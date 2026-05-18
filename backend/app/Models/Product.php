@@ -1,0 +1,97 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+use App\Models\Vendor;
+use App\Models\OrderItem;
+use App\Models\InventoryLog;
+
+class Product extends Model
+{
+    use HasFactory, SoftDeletes;
+
+protected $fillable = [
+    'vendor_id',
+    'media_path',
+    'media_url',
+    'media_kind',
+    'media_urls',
+    'image_url',
+    'status',
+    'created_by',
+    'seller_name',
+    'deadline_date',
+    'submitted_by',
+    'submitted_at',
+    'reviewed_by',
+    'reviewed_at',
+    'rejection_reason',
+    'product_type',
+    'product_type_link',
+    'product_type_links',
+    'production_time',
+    'shipping_time',
+    'total_cost',
+    'material',
+    'print_area',
+    'other_specs',
+    'good_review',
+    'bad_review',
+    'packaging_links',    // ← THÊM
+    'other_packaging',    // ← THÊM
+];
+
+protected $casts = [
+    'media_urls' => 'array',
+    'product_type_links' => 'array',
+    'created_at' => 'datetime',
+    'updated_at' => 'datetime',
+];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    // Vendor của sản phẩm
+    public function vendor()
+    {
+        return $this->belongsTo(Vendor::class);
+    }
+
+    // Các đơn hàng chứa sản phẩm
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    // Log tồn kho
+    public function inventoryLogs()
+    {
+        return $this->hasMany(InventoryLog::class);
+    }
+
+    // Quan hệ với User - người tạo sản phẩm
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // Người duyệt sản phẩm
+    public function reviewer()
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    // Người gửi duyệt
+    public function submitter()
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
+
+}

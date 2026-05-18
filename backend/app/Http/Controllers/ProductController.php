@@ -1,0 +1,521 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Product;
+use App\Models\Vendor;
+use Illuminate\Support\Facades\Storage;
+use App\Models\Notification;
+use App\Models\User;
+use App\Services\NotificationService;
+
+class ProductController extends Controller
+{
+    // Helper: thêm media_url và media_urls vào product
+    private function addMediaUrlsToProduct($product)
+    {
+        if ($product->media_path) {
+            $fullUrl = Storage::url($product->media_path);
+            $product->media_url = $fullUrl;
+            
+            if (empty($product->media_urls)) {
+                $product->media_urls = [$fullUrl];
+            } else {
+                $product->media_urls = array_map(function($url) {
+                    if (!str_starts_with($url, 'http') && !str_starts_with($url, '/storage')) {
+                        return Storage::url($url);
+                    }
+                    return $url;
+                }, $product->media_urls);
+            }
+        } else {
+            $product->media_url = null;
+            $product->media_urls = [];
+        }
+        return $product;
+    }
+
+    // 1️⃣ Lấy danh sách sản phẩm
+    public function index(Request $request)
+    {
+        $user  = $request->user();
+        $query = Product::with('creator:id,name,email,project,seller_name')->latest();
+
+        if ($user && method_exists($user, 'isStaff') && $user->isStaff()) {
+            $query->where('created_by', $user->id);
+        }
+
+        if ($request->filled('search')) {
+            $q = $request->input('search');
+            $query->where('product_type', 'like', "%{$q}%");
+        }
+
+        $products = $query->paginate((int)($request->input('per_page', 20)));
+        $products->getCollection()->transform(function ($product) {
+            $product = $this->addMediaUrlsToProduct($product);
+            if ($product->creator) {
+            $product->project = $product->creator->project;
+            $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
+        }
+        return $product;
+    });
+
+    return response()->json([
+        'data' => $products,
+    ]);
+}
+
+    // 2️⃣ Thêm sản phẩm (hỗ trợ nhiều file) - ĐÃ SỬA HOÀN CHỈNH
+public function store(Request $request)
+{
+    $user = $request->user();
+
+    $validated = $request->validate([
+        'vendor_id'         => 'nullable|exists:vendors,id',
+        'deadline_date'     => 'nullable|date',
+        'product_type'      => 'nullable|string|max:255',
+        'product_type_link' => 'nullable|string|max:500',
+        'product_type_links' => 'nullable|string',
+        'other_specs'       => 'nullable|string',
+        'good_review'       => 'nullable|string',
+        'bad_review'        => 'nullable|string',
+        'media.*'           => 'nullable|file|max:20480|mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm',
+        'production_time'   => 'nullable|string|max:255',
+        'shipping_time'     => 'nullable|string|max:255',
+        'total_cost'        => 'nullable|numeric|min:0',
+        'material'          => 'nullable|string',
+        'print_area'        => 'nullable|string',
+        'packaging_links'   => 'nullable|string',
+        'other_packaging'   => 'nullable|string',
+        'seller_name'       => 'nullable|string|max:255',
+    ]);
+
+    $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+    $mediaUrls = [];
+    $mediaPath = null;
+    $mediaKind = null;
+
+    // Xử lý product_type_links trực tiếp trong mảng data
+    $productTypeLinks = null;
+    if ($request->filled('product_type_links')) {
+        $decoded = json_decode($request->product_type_links, true);
+        $productTypeLinks = is_array($decoded) ? $decoded : [$request->product_type_links];
+    }
+
+    if ($request->hasFile('media')) {
+        $files = $request->file('media');
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+        foreach ($files as $file) {
+            $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
+            $kind = in_array($ext, ['mp4', 'webm'], true) ? 'video' : 'image';
+            $path = $file->store('products', 'public');
+            $fullUrl = Storage::url($path);
+            $mediaUrls[] = $fullUrl;
+            if (!$mediaPath) {
+                $mediaPath = $path;
+                $mediaKind = $kind;
+            }
+        }
+    }
+    
+    $data = [
+        ...$validated,
+        'created_by'    => $user?->id,
+        'status'        => $isAdmin ? 'approved' : 'draft',
+        'submitted_by'  => $isAdmin ? $user?->id : null,
+        'submitted_at'  => $isAdmin ? now() : null,
+        'reviewed_by'   => $isAdmin ? $user?->id : null,
+        'reviewed_at'   => $isAdmin ? now() : null,
+        'media_path'    => $mediaPath,
+        'media_kind'    => $mediaKind,
+        'media_urls'    => $mediaUrls,
+    ];
+    
+    // Chỉ thêm product_type_links nếu có giá trị
+    if ($productTypeLinks !== null) {
+        $data['product_type_links'] = $productTypeLinks;
+    }
+    
+    $product = Product::create($data);
+    $product = $this->addMediaUrlsToProduct($product);
+
+    return response()->json($product, 201);
+}
+public function update(Request $request, $id)
+{
+    $user    = $request->user();
+    $product = Product::findOrFail($id);
+
+    $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+    $isStaff = $user && method_exists($user, 'isStaff') && $user->isStaff();
+
+    if ($isStaff) {
+        if ((int)$product->created_by !== (int)$user->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+        if (!in_array($product->status, ['draft', 'rejected'], true)) {
+            return response()->json(['message' => 'Sản phẩm đang chờ duyệt hoặc đã duyệt'], 422);
+        }
+    }
+
+    $validated = $request->validate([
+        'deadline_date'     => 'sometimes|nullable|date',
+        'product_type'      => 'sometimes|nullable|string|max:255',
+        'product_type_link' => 'sometimes|nullable|string|max:500',
+        'product_type_links' => 'sometimes|nullable|string', // ← THÊM DÒNG NÀY
+        'other_specs'       => 'sometimes|nullable|string',
+        'good_review'       => 'sometimes|nullable|string',
+        'bad_review'        => 'sometimes|nullable|string',
+        'production_time'   => 'sometimes|nullable|string|max:255',
+        'shipping_time'     => 'sometimes|nullable|string|max:255',
+        'total_cost'        => 'sometimes|nullable|numeric|min:0',
+        'material'          => 'sometimes|nullable|string',
+        'print_area'        => 'sometimes|nullable|string',
+        'packaging_links'   => 'sometimes|nullable|string',
+        'other_packaging'   => 'sometimes|nullable|string',
+        'media.*'           => 'sometimes|nullable|file|max:20480|mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm',
+        'delete_media_indices' => 'sometimes|string',
+        'seller_name'       => 'sometimes|nullable|string|max:255', // ← THÊM DÒNG NÀY
+    ]);
+
+    // Xử lý product_type_links từ JSON string
+    if ($request->filled('product_type_links')) {
+        $productTypeLinks = json_decode($request->product_type_links, true);
+        if (is_array($productTypeLinks)) {
+            $validated['product_type_links'] = $productTypeLinks;
+        } else {
+            $validated['product_type_links'] = [$request->product_type_links];
+        }
+    }
+
+    $product->fill(collect($validated)->except(['media', 'delete_media_indices', 'product_type_links'])->all());
+    
+    // Cập nhật product_type_links riêng
+    if (isset($validated['product_type_links'])) {
+        $product->product_type_links = $validated['product_type_links'];
+    }
+
+    // Xóa media theo chỉ số
+    if ($request->filled('delete_media_indices')) {
+        $indices = explode(',', $request->delete_media_indices);
+        $currentUrls = $product->media_urls ?? [];
+        $keepUrls = [];
+        foreach ($currentUrls as $idx => $url) {
+            if (!in_array($idx, $indices)) {
+                $keepUrls[] = $url;
+            } else {
+                $relativePath = str_replace('/storage/', '', $url);
+                Storage::disk('public')->delete($relativePath);
+            }
+        }
+        $product->media_urls = $keepUrls;
+        if (!empty($keepUrls)) {
+            $firstUrl = $keepUrls[0];
+            $product->media_path = str_replace('/storage/', '', $firstUrl);
+            $ext = pathinfo($firstUrl, PATHINFO_EXTENSION);
+            $product->media_kind = in_array(strtolower($ext), ['mp4', 'webm']) ? 'video' : 'image';
+        } else {
+            $product->media_path = null;
+            $product->media_kind = null;
+        }
+    }
+
+    // Thêm media mới (giữ nguyên media cũ)
+    if ($request->hasFile('media')) {
+        $files = $request->file('media');
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+        $newUrls = $product->media_urls ?? [];
+        foreach ($files as $file) {
+            $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
+            $path = $file->store('products', 'public');
+            $fullUrl = Storage::url($path);
+            $newUrls[] = $fullUrl;
+            if (empty($product->media_path)) {
+                $product->media_path = $path;
+                $product->media_kind = in_array($ext, ['mp4', 'webm']) ? 'video' : 'image';
+            }
+        }
+        $product->media_urls = $newUrls;
+    }
+
+    if ($isStaff) {
+        $product->status           = 'draft';
+        $product->reviewed_by      = null;
+        $product->reviewed_at      = null;
+        $product->rejection_reason = null;
+    }
+
+    $product->save();
+    $product = $this->addMediaUrlsToProduct($product);
+
+    return response()->json($product);
+}
+
+    // 5️⃣ Xóa sản phẩm
+    public function destroy(Request $request, $id)
+    {
+        $user    = $request->user();
+        $product = Product::find($id);
+
+        if (!$product) {
+            return response()->json(['message' => 'Product không tồn tại hoặc đã bị xóa'], 404);
+        }
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $isAdmin = method_exists($user, 'isAdmin') && $user->isAdmin();
+        $isStaff = method_exists($user, 'isStaff') && $user->isStaff();
+
+        if (!$isAdmin && !$isStaff) {
+            $role = strtolower($user->role ?? '');
+            $isAdmin = in_array($role, ['admin', 'super_admin']);
+            $isStaff = in_array($role, ['staff', 'staff_a', 'staff_b', 'staff-a', 'staff-b','staffa', 'staffb',]);
+        }
+
+        if (!$isAdmin && !$isStaff) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        if ($isStaff) {
+            if ((int)$product->created_by !== (int)$user->id) {
+                return response()->json(['message' => 'Bạn không phải người tạo sản phẩm này'], 403);
+            }
+            if (!in_array($product->status, ['draft', 'rejected'], true)) {
+                return response()->json(['message' => 'Không thể xóa sản phẩm đã gửi duyệt'], 422);
+            }
+        }
+
+        // Xóa tất cả file media
+        $mediaUrls = $product->media_urls ?? [];
+        foreach ($mediaUrls as $url) {
+            $relativePath = str_replace('/storage/', '', $url);
+            Storage::disk('public')->delete($relativePath);
+        }
+        if ($product->media_path) {
+            Storage::disk('public')->delete($product->media_path);
+        }
+
+        $product->delete();
+
+        return response()->json(['message' => 'Product deleted successfully']);
+    }
+
+    // Staff gửi duyệt
+    public function submit($id)
+    {
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+
+        $product->status       = 'pending';
+        $product->submitted_by = auth()->id();
+        $product->submitted_at = now();
+        $product->save();
+
+        NotificationService::sendToRole(
+            'admin',
+            'pending',
+            '📋 Sản phẩm mới chờ duyệt',
+            "Sản phẩm \"{$product->product_type}\" đang chờ Admin phê duyệt."
+        );
+
+        return response()->json(['message' => 'Gửi Form cho Admin thành công']);
+    }
+
+public function pendingApprovals()
+{
+    $products = Product::where('status', 'pending')
+        ->with('creator:id,name,email,project,seller_name')  // ← THÊM with()
+        ->get();
+    
+    $products->transform(function ($product) {
+        $product = $this->addMediaUrlsToProduct($product);
+        if ($product->creator) {
+            $product->project = $product->creator->project;
+            $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
+        }
+        return $product;
+    });
+    
+    return response()->json($products);
+}
+
+    // Admin duyệt/từ chối
+    public function approve(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+        $isApproved = $request->input('approved', true);
+        
+        $product->status = $isApproved ? 'approved' : 'rejected';
+        $product->reviewed_by = auth()->id();
+        $product->reviewed_at = now();
+        $product->rejection_reason = $isApproved ? null : $request->reason;
+        $product->save();
+
+        if ($product->created_by) {
+            $message = $isApproved
+                ? "✅ Sản phẩm \"{$product->product_type}\" đã được Admin phê duyệt."
+                : "❌ Sản phẩm \"{$product->product_type}\" bị từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '');
+            NotificationService::send(
+                $product->created_by,
+                $isApproved ? 'approved' : 'rejected',
+                $isApproved ? '✅ Sản phẩm đã được duyệt' : '❌ Sản phẩm bị từ chối',
+                $message
+            );
+        }
+        
+        return response()->json(['message' => $isApproved ? 'Product approved' : 'Product rejected']);
+    }
+
+    // Reject riêng
+    public function reject(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+        $product->status = 'rejected';
+        $product->reviewed_by = auth()->id();
+        $product->reviewed_at = now();
+        $product->rejection_reason = $request->reason;
+        $product->save();
+
+        if ($product->created_by) {
+            NotificationService::send(
+                $product->created_by,
+                'rejected',
+                '❌ Sản phẩm bị từ chối',
+                "Sản phẩm \"{$product->product_type}\" bị từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '')
+            );
+        }
+
+        return response()->json(['message' => 'Product rejected']);
+    }
+
+    // Staff B gửi phản hồi
+    public function sendFeedback(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'feedback' => 'required|string|max:1000',
+        ]);
+
+        $product = Product::findOrFail($id);
+
+        if ($product->created_by) {
+            NotificationService::send(
+                $product->created_by,
+                'feedback',
+                '💬 Có phản hồi mới từ Staff B',
+                "Sản phẩm \"{$product->product_type}\": {$validated['feedback']}"
+            );
+        }
+
+        return response()->json(['success' => true, 'message' => 'Đã gửi phản hồi thành công!']);
+    }
+
+    // Vendor comparison
+    public function vendorComparison($id)
+    {
+        $product = Product::findOrFail($id);
+        $vendors = Vendor::where('category', $product->product_type)->get();
+        return response()->json([
+            'product_type' => $product->product_type,
+            'vendors'      => $vendors,
+        ]);
+    }
+public function show($id)
+{
+    $product = Product::with('creator:id,name,email,project,seller_name')->findOrFail($id);
+    
+    $product = $this->addMediaUrlsToProduct($product);
+    
+    if ($product->creator) {
+        $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
+        $product->seller_email = $product->creator->email;
+        $product->project = $product->creator->project;
+    }
+    
+    if ($product->product_type_links && is_string($product->product_type_links)) {
+        $product->product_type_links = json_decode($product->product_type_links, true);
+    }
+    
+    return response()->json([
+        'success' => true,
+        'data' => $product
+    ]);
+}
+public function approvedProducts()
+{
+    $products = Product::where('status', 'approved')
+        ->with('creator:id,name,email,project,seller_name')  // ← THÊM project
+        ->latest()
+        ->get();
+    
+    $products->transform(function ($product) {
+        $product = $this->addMediaUrlsToProduct($product);
+        
+        if ($product->creator) {
+            $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
+            $product->seller_email = $product->creator->email;
+            $product->project = $product->creator->project;  // ← THÊM DÒNG NÀY
+        }
+        
+        if ($product->product_type_links && is_string($product->product_type_links)) {
+            $product->product_type_links = json_decode($product->product_type_links, true);
+        }
+        
+        return $product;
+    });
+    
+    return response()->json([
+        'data' => $products
+    ]);
+}
+     public function updateDeadline(Request $request, $id)
+    {
+        $user = $request->user();
+        $product = Product::findOrFail($id);
+
+        // Kiểm tra quyền: Staff B hoặc Staff A có thể cập nhật deadline
+        $isStaff = $user && method_exists($user, 'isStaff') && $user->isStaff();
+        $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+
+        if (!$isStaff && !$isAdmin) {
+            $role = strtolower($user->role ?? '');
+            $isStaff = in_array($role, ['staff', 'staff_a', 'staff_b', 'staff-a', 'staff-b', 'staffa', 'staffb']);
+        }
+
+        if (!$isStaff && !$isAdmin) {
+            return response()->json(['message' => 'Forbidden - Bạn không có quyền cập nhật deadline'], 403);
+        }
+
+        $validated = $request->validate([
+            'deadline_date' => 'required|date|after_or_equal:today',
+        ]);
+
+        $product->deadline_date = $validated['deadline_date'];
+        $product->save();
+
+        // Gửi thông báo cho người tạo sản phẩm (Staff A)
+        if ($product->created_by && $product->created_by != $user->id) {
+            NotificationService::send(
+                $product->created_by,
+                'deadline_updated',
+                '📅 Deadline đã được cập nhật',
+                "Sản phẩm \"{$product->product_type}\" có deadline mới: " . date('d/m/Y', strtotime($validated['deadline_date']))
+            );
+        }
+
+        $product = $this->addMediaUrlsToProduct($product);
+
+        return response()->json([
+            'message' => 'Đã cập nhật deadline thành công',
+            'product' => $product
+        ]);
+    }
+}
