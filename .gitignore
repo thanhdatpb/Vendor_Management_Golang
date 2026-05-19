@@ -2,3 +2,6 @@
 .agent/
 .claude/
 .codex/
+
+# Documents tài liệu liên quan đến hệ thống
+.documents/
