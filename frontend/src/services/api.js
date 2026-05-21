@@ -11,6 +11,15 @@ const api = axios.create({
   },
 });
 
+// Tự động xóa Content-Type khi gửi FormData
+// để browser/axios tự set multipart boundary đúng
+api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
+  return config;
+});
+
 
 // ===============================
 // AXIOS REQUEST INTERCEPTOR
@@ -74,23 +83,16 @@ export const productApi = {
 
   getById: (id) => api.get(`/products/${id}`),
 
-  create: (data) =>
-    api.post(
-      "/products",
-      data,
-      data instanceof FormData
-        ? { headers: { "Content-Type": "multipart/form-data" } }
-        : undefined
-    ),
+  create: (data) => api.post("/products", data),
 
-  update: (id, data) =>
-    api.put(
-      `/products/${id}`,
-      data,
-      data instanceof FormData
-        ? { headers: { "Content-Type": "multipart/form-data" } }
-        : undefined
-    ),
+  // PHP không parse files từ PUT — dùng POST + _method=PUT (Laravel method spoofing)
+  update: (id, data) => {
+    if (data instanceof FormData) {
+      data.append("_method", "PUT");
+      return api.post(`/products/${id}`, data);
+    }
+    return api.put(`/products/${id}`, data);
+  },
 
   delete: (id) => api.delete(`/products/${id}`),
 
