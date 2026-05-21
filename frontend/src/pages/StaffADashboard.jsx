@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { productApi, notificationApi, vendorApi } from '../services/api';
 
 // ─── CẤU HÌNH ─────────────────────────────────────────────
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || ""; // "" = dùng Vite proxy → /storage → laravel
 // const API_BASE_URL = 'http://localhost:8000/api';
 const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
 const LS_A_SELECTIONS = 'STAFF_A_SELECTIONS_V1';

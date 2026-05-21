@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Nếu VITE_API_URL để trống → dùng "" (relative URL) → Vite proxy forward đến Laravel
+// Nếu VITE_API_URL có giá trị (ví dụ khi deploy) → dùng URL đó
+const API_BASE = import.meta.env.VITE_API_URL || "";
 const API_URL = `${API_BASE}/api`;
 const api = axios.create({
   baseURL: API_URL,
