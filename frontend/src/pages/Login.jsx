@@ -1,30 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-// ── Inline SVG logo replicating Happy Creative mark ──────
-function HappyCreativeLogo({ size = 80, color = "#F5A623" }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer arc — open C shape */}
-      <path
-        d="M168 44 A88 88 0 1 0 168 156"
-        stroke={color}
-        strokeWidth="20"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Inner smile stroke */}
-      <path
-        d="M118 128 Q130 142 145 132"
-        stroke={color}
-        strokeWidth="14"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
-  );
-}
+import logoImg from "../assets/logo.png";
 
 export default function Login() {
   const { login, user: contextUser } = useAuth();
@@ -202,8 +179,8 @@ export default function Login() {
 
           {/* Brand header */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div className="hc-float-a" style={{ display: "inline-block", marginBottom: 12 }}>
-              <HappyCreativeLogo size={72} color={ORANGE} />
+            <div style={{ display: "inline-block", marginBottom: 12 }}>
+              <img src={logoImg} alt="Happy Creative Logo" style={{ width: 72, height: 72, objectFit: "contain" }} />
             </div>
 
             <div style={{
