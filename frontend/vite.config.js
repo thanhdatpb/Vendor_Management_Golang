@@ -11,8 +11,6 @@ export default defineConfig({
     allowedHosts: true,
     cors: true,
     proxy: {
-      // Mọi request /api sẽ được Vite forward đến Laravel
-      // Máy khác chỉ cần truy cập port 5173, không cần mở port 8000
       "/api": {
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
@@ -24,5 +22,23 @@ export default defineConfig({
         secure: false,
       },
     },
-  }
+  },
+  build: {
+    // Tăng warning threshold lên 600KB (mỗi chunk sau split)
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core — load đầu tiên, cache lâu dài
+          'vendor-react': ['react', 'react-dom'],
+
+          // Ant Design icons — ~300KB, tách riêng để cache
+          'vendor-antd-icons': ['@ant-design/icons'],
+
+          // XLSX — ~500KB, chỉ dùng khi export
+          'vendor-xlsx': ['xlsx'],
+        },
+      },
+    },
+  },
 })

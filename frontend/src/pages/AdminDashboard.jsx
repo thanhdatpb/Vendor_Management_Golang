@@ -208,9 +208,10 @@ function MediaGallery({ mediaUrls = [] }) {
 // ════════════════════════════════════════════════════════
 function NotificationCenter({ onClose, notifications, newsNotifications, markAsRead, markNewsAsRead, onNotificationClick, onNewsClick }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'news'
+  const [activeTab, setActiveTab] = useState('requests');
   const [localRequests, setLocalRequests] = useState(notifications || []);
   const [localNews, setLocalNews] = useState(newsNotifications || []);
+  const [selectedNotif, setSelectedNotif] = useState(null); // Chi tiết thông báo đang xem
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
     try {
@@ -230,12 +231,25 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
       return '';
     }
   };
+  // Sync từ props nhưng GIỮ NGUYÊN read=true đã đánh dấu trong local state
   useEffect(() => {
-    setLocalRequests(notifications || []);
+    setLocalRequests(prev => {
+      const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
+      return (notifications || []).map(n => ({
+        ...n,
+        read: readIds.has(n.id) ? true : n.read,
+      }));
+    });
   }, [notifications]);
 
   useEffect(() => {
-    setLocalNews(newsNotifications || []);
+    setLocalNews(prev => {
+      const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
+      return (newsNotifications || []).map(n => ({
+        ...n,
+        read: readIds.has(n.id) ? true : n.read,
+      }));
+    });
   }, [newsNotifications]);
 
   const unreadRequests = localRequests.filter(n => !n.read).length;
@@ -259,41 +273,45 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
   };
 
   const handleMarkAllRequestsAsRead = () => {
-    localRequests.forEach(n => {
-      if (!n.read) markAsRead(n.id);
-    });
-    setLocalRequests(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    );
+    // Cập nhật local state trước
+    setLocalRequests(prev => prev.map(n => ({ ...n, read: true })));
+    // Rồi mới gọi parent (không để parent re-render gây race condition)
+    setTimeout(() => {
+      localRequests.forEach(n => {
+        if (!n.read) markAsRead(n.id);
+      });
+    }, 0);
   };
 
   const handleMarkAllNewsAsRead = () => {
-    localNews.forEach(n => {
-      if (!n.read && markNewsAsRead) markNewsAsRead(n.id);
-    });
-    setLocalNews(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    );
+    setLocalNews(prev => prev.map(n => ({ ...n, read: true })));
+    setTimeout(() => {
+      localNews.forEach(n => {
+        if (!n.read && markNewsAsRead) markNewsAsRead(n.id);
+      });
+    }, 0);
   };
 
   const handleRequestClick = (notif) => {
-    if (!notif.read) {
-      handleMarkAsRead(notif.id);
-    }
-    if (onNotificationClick) {
-      onNotificationClick(notif);
-    }
-    setIsOpen(false);
+    // Đánh dấu đã đọc local trước
+    setLocalRequests(prev =>
+      prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
+    );
+    setTimeout(() => {
+      if (!notif.read) markAsRead(notif.id);
+    }, 0);
+    // Hiển thị chi tiết trong panel thay vì đóng
+    setSelectedNotif({ ...notif, read: true, _type: 'request' });
   };
 
   const handleNewsClick = (notif) => {
-    if (!notif.read) {
-      handleMarkNewsAsRead(notif.id);
-    }
-    if (onNewsClick) {
-      onNewsClick(notif);
-    }
-    setIsOpen(false);
+    setLocalNews(prev =>
+      prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
+    );
+    setTimeout(() => {
+      if (!notif.read && markNewsAsRead) markNewsAsRead(notif.id);
+    }, 0);
+    setSelectedNotif({ ...notif, read: true, _type: 'news' });
   };
 
   return (
@@ -359,8 +377,8 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
             position: 'absolute',
             top: 50,
             right: 0,
-            width: 420,
-            maxHeight: 550,
+            width: 520,
+            maxHeight: 680,
             background: HC.surface,
             borderRadius: 16,
             boxShadow: HC.shadowStrong,
@@ -453,8 +471,143 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
               </div>
             </div>
 
-            {/* Nội dung theo tab */}
-            <div style={{ overflowY: 'auto', maxHeight: 420 }}>
+            {/* Chi tiết thông báo (khi đã chọn) */}
+            {selectedNotif ? (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', maxHeight: 530 }}>
+                {/* Thanh back */}
+                <div style={{
+                  padding: '10px 16px',
+                  background: HC.cream,
+                  borderBottom: `1px solid ${HC.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                }}>
+                  <button
+                    onClick={() => setSelectedNotif(null)}
+                    style={{
+                      background: HC.orangeLight,
+                      border: `1px solid ${HC.orangeMid}`,
+                      borderRadius: 8,
+                      padding: '4px 12px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: HC.orangeDark,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    ← Quay lại
+                  </button>
+                  <span style={{ fontSize: 11, color: HC.muted, fontWeight: 600 }}>Chi tiết thông báo</span>
+                  <span style={{
+                    marginLeft: 'auto',
+                    fontSize: 9, fontWeight: 700, color: HC.success,
+                    background: '#ecfdf5', border: '1px solid #bbf7d0',
+                    borderRadius: 99, padding: '2px 8px',
+                  }}>✓ Đã đọc</span>
+                </div>
+
+                {/* Nội dung chi tiết */}
+                <div style={{ padding: '20px 20px', flex: 1 }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{
+                      fontWeight: 900, fontSize: 14,
+                      color: HC.ink, fontFamily: "'Nunito',sans-serif",
+                      lineHeight: 1.4,
+                    }}>
+                      {selectedNotif.title}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    background: HC.orangePale,
+                    border: `1px solid ${HC.border}`,
+                    borderRadius: 12,
+                    padding: '14px 16px',
+                    fontSize: 13,
+                    color: HC.ink2,
+                    lineHeight: 1.7,
+                    whiteSpace: 'pre-wrap',
+                    marginBottom: 16,
+                  }}>
+                    {selectedNotif.message || '(Không có nội dung)'}
+                  </div>
+
+                  {/* Meta info */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(selectedNotif.product_type || selectedNotif.productType) && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: HC.muted, width: 90 }}>🏷️ Loại SP</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>
+                          {selectedNotif.product_type || selectedNotif.productType}
+                        </span>
+                      </div>
+                    )}
+                    {selectedNotif.sender && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: HC.muted, width: 90 }}>👤 Người gửi</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>{selectedNotif.sender}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: HC.muted, width: 90 }}>🕒 Thời gian</span>
+                      <span style={{ fontSize: 12, color: HC.brown }}>
+                        {selectedNotif.time || (selectedNotif.timestamp ? new Date(selectedNotif.timestamp).toLocaleString('vi-VN') : '')}
+                      </span>
+                    </div>
+                    {selectedNotif.reason && (
+                      <div style={{
+                        marginTop: 8,
+                        padding: '10px 14px',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: 10,
+                        fontSize: 12,
+                        color: HC.danger,
+                        lineHeight: 1.5,
+                      }}>
+                        <b>Lý do từ chối:</b> {selectedNotif.reason}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Nút điều hướng nếu có productId */}
+                  {(selectedNotif.productId || selectedNotif.product_id) && onNotificationClick && (
+                    <button
+                      onClick={() => {
+                        onNotificationClick(selectedNotif);
+                        setSelectedNotif(null);
+                        setIsOpen(false);
+                      }}
+                      style={{
+                        marginTop: 20,
+                        width: '100%',
+                        padding: '10px',
+                        background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
+                        border: 'none',
+                        borderRadius: 10,
+                        color: '#fff',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontFamily: "'Nunito',sans-serif",
+                      }}
+                    >
+                      🔍 Xem sản phẩm liên quan
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+
+            /* Danh sách theo tab */
+            <div style={{ overflowY: 'auto', maxHeight: 530, scrollbarWidth: 'thin', scrollbarColor: `${HC.orangeMid} transparent` }}>
               {activeTab === 'requests' && (
                 <>
                   <div style={{
@@ -464,25 +617,33 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
                   }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
                       📋 Form request từ Seller
+                      {localRequests.length > 0 && (
+                        <span style={{ marginLeft: 6, color: HC.muted2 }}>
+                          ({localRequests.filter(n => n.read).length}/{localRequests.length} đã đọc)
+                        </span>
+                      )}
                     </span>
-                    {unreadRequests > 0 && (
-                      <button
-                        onClick={handleMarkAllRequestsAsRead}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: HC.orange,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Đánh dấu đã đọc
-                      </button>
-                    )}
+                    <button
+                      onClick={handleMarkAllRequestsAsRead}
+                      style={{
+                        background: unreadRequests > 0 ? HC.orangeLight : 'transparent',
+                        border: unreadRequests > 0 ? `1px solid ${HC.orangeMid}` : 'none',
+                        color: unreadRequests > 0 ? HC.orangeDark : HC.muted2,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: unreadRequests > 0 ? 'pointer' : 'default',
+                        borderRadius: 6,
+                        padding: '3px 8px',
+                      }}
+                    >
+                      {unreadRequests > 0 ? `Đánh dấu tất cả đã đọc (${unreadRequests})` : '✓ Tất cả đã đọc'}
+                    </button>
                   </div>
 
                   {localRequests.length === 0 ? (
@@ -506,6 +667,7 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                           background: notif.read ? HC.surface : HC.orangeLight,
                           cursor: 'pointer',
                           transition: 'background 0.2s',
+                          opacity: notif.read ? 0.75 : 1,
                         }}
                         onMouseEnter={e => e.currentTarget.style.background = HC.orangePale}
                         onMouseLeave={e => e.currentTarget.style.background = notif.read ? HC.surface : HC.orangeLight}
@@ -513,13 +675,29 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                           <span style={{ fontSize: 24 }}>{notif.icon || '📋'}</span>
                           <div style={{ flex: 1 }}>
-                            <div style={{
-                              fontWeight: 800,
-                              fontSize: 13,
-                              color: notif.read ? HC.muted : HC.ink,
-                              fontFamily: "'Nunito',sans-serif",
-                            }}>
-                              {notif.title}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{
+                                fontWeight: notif.read ? 600 : 800,
+                                fontSize: 13,
+                                color: notif.read ? HC.muted : HC.ink,
+                                fontFamily: "'Nunito',sans-serif",
+                                flex: 1,
+                              }}>
+                                {notif.title}
+                              </div>
+                              {notif.read && (
+                                <span style={{
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  color: HC.success,
+                                  background: '#ecfdf5',
+                                  border: '1px solid #bbf7d0',
+                                  borderRadius: 99,
+                                  padding: '2px 7px',
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                }}>✓ Đã đọc</span>
+                              )}
                             </div>
                             <div style={{
                               fontSize: 12,
@@ -538,9 +716,10 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                             }}>
                               <span>🏷️ {notif.product_type || 'Sản phẩm'}</span>
                               <span>🕒 {formatTime(notif.timestamp)}</span>
+                              {notif.sender && <span>👤 {notif.sender}</span>}
                             </div>
                           </div>
-                          {!notif.read && (
+                          {!notif.read ? (
                             <div style={{
                               width: 8,
                               height: 8,
@@ -549,7 +728,7 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                               flexShrink: 0,
                               marginTop: 8,
                             }} />
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))
@@ -566,25 +745,33 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 2,
                   }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
                       📰 Tin tức & Cập nhật từ Staff B
+                      {localNews.length > 0 && (
+                        <span style={{ marginLeft: 6, color: HC.muted2 }}>
+                          ({localNews.filter(n => n.read).length}/{localNews.length} đã đọc)
+                        </span>
+                      )}
                     </span>
-                    {unreadNews > 0 && (
-                      <button
-                        onClick={handleMarkAllNewsAsRead}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: HC.orange,
-                          fontSize: 10,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Đánh dấu đã đọc
-                      </button>
-                    )}
+                    <button
+                      onClick={handleMarkAllNewsAsRead}
+                      style={{
+                        background: unreadNews > 0 ? HC.orangeLight : 'transparent',
+                        border: unreadNews > 0 ? `1px solid ${HC.orangeMid}` : 'none',
+                        color: unreadNews > 0 ? HC.orangeDark : HC.muted2,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: unreadNews > 0 ? 'pointer' : 'default',
+                        borderRadius: 6,
+                        padding: '3px 8px',
+                      }}
+                    >
+                      {unreadNews > 0 ? `Đánh dấu tất cả đã đọc (${unreadNews})` : '✓ Tất cả đã đọc'}
+                    </button>
                   </div>
 
                   {localNews.length === 0 ? (
@@ -608,6 +795,7 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                           background: notif.read ? HC.surface : HC.orangeLight,
                           cursor: 'pointer',
                           transition: 'background 0.2s',
+                          opacity: notif.read ? 0.75 : 1,
                         }}
                         onMouseEnter={e => e.currentTarget.style.background = HC.orangePale}
                         onMouseLeave={e => e.currentTarget.style.background = notif.read ? HC.surface : HC.orangeLight}
@@ -615,13 +803,29 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                           <span style={{ fontSize: 24 }}>{notif.icon || '📰'}</span>
                           <div style={{ flex: 1 }}>
-                            <div style={{
-                              fontWeight: 800,
-                              fontSize: 13,
-                              color: notif.read ? HC.muted : HC.ink,
-                              fontFamily: "'Nunito',sans-serif",
-                            }}>
-                              {notif.title}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{
+                                fontWeight: notif.read ? 600 : 800,
+                                fontSize: 13,
+                                color: notif.read ? HC.muted : HC.ink,
+                                fontFamily: "'Nunito',sans-serif",
+                                flex: 1,
+                              }}>
+                                {notif.title}
+                              </div>
+                              {notif.read && (
+                                <span style={{
+                                  fontSize: 9,
+                                  fontWeight: 700,
+                                  color: HC.success,
+                                  background: '#ecfdf5',
+                                  border: '1px solid #bbf7d0',
+                                  borderRadius: 99,
+                                  padding: '2px 7px',
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                }}>✓ Đã đọc</span>
+                              )}
                             </div>
                             <div style={{
                               fontSize: 12,
@@ -632,27 +836,19 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                               {notif.message}
                             </div>
                             <div style={{
+                              display: 'flex',
+                              gap: 12,
+                              marginTop: 8,
                               fontSize: 10,
                               color: HC.muted2,
-                              marginTop: 8,
+                              flexWrap: 'wrap',
                             }}>
-                              🕒 {notif.time || new Date(notif.timestamp).toLocaleString('vi-VN')}
+                              <span>🕒 {notif.time || new Date(notif.timestamp || Date.now()).toLocaleString('vi-VN')}</span>
+                              {notif.sender && <span>👤 {notif.sender}</span>}
+                              {notif.product_type && <span>📦 {notif.product_type}</span>}
                             </div>
-                            {notif.product_type && (
-                              <div style={{
-                                marginTop: 6,
-                                padding: '3px 8px',
-                                background: HC.cream,
-                                borderRadius: 6,
-                                fontSize: 10,
-                                color: HC.brown,
-                                display: 'inline-block',
-                              }}>
-                                📦 {notif.product_type}
-                              </div>
-                            )}
                           </div>
-                          {!notif.read && (
+                          {!notif.read ? (
                             <div style={{
                               width: 8,
                               height: 8,
@@ -661,7 +857,7 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                               flexShrink: 0,
                               marginTop: 8,
                             }} />
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))
@@ -669,6 +865,7 @@ function NotificationCenter({ onClose, notifications, newsNotifications, markAsR
                 </>
               )}
             </div>
+            )} {/* end selectedNotif ternary */}
 
             <div style={{
               padding: '10px 16px',
@@ -3135,8 +3332,16 @@ export default function AdminDashboard() {
       const staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
       const requests = staffANotifs
         .filter(n => n.type === 'new_form')
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      setRequestNotifications(requests.slice(0, 50));
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 50);
+      // ⚠️ Giữ nguyên read=true nếu đã đánh dấu trong state hiện tại
+      setRequestNotifications(prev => {
+        const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
+        return requests.map(n => ({
+          ...n,
+          read: prevMap[n.id]?.read === true ? true : (n.read || false),
+        }));
+      });
     } catch (err) {
       console.error('Error loading request notifications:', err);
     }
@@ -3154,10 +3359,18 @@ export default function AdminDashboard() {
         message: notif.message || '',
         author: notif.author || 'Staff B',
         timestamp: notif.timestamp || new Date().toISOString(),
-        read: notif.read || false,  // giữ nguyên read từ localStorage
+        read: notif.read || false,
       }));
       formattedNews.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      setNewsNotifications(formattedNews.slice(0, 50));
+      const sliced = formattedNews.slice(0, 50);
+      // ⚠️ Giữ nguyên read=true nếu đã đánh dấu trong state hiện tại
+      setNewsNotifications(prev => {
+        const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
+        return sliced.map(n => ({
+          ...n,
+          read: prevMap[n.id]?.read === true ? true : n.read,
+        }));
+      });
     } catch (err) {
       console.error('Error loading news notifications:', err);
       setNewsNotifications([]);
