@@ -29,7 +29,7 @@ export default function FormHistoryModal({ open, onClose, title, filterType, fil
     filteredProducts = filteredProducts.filter(p => p.project === filterValue);
   }
 
-  // ✅ Lấy danh sách seller thuộc project hiện tại
+  // ✅ Lấy danh sách seller
   const getSellersByProject = () => {
     const currentProject = filterType === 'project' ? filterValue : null;
     if (!currentProject || !allSellers.length) {
