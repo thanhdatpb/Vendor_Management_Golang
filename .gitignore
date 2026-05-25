@@ -5,3 +5,9 @@
 
 # Documents tài liệu liên quan đến hệ thống
 .documents/
+
+start-dev.bat
+start-laravel.bat
+start-servers.bat
+start-servers.ps1
+start-vite.bat
