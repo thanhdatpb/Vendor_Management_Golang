@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { vendorApi } from '../../../services/api';
 import { HC, LS_PRODUCT_VENDORS, VENDOR_TYPES, VENDOR_PAGE_SIZE } from '../utils/constants';
-import { lsGet, lsSet, parseVendorExcel, normalizeVendorType } from '../utils/helpers';
+import { lsGet, lsSet, parseVendorExcel, buildVendorPayload, vendorMatchesExisting, VENDOR_TYPE_LIST, normalizeVendorType } from '../utils/helpers';
 import { Spinner, EmptyState, BestSellerBadge } from '../ui/StaffBUI';
 
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
@@ -166,41 +166,46 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     const errors = [];
 
     for (let i = 0; i < importPreview.length; i++) {
-      const vendorData = importPreview[i];
-      let vendorName = (vendorData['Vendor Name'] || vendorData.vendor_name || vendorData.name || '').toString().trim();
-      let productType = (vendorData['Product Type'] || vendorData.product_type || '').toString().trim();
-      if (!productType) { errors.push({ idx: i + 1, name: `dòng ${i + 1}`, message: 'Thiếu Product Type' }); continue; }
-      let vendorType = normalizeVendorType((vendorData['Vendor Type'] || vendorData.vendor_type || '').toString().trim());
-      if (!VENDOR_TYPES.includes(vendorType)) { errors.push({ idx: i + 1, name: productType, message: `Vendor Type "${vendorData.vendor_type}" không hợp lệ` }); continue; }
+      const cleanedData = buildVendorPayload(importPreview[i]);
 
-      const size = vendorData.Size || vendorData.size ? (vendorData.Size || vendorData.size).toString().trim() : null;
-      const optional = vendorData.Optional || vendorData.optional ? (vendorData.Optional || vendorData.optional).toString().trim() : null;
+      if (!cleanedData.product_type) {
+        errors.push({ idx: i + 1, name: `dòng ${i + 1}`, message: 'Thiếu Product Type' });
+        continue;
+      }
+      if (!cleanedData.vendor_type || !VENDOR_TYPE_LIST.includes(cleanedData.vendor_type)) {
+        errors.push({
+          idx: i + 1,
+          name: cleanedData.product_type,
+          message: `Vendor Type không hợp lệ (cần: Old, New, Best Seller hoặc Loại 1/2/3)`,
+        });
+        continue;
+      }
 
-      const cleanedData = { name: vendorName, product_type: productType, vendor_type: vendorType, size, optional };
-      const getValue = (obj, possibleNames) => { for (const name of possibleNames) { if (obj[name] !== undefined && obj[name] !== '' && obj[name] !== null) return obj[name]; } return null; };
-
-      cleanedData.pricing1 = parseFloat(getValue(vendorData, ['Pricing 1', 'pricing1']) || 0);
-      cleanedData.pricing2 = parseFloat(getValue(vendorData, ['Pricing 2', 'pricing2']) || 0);
-      cleanedData.eco_price = parseFloat(getValue(vendorData, ['Economy Price Ship', 'eco_price']) || 0);
-      cleanedData.eco_total = parseFloat(getValue(vendorData, ['Economy Total', 'eco_total']) || 0);
-      cleanedData.fast_price = parseFloat(getValue(vendorData, ['Fast Price Ship', 'fast_price']) || 0);
-      cleanedData.fast_total = parseFloat(getValue(vendorData, ['Fast Total', 'fast_total']) || 0);
-      cleanedData.express_price = parseFloat(getValue(vendorData, ['Express Price Ship', 'express_price']) || 0);
-      cleanedData.express_total = parseFloat(getValue(vendorData, ['Express Total', 'express_total']) || 0);
-      cleanedData.overnight_price = parseFloat(getValue(vendorData, ['Overnight Price Ship', 'overnight_price']) || 0);
-      cleanedData.overnight_total = parseFloat(getValue(vendorData, ['Overnight Total', 'overnight_total']) || 0);
-
-      Object.keys(cleanedData).forEach(key => { if (typeof cleanedData[key] === 'number' && isNaN(cleanedData[key])) cleanedData[key] = null; });
-
-      const matched = vendorList.find(v => v.product_type === cleanedData.product_type && v.vendor_type === cleanedData.vendor_type && (v.size || null) === cleanedData.size && (v.optional || null) === cleanedData.optional);
+      const matched = vendorList.find((v) => vendorMatchesExisting(v, cleanedData));
       try {
-        if (matched) { await vendorApi.update(matched.id, cleanedData); updateCount++; }
-        else { await vendorApi.create(cleanedData); successCount++; }
-      } catch (err) { errors.push({ idx: i + 1, name: productType, message: getDetailedError(err) }); }
+        if (matched) {
+          await vendorApi.update(matched.id, cleanedData);
+          updateCount++;
+        } else {
+          await vendorApi.create(cleanedData);
+          successCount++;
+        }
+      } catch (err) {
+        errors.push({ idx: i + 1, name: cleanedData.product_type, message: getDetailedError(err) });
+      }
     }
-    await loadVendors(); setImporting(false); setImportConfirmOpen(false); setImportPreview(null);
-    if (errors.length === 0) alert(`✅ Import hoàn tất!\n• Thêm mới: ${successCount}\n• Cập nhật: ${updateCount}`);
-    else alert(`⚠️ Import xong\n• Thêm: ${successCount} · Cập nhật: ${updateCount} · Lỗi: ${errors.length}\n\n${errors.slice(0, 8).map(e => `Dòng ${e.idx}: ${e.message}`).join('\n')}`);
+    await loadVendors();
+    setImporting(false);
+    setImportConfirmOpen(false);
+    setImportPreview(null);
+    if (errors.length === 0) {
+      alert(`✅ Import hoàn tất!\n• Thêm mới: ${successCount}\n• Cập nhật: ${updateCount}`);
+    } else {
+      alert(
+        `⚠️ Import xong\n• Thêm: ${successCount} · Cập nhật: ${updateCount} · Lỗi: ${errors.length}\n\n` +
+        errors.slice(0, 8).map((e) => `Dòng ${e.idx}: ${e.message}`).join('\n')
+      );
+    }
   };
 
   const handleImportFile = async (e) => {

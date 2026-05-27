@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vendors', function (Blueprint $table) {
-            $table->dropColumn('vendor_type');
-        });
+        // Giữ cột vendor_type để tương thích luồng import Vendor.
+        // Migration này từng gây lỗi import khi API vẫn validate vendor_type.
+        // Intentionally no-op.
     }
 
     /**
@@ -21,8 +21,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vendors', function (Blueprint $table) {
-            $table->string('vendor_type')->nullable();
-        });
+        // no-op
     }
 };

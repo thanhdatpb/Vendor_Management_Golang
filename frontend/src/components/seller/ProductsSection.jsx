@@ -6,6 +6,7 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
 import { lsGet, fmtDate, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
+import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../utils/productExcel';
 import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field } from './SellerUI';
 import { productApi } from '../../services/api';
 import ProductViewerModal from './ProductViewerModal';
@@ -31,6 +32,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const [previewUrls, setPreviewUrls] = useState([]);
   const [formErrors, setFormErrors] = useState({});
   const processedProductIdRef = useRef(null);
+  const importFileRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
 
   // Thêm link mới
@@ -435,6 +437,72 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     await exportProductsToExcel(filteredProducts, productVendors, `products_${d}.xlsx`);
   };
 
+  const handleDownloadImportTemplate = async () => {
+    await exportProductsImportTemplate();
+    showToast('success', '📄 Đã tải template', 'Bạn có thể điền dữ liệu rồi Import vào hệ thống.');
+  };
+
+  const handleImportProductsFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (importFileRef.current) importFileRef.current.value = '';
+    if (!file) return;
+    if (!['xlsx', 'xls', 'csv'].includes(file.name.split('.').pop().toLowerCase())) {
+      showToast('error', '❌ Sai định dạng', 'Vui lòng chọn file .xlsx/.xls/.csv');
+      return;
+    }
+
+    let rows = [];
+    try {
+      rows = await parseSellerProductsExcel(file);
+    } catch (err) {
+      showToast('error', '❌ Lỗi đọc file', err.message || 'Không thể parse file Excel');
+      return;
+    }
+
+    if (!rows.length) {
+      showToast('warning', '⚠️ Không có dữ liệu', 'Không tìm thấy dòng sản phẩm hợp lệ trong file.');
+      return;
+    }
+
+    setSubmitting(true);
+    let ok = 0;
+    const errors = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const data = new FormData();
+      data.append('product_type', row.product_type || '');
+      if (row.deadline_date) data.append('deadline_date', row.deadline_date);
+      if (row.other_specs) data.append('other_specs', row.other_specs);
+      if (row.material) data.append('material', row.material);
+      if (row.print_area) data.append('print_area', row.print_area);
+      if (row.good_review) data.append('good_review', row.good_review);
+      if (row.bad_review) data.append('bad_review', row.bad_review);
+      if (row.packaging_links) data.append('packaging_links', row.packaging_links);
+      if (row.other_packaging) data.append('other_packaging', row.other_packaging);
+      if (row.product_type_links?.length) data.append('product_type_links', JSON.stringify(row.product_type_links));
+      if (user?.sellerName || user?.seller_name) data.append('seller_name', user.sellerName || user.seller_name);
+
+      try {
+        await productApi.create(data);
+        ok++;
+      } catch (err) {
+        const msg = err.response?.data?.message || err.message || 'Không xác định';
+        errors.push(`Dòng ${i + 1} (${row.product_type || 'N/A'}): ${msg}`);
+      }
+    }
+
+    await loadProducts();
+    setSubmitting(false);
+
+    if (!errors.length) {
+      showToast('success', '✅ Import thành công', `Đã import ${ok}/${rows.length} sản phẩm.`);
+    } else {
+      showToast('warning', '⚠️ Import hoàn tất có lỗi', `Thành công ${ok}/${rows.length}. Kiểm tra alert để xem lỗi.`);
+      alert(`Import có lỗi:\n\n${errors.slice(0, 12).join('\n')}`);
+    }
+  };
+
 
   const filteredProducts = submittedProducts.filter(p => {
     const hay = `${p.product_type || ''} ${p.other_specs || ''}`.toLowerCase();
@@ -459,11 +527,20 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
   return (
     <div>
+      <input
+        ref={importFileRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        style={{ display: 'none' }}
+        onChange={handleImportProductsFile}
+      />
       {toast && (<div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 380 }}><div style={{ background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : toast.type === 'error' ? `linear-gradient(135deg, ${HC.danger}, #b91c1c)` : `linear-gradient(135deg, ${HC.warning}, #d97706)`, color: '#fff', borderRadius: 12, boxShadow: HC.shadowStrong, overflow: 'hidden' }}><div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ fontSize: 24 }}>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : '⚠️'}</span><div><div style={{ fontWeight: 900, fontSize: 13 }}>{toast.title}</div><div style={{ fontSize: 11, opacity: 0.9 }}>{toast.message}</div></div><button onClick={() => setToast(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16 }}>✕</button></div><div style={{ height: 3, background: 'rgba(255,255,255,0.5)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} /></div></div>)}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ fontSize: 16, fontWeight: 900, color: HC.ink }}>Danh Sách Sản Phẩm</h3>
         <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={handleDownloadImportTemplate} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: HC.cream, color: HC.brown, border: `1.5px solid ${HC.border}`, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>📄 Template</button>
+          <button onClick={() => importFileRef.current?.click()} disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: submitting ? HC.muted2 : HC.warning, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer' }}>{submitting ? '⏳ Đang import...' : '📥 Import Excel'}</button>
           <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>⬇ Xuất Excel{hasFilter && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 999, padding: '1px 6px', fontSize: 10 }}>{filteredProducts.length}</span>}</button>
           <button onClick={openCreateModal} style={{ padding: '9px 16px', borderRadius: 11, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>+ Tạo Sản Phẩm Mới</button>
         </div>

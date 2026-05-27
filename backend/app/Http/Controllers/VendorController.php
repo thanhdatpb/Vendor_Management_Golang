@@ -25,7 +25,15 @@ class VendorController extends Controller
             $query->where('vendor_category', $request->vendor_category);
         }
 
-        $vendors = $query->paginate(20);
+        $perPage = (int) $request->input('per_page', 20);
+        if ($perPage < 1) {
+            $perPage = 20;
+        }
+        if ($perPage > 5000) {
+            $perPage = 5000;
+        }
+
+        $vendors = $query->paginate($perPage);
 
         return response()->json([
             "data" => $vendors

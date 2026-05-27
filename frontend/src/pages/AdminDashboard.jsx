@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { productApi } from '../services/api';
-
 import { HC, PAGE_TITLES } from '../components/admin/constants';
 import { normalizeList } from '../components/admin/utils';
 import Sidebar from '../components/admin/Sidebar';
