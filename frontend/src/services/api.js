@@ -190,6 +190,9 @@ export const vendorApi = {
   // ⚠️ Dùng api instance (có token), KHÔNG dùng axios trực tiếp
   compare: (params) => api.get("/vendors/compare", { params }),
 
+  // Bulk import (create/update theo composite key)
+  importBulk: (vendors) => api.post("/vendors/import", { vendors }),
+
   create: (data) => api.post("/vendors", data),
   update: (id, data) => api.put(`/vendors/${id}`, data),
   delete: (id) => api.delete(`/vendors/${id}`),

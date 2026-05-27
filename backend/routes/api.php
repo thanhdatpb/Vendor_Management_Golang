@@ -149,11 +149,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/vendors/compare',  [VendorController::class, 'compare']);
 
-    Route::get('/vendors',          [VendorController::class, 'index']);
-    Route::post('/vendors',         [VendorController::class, 'store']);
-    Route::get('/vendors/{id}',     [VendorController::class, 'show']);
-    Route::put('/vendors/{id}',     [VendorController::class, 'update']);
-    Route::delete('/vendors/{id}',  [VendorController::class, 'destroy']);
+    Route::get('/vendors',             [VendorController::class, 'index']);
+    Route::post('/vendors',            [VendorController::class, 'store']);
+    Route::post('/vendors/import',     [VendorController::class, 'import']); // bulk import
+    Route::get('/vendors/{id}',        [VendorController::class, 'show']);
+    Route::put('/vendors/{id}',        [VendorController::class, 'update']);
+    Route::delete('/vendors/{id}',     [VendorController::class, 'destroy']);
 
 
 

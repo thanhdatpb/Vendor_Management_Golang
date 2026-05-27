@@ -162,8 +162,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const handleConfirmImport = async () => {
     if (!importPreview || importPreview.length === 0) return;
     setImporting(true);
-    let successCount = 0, updateCount = 0;
     const errors = [];
+    const vendors = [];
 
     for (let i = 0; i < importPreview.length; i++) {
       const cleanedData = buildVendorPayload(importPreview[i]);
@@ -181,30 +181,44 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         continue;
       }
 
-      const matched = vendorList.find((v) => vendorMatchesExisting(v, cleanedData));
-      try {
-        if (matched) {
-          await vendorApi.update(matched.id, cleanedData);
-          updateCount++;
-        } else {
-          await vendorApi.create(cleanedData);
-          successCount++;
-        }
-      } catch (err) {
-        errors.push({ idx: i + 1, name: cleanedData.product_type, message: getDetailedError(err) });
-      }
+      vendors.push(cleanedData);
     }
-    await loadVendors();
-    setImporting(false);
-    setImportConfirmOpen(false);
-    setImportPreview(null);
-    if (errors.length === 0) {
-      alert(`✅ Import hoàn tất!\n• Thêm mới: ${successCount}\n• Cập nhật: ${updateCount}`);
-    } else {
-      alert(
-        `⚠️ Import xong\n• Thêm: ${successCount} · Cập nhật: ${updateCount} · Lỗi: ${errors.length}\n\n` +
-        errors.slice(0, 8).map((e) => `Dòng ${e.idx}: ${e.message}`).join('\n')
-      );
+
+    if (vendors.length === 0) {
+      setImporting(false);
+      alert(`⚠️ Không có dòng hợp lệ để import.\n\n${errors.slice(0, 8).map((e) => `Dòng ${e.idx}: ${e.message}`).join('\n')}`);
+      return;
+    }
+
+    try {
+      const res = await vendorApi.importBulk(vendors);
+      const summary = res?.data?.summary || {};
+      const apiErrors = res?.data?.errors || [];
+
+      await loadVendors();
+      setImportConfirmOpen(false);
+      setImportPreview(null);
+
+      const created = summary.created ?? 0;
+      const updated = summary.updated ?? 0;
+      const failed = summary.failed ?? 0;
+
+      if (failed === 0 && errors.length === 0) {
+        alert(`✅ Import hoàn tất!\n• Thêm mới: ${created}\n• Cập nhật: ${updated}`);
+      } else {
+        const mergedErrLines = [
+          ...errors.map((e) => `Dòng ${e.idx}: ${e.message}`),
+          ...apiErrors.slice(0, 12).map((e) => `Dòng ${e.row}: ${e.message}`),
+        ];
+        alert(
+          `⚠️ Import xong\n• Thêm: ${created} · Cập nhật: ${updated} · Lỗi: ${failed + errors.length}\n\n` +
+          mergedErrLines.slice(0, 12).join('\n')
+        );
+      }
+    } catch (err) {
+      alert('Lỗi import (API): ' + getDetailedError(err));
+    } finally {
+      setImporting(false);
     }
   };
 

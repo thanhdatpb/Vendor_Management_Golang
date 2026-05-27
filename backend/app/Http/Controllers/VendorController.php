@@ -43,6 +43,96 @@ class VendorController extends Controller
 
 
     // =========================
+    // BULK IMPORT VENDORS
+    // =========================
+
+    public function import(Request $request)
+    {
+        $data = $request->validate([
+            'vendors'                       => 'required|array|min:1',
+            'vendors.*.product_type'        => 'required|string|max:255',
+            'vendors.*.vendor_type'         => 'required|in:Old,New,Best Seller',
+            'vendors.*.name'                => 'nullable|string|max:255',
+            'vendors.*.size'                => 'nullable|string|max:255',
+            'vendors.*.optional'            => 'nullable|string|max:255',
+            'vendors.*.pricing1'            => 'nullable|numeric|min:0',
+            'vendors.*.pricing2'            => 'nullable|numeric|min:0',
+            'vendors.*.eco_price'           => 'nullable|numeric|min:0',
+            'vendors.*.eco_total'           => 'nullable|numeric|min:0',
+            'vendors.*.fast_price'          => 'nullable|numeric|min:0',
+            'vendors.*.fast_total'          => 'nullable|numeric|min:0',
+            'vendors.*.express_price'       => 'nullable|numeric|min:0',
+            'vendors.*.express_total'       => 'nullable|numeric|min:0',
+            'vendors.*.overnight_price'     => 'nullable|numeric|min:0',
+            'vendors.*.overnight_total'     => 'nullable|numeric|min:0',
+        ]);
+
+        $rows        = $data['vendors'];
+        $created     = 0;
+        $updated     = 0;
+        $failed      = 0;
+        $errorRows   = [];
+
+        foreach ($rows as $index => $row) {
+            $payload = $row;
+
+            if (empty($payload['name'])) {
+                $payload['name'] = $payload['vendor_type'];
+            }
+
+            try {
+                $existing = Vendor::where('product_type', $payload['product_type'])
+                    ->where('vendor_type', $payload['vendor_type'])
+                    ->where(function ($q) use ($payload) {
+                        $size = $payload['size'] ?? null;
+                        $opt  = $payload['optional'] ?? null;
+                        $q->where(function ($qq) use ($size) {
+                            if ($size === null || $size === '') {
+                                $qq->whereNull('size');
+                            } else {
+                                $qq->where('size', $size);
+                            }
+                        })->where(function ($qq) use ($opt) {
+                            if ($opt === null || $opt === '') {
+                                $qq->whereNull('optional');
+                            } else {
+                                $qq->where('optional', $opt);
+                            }
+                        });
+                    })
+                    ->first();
+
+                if ($existing) {
+                    $existing->update($payload);
+                    $updated++;
+                } else {
+                    Vendor::create($payload);
+                    $created++;
+                }
+            } catch (\Throwable $e) {
+                $failed++;
+                $errorRows[] = [
+                    'row'     => $index + 1,
+                    'message' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => $failed === 0,
+            'summary' => [
+                'total'   => count($rows),
+                'created' => $created,
+                'updated' => $updated,
+                'failed'  => $failed,
+            ],
+            'errors'  => $errorRows,
+        ]);
+    }
+
+
+
+    // =========================
     // CREATE VENDOR
     // =========================
 
