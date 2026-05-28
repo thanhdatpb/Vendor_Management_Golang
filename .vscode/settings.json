@@ -1,0 +1,6 @@
+{
+  "files.exclude": {
+    "start-*.bat": true,
+    "start-*.ps1": true
+  }
+}
