@@ -29,7 +29,7 @@ export default function StaffDashboard() {
           if (n.type === 'approved') {
             requests.push({
               id: `api_${n.id}`, type: 'approved', source: 'admin', icon: '✅',
-              title: '✅ Form sản phẩm đã được duyệt',
+              title: 'Form sản phẩm đã được duyệt',
               message: `Form sản phẩm "${n.product_type || ''}" của Seller "${n.seller_name || 'Seller'}" đã được Admin duyệt.`,
               time: new Date(n.created_at).toLocaleString('vi-VN'), read: n.is_read || false,
               productId: n.product_id, productType: n.product_type, sellerName: n.seller_name, timestamp: n.created_at
@@ -45,7 +45,7 @@ export default function StaffDashboard() {
           const isApproved = n.type === 'sample_approved';
           requests.push({
             id: `staffa_${n.id}`, type: n.type, source: 'staffA', icon: isApproved ? '✅' : '❌',
-            title: isApproved ? '✅ Seller đồng ý đặt Sample' : '❌ Seller từ chối đặt Sample',
+            title: isApproved ? 'Seller đồng ý đặt Sample' : 'Seller từ chối đặt Sample',
             message: n.message || '', time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'),
             read: n.read || false, productId: n.productId, productType: n.productType, vendorType: n.vendorType, sellerName: n.sellerName, sampleDetails: n.sampleDetails, timestamp: n.timestamp || Date.now()
           });
@@ -59,7 +59,7 @@ export default function StaffDashboard() {
         if (n.type === 'staff_a_approved_vendor') {
           requests.push({
             id: `staffb_${n.id}`, type: 'staff_a_approved_vendor', source: 'staffA', icon: n.icon || '✅',
-            title: n.title || '✅ Staff A đã xác nhận vendor', message: n.message || '',
+            title: n.title || 'Staff A đã xác nhận vendor', message: n.message || '',
             time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'), read: n.is_read || false,
             productId: n.productId, productType: n.productName || n.productType, vendorType: n.vendorType, sellerFeedback: n.sellerFeedback, timestamp: n.timestamp || n.id
           });
@@ -79,7 +79,7 @@ export default function StaffDashboard() {
       newsNotifs.forEach(n => {
         news.push({
           id: `news_${n.id}`, type: 'news', icon: n.icon || '📰',
-          title: n.title || '📰 Tin tức mới', message: n.message || '',
+          title: n.title || 'Tin tức mới', message: n.message || '',
           time: n.time || new Date(n.created_at || Date.now()).toLocaleString('vi-VN'), read: n.read || false, timestamp: n.created_at || Date.now()
         });
       });

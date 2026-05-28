@@ -330,7 +330,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
             </Field>
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button onClick={handleSetDeadline} disabled={settingDeadline} style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: settingDeadline ? HC.muted2 : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 13, fontWeight: 800, cursor: settingDeadline ? 'not-allowed' : 'pointer' }}>
-                {settingDeadline ? '⟳ Đang xử lý...' : '✅ Lưu Deadline'}
+                {settingDeadline ? '⟳ Đang xử lý...' : 'Lưu Deadline'}
               </button>
               <button onClick={() => { setDeadlineModalOpen(false); setDeadlineProduct(null); setDeadlineDate(''); }} style={{ padding: '10px 18px', borderRadius: 10, background: HC.cream, color: HC.brown, border: `1.5px solid ${HC.border}`, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 Hủy

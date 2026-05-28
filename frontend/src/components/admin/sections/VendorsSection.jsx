@@ -15,6 +15,7 @@ export default function VendorsSection() {
     vendor_type: ''
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const uniqueProductTypes = useRef([]);
   const uniqueVendorTypes = useRef([]);
@@ -183,20 +184,29 @@ export default function VendorsSection() {
           </button>
 
           <button
-            onClick={loadVendors}
+            onClick={async () => {
+              if (isRefreshing) return;
+              setIsRefreshing(true);
+              try { await loadVendors(); } finally { setIsRefreshing(false); }
+            }}
+            disabled={isRefreshing}
             style={{
               padding: '8px 14px',
               borderRadius: 10,
-              background: HC.cream,
-              border: `1.5px solid ${HC.border}`,
-              cursor: 'pointer',
+              background: isRefreshing ? HC.orangeLight : HC.cream,
+              border: `1.5px solid ${isRefreshing ? HC.orangeMid : HC.border}`,
+              cursor: isRefreshing ? 'not-allowed' : 'pointer',
               fontSize: 12,
               fontWeight: 700,
-              color: HC.brown,
+              color: isRefreshing ? HC.orangeDark : HC.brown,
               fontFamily: "'Nunito',sans-serif",
+              display: 'flex', alignItems: 'center', gap: 5,
+              transition: 'all 0.2s',
+              opacity: isRefreshing ? 0.85 : 1,
             }}
           >
-            ↻ Làm mới
+            <span style={{ display: 'inline-block', animation: isRefreshing ? 'spin360 0.7s linear infinite' : 'none' }}>↻</span>
+            {isRefreshing ? 'Đang tải...' : 'Làm mới'}
           </button>
 
           {(searchTerm || filters.product_type || filters.vendor_type) && (
@@ -358,7 +368,7 @@ export default function VendorsSection() {
                       ) : (
                         v.vendor_type || '—'
                       )}
-                    </td>                    {/* 🆕 Cột Pricing gộp */}
+                    </td>
                     <td style={{ ...C(), fontWeight: 800, color: HC.success, fontSize: 13, background: i % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
                       ${totalPricing.toFixed(2)}
                     </td>
@@ -379,6 +389,12 @@ export default function VendorsSection() {
           </table>
         </div>
       )}
+      <style>{`
+        @keyframes spin360 {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useTransition } from 'react';
 import { HC, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
 import { playNotificationBeep } from '../audio';
@@ -15,6 +15,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
   const [rejectModal, setRejectModal] = useState({ open: false, productId: null, reason: '' });
   const pendingCountRef = useRef(0);
   const [toast, setToast] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState(null);
   const [sellerNamesMap, setSellerNamesMap] = useState({});
   const [loadingProductId, setLoadingProductId] = useState(null);
@@ -96,7 +97,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
       id: `form_${product.id}_${Date.now()}`,
       type: 'new_form',
       icon: '📋',
-      title: `📋 Yêu cầu duyệt sản phẩm mới`,
+      title: `Yêu cầu duyệt sản phẩm mới`,
       message: `Seller "${sellerName}" thuộc Project "${projectName}" vừa gửi form request mới.`,  // ✅ Đã sửa
       product_id: product.id,
       product_type: product.product_type,
@@ -108,7 +109,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
   }, [getSellerName]);
 
   const loadPending = useCallback(() => {
-    productApi.pendingApprovals()
+    return productApi.pendingApprovals()
       .then(r => {
         const newPending = normalizeList(r).map(normalizeProduct);
         const oldCount = pendingCountRef.current;
@@ -152,7 +153,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
             const projectNames = [...new Set(newestProducts.map(p => p.project || 'Không xác định'))];
             setToast({
               type: 'new_form',
-              title: '📋 Form mới từ Seller!',
+              title: 'Form mới từ Seller!',
               message: `${newCount} form mới từ Project: ${projectNames.join(', ')}`,
               duration: 5000
             });
@@ -203,7 +204,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
         const newNotif = {
           id: Date.now(),
           type: 'product_approved',
-          title: '✅ Sản phẩm đã được duyệt',
+          title: 'Sản phẩm đã được duyệt',
           message: `Sản phẩm "${product.product_type}" của Seller "${getSellerName(product)}" đã được Admin duyệt. Hãy vào "Products" để gán Vendor.`,
           productId: product.id,
           productType: product.product_type,
@@ -231,7 +232,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
 
       setToast({
         type: 'success',
-        title: '✅ Duyệt thành công!',
+        title: 'Duyệt thành công!',
         message: `Sản phẩm "${product.product_type}" đã được duyệt`,
         duration: 3000
       });
@@ -239,7 +240,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
       console.error('Lỗi duyệt:', err);
       setToast({
         type: 'error',
-        title: '❌ Lỗi duyệt!',
+        title: 'Lỗi duyệt!',
         message: err.response?.data?.message || 'Không thể duyệt sản phẩm',
         duration: 4000
       });
@@ -252,7 +253,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
     if (!rejectModal.reason.trim()) {
       setToast({
         type: 'warning',
-        title: '⚠️ Thiếu lý do!',
+        title: 'Thiếu lý do!',
         message: 'Vui lòng nhập lý do từ chối',
         duration: 3000
       });
@@ -292,7 +293,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
 
       setToast({
         type: 'warning',
-        title: '⚠️ Đã từ chối!',
+        title: 'Đã từ chối!',
         message: `Sản phẩm "${product.product_type}" đã bị từ chối`,
         duration: 5000
       });
@@ -302,7 +303,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
       console.error('Lỗi từ chối:', err);
       setToast({
         type: 'error',
-        title: '❌ Lỗi từ chối!',
+        title: 'Lỗi từ chối!',
         message: err.response?.data?.message || 'Không thể từ chối sản phẩm',
         duration: 4000
       });
@@ -351,10 +352,27 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
   const h3S = { fontSize: 15, fontWeight: 900, color: HC.ink, margin: 0, fontFamily: "'Nunito',sans-serif" };
   const refreshBtn = fn => (
     <button
-      onClick={fn}
-      style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: 8, border: `1.5px solid ${HC.border}`, background: HC.cream, color: HC.brown, fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito',sans-serif", transition: 'all 0.15s' }}
+      onClick={async () => {
+        if (isRefreshing) return;
+        setIsRefreshing(true);
+        try { await fn(); } finally { setIsRefreshing(false); }
+      }}
+      disabled={isRefreshing}
+      style={{
+        marginLeft: 'auto', padding: '5px 14px', borderRadius: 8,
+        border: `1.5px solid ${isRefreshing ? HC.orangeMid : HC.border}`,
+        background: isRefreshing ? HC.orangeLight : HC.cream,
+        color: isRefreshing ? HC.orangeDark : HC.brown,
+        fontSize: 11, fontWeight: 800,
+        cursor: isRefreshing ? 'not-allowed' : 'pointer',
+        fontFamily: "'Nunito',sans-serif",
+        transition: 'all 0.2s',
+        opacity: isRefreshing ? 0.85 : 1,
+        display: 'flex', alignItems: 'center', gap: 5,
+      }}
     >
-      ↻ Làm mới
+      <span style={{ display: 'inline-block', animation: isRefreshing ? 'spin360 0.7s linear infinite' : 'none' }}>↻</span>
+      {isRefreshing ? 'Đang tải...' : 'Làm mới'}
     </button>
   );
 
@@ -382,7 +400,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
               {pendingProducts.length} form chờ xử lý
             </span>
           )}
-          {refreshBtn(() => { loadPending(); loadAllProducts(); })}
+          {refreshBtn(async () => { await Promise.all([loadPending(), loadAllProducts()]); })}
         </div>
 
         {pendingProducts.length === 0 ? (
@@ -467,7 +485,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
               </span>
             </div>
           </div>
-          {refreshBtn(() => loadAllProducts())}
+          {refreshBtn(async () => { await loadAllProducts(); })}
         </div>
 
         {(() => {
@@ -590,6 +608,10 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
         @keyframes progressBar {
           from { width: 100%; }
           to { width: 0%; }
+        }
+        @keyframes spin360 {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

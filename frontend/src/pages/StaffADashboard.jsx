@@ -48,7 +48,7 @@ export default function SellerDashboard() {
               type: n.type,
               source: 'admin',
               icon: n.type === 'approved' ? '✅' : '❌',
-              title: n.type === 'approved' ? '✅ Sản phẩm được duyệt' : '❌ Sản phẩm bị từ chối',
+              title: n.type === 'approved' ? 'Sản phẩm được duyệt' : 'Sản phẩm bị từ chối',
               message: n.type === 'approved'
                 ? `Sản phẩm "${productName}" đã được Admin duyệt`
                 : `Sản phẩm "${productName}" đã bị Admin từ chối. Lý do: ${n.reason || 'Không có lý do'}`,
@@ -79,7 +79,7 @@ export default function SellerDashboard() {
         if (n.type === 'vendor_assigned' || n.type === 'seller_feedback') {
           const productName = n.productName || n.product_type || n.productType || 'Sản phẩm';
           const icon = n.type === 'vendor_assigned' ? '🏪' : '💬';
-          const title = n.type === 'vendor_assigned' ? '🏪 Vendor đã được gán' : '💬 Phản hồi từ Staff B';
+          const title = n.type === 'vendor_assigned' ? 'Vendor đã được gán' : 'Phản hồi từ Staff B';
           const exists = requests.some(ex => ex.id === `staffb_${n.id}`);
           if (!exists) {
             requests.push({
@@ -102,7 +102,7 @@ export default function SellerDashboard() {
         if (n.type === 'feedback_from_b') {
           requests.push({
             id: `staffa_${n.id}`, type: 'feedback_from_b', source: 'staffb',
-            icon: n.icon || '💬', title: n.title || '💬 Staff B đã gửi phản hồi',
+            icon: n.icon || '💬', title: n.title || 'Staff B đã gửi phản hồi',
             message: n.message || '',
             time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'),
             read: n.is_read || false, productId: n.productId,
@@ -131,7 +131,7 @@ export default function SellerDashboard() {
       staffBNotifs.filter(n => n.type === 'news').forEach(n => {
         news.push({
           id: `news_${n.id}`, type: 'news', icon: n.icon || '📰',
-          title: n.title || '📰 Tin tức mới', message: n.message || '',
+          title: n.title || 'Tin tức mới', message: n.message || '',
           time: n.time || new Date(n.created_at || Date.now()).toLocaleString('vi-VN'),
           read: n.is_read || false, timestamp: n.created_at || Date.now(), source: 'staff_b',
         });
@@ -144,7 +144,7 @@ export default function SellerDashboard() {
         if (!news.some(ex => ex.id === n.id)) {
           news.push({
             id: n.id, type: 'news', icon: n.icon || '📰',
-            title: n.title || '📰 Tin tức mới', message: n.message || '',
+            title: n.title || 'Tin tức mới', message: n.message || '',
             time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'),
             read: n.read || false, timestamp: n.timestamp || Date.now(), source: 'staff_b',
           });

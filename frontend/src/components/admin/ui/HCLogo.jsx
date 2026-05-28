@@ -1,10 +1,12 @@
 import React from 'react';
+import logoImg from '../../../assets/logo.png';
 
-export default function HCLogo({ size = 32, color = '#F5A623' }) {
+export default function HCLogo({ size = 32 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 200 200" fill="none">
-      <path d="M168 44 A88 88 0 1 0 168 156" stroke={color} strokeWidth="20" strokeLinecap="round" fill="none" />
-      <path d="M118 128 Q130 142 145 132" stroke={color} strokeWidth="18" strokeLinecap="round" fill="none" />
-    </svg>
+    <img
+      src={logoImg}
+      alt="Happy Creative Logo"
+      style={{ width: size, height: size, objectFit: 'contain', display: 'block' }}
+    />
   );
 }
