@@ -490,7 +490,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
               <thead>
                 <tr>
-                  <th style={{ ...TH2({ minWidth: 44, width: 44 }), cursor: 'pointer', textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }} onClick={toggleAll}>
+                  <th rowSpan={2} style={{ ...TH2({ minWidth: 44, width: 44 }), cursor: 'pointer', textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }} onClick={toggleAll}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
                       <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${pageAllSelected ? '#fff' : 'rgba(255,255,255,0.5)'}`, background: pageAllSelected ? '#fff' : pageSomeSelected ? 'rgba(255,255,255,0.4)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}>
                         {pageAllSelected && <span style={{ color: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
@@ -511,7 +511,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                   <th rowSpan={2} style={{ ...TH2(), background: activeTab === 'bestseller' ? '#8B6914' : HC.orangeDeep, minWidth: 90 }}>Thao tác</th>
                 </tr>
                 <tr>
-                  <th style={{ ...TH2({ background: 'transparent', border: 'none' }), height: 0, padding: 0 }} />
                   <th style={TH2({ minWidth: 80 })}>Size</th>
                   <th style={TH2({ minWidth: 90 })}>Optional</th>
                   {['Economy', 'Fast', 'Express', 'Overnight'].map(s => [
