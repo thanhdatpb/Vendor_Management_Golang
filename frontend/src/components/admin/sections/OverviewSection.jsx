@@ -7,23 +7,23 @@ import { Spinner } from '../ui';
 import FormHistoryModal from '../modals/FormHistoryModal';
 
 // ── Mini donut / ring progress ─────────────────────────────
-function RingProgress({ percent, color, size = 56 }) {
-  const r = (size - 8) / 2;
+function RingProgress({ percent, color, size = 46 }) {
+  const r = (size - 6) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (percent / 100) * circ;
   return (
     <svg width={size} height={size} style={{ flexShrink: 0 }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F0E4CC" strokeWidth={6} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F0E4CC" strokeWidth={4} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke={color} strokeWidth={6}
+        stroke={color} strokeWidth={4}
         strokeDasharray={`${dash} ${circ}`}
         strokeLinecap="round"
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: 'stroke-dasharray 0.6s ease' }}
       />
       <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle"
-        style={{ fontSize: 11, fontWeight: 800, fill: color, fontFamily: "'Nunito',sans-serif" }}>
+        style={{ fontSize: 11, fontWeight: 800, fill: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>
         {percent}%
       </text>
     </svg>
@@ -31,7 +31,7 @@ function RingProgress({ percent, color, size = 56 }) {
 }
 
 // ── Stat Card ──────────────────────────────────────────────
-function StatCard({ label, value, icon, color, gradient, onClick, subLabel }) {
+function StatCard({ label, value, icon, color, onClick, subLabel }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -39,28 +39,24 @@ function StatCard({ label, value, icon, color, gradient, onClick, subLabel }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? gradient : '#fff',
-        borderRadius: 18,
-        border: `1.5px solid ${hovered ? color + '55' : '#F0E4CC'}`,
-        boxShadow: hovered ? `0 12px 40px ${color}25` : '0 2px 12px rgba(0,0,0,0.05)',
-        padding: '20px 22px',
+        background: '#fff',
+        borderRadius: 16,
+        border: `1.5px solid ${hovered ? color : '#F0E4CC'}`,
+        boxShadow: hovered ? `0 8px 24px ${color}15` : '0 2px 8px rgba(0,0,0,0.02)',
+        padding: '20px',
         cursor: 'pointer',
-        transition: 'all 0.22s ease',
-        transform: hovered ? 'translateY(-3px)' : 'none',
-        position: 'relative',
-        overflow: 'hidden',
+        transition: 'all 0.2s ease',
+        transform: hovered ? 'translateY(-2px)' : 'none',
       }}
     >
-      <div style={{ position: 'absolute', top: -18, right: -18, width: 80, height: 80, borderRadius: '50%', background: color + '18', pointerEvents: 'none' }} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#B8956A', fontFamily: "'Nunito',sans-serif", marginBottom: 8 }}>{label}</div>
-          <div style={{ fontSize: 32, fontWeight: 900, color, fontFamily: "'Nunito',sans-serif", lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</div>
-          {subLabel && <div style={{ fontSize: 11, color: '#B8956A', marginTop: 6, fontWeight: 600 }}>{subLabel}</div>}
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#9C7A50', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontFamily: "'Nunito',sans-serif" }}>{label}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", lineHeight: 1 }}>{value}</div>
+          {subLabel && <div style={{ fontSize: 11, color: '#B8956A', marginTop: 8, fontWeight: 600 }}>{subLabel}</div>}
         </div>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: color + '18', border: `1.5px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{icon}</div>
+        <div style={{ width: 42, height: 42, borderRadius: 12, background: color + '15', color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{icon}</div>
       </div>
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${color}, ${color}55)`, borderRadius: '0 0 18px 18px', opacity: hovered ? 1 : 0.4, transition: 'opacity 0.22s' }} />
     </div>
   );
 }
@@ -96,32 +92,30 @@ function DeadlinePanel({ products, onViewAll }) {
   };
 
   return (
-    <div style={{ background: '#fff', borderRadius: 18, border: '1.5px solid #F0E4CC', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{ padding: '14px 18px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: urgentForms.length > 0 ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
+    <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #F0E4CC', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: urgentForms.length > 0 ? '#fffbeb' : '#ecfdf5', color: urgentForms.length > 0 ? '#f59e0b' : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
             {urgentForms.length > 0 ? '⚠️' : '✅'}
           </div>
           <div>
-            <div style={{ fontWeight: 900, fontSize: 13, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Deadline Sắp Đến</div>
-            <div style={{ fontSize: 10, color: '#B8956A', fontWeight: 600 }}>Form pending trong 7 ngày tới</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Deadline Sắp Đến</div>
+            <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>Form pending trong 7 ngày tới</div>
           </div>
         </div>
         {urgentForms.length > 0 && (
-          <span style={{ padding: '3px 10px', borderRadius: 20, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#991b1b', fontSize: 11, fontWeight: 800 }}>
+          <span style={{ padding: '4px 12px', borderRadius: 20, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#991b1b', fontSize: 11, fontWeight: 800 }}>
             {urgentForms.length} form
           </span>
         )}
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, padding: urgentForms.length === 0 ? '0' : '4px 0' }}>
+      <div style={{ flex: 1, padding: urgentForms.length === 0 ? '0' : '8px 0' }}>
         {urgentForms.length === 0 ? (
-          <div style={{ padding: '32px 18px', textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🎉</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#16a34a', fontFamily: "'Nunito',sans-serif" }}>Không có form nào sắp hết hạn</div>
-            <div style={{ fontSize: 11, color: '#B8956A', marginTop: 4 }}>Tất cả deadline đều ổn</div>
+          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🎉</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#10B981', fontFamily: "'Nunito',sans-serif" }}>Không có form nào sắp hết hạn</div>
+            <div style={{ fontSize: 12, color: '#9C7A50', marginTop: 4 }}>Tất cả deadline đều ổn</div>
           </div>
         ) : (
           urgentForms.map((p, i) => {
@@ -131,20 +125,20 @@ function DeadlinePanel({ products, onViewAll }) {
               <div
                 key={p.id || i}
                 onClick={onViewAll}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', cursor: 'pointer', borderBottom: i < urgentForms.length - 1 ? '1px solid #FBF3E4' : 'none', transition: 'background 0.15s' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', cursor: 'pointer', borderBottom: i < urgentForms.length - 1 ? '1px solid #FBF3E4' : 'none', transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#FFFBF4'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <div style={{ width: 9, height: 9, borderRadius: '50%', background: urg.dot, flexShrink: 0, boxShadow: `0 0 0 3px ${urg.dot}30` }} />
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: urg.dot, flexShrink: 0, boxShadow: `0 0 0 3px ${urg.dot}20` }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#3D2B0F', fontFamily: "'Nunito Sans',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1A0F00', fontFamily: "'Nunito Sans',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {p.product_type || p.name || 'Sản phẩm'}
                   </div>
-                  <div style={{ fontSize: 10, color: '#B8956A', fontWeight: 600, marginTop: 1 }}>
+                  <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>
                     {seller} · {p.project || '—'}
                   </div>
                 </div>
-                <span style={{ padding: '3px 8px', borderRadius: 8, background: urg.bg, color: urg.text, fontSize: 10, fontWeight: 800, fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <span style={{ padding: '4px 10px', borderRadius: 8, background: urg.bg, color: urg.text, fontSize: 11, fontWeight: 800, fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {urg.label}
                 </span>
               </div>
@@ -158,7 +152,6 @@ function DeadlinePanel({ products, onViewAll }) {
 
 // ── Product Type Distribution Panel ────────────────────────
 function ProductTypePanel({ products, onViewAll }) {
-  // Group by product_type, count total & approved
   const typeMap = {};
   products.forEach(p => {
     const type = p.product_type || p.category || p.name || 'Khác';
@@ -172,31 +165,28 @@ function ProductTypePanel({ products, onViewAll }) {
     .slice(0, 6);
 
   const maxTotal = types.length > 0 ? types[0][1].total : 1;
-
-  const barColors = ['#F5A623', '#3B82F6', '#10B981', '#A855F7', '#EF4444', '#F59E0B'];
+  const barColors = ['#F5A623', '#4B5563', '#8B5CF6', '#10B981', '#F43F5E', '#0EA5E9'];
 
   return (
-    <div style={{ background: '#fff', borderRadius: 18, border: '1.5px solid #F0E4CC', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{ padding: '14px 18px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg,#F5A623,#E09415)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📦</div>
+    <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #F0E4CC', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FFF8EE', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📦</div>
           <div>
-            <div style={{ fontWeight: 900, fontSize: 13, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Phân Bố Product Type</div>
-            <div style={{ fontSize: 10, color: '#B8956A', fontWeight: 600 }}>Loại sản phẩm được submit nhiều nhất</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Phân Bố Product Type</div>
+            <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>Loại sản phẩm được submit nhiều nhất</div>
           </div>
         </div>
-        <span style={{ padding: '3px 10px', borderRadius: 20, background: '#FEF3DC', border: '1.5px solid #FDE8B8', color: '#92400E', fontSize: 11, fontWeight: 800 }}>
+        <span style={{ padding: '4px 12px', borderRadius: 20, background: '#F8F9FA', border: '1.5px solid #E5E7EB', color: '#4B5563', fontSize: 11, fontWeight: 800 }}>
           {types.length} loại
         </span>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, padding: types.length === 0 ? '0' : '14px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: 1, padding: types.length === 0 ? '0' : '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {types.length === 0 ? (
-          <div style={{ padding: '32px 18px', textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#B8956A' }}>Chưa có dữ liệu sản phẩm</div>
+          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📭</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#9C7A50' }}>Chưa có dữ liệu sản phẩm</div>
           </div>
         ) : (
           types.map(([type, counts], i) => {
@@ -211,25 +201,23 @@ function ProductTypePanel({ products, onViewAll }) {
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#3D2B0F', fontFamily: "'Nunito Sans',sans-serif" }}>{type}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1A0F00', fontFamily: "'Nunito Sans',sans-serif" }}>{type}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, color: '#B8956A', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600 }}>
                       ✅ {counts.approved}/{counts.total}
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 900, color, fontFamily: "'Nunito',sans-serif", minWidth: 20, textAlign: 'right' }}>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", minWidth: 24, textAlign: 'right' }}>
                       {counts.total}
                     </span>
                   </div>
                 </div>
-                {/* Background bar (total) */}
-                <div style={{ height: 8, background: '#F0E4CC', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${barW}%`, background: color + '40', borderRadius: 4, transition: 'width 0.6s ease' }} />
-                  {/* Foreground bar (approved) */}
-                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${(approvedW / 100) * barW}%`, background: color, borderRadius: 4, transition: 'width 0.7s ease' }} />
+                <div style={{ height: 6, background: '#F3F4F6', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${barW}%`, background: color + '30', borderRadius: 3, transition: 'width 0.6s ease' }} />
+                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${(approvedW / 100) * barW}%`, background: color, borderRadius: 3, transition: 'width 0.7s ease' }} />
                 </div>
               </div>
             );
@@ -240,16 +228,17 @@ function ProductTypePanel({ products, onViewAll }) {
   );
 }
 
+// ── Project Card ───────────────────────────────────────────
 const PROJECT_META = {
-  'Creative Project': { icon: '🎨', gradient: 'linear-gradient(135deg,#FEF3DC,#FFFBEB)', border: '#F59E0B', color: '#92400E', dot: '#F59E0B' },
-  'Happy Project':    { icon: '😊', gradient: 'linear-gradient(135deg,#ECFDF5,#F0FDF4)', border: '#10B981', color: '#065F46', dot: '#10B981' },
-  'Global Project':   { icon: '🌏', gradient: 'linear-gradient(135deg,#EFF6FF,#F8FAFC)', border: '#3B82F6', color: '#1E40AF', dot: '#3B82F6' },
-  'Pilot Project':    { icon: '🚀', gradient: 'linear-gradient(135deg,#F3E8FF,#FAF5FF)', border: '#A855F7', color: '#6B21A5', dot: '#A855F7' },
+  'Creative Project': { icon: '🎨', color: '#F5A623' },
+  'Happy Project':    { icon: '😊', color: '#10B981' },
+  'Global Project':   { icon: '🌏', color: '#3B82F6' },
+  'Pilot Project':    { icon: '🚀', color: '#A855F7' },
 };
 
 function ProjectCard({ project, stats, onClick }) {
   const [hovered, setHovered] = useState(false);
-  const meta = PROJECT_META[project] || { icon: '📁', gradient: '#fff', border: '#F0E4CC', color: '#3D2B0F', dot: '#F5A623' };
+  const meta = PROJECT_META[project] || { icon: '📁', color: '#6B7280' };
   const approvalRate = stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0;
   const pending = stats.total - stats.approved - stats.rejected;
 
@@ -259,60 +248,60 @@ function ProjectCard({ project, stats, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: hovered ? meta.gradient : '#fff',
-        borderRadius: 18,
-        border: `1.5px solid ${hovered ? meta.border : '#F0E4CC'}`,
-        boxShadow: hovered ? `0 12px 40px ${meta.dot}25` : '0 2px 12px rgba(0,0,0,0.05)',
+        background: '#fff',
+        borderRadius: 16,
+        border: `1.5px solid ${hovered ? meta.color : '#F0E4CC'}`,
+        boxShadow: hovered ? `0 8px 24px ${meta.color}15` : '0 2px 8px rgba(0,0,0,0.02)',
         overflow: 'hidden', cursor: 'pointer',
-        transition: 'all 0.22s ease',
-        transform: hovered ? 'translateY(-3px)' : 'none',
+        transition: 'all 0.2s ease',
+        transform: hovered ? 'translateY(-2px)' : 'none',
       }}
     >
-      <div style={{ padding: '14px 18px 12px', borderBottom: `1.5px solid ${hovered ? meta.border + '55' : '#F0E4CC'}`, display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.22s' }}>
-        <span style={{ width: 34, height: 34, borderRadius: 10, background: meta.dot + '20', border: `1.5px solid ${meta.dot}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{meta.icon}</span>
+      <div style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.2s' }}>
+        <span style={{ width: 38, height: 38, borderRadius: 10, background: '#F8F9FA', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{meta.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 900, fontSize: 13, color: meta.color, fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
-          <div style={{ fontSize: 10, color: '#B8956A', fontWeight: 600, marginTop: 1 }}>{stats.total} form tổng cộng</div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
+          <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>{stats.total} form tổng cộng</div>
         </div>
-        <RingProgress percent={approvalRate} color={meta.dot} size={50} />
+        <RingProgress percent={approvalRate} color={meta.color} size={46} />
       </div>
-      <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a' }}>Đã duyệt</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Đã duyệt</span>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 900, color: '#16a34a', fontFamily: "'Nunito',sans-serif" }}>{stats.approved}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{stats.approved}</span>
           </div>
-          <div style={{ height: 5, background: '#F0E4CC', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg,#16a34a,#4ade80)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+          <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%`, height: '100%', background: '#10B981', borderRadius: 2, transition: 'width 0.6s ease' }} />
           </div>
         </div>
         {pending > 0 && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#92400e' }}>Chờ duyệt</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Chờ duyệt</span>
               </div>
-              <span style={{ fontSize: 14, fontWeight: 900, color: '#92400e', fontFamily: "'Nunito',sans-serif" }}>{pending}</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{pending}</span>
             </div>
-            <div style={{ height: 5, background: '#F0E4CC', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: `${stats.total > 0 ? (pending / stats.total) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg,#f59e0b,#fcd34d)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+            <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ width: `${stats.total > 0 ? (pending / stats.total) * 100 : 0}%`, height: '100%', background: '#F59E0B', borderRadius: 2, transition: 'width 0.6s ease' }} />
             </div>
           </div>
         )}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#dc2626' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#991b1b' }}>Từ chối</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Từ chối</span>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 900, color: '#991b1b', fontFamily: "'Nunito',sans-serif" }}>{stats.rejected}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{stats.rejected}</span>
           </div>
-          <div style={{ height: 5, background: '#F0E4CC', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ width: `${stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0}%`, height: '100%', background: 'linear-gradient(90deg,#dc2626,#f87171)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+          <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: `${stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0}%`, height: '100%', background: '#EF4444', borderRadius: 2, transition: 'width 0.6s ease' }} />
           </div>
         </div>
       </div>
@@ -425,12 +414,12 @@ export default function OverviewSection() {
       `}</style>
 
       {/* ── Section header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, animation: 'fadeUp 0.4s ease' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#F5A623,#E09415)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, boxShadow: '0 4px 12px rgba(245,166,35,0.3)' }}>📊</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, animation: 'fadeUp 0.4s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF8EE', border: '1.5px solid #FDE8B8', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📊</div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Tổng Quan</div>
-            <div style={{ fontSize: 11, color: '#B8956A', fontWeight: 600, marginTop: 1 }}>Cập nhật mỗi 30 giây · {formStats.total} form tổng cộng</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Tổng Quan</div>
+            <div style={{ fontSize: 12, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>Cập nhật mỗi 30 giây · {formStats.total} form tổng cộng</div>
           </div>
         </div>
         <div style={{ padding: '6px 16px', borderRadius: 20, background: overallRate >= 70 ? '#ecfdf5' : overallRate >= 40 ? '#fffbeb' : '#fef2f2', border: `1.5px solid ${overallRate >= 70 ? '#bbf7d0' : overallRate >= 40 ? '#fde68a' : '#fecaca'}`, color: overallRate >= 70 ? '#166534' : overallRate >= 40 ? '#92400e' : '#991b1b', fontSize: 12, fontWeight: 800, fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -440,35 +429,35 @@ export default function OverviewSection() {
       </div>
 
       {/* ── Stat Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 28, animation: 'fadeUp 0.45s ease' }}>
-        <StatCard label="Tổng Form Request" value={formStats.total} icon="📁" color="#F5A623" gradient="linear-gradient(135deg,#FEF3DC,#FFFBF4)" subLabel="Tất cả trạng thái" onClick={() => handleCardClick('status', 'all', 'Tất cả Form Request')} />
-        <StatCard label="Chờ Duyệt" value={formStats.pending} icon="⏳" color="#f59e0b" gradient="linear-gradient(135deg,#fffbeb,#fef3c7)" subLabel={formStats.pending > 0 ? 'Cần xử lý ngay' : 'Không có form chờ'} onClick={() => handleCardClick('status', 'pending', 'Form Chờ Duyệt')} />
-        <StatCard label="Đã Duyệt" value={formStats.approved} icon="✅" color="#16a34a" gradient="linear-gradient(135deg,#ecfdf5,#f0fdf4)" subLabel={`${overallRate}% tỷ lệ duyệt`} onClick={() => handleCardClick('status', 'approved', 'Form Đã Duyệt')} />
-        <StatCard label="Từ Chối" value={formStats.rejected} icon="❌" color="#dc2626" gradient="linear-gradient(135deg,#fef2f2,#fff1f1)" subLabel={formStats.rejected > 0 ? `${Math.round((formStats.rejected / (formStats.total || 1)) * 100)}% tổng form` : 'Không có từ chối'} onClick={() => handleCardClick('status', 'rejected', 'Form Từ Chối')} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32, animation: 'fadeUp 0.45s ease' }}>
+        <StatCard label="Tổng Form Request" value={formStats.total} icon="📁" color="#F5A623" subLabel="Tất cả trạng thái" onClick={() => handleCardClick('status', 'all', 'Tất cả Form Request')} />
+        <StatCard label="Chờ Duyệt" value={formStats.pending} icon="⏳" color="#F59E0B" subLabel={formStats.pending > 0 ? 'Cần xử lý ngay' : 'Không có form chờ'} onClick={() => handleCardClick('status', 'pending', 'Form Chờ Duyệt')} />
+        <StatCard label="Đã Duyệt" value={formStats.approved} icon="✅" color="#10B981" subLabel={`${overallRate}% tỷ lệ duyệt`} onClick={() => handleCardClick('status', 'approved', 'Form Đã Duyệt')} />
+        <StatCard label="Từ Chối" value={formStats.rejected} icon="❌" color="#EF4444" subLabel={formStats.rejected > 0 ? `${Math.round((formStats.rejected / (formStats.total || 1)) * 100)}% tổng form` : 'Không có từ chối'} onClick={() => handleCardClick('status', 'rejected', 'Form Từ Chối')} />
       </div>
 
       {/* ── Project section header + filter ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, animation: 'fadeUp 0.5s ease', flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>🎯</span>
-          <span style={{ fontSize: 14, fontWeight: 900, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Theo Project</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, animation: 'fadeUp 0.5s ease', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F8F9FA', border: '1.5px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🎯</div>
+          <span style={{ fontSize: 15, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Theo Project</span>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
             { id: 'all',       label: 'Tất cả' },
             { id: 'active',    label: '🔥 Có hoạt động' },
             { id: 'pending',   label: '⏳ Còn chờ' },
             { id: 'completed', label: '✅ Hoàn tất' },
           ].map(f => (
-            <button key={f.id} onClick={() => setActiveFilter(f.id)} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${activeFilter === f.id ? '#F5A623' : '#F0E4CC'}`, background: activeFilter === f.id ? 'linear-gradient(135deg,#F5A623,#E09415)' : '#fff', color: activeFilter === f.id ? '#fff' : '#7A5C32', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito',sans-serif", transition: 'all 0.18s' }}>{f.label}</button>
+            <button key={f.id} onClick={() => setActiveFilter(f.id)} style={{ padding: '6px 16px', borderRadius: 20, border: `1.5px solid ${activeFilter === f.id ? '#F5A623' : '#F0E4CC'}`, background: activeFilter === f.id ? '#FFF8EE' : '#fff', color: activeFilter === f.id ? '#F5A623' : '#9C7A50', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif", transition: 'all 0.2s' }}>{f.label}</button>
           ))}
         </div>
       </div>
 
       {/* ── Project Cards grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, animation: 'fadeUp 0.55s ease', marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16, animation: 'fadeUp 0.55s ease', marginBottom: 32 }}>
         {filteredProjects.length === 0 ? (
-          <div style={{ gridColumn: '1 / -1', padding: '32px', textAlign: 'center', color: '#B8956A', fontSize: 13, fontWeight: 600, background: '#FFFBF4', borderRadius: 16, border: '1.5px dashed #F0E4CC' }}>
+          <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#B8956A', fontSize: 13, fontWeight: 600, background: '#FFFBF4', borderRadius: 16, border: '1.5px dashed #F0E4CC' }}>
             Không có project nào phù hợp với bộ lọc này
           </div>
         ) : filteredProjects.map(project => (
