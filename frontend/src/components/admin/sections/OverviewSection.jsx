@@ -150,79 +150,98 @@ function DeadlinePanel({ products, onViewAll }) {
   );
 }
 
-// ── Product Type Distribution Panel ────────────────────────
-function ProductTypePanel({ products, onViewAll }) {
-  const typeMap = {};
-  products.forEach(p => {
-    const type = p.product_type || p.category || p.name || 'Khác';
-    if (!typeMap[type]) typeMap[type] = { total: 0, approved: 0 };
-    typeMap[type].total++;
-    if (p.status === 'approved') typeMap[type].approved++;
+// ── Performance Stats Panel ────────────────────────────────
+function PerformancePanel({ products }) {
+  const now = new Date();
+  
+  const processedForms = products.filter(p => p.status === 'approved' || p.status === 'rejected' || p.status === 'reject');
+  
+  let totalProcessTimeMs = 0;
+  let validTimeCount = 0;
+  let processedToday = 0;
+
+  processedForms.forEach(p => {
+    if (p.created_at && p.updated_at) {
+      const created = new Date(p.created_at);
+      const updated = new Date(p.updated_at);
+      if (updated > created) {
+        totalProcessTimeMs += (updated - created);
+        validTimeCount++;
+      }
+    }
+    if (p.updated_at) {
+      const updated = new Date(p.updated_at);
+      if (updated.toDateString() === now.toDateString()) {
+        processedToday++;
+      }
+    }
   });
 
-  const types = Object.entries(typeMap)
-    .sort((a, b) => b[1].total - a[1].total)
-    .slice(0, 6);
+  let avgHours = 0;
+  let avgLabel = 'Chưa có';
+  let speedStatus = { color: '#9C7A50', text: 'Chưa đủ dữ liệu' };
 
-  const maxTotal = types.length > 0 ? types[0][1].total : 1;
-  const barColors = ['#F5A623', '#4B5563', '#8B5CF6', '#10B981', '#F43F5E', '#0EA5E9'];
+  if (validTimeCount > 0) {
+    avgHours = totalProcessTimeMs / validTimeCount / (1000 * 60 * 60);
+    if (avgHours < 24) {
+      const h = Math.round(avgHours * 10) / 10;
+      avgLabel = `${h > 0 ? h : '< 0.1'} giờ`;
+      speedStatus = { color: '#10B981', text: '🚀 Tốc độ xuất sắc' };
+    } else {
+      const days = Math.round(avgHours / 24 * 10) / 10;
+      avgLabel = `${days} ngày`;
+      if (days <= 3) {
+         speedStatus = { color: '#3B82F6', text: '⚡ Tốc độ ổn định' };
+      } else {
+         speedStatus = { color: '#F59E0B', text: '⚠️ Cần cải thiện' };
+      }
+    }
+  }
+
+  const total = products.length;
+  const processedRate = total > 0 ? Math.round((processedForms.length / total) * 100) : 0;
 
   return (
     <div style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #F0E4CC', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FFF8EE', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📦</div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Phân Bố Product Type</div>
-            <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>Loại sản phẩm được submit nhiều nhất</div>
-          </div>
+      <div style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F0FDF4', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⏱️</div>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Hiệu Suất Xử Lý</div>
+          <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>Thống kê tốc độ phản hồi form</div>
         </div>
-        <span style={{ padding: '4px 12px', borderRadius: 20, background: '#F8F9FA', border: '1.5px solid #E5E7EB', color: '#4B5563', fontSize: 11, fontWeight: 800 }}>
-          {types.length} loại
-        </span>
       </div>
 
-      <div style={{ flex: 1, padding: types.length === 0 ? '0' : '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {types.length === 0 ? (
-          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📭</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#9C7A50' }}>Chưa có dữ liệu sản phẩm</div>
+      <div style={{ flex: 1, padding: '24px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Thời gian phản hồi TB</div>
+            <div style={{ fontSize: 32, fontWeight: 900, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", lineHeight: 1.2, marginTop: 4 }}>
+              {avgLabel}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: speedStatus.color, marginTop: 4 }}>
+              {speedStatus.text}
+            </div>
           </div>
-        ) : (
-          types.map(([type, counts], i) => {
-            const barW = maxTotal > 0 ? (counts.total / maxTotal) * 100 : 0;
-            const approvedW = counts.total > 0 ? (counts.approved / counts.total) * 100 : 0;
-            const color = barColors[i % barColors.length];
-            return (
-              <div
-                key={type}
-                onClick={onViewAll}
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1A0F00', fontFamily: "'Nunito Sans',sans-serif" }}>{type}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600 }}>
-                      ✅ {counts.approved}/{counts.total}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 900, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", minWidth: 24, textAlign: 'right' }}>
-                      {counts.total}
-                    </span>
-                  </div>
-                </div>
-                <div style={{ height: 6, background: '#F3F4F6', borderRadius: 3, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${barW}%`, background: color + '30', borderRadius: 3, transition: 'width 0.6s ease' }} />
-                  <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${(approvedW / 100) * barW}%`, background: color, borderRadius: 3, transition: 'width 0.7s ease' }} />
-                </div>
-              </div>
-            );
-          })
-        )}
+          <div style={{ textAlign: 'right' }}>
+             <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Đã xử lý hôm nay</div>
+             <div style={{ fontSize: 24, fontWeight: 800, color: '#3B82F6', fontFamily: "'Nunito',sans-serif", lineHeight: 1.2, marginTop: 4 }}>
+               {processedToday} <span style={{ fontSize: 14, color: '#9C7A50', fontWeight: 600 }}>form</span>
+             </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#1A0F00' }}>Tiến độ tổng thể</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#10B981' }}>{processedRate}%</span>
+          </div>
+          <div style={{ height: 8, background: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ width: `${processedRate}%`, height: '100%', background: 'linear-gradient(90deg, #10B981, #34D399)', borderRadius: 4, transition: 'width 0.8s ease' }} />
+          </div>
+          <div style={{ fontSize: 11, color: '#9C7A50', marginTop: 8, fontWeight: 600 }}>
+            Đã quyết định {processedForms.length} / {total} form request
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -470,15 +489,14 @@ export default function OverviewSection() {
         ))}
       </div>
 
-      {/* ── Bottom Row: Deadline + Product Type ── */}
+      {/* ── Bottom Row: Deadline + Performance ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, animation: 'fadeUp 0.6s ease' }}>
         <DeadlinePanel
           products={allProducts}
           onViewAll={() => handleCardClick('status', 'pending', 'Form Chờ Duyệt')}
         />
-        <ProductTypePanel
+        <PerformancePanel
           products={allProducts}
-          onViewAll={() => handleCardClick('status', 'all', 'Tất cả Form Request')}
         />
       </div>
 
