@@ -80,6 +80,61 @@ export default function NewsManagementSection() {
     }
   };
 
+  const updateNewsInDashboards = (news) => {
+    const notification = {
+      type: 'news',
+      icon: '📰',
+      title: news.title,
+      message: news.message,
+      time: new Date(news.created_at || Date.now()).toLocaleString('vi-VN'),
+      read: false,
+      timestamp: news.created_at || Date.now(),
+      source: 'staff_b'
+    };
+
+    try {
+      let adminNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
+      const existIdx = adminNotifs.findIndex(n => n.id === `admin_${news.id}`);
+      if (existIdx !== -1) {
+        if (news.target === 'seller') adminNotifs.splice(existIdx, 1);
+        else adminNotifs[existIdx] = { ...adminNotifs[existIdx], title: news.title, message: news.message };
+      } else if (news.target === 'admin' || news.target === 'both') {
+        adminNotifs.unshift({ ...notification, id: `admin_${news.id}` });
+      }
+      localStorage.setItem('STAFF_B_NOTIFICATIONS_TO_ADMIN', JSON.stringify(adminNotifs.slice(0, 100)));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS_TO_ADMIN' }));
+    } catch (err) {}
+
+    try {
+      let sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
+      const existIdx = sellerNotifs.findIndex(n => n.id === `seller_${news.id}`);
+      if (existIdx !== -1) {
+        if (news.target === 'admin') sellerNotifs.splice(existIdx, 1);
+        else sellerNotifs[existIdx] = { ...sellerNotifs[existIdx], title: news.title, message: news.message };
+      } else if (news.target === 'seller' || news.target === 'both') {
+        sellerNotifs.unshift({ ...notification, id: `seller_${news.id}` });
+      }
+      localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(sellerNotifs.slice(0, 100)));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'SELLER_NOTIFICATIONS' }));
+    } catch (err) {}
+  };
+
+  const removeNewsFromDashboards = (newsId) => {
+    try {
+      let adminNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
+      adminNotifs = adminNotifs.filter(n => n.id !== `admin_${newsId}`);
+      localStorage.setItem('STAFF_B_NOTIFICATIONS_TO_ADMIN', JSON.stringify(adminNotifs));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS_TO_ADMIN' }));
+    } catch (err) {}
+
+    try {
+      let sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
+      sellerNotifs = sellerNotifs.filter(n => n.id !== `seller_${newsId}`);
+      localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(sellerNotifs));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'SELLER_NOTIFICATIONS' }));
+    } catch (err) {}
+  };
+
   const handleCreateNews = async () => {
     if (!validateForm()) return;
     setSubmitting(true);
@@ -120,6 +175,7 @@ export default function NewsManagementSection() {
       };
       const updatedList = newsList.map(n => n.id === editingNews.id ? updatedNews : n);
       localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(updatedList));
+      updateNewsInDashboards(updatedNews);
       setNewsList(updatedList);
       closeModal();
       setToast({ type: 'success', title: 'Thành công', message: 'Đã cập nhật thông báo' });
@@ -135,6 +191,7 @@ export default function NewsManagementSection() {
     try {
       const updatedList = newsList.filter(n => n.id !== deleteConfirm.id);
       localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(updatedList));
+      removeNewsFromDashboards(deleteConfirm.id);
       setNewsList(updatedList);
       setDeleteConfirm(null);
       setToast({ type: 'success', title: 'Thành công', message: 'Đã xóa thông báo' });

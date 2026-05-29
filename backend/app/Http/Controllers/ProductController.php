@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -40,31 +41,36 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $user  = $request->user();
-        $query = Product::with('creator:id,name,email,project,seller_name')->latest();
+        $cacheKey = 'products_index_' . ($user?->id ?? 'guest') . '_' . md5(json_encode($request->all()));
 
-        if ($user && method_exists($user, 'isStaff') && $user->isStaff()) {
-            $query->where('created_by', $user->id);
-        }
+        $products = Cache::remember($cacheKey, 3600, function () use ($request, $user) {
+            $query = Product::with('creator:id,name,email,project,seller_name')->latest();
 
-        if ($request->filled('search')) {
-            $q = $request->input('search');
-            $query->where('product_type', 'like', "%{$q}%");
-        }
+            if ($user && method_exists($user, 'isStaff') && $user->isStaff()) {
+                $query->where('created_by', $user->id);
+            }
 
-        $products = $query->paginate((int)($request->input('per_page', 20)));
-        $products->getCollection()->transform(function ($product) {
-            $product = $this->addMediaUrlsToProduct($product);
-            if ($product->creator) {
-            $product->project = $product->creator->project;
-            $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
-        }
-        return $product;
-    });
+            if ($request->filled('search')) {
+                $q = $request->input('search');
+                $query->where('product_type', 'like', "%{$q}%");
+            }
 
-    return response()->json([
-        'data' => $products,
-    ]);
-}
+            $paginated = $query->paginate((int)($request->input('per_page', 20)));
+            $paginated->getCollection()->transform(function ($product) {
+                $product = $this->addMediaUrlsToProduct($product);
+                if ($product->creator) {
+                    $product->project = $product->creator->project;
+                    $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
+                }
+                return $product;
+            });
+            return $paginated;
+        });
+
+        return response()->json([
+            'data' => $products,
+        ]);
+    }
 
     // 2️⃣ Thêm sản phẩm (hỗ trợ nhiều file) - ĐÃ SỬA HOÀN CHỈNH
 public function store(Request $request)
@@ -141,6 +147,8 @@ public function store(Request $request)
     
     $product = Product::create($data);
     $product = $this->addMediaUrlsToProduct($product);
+
+    Cache::flush();
 
     return response()->json($product, 201);
 }
@@ -253,6 +261,8 @@ public function update(Request $request, $id)
     $product->save();
     $product = $this->addMediaUrlsToProduct($product);
 
+    Cache::flush();
+
     return response()->json($product);
 }
 
@@ -304,6 +314,8 @@ public function update(Request $request, $id)
 
         $product->delete();
 
+        Cache::flush();
+
         return response()->json(['message' => 'Product deleted successfully']);
     }
 
@@ -320,6 +332,8 @@ public function update(Request $request, $id)
         $product->submitted_at = now();
         $product->save();
 
+        Cache::flush();
+
         NotificationService::sendToRole(
             'admin',
             'pending',
@@ -332,17 +346,20 @@ public function update(Request $request, $id)
 
 public function pendingApprovals()
 {
-    $products = Product::where('status', 'pending')
-        ->with('creator:id,name,email,project,seller_name')  // ← THÊM with()
-        ->get();
-    
-    $products->transform(function ($product) {
-        $product = $this->addMediaUrlsToProduct($product);
-        if ($product->creator) {
-            $product->project = $product->creator->project;
-            $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
-        }
-        return $product;
+    $products = Cache::remember('products_pending', 3600, function () {
+        $prods = Product::where('status', 'pending')
+            ->with('creator:id,name,email,project,seller_name')  // ← THÊM with()
+            ->get();
+        
+        $prods->transform(function ($product) {
+            $product = $this->addMediaUrlsToProduct($product);
+            if ($product->creator) {
+                $product->project = $product->creator->project;
+                $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
+            }
+            return $product;
+        });
+        return $prods;
     });
     
     return response()->json($products);
@@ -372,6 +389,8 @@ public function pendingApprovals()
             );
         }
         
+        Cache::flush();
+        
         return response()->json(['message' => $isApproved ? 'Product approved' : 'Product rejected']);
     }
 
@@ -393,6 +412,8 @@ public function pendingApprovals()
                 "Sản phẩm \"{$product->product_type}\" bị từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '')
             );
         }
+
+        Cache::flush();
 
         return response()->json(['message' => 'Product rejected']);
     }
@@ -451,25 +472,28 @@ public function show($id)
 }
 public function approvedProducts()
 {
-    $products = Product::where('status', 'approved')
-        ->with('creator:id,name,email,project,seller_name')  // ← THÊM project
-        ->latest()
-        ->get();
-    
-    $products->transform(function ($product) {
-        $product = $this->addMediaUrlsToProduct($product);
+    $products = Cache::remember('products_approved', 3600, function () {
+        $prods = Product::where('status', 'approved')
+            ->with('creator:id,name,email,project,seller_name')  // ← THÊM project
+            ->latest()
+            ->get();
         
-        if ($product->creator) {
-            $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
-            $product->seller_email = $product->creator->email;
-            $product->project = $product->creator->project;  // ← THÊM DÒNG NÀY
-        }
-        
-        if ($product->product_type_links && is_string($product->product_type_links)) {
-            $product->product_type_links = json_decode($product->product_type_links, true);
-        }
-        
-        return $product;
+        $prods->transform(function ($product) {
+            $product = $this->addMediaUrlsToProduct($product);
+            
+            if ($product->creator) {
+                $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
+                $product->seller_email = $product->creator->email;
+                $product->project = $product->creator->project;  // ← THÊM DÒNG NÀY
+            }
+            
+            if ($product->product_type_links && is_string($product->product_type_links)) {
+                $product->product_type_links = json_decode($product->product_type_links, true);
+            }
+            
+            return $product;
+        });
+        return $prods;
     });
     
     return response()->json([
@@ -512,6 +536,8 @@ public function approvedProducts()
         }
 
         $product = $this->addMediaUrlsToProduct($product);
+
+        Cache::flush();
 
         return response()->json([
             'message' => 'Đã cập nhật deadline thành công',

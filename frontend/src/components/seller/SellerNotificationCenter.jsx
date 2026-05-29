@@ -258,10 +258,10 @@ export default function SellerNotificationCenter({
             <div style={{ padding: '14px 18px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff' }}>
               <div style={{ fontWeight: 900, fontSize: 14, fontFamily: "'Nunito',sans-serif", marginBottom: 12 }}>🔔 Trung tâm thông báo</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setActiveTab('requests')} style={tabBtn(activeTab === 'requests')}>
+                <button onClick={() => { setActiveTab('requests'); setSelectedNotif(null); }} style={tabBtn(activeTab === 'requests')}>
                   📋 Yêu cầu {unreadRequests > 0 && <span style={badgeStyle}>{unreadRequests}</span>}
                 </button>
-                <button onClick={() => setActiveTab('news')} style={tabBtn(activeTab === 'news')}>
+                <button onClick={() => { setActiveTab('news'); setSelectedNotif(null); }} style={tabBtn(activeTab === 'news')}>
                   📰 Tin tức {unreadNews > 0 && <span style={badgeStyle}>{unreadNews}</span>}
                 </button>
               </div>

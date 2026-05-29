@@ -521,10 +521,22 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               </thead>
               <tbody>
                 {(() => {
+                  const groupIndices = [];
+                  let currentGrp = 1;
+                  for (let k = 0; k < filteredVendors.length; k++) {
+                    const vName = ((filteredVendors[k].name || filteredVendors[k].vendor_type || '—') || '').toString().trim();
+                    if (k > 0) {
+                      const pName = ((filteredVendors[k-1].name || filteredVendors[k-1].vendor_type || '—') || '').toString().trim();
+                      if (vName !== pName) currentGrp++;
+                    }
+                    groupIndices.push(currentGrp);
+                  }
+
                   const rows = [];
                   for (let i = 0; i < pagedVendors.length; i++) {
                     const v = pagedVendors[i];
                     const absIdx = (vPage - 1) * VENDOR_PAGE_SIZE + i;
+                    const vendorGroupIndex = groupIndices[absIdx];
                     const C = absIdx % 2 === 0 ? TD : TDalt;
                     const isSelected = selectedIds.has(v.id);
                     const totalPricing = (v.pricing1 || 0) + (v.pricing2 || 0);
@@ -543,14 +555,33 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
                     rows.push(
                       <tr key={v.id || absIdx} style={{ background: isSelected ? (activeTab === 'bestseller' ? '#FFFDE7' : `${HC.orange}12`) : undefined }} onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.97)'} onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
-                        <td style={{ ...C(), cursor: 'pointer', width: 44, textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }} onClick={() => toggleSelect(v.id)}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                            <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isSelected ? (activeTab === 'bestseller' ? HC.gold : HC.orange) : HC.muted2}`, background: isSelected ? (activeTab === 'bestseller' ? HC.gold : HC.orange) : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}>
-                              {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                        {!isSameAsPrev && (
+                          <td rowSpan={rowSpan} style={{ ...C(), cursor: 'pointer', width: 44, textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }} onClick={() => {
+                            const groupIds = [];
+                            for (let j = i; j < i + rowSpan; j++) {
+                              if (pagedVendors[j] && pagedVendors[j].id) groupIds.push(pagedVendors[j].id);
+                            }
+                            const allSelected = groupIds.length > 0 && groupIds.every(gid => selectedIds.has(gid));
+                            setSelectedIds(prev => {
+                              const n = new Set(prev);
+                              if (allSelected) {
+                                groupIds.forEach(gid => n.delete(gid));
+                              } else {
+                                groupIds.forEach(gid => n.add(gid));
+                              }
+                              return n;
+                            });
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+                              <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isSelected ? (activeTab === 'bestseller' ? HC.gold : HC.orange) : HC.muted2}`, background: isSelected ? (activeTab === 'bestseller' ? HC.gold : HC.orange) : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}>
+                                {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td style={{ ...C(), color: HC.muted, fontWeight: 700 }}>{absIdx + 1}</td>
+                          </td>
+                        )}
+                        {!isSameAsPrev && (
+                          <td rowSpan={rowSpan} style={{ ...C(), color: HC.muted, fontWeight: 700, verticalAlign: 'middle' }}>{vendorGroupIndex}</td>
+                        )}
                         {!isSameAsPrev && (
                           <td rowSpan={rowSpan} style={{ ...C(), fontWeight: 800, color: HC.ink2, verticalAlign: 'middle' }}>{vendorName}</td>
                         )}

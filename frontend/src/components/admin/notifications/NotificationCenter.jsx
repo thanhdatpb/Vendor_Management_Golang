@@ -197,7 +197,7 @@ export default function NotificationCenter({ onClose, notifications, newsNotific
               {/* Tabs */}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  onClick={() => setActiveTab('requests')}
+                  onClick={() => { setActiveTab('requests'); setSelectedNotif(null); }}
                   style={{
                     flex: 1,
                     padding: '8px 12px',
@@ -231,7 +231,7 @@ export default function NotificationCenter({ onClose, notifications, newsNotific
                   )}
                 </button>
                 <button
-                  onClick={() => setActiveTab('news')}
+                  onClick={() => { setActiveTab('news'); setSelectedNotif(null); }}
                   style={{
                     flex: 1,
                     padding: '8px 12px',

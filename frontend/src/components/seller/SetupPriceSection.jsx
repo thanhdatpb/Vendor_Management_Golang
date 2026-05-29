@@ -1,4 +1,4 @@
-﻿// ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  SETUP PRICE SECTION
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -27,8 +27,8 @@ export default function SetupPriceSection() {
 
   // State cho nhiều giá trị
   const [displayPrices, setDisplayPrices] = useState([0]);
-  const [customizePrices, setCustomizePrices] = useState([0]);
-  const [shipPrices, setShipPrices] = useState([0]);
+  const [customizePrices, setCustomizePrices] = useState([{ name: '', price: 0 }]);
+  const [shipPrices, setShipPrices] = useState([{ name: '', price: 0 }]);
 
   const [setupForm, setSetupForm] = useState({
     shipping_method: 'economy',
@@ -36,7 +36,7 @@ export default function SetupPriceSection() {
     final_price: 0,
     profit: 0,
     profit_margin: 0,
-    coupon_percent: 0,
+    coupon_percent: 10,
     coupon_fee: 0  // Thêm coupon_fee
   });
 
@@ -53,10 +53,10 @@ export default function SetupPriceSection() {
         setDisplayPrices([...displayPrices, 0]);
         break;
       case 'customize':
-        setCustomizePrices([...customizePrices, 0]);
+        setCustomizePrices([...customizePrices, { name: '', price: 0 }]);
         break;
       case 'ship':
-        setShipPrices([...shipPrices, 0]);
+        setShipPrices([...shipPrices, { name: '', price: 0 }]);
         break;
       default:
         break;
@@ -102,16 +102,28 @@ export default function SetupPriceSection() {
         break;
       case 'customize':
         const newCustomizePrices = [...customizePrices];
-        newCustomizePrices[index] = parseFloat(value) || 0;
+        newCustomizePrices[index].price = parseFloat(value) || 0;
         setCustomizePrices(newCustomizePrices);
         break;
       case 'ship':
         const newShipPrices = [...shipPrices];
-        newShipPrices[index] = parseFloat(value) || 0;
+        newShipPrices[index].price = parseFloat(value) || 0;
         setShipPrices(newShipPrices);
         break;
       default:
         break;
+    }
+  };
+
+  const updatePriceName = (type, index, value) => {
+    if (type === 'customize') {
+      const newCustomizePrices = [...customizePrices];
+      newCustomizePrices[index].name = value;
+      setCustomizePrices(newCustomizePrices);
+    } else if (type === 'ship') {
+      const newShipPrices = [...shipPrices];
+      newShipPrices[index].name = value;
+      setShipPrices(newShipPrices);
     }
   };
 
@@ -121,11 +133,11 @@ export default function SetupPriceSection() {
   };
 
   const getTotalCustomizePrice = () => {
-    return customizePrices.reduce((sum, price) => sum + price, 0);
+    return customizePrices.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
   };
 
   const getTotalShipMin = () => {
-    return shipPrices.reduce((sum, price) => sum + price, 0);
+    return shipPrices.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
   };
 
   const [sampleDecisions, setSampleDecisions] = useState(() => {
@@ -175,8 +187,14 @@ export default function SetupPriceSection() {
     setSelectedVendor(vendor);
     setShipInfo(defaultShipInfo);
     setDisplayPrices(vendor.display_prices || [gia_hien_thi]);
-    setCustomizePrices(vendor.customize_prices || [total_customize_price]);
-    setShipPrices(vendor.ship_prices || [initShipPrice]);
+    
+    setCustomizePrices(vendor.customize_prices?.length 
+      ? vendor.customize_prices.map(p => typeof p === 'object' ? p : { name: '', price: p }) 
+      : [{ name: '', price: total_customize_price }]);
+      
+    setShipPrices(vendor.ship_prices?.length 
+      ? vendor.ship_prices.map(p => typeof p === 'object' ? p : { name: getShippingMethodLabel(defaultMethod), price: p }) 
+      : [{ name: getShippingMethodLabel(defaultMethod), price: initShipPrice }]);
     setSetupForm({
       shipping_method: defaultMethod,
       size: vendor.size || '',
@@ -638,16 +656,17 @@ export default function SetupPriceSection() {
             <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'left' }}>Vendor Type</th>
             <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'left' }}>Product Type</th>
             <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'center' }}>Size</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total giá hiển thị</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total Customize</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total Ship</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Giá hiển thị</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total custom</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total ship</th>
             <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total Price</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Coupon</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Coupon Fee (2.5%)</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>AMZ (17%)</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>10%</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>2.5%</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>17%</th>
             <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Profit</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Margin %</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>After Price</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Tỷ lệ profit/price (fulfill)</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Profit Margin</th>
+            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>After Total Price</th>
             <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'center', minWidth: 120 }}>Thao tác</th>
           </tr>
         </thead>
@@ -677,6 +696,9 @@ export default function SetupPriceSection() {
                 <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: '#d97706' }}>${(p.coupon_fee || 0).toFixed(2)}</td>
                 <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.orangeDark }}>${(p.amz_fee || 0).toFixed(2)}</td>
                 <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: (p.profit || 0) > 0 ? HC.success : HC.danger }}>${(p.profit || 0).toFixed(2)}</td>
+                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: (p.profit || 0) > 0 ? HC.success : HC.danger }}>
+                  {p.base_cost ? ((p.profit || 0) / p.base_cost * 100).toFixed(2) : ((p.total_price_2) ? ((p.profit || 0) / p.total_price_2 * 100).toFixed(2) : 0)}%
+                </td>
                 <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: (p.profit_margin || 0) > 20 ? HC.success : HC.warning }}>{(p.profit_margin || 0).toFixed(2)}%</td>
                 <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.success }}>${(p.after_price || 0).toFixed(2)}</td>
                 <td style={{ padding: '10px 10px', textAlign: 'center' }}>
@@ -694,20 +716,29 @@ export default function SetupPriceSection() {
   );
 
   // Component PriceInputGroup
-  const PriceInputGroup = ({ label, icon, prices, onUpdate, onAdd, onRemove, unit = '$' }) => (
+  const PriceInputGroup = ({ label, icon, prices, onUpdate, onUpdateName, onAdd, onRemove, unit = '$', isNamed = false }) => (
     <div style={{ marginBottom: 20 }}>
       <label style={{ fontSize: 12, fontWeight: 800, color: HC.muted, marginBottom: 8, display: 'block' }}>
         {icon} {label}
       </label>
-      {prices.map((price, idx) => (
+      {prices.map((item, idx) => (
         <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+          {isNamed && (
+            <input
+              type="text"
+              value={item.name}
+              onChange={(e) => onUpdateName(idx, e.target.value)}
+              placeholder="Tên (VD: Hộp quà)"
+              style={{ ...inp, padding: '10px 12px', flex: 1 }}
+            />
+          )}
           <input
             type="number"
             step="0.01"
-            value={price}
+            value={isNamed ? item.price : item}
             onChange={(e) => onUpdate(idx, e.target.value)}
-            placeholder={`${label} ${idx + 1}`}
-            style={{ ...inp, padding: '10px 12px', flex: 1 }}
+            placeholder={isNamed ? "0.00" : `${label} ${idx + 1}`}
+            style={{ ...inp, padding: '10px 12px', flex: isNamed ? 1 : 1 }}
           />
           {prices.length > 1 && (
             <button
@@ -753,7 +784,7 @@ export default function SetupPriceSection() {
         <span style={{ fontSize: 14 }}>+</span> Thêm {label}
       </button>
       <div style={{ marginTop: 8, fontSize: 11, color: HC.success, fontWeight: 600 }}>
-        Tổng: {unit}{prices.reduce((sum, p) => sum + p, 0).toFixed(2)}
+        Tổng: {unit}{prices.reduce((sum, p) => sum + (isNamed ? parseFloat(p.price || 0) : parseFloat(p || 0)), 0).toFixed(2)}
       </div>
     </div>
   );
@@ -870,7 +901,9 @@ export default function SetupPriceSection() {
                 label="Total giá Customize"
                 icon="🎨"
                 prices={customizePrices}
+                isNamed={true}
                 onUpdate={(idx, val) => updatePriceField('customize', idx, val)}
+                onUpdateName={(idx, val) => updatePriceName('customize', idx, val)}
                 onAdd={() => addPriceField('customize')}
                 onRemove={(idx) => removePriceField('customize', idx)}
               />
@@ -879,7 +912,9 @@ export default function SetupPriceSection() {
                 label="Total giá Ship "
                 icon="🚚"
                 prices={shipPrices}
+                isNamed={true}
                 onUpdate={(idx, val) => updatePriceField('ship', idx, val)}
+                onUpdateName={(idx, val) => updatePriceName('ship', idx, val)}
                 onAdd={() => addPriceField('ship')}
                 onRemove={(idx) => removePriceField('ship', idx)}
               />

@@ -555,10 +555,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', minWidth: 130, padding: '9px 12px', borderRadius: 9, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2 }}>
           <option value="">Tất cả trạng thái</option>
-          <option value="draft">📝 Draft (Chưa gửi)</option>
-          <option value="pending">⏳ Pending (Chờ duyệt)</option>
-          <option value="approved">✅ Approved (Đã duyệt)</option>
-          <option value="reject">❌ Rejected (Từ chối)</option>
+          <option value="draft">Draft (Chưa gửi)</option>
+          <option value="pending">Pending (Chờ duyệt)</option>
+          <option value="approved">Approved (Đã duyệt)</option>
+          <option value="reject">Rejected (Từ chối)</option>
         </select>
         {hasFilter && <button onClick={() => { setSearch(''); setFilterStatus(''); }} style={{ padding: '8px 14px', borderRadius: 9, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Xóa lọc</button>}
         <div style={{ fontSize: 11, color: HC.muted, fontWeight: 700 }}>{filteredProducts.length} / {submittedProducts.length} sản phẩm</div>

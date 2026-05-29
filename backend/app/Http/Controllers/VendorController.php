@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Vendor;
 use App\Models\Product;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\Cache;
 
 class VendorController extends Controller
 {
@@ -16,24 +17,28 @@ class VendorController extends Controller
 
     public function index(Request $request)
     {
-        $query = Vendor::latest();
+        $cacheKey = 'vendors_index_' . md5(json_encode($request->all()));
 
-        if ($request->filled('product_type')) {
-            $query->where('product_type', $request->product_type);
-        }
-        if ($request->filled('vendor_category')) {
-            $query->where('vendor_category', $request->vendor_category);
-        }
+        $vendors = Cache::remember($cacheKey, 3600, function () use ($request) {
+            $query = Vendor::latest();
 
-        $perPage = (int) $request->input('per_page', 20);
-        if ($perPage < 1) {
-            $perPage = 20;
-        }
-        if ($perPage > 5000) {
-            $perPage = 5000;
-        }
+            if ($request->filled('product_type')) {
+                $query->where('product_type', $request->product_type);
+            }
+            if ($request->filled('vendor_category')) {
+                $query->where('vendor_category', $request->vendor_category);
+            }
 
-        $vendors = $query->paginate($perPage);
+            $perPage = (int) $request->input('per_page', 20);
+            if ($perPage < 1) {
+                $perPage = 20;
+            }
+            if ($perPage > 5000) {
+                $perPage = 5000;
+            }
+
+            return $query->paginate($perPage);
+        });
 
         return response()->json([
             "data" => $vendors
@@ -124,6 +129,8 @@ class VendorController extends Controller
             }
         }
 
+        Cache::flush();
+
         return response()->json([
             'success' => $failed === 0,
             'summary' => [
@@ -168,6 +175,8 @@ class VendorController extends Controller
         }
 
         $vendor = Vendor::create($validated);
+        
+        Cache::flush();
 
         return response()->json([
             'success' => true,
@@ -225,6 +234,8 @@ class VendorController extends Controller
         }
 
         $vendor->update($validated);
+        
+        Cache::flush();
 
         return response()->json([
             'success' => true,
@@ -243,6 +254,8 @@ class VendorController extends Controller
     {
         $vendor = Vendor::findOrFail($id);
         $vendor->delete();
+        
+        Cache::flush();
 
         return response()->json([
             'success' => true,
@@ -316,6 +329,8 @@ class VendorController extends Controller
                 ($vendor->vendor_category ? " [{$vendor->vendor_category}]" : '') . "."
             );
         }
+
+        Cache::flush();
 
         return response()->json([
             'success' => true,
