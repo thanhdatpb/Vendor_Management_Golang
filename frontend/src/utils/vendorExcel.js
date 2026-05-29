@@ -161,6 +161,7 @@ export async function parseVendorExcel(file) {
 
         if (headerRowIdx >= 0) {
           const headers = (aoa[headerRowIdx] || []).map((h) => normalizeKey(h));
+          let lastVendorName = ''; // carry-forward for merged/empty Vendor Name cells
           for (let r = headerRowIdx + 1; r < aoa.length; r++) {
             const rowArr = aoa[r] || [];
             if (rowArr.every((c) => String(c).trim() === '')) continue;
@@ -169,6 +170,23 @@ export async function parseVendorExcel(file) {
             headers.forEach((h, c) => {
               if (h) rowObj[h] = rowArr[c];
             });
+
+            // Carry-forward: nếu Vendor Name trống, dùng tên từ dòng trước
+            const nameAliases = ['vendor name', 'vendor_name', 'ten vendor', 'tên vendor', 'name'];
+            let currentName = '';
+            for (const alias of nameAliases) {
+              if (rowObj[alias] !== undefined && String(rowObj[alias]).trim() !== '') {
+                currentName = String(rowObj[alias]).trim();
+                break;
+              }
+            }
+            if (currentName) {
+              lastVendorName = currentName;
+            } else if (lastVendorName) {
+              // Điền tên từ dòng trước vào rowObj
+              const firstAlias = nameAliases.find(a => rowObj[a] !== undefined) || nameAliases[0];
+              rowObj[firstAlias] = lastVendorName;
+            }
 
             const payload = buildVendorPayload(rowObj);
             if (!payload.product_type || !payload.vendor_type) continue;

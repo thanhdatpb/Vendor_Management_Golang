@@ -84,6 +84,12 @@ class VendorController extends Controller
                 $existing = Vendor::where('product_type', $payload['product_type'])
                     ->where('vendor_type', $payload['vendor_type'])
                     ->where(function ($q) use ($payload) {
+                        $name = $payload['name'] ?? null;
+                        if ($name !== null && $name !== '') {
+                            $q->where('name', $name);
+                        }
+                    })
+                    ->where(function ($q) use ($payload) {
                         $size = $payload['size'] ?? null;
                         $opt  = $payload['optional'] ?? null;
                         $q->where(function ($qq) use ($size) {

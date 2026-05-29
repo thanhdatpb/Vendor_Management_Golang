@@ -380,7 +380,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
 
   return (
     <div>
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: pendingProducts.length === 0 ? 16 : 32 }}>
         <div style={sHdr}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 20 }}>⏳</span>
@@ -404,7 +404,25 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
         </div>
 
         {pendingProducts.length === 0 ? (
-          <EmptyState msg="Không có form chờ duyệt nào từ Seller" />
+          <div style={{
+            padding: '11px 18px',
+            borderRadius: 10,
+            background: `linear-gradient(135deg, #f0fdf4, #ecfdf5)`,
+            border: `1.5px solid #bbf7d0`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 15 }}>🟢</span>
+            <span style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#166534',
+              fontFamily: "'Nunito Sans',sans-serif",
+            }}>
+              Tất cả form đã được xử lý — Không có form nào đang chờ duyệt
+            </span>
+          </div>
         ) : (
           <>
             <Table
@@ -485,7 +503,6 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
               </span>
             </div>
           </div>
-          {refreshBtn(async () => { await loadAllProducts(); })}
         </div>
 
         {(() => {
