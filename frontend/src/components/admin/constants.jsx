@@ -15,6 +15,7 @@ export const STATUS_CFG = {
   pending: { bg: '#fffbeb', text: '#92400e', dot: '#f59e0b', label: 'Chờ duyệt' },
   approved: { bg: '#ecfdf5', text: '#065f46', dot: '#16a34a', label: 'Đã duyệt' },
   rejected: { bg: '#fef2f2', text: '#991b1b', dot: '#dc2626', label: 'Từ chối' },
+  draft: { bg: '#FEF3DC', text: '#7A5C32', dot: '#B8956A', label: 'Chưa duyệt' },
 };
 
 export const MENU = [
