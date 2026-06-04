@@ -196,7 +196,7 @@ export default function SetupPriceSection() {
       
     setShipPrices(vendor.ship_prices?.length 
       ? vendor.ship_prices.map(p => typeof p === 'object' ? p : { name: getShippingMethodLabel(defaultMethod), price: p }) 
-      : [{ name: getShippingMethodLabel(defaultMethod), price: initShipPrice }]);
+      : [{ name: '', price: 0 }]);
     setSetupForm({
       shipping_method: defaultMethod,
       size: vendor.size || '',
@@ -296,7 +296,6 @@ export default function SetupPriceSection() {
   const handleShippingMethodChange = (method) => {
     const newShipInfo = getShipInfoByMethod(selectedVendor, method);
     setShipInfo(newShipInfo);
-    setShipPrices([newShipInfo.ship_price]);
     setSetupForm(prev => ({
       ...prev,
       shipping_method: method
