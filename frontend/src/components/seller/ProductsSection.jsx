@@ -437,11 +437,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     await exportProductsToExcel(filteredProducts, productVendors, `products_${d}.xlsx`);
   };
 
-  const handleDownloadImportTemplate = async () => {
-    await exportProductsImportTemplate();
-    showToast('success', '📄 Đã tải template', 'Bạn có thể điền dữ liệu rồi Import vào hệ thống.');
-  };
-
   const handleImportProductsFile = async (e) => {
     const file = e.target.files?.[0];
     if (importFileRef.current) importFileRef.current.value = '';
@@ -539,7 +534,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ fontSize: 16, fontWeight: 900, color: HC.ink }}>Danh Sách Sản Phẩm</h3>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={handleDownloadImportTemplate} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: HC.cream, color: HC.brown, border: `1.5px solid ${HC.border}`, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>📄 Template</button>
+
           <button onClick={() => importFileRef.current?.click()} disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: submitting ? HC.muted2 : HC.warning, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer' }}>{submitting ? '⏳ Đang import...' : '📥 Import Excel'}</button>
           <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>⬇ Xuất Excel{hasFilter && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 999, padding: '1px 6px', fontSize: 10 }}>{filteredProducts.length}</span>}</button>
           <button onClick={openCreateModal} style={{ padding: '9px 16px', borderRadius: 11, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>+ Tạo Sản Phẩm Mới</button>

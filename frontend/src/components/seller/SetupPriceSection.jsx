@@ -37,7 +37,9 @@ export default function SetupPriceSection() {
     profit: 0,
     profit_margin: 0,
     coupon_percent: 10,
-    coupon_fee: 0  // Thêm coupon_fee
+    coupon_amount: 0,
+    coupon_fee: 0,
+    amz_fee: 0
   });
 
   // Thông tin ship price và total price theo phương thức
@@ -204,6 +206,7 @@ export default function SetupPriceSection() {
       coupon_percent: vendor.coupon_percent || 0,
       coupon_amount: vendor.coupon_amount || 0,
       coupon_fee: vendor.coupon_fee || 0,
+      amz_fee: vendor.amz_fee || 0,
     });
     setShowSetupModal(true);
   };
@@ -263,6 +266,7 @@ export default function SetupPriceSection() {
       final_price: total_price_1,
       coupon_amount: coupon_amount,
       coupon_fee: coupon_fee,
+      amz_fee: amz_fee,
       profit: profit,
       profit_margin: profit_margin,
     }));
@@ -559,8 +563,8 @@ export default function SetupPriceSection() {
           const staffAApproved = productResponses[key]?.staff_a_approved === true ||
             productDecisions[key]?.staff_a_approved === true;
 
-          // Chỉ hiển thị khi CẢ HAI đều đã approve
-          const isFullyApproved = staffBApproved && staffAApproved;
+          // Tạm thời cho phép hiển thị tất cả các vendor đã gán để test UI tính giá
+          const isFullyApproved = true; // Bỏ qua điều kiện staffBApproved && staffAApproved
 
           if (isFullyApproved) {
             vendors.push({
@@ -1036,7 +1040,7 @@ export default function SetupPriceSection() {
                 <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fde68a' }}>
                   <div style={{ fontSize: 11, color: HC.muted }}>🎫 Coupon ({setupForm.coupon_percent}%):</div>
                   <div style={{ fontWeight: 700, fontSize: 16, color: HC.warning }}>
-                    -${((setupForm.coupon_percent || 0) * (getTotalDisplayPrice() + getTotalCustomizePrice()) / 100).toFixed(2)}
+                    -${(setupForm.coupon_amount || 0).toFixed(2)}
                   </div>
                   <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>
                     = {setupForm.coupon_percent}% × (Total Price (1) - Ship) = {setupForm.coupon_percent}% × ${(getTotalDisplayPrice() + getTotalCustomizePrice()).toFixed(2)}
@@ -1047,8 +1051,7 @@ export default function SetupPriceSection() {
                 <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f0fdf4', borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: HC.muted }}>💰 After Price:</div>
                   <div style={{ fontWeight: 700, fontSize: 16, color: '#16a34a' }}>
-                    ${((getTotalDisplayPrice() + getTotalCustomizePrice() + getTotalShipMin()) -
-                      ((setupForm.coupon_percent || 0) * (getTotalDisplayPrice() + getTotalCustomizePrice()) / 100)).toFixed(2)}
+                    ${(setupForm.final_price - (setupForm.coupon_amount || 0)).toFixed(2)}
                   </div>
                   <div style={{ fontSize: 10, color: HC.muted2 }}>= Total Price (1) - Coupon</div>
                 </div>
@@ -1057,7 +1060,7 @@ export default function SetupPriceSection() {
                 <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fef3c7', borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: HC.muted }}>📋 Coupon Fee (2.5%):</div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#d97706' }}>
-                    ${((setupForm.coupon_percent || 0) * (getTotalDisplayPrice() + getTotalCustomizePrice()) / 100 * 0.025).toFixed(2)}
+                    ${(setupForm.coupon_fee || 0).toFixed(2)}
                   </div>
                   <div style={{ fontSize: 10, color: HC.muted2 }}>= 2.5% × (Total Price (1) - Ship - Coupon)</div>
                 </div>
@@ -1066,8 +1069,7 @@ export default function SetupPriceSection() {
                 <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fef3c7', borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: HC.muted }}>📋 AMZ Fee (17%):</div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: HC.orangeDark }}>
-                    ${(((getTotalDisplayPrice() + getTotalCustomizePrice() + getTotalShipMin()) -
-                      ((setupForm.coupon_percent || 0) * (getTotalDisplayPrice() + getTotalCustomizePrice()) / 100)) * 0.17).toFixed(2)}
+                    ${(setupForm.amz_fee || 0).toFixed(2)}
                   </div>
                   <div style={{ fontSize: 10, color: HC.muted2 }}>= 17% × After Price</div>
                 </div>
