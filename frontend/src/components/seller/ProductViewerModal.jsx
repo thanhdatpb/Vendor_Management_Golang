@@ -1,4 +1,4 @@
-﻿// ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
 //  PRODUCT VIEWER MODAL (Seller)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback } from 'react';
@@ -486,17 +486,14 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                                     {sampleDecision?.decision === 'dat' || aResponse?.decision === 'dat' ? (
-                                      <><span style={{ fontSize: 18 }}>✅</span><span style={{ fontWeight: 800, color: '#065f46' }}>Đã chọn đặt Sample</span></>
+                                      <><span style={{ fontSize: 18 }}>✅</span><span style={{ fontWeight: 800, color: '#065f46' }}>Đã gửi phản hồi</span></>
                                     ) : (
-                                      <><span style={{ fontSize: 18 }}>❌</span><span style={{ fontWeight: 800, color: '#991b1b' }}>Đã từ chối đặt Sample</span></>
+                                      <><span style={{ fontSize: 18 }}>❌</span><span style={{ fontWeight: 800, color: '#991b1b' }}>Đã gửi phản hồi</span></>
                                     )}
                                   </div>
-                                  {(aResponse?.sampleDetails || sampleDecision?.sampleDetails) && (sampleDecision?.decision === 'dat' || aResponse?.decision === 'dat') && (
-                                    <div style={{ marginTop: 8, padding: '8px 10px', background: '#fff', borderRadius: 8 }}>
-                                      <div style={{ fontWeight: 700, fontSize: 10, color: HC.orange }}>📦 Chi tiết Sample:</div>
-                                      <div style={{ fontSize: 11, marginTop: 4, whiteSpace: 'pre-wrap' }}>{(aResponse?.sampleDetails || sampleDecision?.sampleDetails)}</div>
-                                    </div>
-                                  )}
+                                  <div style={{ fontSize: 12, color: HC.ink2, marginTop: 4, whiteSpace: 'pre-wrap' }}>
+                                    {aResponse?.sellerFeedback || sampleDecision?.sellerFeedback}
+                                  </div>
                                   <div style={{ marginTop: 6, fontSize: 9, color: '#059669', textAlign: 'right' }}>
                                     {new Date(aResponse?.respondedAt || sampleDecision?.time).toLocaleString('vi-VN')}
                                   </div>
@@ -517,55 +514,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                     }}
                                   />
 
-                                  {/* Radio buttons for sample decision */}
-                                  <div>
-                                    <div style={{ fontSize: 12, fontWeight: 800, color: HC.muted, marginBottom: 8 }}>📦 Quyết định đặt Sample:</div>
-                                    <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                                        <input
-                                          type="radio"
-                                          name={`sample_decision_${key}`}
-                                          value="dat"
-                                          checked={tempDecision === 'dat'}
-                                          onChange={() => setTempDecision('dat')}
-                                          style={{ width: 16, height: 16, cursor: 'pointer' }}
-                                        />
-                                        <span style={{ fontSize: 12, fontWeight: 600 }}>✅ Đặt Sample</span>
-                                      </label>
-                                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                                        <input
-                                          type="radio"
-                                          name={`sample_decision_${key}`}
-                                          value="khong"
-                                          checked={tempDecision === 'khong'}
-                                          onChange={() => setTempDecision('khong')}
-                                          style={{ width: 16, height: 16, cursor: 'pointer' }}
-                                        />
-                                        <span style={{ fontSize: 12, fontWeight: 600 }}>❌ Không đặt Sample</span>
-                                      </label>
-                                    </div>
-                                  </div>
 
-                                  {/* Conditional textarea for sample details */}
-                                  {tempDecision === 'dat' && (
-                                    <div>
-                                      <textarea
-                                        placeholder="Nhập chi tiết Sample muốn đặt (số lượng, màu sắc, kích thước, yêu cầu...)"
-                                        value={tempSampleDetails}
-                                        onChange={e => setTempSampleDetails(e.target.value)}
-                                        rows={3}
-                                        style={{
-                                          padding: '8px 12px', borderRadius: 10,
-                                          border: `1.5px solid ${tempSampleDetails ? HC.orange : HC.border}`,
-                                          fontSize: 12, width: '100%', resize: 'vertical',
-                                          fontFamily: "'Nunito Sans',sans-serif", outline: 'none'
-                                        }}
-                                      />
-                                      <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>
-                                        💡 Thông tin này sẽ được gửi đến Staff B để xử lý đặt hàng
-                                      </div>
-                                    </div>
-                                  )}
 
                                   {!isChecked && (
                                     <div style={{ fontSize: 10, color: HC.warning, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -584,28 +533,17 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                         showToastMessage('Vui lòng nhập nội dung phản hồi', 'warning');
                                         return;
                                       }
-                                      if (!tempDecision) {
-                                        showToastMessage('Vui lòng chọn quyết định đặt Sample', 'warning');
-                                        return;
-                                      }
-                                      if (tempDecision === 'dat' && !tempSampleDetails.trim()) {
-                                        showToastMessage('Vui lòng nhập chi tiết Sample', 'warning');
-                                        return;
-                                      }
-                                      // Gửi trực tiếp
-                                      submitFeedbackWithDecision(key, v, tempDecision, tempSampleDetails);
-                                      // Reset local state
-                                      setTempDecision('');
-                                      setTempSampleDetails('');
+                                      // Gửi trực tiếp, mặc định duyệt (dat)
+                                      submitFeedbackWithDecision(key, v, 'dat', '');
                                     }}
                                     disabled={sendingKey === key}
                                     style={{
                                       padding: '10px 16px', borderRadius: 10, border: 'none',
-                                      background: (!isChecked || !feedback.trim() || !tempDecision) ? HC.muted2 :
+                                      background: (!isChecked || !feedback.trim()) ? HC.muted2 :
                                         (sendingKey === key ? HC.success : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`),
                                       color: '#fff', fontSize: 12, fontWeight: 700,
-                                      cursor: (!isChecked || !feedback.trim() || !tempDecision) ? 'not-allowed' : 'pointer',
-                                      opacity: (!isChecked || !feedback.trim() || !tempDecision) ? 0.5 : 1,
+                                      cursor: (!isChecked || !feedback.trim()) ? 'not-allowed' : 'pointer',
+                                      opacity: (!isChecked || !feedback.trim()) ? 0.5 : 1,
                                       transition: 'all 0.2s ease'
                                     }}
                                   >
@@ -637,162 +575,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
         </div>
       </div>
 
-      {/* Modal chọn quyết định đặt sample */}
-      {showSampleModal && showSampleModal.action === 'ask_decision' && (
-        <div onClick={() => setShowSampleModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1001, backdropFilter: 'blur(2px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: 500, maxWidth: '90%', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff' }}>
-              <div style={{ fontWeight: 900, fontSize: 16 }}>📦 Quyết định đặt Sample</div>
-              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>Vendor: {showSampleModal.vendor?.vendor_type || '—'}</div>
-            </div>
-            <div style={{ padding: '24px' }}>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>
-                  Phản hồi của bạn:
-                </label>
-                <div style={{
-                  padding: '10px 12px',
-                  background: HC.orangeLight,
-                  borderRadius: 10,
-                  border: `1px solid ${HC.orangeMid}`,
-                  fontSize: 12,
-                  color: HC.ink2
-                }}>
-                  {selections[showSampleModal.key]?.feedback || 'Chưa có phản hồi'}
-                </div>
-              </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>
-                  Bạn muốn đặt Sample không?
-                </label>
-
-                <button
-                  onClick={() => {
-                    setShowSampleModal({
-                      key: showSampleModal.key,
-                      vendor: showSampleModal.vendor,
-                      action: 'dat'
-                    });
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: 10,
-                    background: `linear-gradient(135deg,${HC.success},#15803d)`,
-                    color: '#fff',
-                    border: 'none',
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    marginBottom: 12
-                  }}
-                >
-                  ✅ Có, tôi muốn đặt Sample
-                </button>
-
-                <button
-                  onClick={() => {
-                    submitFeedbackWithDecision(showSampleModal.key, showSampleModal.vendor, 'khong', '');
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: 10,
-                    background: `linear-gradient(135deg,${HC.danger},#b91c1c)`,
-                    color: '#fff',
-                    border: 'none',
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  ❌ Không, tôi không đặt Sample
-                </button>
-              </div>
-            </div>
-            <div style={{ padding: '16px 20px', borderTop: `1px solid ${HC.border}`, display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowSampleModal(null)} style={{ padding: '8px 20px', borderRadius: 8, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontWeight: 700 }}>Hủy</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Modal nhập chi tiết Sample */}
-      {showSampleModal && showSampleModal.action === 'dat' && (
-        <div onClick={() => setShowSampleModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1002, backdropFilter: 'blur(2px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: 500, maxWidth: '90%', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff' }}>
-              <div style={{ fontWeight: 900, fontSize: 16 }}>📦 Nhập chi tiết đặt Sample</div>
-              <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>Vendor: {showSampleModal.vendor?.vendor_type || '—'}</div>
-            </div>
-            <div style={{ padding: '24px' }}>
-              <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>
-                Chi tiết Sample muốn đặt <span style={{ color: HC.danger }}>*</span>
-              </label>
-              <textarea
-                autoFocus
-                rows={5}
-                placeholder="Vui lòng mô tả chi tiết sample muốn đặt:&#10;- Số lượng:&#10;- Màu sắc:&#10;- Kích thước:&#10;- Yêu cầu đặc biệt:&#10;- ..."
-                value={tempSampleDetails}
-                onChange={e => setTempSampleDetails(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  border: `1.5px solid ${tempSampleDetails.trim() ? HC.orange : HC.border}`,
-                  fontSize: 13,
-                  resize: 'vertical',
-                  fontFamily: "'Nunito Sans',sans-serif",
-                  outline: 'none'
-                }}
-              />
-              <div style={{ marginTop: 12, fontSize: 11, color: HC.muted2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>💡</span>
-                <span>Thông tin này sẽ được gửi đến Staff B để xử lý đặt hàng</span>
-              </div>
-            </div>
-            <div style={{ padding: '16px 20px', borderTop: `1px solid ${HC.border}`, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowSampleModal({
-                    key: showSampleModal.key,
-                    vendor: showSampleModal.vendor,
-                    action: 'ask_decision'
-                  });
-                  setTempSampleDetails('');
-                }}
-                style={{ padding: '8px 20px', borderRadius: 8, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontWeight: 700 }}
-              >
-                Quay lại
-              </button>
-              <button
-                onClick={() => {
-                  if (tempSampleDetails.trim()) {
-                    submitFeedbackWithDecision(
-                      showSampleModal.key,
-                      showSampleModal.vendor,
-                      'dat',
-                      tempSampleDetails.trim()
-                    );
-                  }
-                }}
-                disabled={!tempSampleDetails.trim()}
-                style={{
-                  padding: '8px 24px',
-                  borderRadius: 8,
-                  background: !tempSampleDetails.trim() ? HC.muted2 : `linear-gradient(135deg,${HC.success},#15803d)`,
-                  color: '#fff',
-                  border: 'none',
-                  cursor: !tempSampleDetails.trim() ? 'not-allowed' : 'pointer',
-                  fontWeight: 700
-                }}
-              >
-                Xác nhận đặt Sample
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Lightbox */}
       {lightboxOpen && mediaUrls.length > 0 && (
