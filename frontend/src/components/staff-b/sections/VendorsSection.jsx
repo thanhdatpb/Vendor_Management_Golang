@@ -339,6 +339,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     if (!importConfirmOpen || !importPreview) return null;
     const hasImportResult = Boolean(importResult);
     const resultErrors = importResult?.errors || [];
+
+    const uniqueVendorNames = new Set(
+      importPreview
+        .map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim())
+        .filter(Boolean)
+    );
+    const uniqueCount = uniqueVendorNames.size > 0 ? uniqueVendorNames.size : importPreview.length;
+
     return (
       <div onClick={() => { if (!importing) { setImportConfirmOpen(false); setImportPreview(null); setImportResult(null); } }} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, backdropFilter: 'blur(3px)', padding: 16 }}>
         <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 800, background: HC.surface, borderRadius: 20, boxShadow: '0 32px 80px rgba(26,15,0,0.28)', border: `1.5px solid ${HC.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
@@ -346,7 +354,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
             <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(245,166,35,0.15)', border: '1.5px solid rgba(245,166,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📥</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Xác nhận Import Vendor</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Tìm thấy <b style={{ color: HC.orange }}>{importPreview.length} vendor</b></div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Tìm thấy <b style={{ color: HC.orange }}>{uniqueCount} vendor</b> ({importPreview.length} phân loại)</div>
             </div>
             {!importing && <button onClick={() => { setImportConfirmOpen(false); setImportPreview(null); setImportResult(null); }} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)' }}>✕</button>}
           </div>
@@ -389,9 +397,9 @@ export default function VendorsSection({ filterProductType = '', filterProductId
           </div>
           {totalPrevPages > 1 && <div style={{ padding: '4px 22px', flexShrink: 0 }}><MiniPager page={importPreviewPage} total={totalPrevPages} onChange={setImportPreviewPage} label={`Xem ${(importPreviewPage - 1) * PREV_PAGE_SIZE + 1}–${Math.min(importPreview.length, importPreviewPage * PREV_PAGE_SIZE)} / ${importPreview.length}`} /></div>}
           <div style={{ padding: '14px 22px', background: HC.cream, borderTop: `1.5px solid ${HC.border}`, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <div style={{ flex: 1, fontSize: 11, color: HC.muted }}>{importing ? '⟳ Đang import...' : hasImportResult ? 'Đã có kết quả import' : `Sẽ thêm ${importPreview.length} vendor`}</div>
+            <div style={{ flex: 1, fontSize: 11, color: HC.muted }}>{importing ? '⟳ Đang import...' : hasImportResult ? 'Đã có kết quả import' : `Sẽ thêm ${uniqueCount} vendor (${importPreview.length} phân loại)`}</div>
             <button onClick={() => { setImportConfirmOpen(false); setImportPreview(null); setImportResult(null); }} disabled={importing} style={{ padding: '9px 20px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.brown, fontSize: 12, fontWeight: 700, cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.5 : 1 }}>{hasImportResult ? 'Đóng' : 'Hủy'}</button>
-            <button onClick={handleConfirmImport} disabled={importing} style={{ padding: '9px 26px', borderRadius: 10, border: 'none', background: importing ? HC.muted2 : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', fontSize: 12, fontWeight: 900, cursor: importing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>{importing ? '⟳ Đang import...' : hasImportResult ? 'Import lại' : `✓ Import ${importPreview.length} Vendor`}</button>
+            <button onClick={handleConfirmImport} disabled={importing} style={{ padding: '9px 26px', borderRadius: 10, border: 'none', background: importing ? HC.muted2 : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', fontSize: 12, fontWeight: 900, cursor: importing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>{importing ? '⟳ Đang import...' : hasImportResult ? 'Import lại' : `✓ Import ${uniqueCount} Vendor`}</button>
           </div>
         </div>
       </div>

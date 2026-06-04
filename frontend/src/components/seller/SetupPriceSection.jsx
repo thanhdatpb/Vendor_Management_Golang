@@ -505,7 +505,10 @@ export default function SetupPriceSection() {
 
     const uniquePriceList = newPriceList.filter((item, index, self) =>
       index === self.findIndex((t) => (
-        t.product_type === item.product_type && t.vendor_type === item.vendor_type
+        t.product_type === item.product_type && 
+        t.vendor_type === item.vendor_type &&
+        t.vendor_name === item.vendor_name &&
+        t.size === item.size
       ))
     );
 
