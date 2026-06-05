@@ -279,6 +279,22 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
     { label: 'Status', value: product.status || 'draft', bold: true, color: HC.brown },
   ];
 
+  const groupedVendors = [];
+  const groupMap = new Map();
+  vendors.forEach((v, idx) => {
+    const vName = ((v.name || v.vendor_type || '—') || '').toString().trim();
+    if (!groupMap.has(vName)) {
+      groupMap.set(vName, {
+        vendorName: vName,
+        items: [],
+        firstVendor: v,
+        key: vendorKey(v, idx)
+      });
+      groupedVendors.push(groupMap.get(vName));
+    }
+    groupMap.get(vName).items.push(v);
+  });
+
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999, backdropFilter: 'blur(2px)', padding: '16px' }}>
@@ -356,8 +372,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    {vendors.map((v, i) => {
-                      const key = vendorKey(v, i);
+                    {groupedVendors.map((group, i) => {
+                      const v = group.firstVendor;
+                      const key = group.key;
                       const sel = selections[key];
                       const isChecked = !!sel?.checked;
                       const feedback = sel?.feedback || '';
@@ -404,46 +421,51 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 <span style={{ fontWeight: 800, fontSize: 13, color: HC.muted }}>#{i + 1}</span>
                               </div>
                               <div>
-                                <div style={{ fontWeight: 900, fontSize: 16, color: HC.orangeDark }}>{v.vendor_type || '—'}</div>
+                                <div style={{ fontWeight: 900, fontSize: 16, color: HC.orangeDark }}>{group.vendorName}</div>
                                 <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 11, color: HC.muted2 }}>
-                                  {v.size && <span>📏 Size: {v.size}</span>}
-                                  {v.optional && <span>🎨 Optional: {v.optional}</span>}
+                                  <span>📏 {group.items.length} phân loại (sizes/options)</span>
                                 </div>
-                              </div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: 11, color: HC.muted }}>Pricing 1+2</div>
-                              <div style={{ fontWeight: 800, fontSize: 16, color: HC.orange }}>
-                                ${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}
                               </div>
                             </div>
                           </div>
 
-                          {/* Pricing Grid */}
-                          <div style={{ padding: '16px 20px', background: HC.surface2, borderBottom: `1px solid ${HC.border}` }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-                              {[
-                                { label: '🚚 ECONOMY', price: v.eco_price, total: v.eco_total },
-                                { label: '⚡ FAST', price: v.fast_price, total: v.fast_total },
-                                { label: '✈️ EXPRESS', price: v.express_price, total: v.express_total },
-                                { label: '🌙 OVERNIGHT', price: v.overnight_price, total: v.overnight_total }
-                              ].map((item, idx) => (
-                                <div key={idx} style={{
-                                  background: HC.surface, borderRadius: 10, padding: '8px 12px',
-                                  border: `1px solid ${HC.border}`
-                                }}>
-                                  <div style={{ fontWeight: 800, fontSize: 10, color: HC.muted, marginBottom: 4 }}>{item.label}</div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: 11, color: HC.muted2 }}>Ship:</span>
-                                    <span style={{ fontWeight: 700 }}>{fmt(item.price)}</span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                                    <span style={{ fontSize: 11, color: HC.muted2 }}>Total:</span>
-                                    <span style={{ fontWeight: 800, color: HC.success }}>{fmt(item.total)}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                          {/* Pricing Table (Grouped) */}
+                          <div style={{ padding: '0', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, overflowX: 'auto' }}>
+                            <table style={{ width: '100%', minWidth: 600, borderCollapse: 'collapse', fontSize: 11, textAlign: 'center' }}>
+                              <thead>
+                                <tr style={{ background: HC.cream, borderBottom: `1px solid ${HC.border}`, color: HC.muted }}>
+                                  <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 800 }}>Variant (Size / Opt)</th>
+                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Base Cost</th>
+                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Economy (Ship/Total)</th>
+                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Fast (Ship/Total)</th>
+                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Express (Ship/Total)</th>
+                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Overnight (Ship/Total)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.items.map((vi, idx) => (
+                                  <tr key={idx} style={{ borderBottom: idx === group.items.length - 1 ? 'none' : `1px solid ${HC.border}`, background: HC.surface }}>
+                                    <td style={{ padding: '10px 12px', textAlign: 'left' }}>
+                                      <div style={{ fontWeight: 800, color: HC.ink }}>{vi.size || '—'}</div>
+                                      {vi.optional && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{vi.optional}</div>}
+                                    </td>
+                                    <td style={{ padding: '10px 12px', fontWeight: 800, color: HC.orange }}>${((vi.pricing1 || 0) + (vi.pricing2 || 0)).toFixed(2)}</td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.eco_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.eco_total)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.fast_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.fast_total)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.express_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.express_total)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px' }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.overnight_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.overnight_total)}</span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
 
                           {/* Feedback Section - 2 cột */}

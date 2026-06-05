@@ -458,7 +458,7 @@ export default function SetupPriceSection() {
           overnight_price: vendor.overnight_price || 0, overnight_total: vendor.overnight_total || 0,
           pricing1: vendor.pricing1 || 0, pricing2: vendor.pricing2 || 0,
           id: existingSetup.id,
-          vendor_name: vendor.vendor_name || vendor.vendor_type,
+          vendor_name: vendor.name || vendor.vendor_name || vendor.vendor_type,
           vendor_type: vendor.vendor_type,
           product_type: vendor.product_type,
           size: existingSetup.size || vendor.size,
@@ -479,7 +479,7 @@ export default function SetupPriceSection() {
       return {
         id: Date.now() + idx + Math.random(),
         vendor_id: vendor.id,
-        vendor_name: vendor.vendor_name || vendor.vendor_type || 'Unknown',
+        vendor_name: vendor.name || vendor.vendor_name || vendor.vendor_type || 'Unknown',
         vendor_type: vendor.vendor_type || '',
         product_type: vendor.productType || vendor.product_type || '',
         size: vendor.size || '',

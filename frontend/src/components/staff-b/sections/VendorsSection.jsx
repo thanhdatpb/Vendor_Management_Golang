@@ -82,6 +82,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   };
   const pageAllSelected = pagedVendors.length > 0 && pagedVendors.every(v => selectedIds.has(v.id));
   const pageSomeSelected = pagedVendors.some(v => selectedIds.has(v.id));
+  
+  const selectedVendorsList = vendorList.filter(v => selectedIds.has(v.id));
+  const uniqueSelectedCount = new Set(selectedVendorsList.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size;
+
 
   const handleAssignVendor = () => {
     if (selectedIds.size === 0) { alert('Vui lòng chọn ít nhất 1 vendor!'); return; }
@@ -90,7 +94,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     if (!productId) { alert('Không xác định được sản phẩm.'); return; }
     const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = selected; lsSet(LS_PRODUCT_VENDORS, all);
     window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
-    alert(`✅ Đã gán ${selected.length} vendor cho sản phẩm!`);
+    alert(`✅ Đã gán ${uniqueSelectedCount} vendor cho sản phẩm!`);
     setSelectedIds(new Set()); onAssignComplete();
   };
 
@@ -450,7 +454,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
           <div style={{ fontWeight: 900, fontSize: 15, color: activeTab === 'bestseller' ? HC.gold : HC.ink, fontFamily: "'Nunito',sans-serif" }}>
             {activeTab === 'bestseller' ? '⭐ Best Seller' : 'Tất Cả Vendor'}
             <span style={{ marginLeft: 10, padding: '2px 10px', borderRadius: 999, background: activeTab === 'bestseller' ? HC.goldLight : HC.orangeLight, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.orangeMid}`, color: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
-              {filteredVendors.length}{!filterProductType && vendorList.length !== filteredVendors.length ? ` / ${vendorList.length}` : ''}
+              {new Set(filteredVendors.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size}
+              {!filterProductType && vendorList.length !== filteredVendors.length ? ` / ${new Set(vendorList.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size}` : ''}
             </span>
           </div>
 
@@ -466,7 +471,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {selectedIds.size > 0 && filterProductId && (
             <button onClick={handleAssignVendor} style={{ padding: '9px 20px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span>✅</span> Gán {selectedIds.size} Vendor
+              <span>✅</span> Gán {uniqueSelectedCount} Vendor
             </button>
           )}
           <button onClick={loadVendors} style={{ padding: '7px 14px', borderRadius: 9, border: `1.5px solid ${HC.border}`, background: HC.cream, color: HC.brown, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>↻ Làm mới</button>
@@ -484,7 +489,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
       {selectedIds.size > 0 && (
         <div style={{ marginBottom: 12, padding: '10px 16px', borderRadius: 12, background: '#ecfdf5', border: '1.5px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: HC.success }}>✓ Đã chọn {selectedIds.size} vendor</span>
+          <span style={{ fontSize: 13, fontWeight: 900, color: HC.success }}>✓ Đã chọn {uniqueSelectedCount} vendor</span>
           <button onClick={() => setSelectedIds(new Set())} style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${HC.success}`, background: 'transparent', color: HC.success, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Bỏ chọn tất cả</button>
           {!filterProductId && <span style={{ fontSize: 11, color: '#92400e' }}>⚠️ Để gán vendor, vào Products → nhấn "Tìm Vendor".</span>}
         </div>

@@ -253,7 +253,7 @@ export default function VendorViewerModal({ product, onClose }) {
                                   </div>
                                 </div>
                               </div>
-                              <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: HC.muted }}>Pricing 1+2</div><div style={{ fontWeight: 800, fontSize: 15, color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</div></div>
+                              <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: HC.muted }}>Base Cost</div><div style={{ fontWeight: 800, fontSize: 15, color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</div></div>
                             </div>
 
                             {/* Pricing Grid */}

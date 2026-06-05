@@ -245,7 +245,7 @@ export default function Login() {
 
           {/* Fields */}
           {[
-            { label: "Email", key: "email", type: "email", placeholder: "your@email.com" },
+            { label: "Tài khoản", key: "email", type: "text", placeholder: "happyc.admin" },
             { label: "Mật khẩu", key: "password", type: "password", placeholder: "••••••••••" },
           ].map(f => (
             <div key={f.key} style={{ marginBottom: 20 }}>

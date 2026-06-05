@@ -12,7 +12,7 @@ class UserSeeder extends Seeder {
         
         // ========== 1. TÀI KHOẢN ADMIN ==========
         User::updateOrCreate(
-            ['email' => 'admin@gmail.com'],
+            ['email' => 'happyc.admin'],
             [
                 'name'       => 'Admin',
                 'password'   => Hash::make('123456'),  // ← sửa thành 123456
@@ -25,13 +25,13 @@ class UserSeeder extends Seeder {
         
         // Xóa tài khoản admin cũ nếu còn
         User::where('email', 'admin@techstore.vn')->delete();
-        $this->command->info('✅ Admin: admin@gmail.com / 123456');
+        $this->command->info('✅ Admin: happyc.admin / 123456');
 
         // ========== 2. TÀI KHOẢN STAFF B ==========
         User::where('email', 'staffb@gmail.com')->delete();
         
         User::updateOrCreate(
-            ['email' => 'uyenho.vendor@gmail.com'],
+            ['email' => 'happyc.uyenho.vendor'],
             [
                 'name'       => 'Uyen Ho',
                 'password'   => Hash::make('123456'),
@@ -41,22 +41,22 @@ class UserSeeder extends Seeder {
                 'is_active'  => true,
             ]
         );
-        $this->command->info('✅ Staff B: uyenho.vendor@gmail.com / 123456');
+        $this->command->info('✅ Staff B: happyc.uyenho.vendor / 123456');
 
         // ========== 3. CẬP NHẬT TÀI KHOẢN staff@techstore.vn (cũ) ==========
         $oldStaff = User::where('email', 'staff@techstore.vn')->first();
         if ($oldStaff) {
             $oldStaff->update([
-                'email'      => 'phuoc.huynh.seller@gmail.com',
+                'email'      => 'happyc.phuochuynh.seller',
                 'name'       => 'Phuoc Huynh',
                 'role'       => 'staff_a',
                 'seller_name'=> 'Phuoc Huynh',
                 'full_name'  => 'Huynh Phuoc',
             ]);
-            $this->command->info('✅ Updated: staff@techstore.vn -> phuoc.huynh.seller@gmail.com');
+            $this->command->info('✅ Updated: staff@techstore.vn -> happyc.phuochuynh.seller');
         } else {
             User::updateOrCreate(
-                ['email' => 'phuoc.huynh.seller@gmail.com'],
+                ['email' => 'happyc.phuochuynh.seller'],
                 [
                     'name'       => 'Phuoc Huynh',
                     'password'   => Hash::make('123456'),
@@ -99,10 +99,10 @@ class UserSeeder extends Seeder {
         $this->command->info("\n🎉 UserSeeder completed!");
         $this->command->info("📋 DANH SÁCH TÀI KHOẢN (TẤT CẢ ĐỀU CÓ MẬT KHẨU: 123456)");
         $this->command->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        $this->command->info("🔴 Admin:     admin@gmail.com");
-        $this->command->info("🟡 Staff B:   uyenho.vendor@gmail.com");
+        $this->command->info("🔴 Admin:     happyc.admin");
+        $this->command->info("🟡 Staff B:   happyc.uyenho.vendor");
         $this->command->info("🟢 Staff A:   10 sellers:");
-        $this->command->info("   - phuoc.huynh.seller@gmail.com");
+        $this->command->info("   - happyc.phuochuynh.seller");
         $this->command->info("   - tran.hoang.seller@gmail.com");
         $this->command->info("   - sang.han.seller@gmail.com");
         $this->command->info("   - quy.hoang.seller@gmail.com");
