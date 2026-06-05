@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import {
+  BarChartOutlined, FolderOpenOutlined, HourglassOutlined,
+  CheckCircleOutlined, CloseCircleOutlined, CheckCircleFilled,
+  WarningFilled, CloseCircleFilled, AimOutlined, FireOutlined,
+  FormatPainterOutlined, SmileOutlined, GlobalOutlined, RocketOutlined,
+  ClockCircleOutlined, CheckOutlined
+} from '@ant-design/icons';
 import { HC, API_BASE_URL, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
 import { playNotificationBeep } from '../audio';
@@ -66,21 +73,33 @@ function StatCard({ label, value, icon, color, onClick, subLabel }) {
 
 // ── Project Card ───────────────────────────────────────────
 const PROJECT_META = {
-  'Creative Project': { icon: '🎨', color: '#F5A623' },
-  'Happy Project':    { icon: '😊', color: '#10B981' },
-  'Global Project':   { icon: '🌏', color: '#3B82F6' },
-  'Pilot Project':    { icon: '🚀', color: '#A855F7' },
+  'Creative Project': { icon: <FormatPainterOutlined />, color: '#F5A623' },
+  'Happy Project':    { icon: <SmileOutlined />, color: '#10B981' },
+  'Global Project':   { icon: <GlobalOutlined />, color: '#3B82F6' },
+  'Pilot Project':    { icon: <RocketOutlined />, color: '#A855F7' },
 };
 
-function ProjectCard({ project, stats, onClick }) {
+function ProjectCard({ project, stats, onClick, onStatusClick }) {
   const [hovered, setHovered] = useState(false);
-  const meta = PROJECT_META[project] || { icon: '📁', color: '#6B7280' };
+  const meta = PROJECT_META[project] || { icon: <FolderOpenOutlined />, color: '#6B7280' };
   const approvalRate = stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0;
   const pending = stats.total - stats.approved - stats.rejected;
 
+  const rowStyle = { 
+    cursor: 'pointer', 
+    padding: '10px 12px', 
+    borderRadius: 8, 
+    border: '1px solid #F3F4F6',
+    transition: 'all 0.2s', 
+    background: '#FAFAFA' 
+  };
+  const onRowHover = (e, isHover) => { 
+    e.currentTarget.style.background = isHover ? '#F0F9FF' : '#FAFAFA'; 
+    e.currentTarget.style.borderColor = isHover ? '#BAE6FD' : '#F3F4F6';
+  };
+
   return (
     <div
-      onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -88,12 +107,12 @@ function ProjectCard({ project, stats, onClick }) {
         borderRadius: 16,
         border: `1.5px solid ${hovered ? meta.color : '#F0E4CC'}`,
         boxShadow: hovered ? `0 8px 24px ${meta.color}15` : '0 2px 8px rgba(0,0,0,0.02)',
-        overflow: 'hidden', cursor: 'pointer',
+        overflow: 'hidden',
         transition: 'all 0.2s ease',
         transform: hovered ? 'translateY(-2px)' : 'none',
       }}
     >
-      <div style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.2s' }}>
+      <div onClick={onClick} style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.2s', cursor: 'pointer' }}>
         <span style={{ width: 38, height: 38, borderRadius: 10, background: '#F8F9FA', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{meta.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
@@ -101,8 +120,13 @@ function ProjectCard({ project, stats, onClick }) {
         </div>
         <RingProgress percent={approvalRate} color={meta.color} size={46} />
       </div>
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div>
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div 
+          onClick={() => onStatusClick('approved')} 
+          style={rowStyle}
+          onMouseEnter={e => onRowHover(e, true)}
+          onMouseLeave={e => onRowHover(e, false)}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
@@ -114,21 +138,31 @@ function ProjectCard({ project, stats, onClick }) {
             <div style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%`, height: '100%', background: '#10B981', borderRadius: 2, transition: 'width 0.6s ease' }} />
           </div>
         </div>
-        {pending > 0 && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Chờ duyệt</span>
-              </div>
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{pending}</span>
+        
+        <div 
+          onClick={() => onStatusClick('pending')} 
+          style={rowStyle}
+          onMouseEnter={e => onRowHover(e, true)}
+          onMouseLeave={e => onRowHover(e, false)}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Chờ duyệt</span>
             </div>
-            <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ width: `${stats.total > 0 ? (pending / stats.total) * 100 : 0}%`, height: '100%', background: '#F59E0B', borderRadius: 2, transition: 'width 0.6s ease' }} />
-            </div>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{pending}</span>
           </div>
-        )}
-        <div>
+          <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ width: `${stats.total > 0 ? (pending / stats.total) * 100 : 0}%`, height: '100%', background: '#F59E0B', borderRadius: 2, transition: 'width 0.6s ease' }} />
+          </div>
+        </div>
+        
+        <div 
+          onClick={() => onStatusClick('rejected')} 
+          style={rowStyle}
+          onMouseEnter={e => onRowHover(e, true)}
+          onMouseLeave={e => onRowHover(e, false)}
+        >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }} />
@@ -154,6 +188,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const [modalTitle, setModalTitle] = useState('');
   const [modalFilterType, setModalFilterType] = useState('');
   const [modalFilterValue, setModalFilterValue] = useState('');
+  const [modalInitialStatus, setModalInitialStatus] = useState('all');
   const [activeFilter, setActiveFilter] = useState('all');
   const [formStats, setFormStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
   const [projectStats, setProjectStats] = useState({
@@ -484,6 +519,16 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     setModalTitle(label);
     setModalFilterType(type);
     setModalFilterValue(value);
+    setModalInitialStatus('all');
+    setModalOpen(true);
+  };
+
+  const handleProjectStatusClick = (project, status) => {
+    let statusLabel = status === 'approved' ? 'Đã Duyệt' : status === 'rejected' ? 'Từ Chối' : 'Chờ Duyệt';
+    setModalTitle(`Lịch sử Form — ${project} (${statusLabel})`);
+    setModalFilterType('project');
+    setModalFilterValue(project);
+    setModalInitialStatus(status);
     setModalOpen(true);
   };
 
@@ -572,38 +617,38 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       {/* ── Section header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, animation: 'fadeUp 0.4s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF8EE', border: '1.5px solid #FDE8B8', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📊</div>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF8EE', border: '1.5px solid #FDE8B8', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}><BarChartOutlined /></div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Tổng Quan</div>
             <div style={{ fontSize: 12, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>Cập nhật mỗi 15 giây · {formStats.total} form tổng cộng</div>
           </div>
         </div>
         <div style={{ padding: '6px 16px', borderRadius: 20, background: overallRate >= 70 ? '#ecfdf5' : overallRate >= 40 ? '#fffbeb' : '#fef2f2', border: `1.5px solid ${overallRate >= 70 ? '#bbf7d0' : overallRate >= 40 ? '#fde68a' : '#fecaca'}`, color: overallRate >= 70 ? '#166534' : overallRate >= 40 ? '#92400e' : '#991b1b', fontSize: 12, fontWeight: 800, fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span>{overallRate >= 70 ? '✅' : overallRate >= 40 ? '⚠️' : '🔴'}</span>
+          <span style={{ display: 'flex', alignItems: 'center' }}>{overallRate >= 70 ? <CheckCircleFilled /> : overallRate >= 40 ? <WarningFilled /> : <CloseCircleFilled />}</span>
           Tỷ lệ duyệt: {overallRate}%
         </div>
       </div>
 
       {/* ── Stat Cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32, animation: 'fadeUp 0.45s ease' }}>
-        <StatCard label="Tổng Form Request" value={formStats.total} icon="📁" color="#F5A623" subLabel="Tất cả trạng thái" onClick={() => handleCardClick('status', 'all', 'Tất cả Form Request')} />
-        <StatCard label="Chờ Duyệt" value={formStats.pending} icon="⏳" color="#F59E0B" subLabel={formStats.pending > 0 ? 'Cần xử lý ngay' : 'Không có form chờ'} onClick={() => handleCardClick('status', 'pending', 'Form Chờ Duyệt')} />
-        <StatCard label="Đã Duyệt" value={formStats.approved} icon="✅" color="#10B981" subLabel={`${overallRate}% tỷ lệ duyệt`} onClick={() => handleCardClick('status', 'approved', 'Form Đã Duyệt')} />
-        <StatCard label="Từ Chối" value={formStats.rejected} icon="❌" color="#EF4444" subLabel={formStats.rejected > 0 ? `${Math.round((formStats.rejected / (formStats.total || 1)) * 100)}% tổng form` : 'Không có từ chối'} onClick={() => handleCardClick('status', 'rejected', 'Form Từ Chối')} />
+        <StatCard label="Tổng Form Request" value={formStats.total} icon={<FolderOpenOutlined />} color="#F5A623" subLabel="Tất cả trạng thái" onClick={() => handleCardClick('status', 'all', 'Tất cả Form Request')} />
+        <StatCard label="Chờ Duyệt" value={formStats.pending} icon={<HourglassOutlined />} color="#F59E0B" subLabel={formStats.pending > 0 ? 'Cần xử lý ngay' : 'Không có form chờ'} onClick={() => handleCardClick('status', 'pending', 'Form Chờ Duyệt')} />
+        <StatCard label="Đã Duyệt" value={formStats.approved} icon={<CheckCircleOutlined />} color="#10B981" subLabel={`${overallRate}% tỷ lệ duyệt`} onClick={() => handleCardClick('status', 'approved', 'Form Đã Duyệt')} />
+        <StatCard label="Từ Chối" value={formStats.rejected} icon={<CloseCircleOutlined />} color="#EF4444" subLabel={formStats.rejected > 0 ? `${Math.round((formStats.rejected / (formStats.total || 1)) * 100)}% tổng form` : 'Không có từ chối'} onClick={() => handleCardClick('status', 'rejected', 'Form Từ Chối')} />
       </div>
 
       {/* ── Project section header + filter ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, animation: 'fadeUp 0.5s ease', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F8F9FA', border: '1.5px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🎯</div>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F8F9FA', border: '1.5px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#9C7A50' }}><AimOutlined /></div>
           <span style={{ fontSize: 15, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Theo Project</span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {[
             { id: 'all',       label: 'Tất cả' },
-            { id: 'active',    label: '🔥 Có hoạt động' },
-            { id: 'pending',   label: '⏳ Còn chờ' },
-            { id: 'completed', label: '✅ Hoàn tất' },
+            { id: 'active',    label: <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FireOutlined /> Có hoạt động</span> },
+            { id: 'pending',   label: <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><HourglassOutlined /> Còn chờ</span> },
+            { id: 'completed', label: <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckOutlined /> Hoàn tất</span> },
           ].map(f => (
             <button key={f.id} onClick={() => setActiveFilter(f.id)} style={{ padding: '6px 16px', borderRadius: 20, border: `1.5px solid ${activeFilter === f.id ? '#F5A623' : '#F0E4CC'}`, background: activeFilter === f.id ? '#FFF8EE' : '#fff', color: activeFilter === f.id ? '#F5A623' : '#9C7A50', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif", transition: 'all 0.2s' }}>{f.label}</button>
           ))}
@@ -622,6 +667,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
             project={project}
             stats={projectStats[project] || { approved: 0, rejected: 0, total: 0 }}
             onClick={() => handleCardClick('project', project, `Lịch sử Form — ${project}`)}
+            onStatusClick={(status) => handleProjectStatusClick(project, status)}
           />
         ))}
       </div>
@@ -630,7 +676,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       <div style={{ marginBottom: pendingProducts.length === 0 ? 16 : 32, animation: 'fadeUp 0.6s ease' }}>
         <div style={sHdr}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>⏳</span>
+            <span style={{ fontSize: 20, color: '#F59E0B', display: 'flex' }}><ClockCircleOutlined /></span>
             <h3 style={h3S}>Form Chờ Duyệt Từ Seller</h3>
           </div>
           {pendingProducts.length > 0 && (
@@ -660,7 +706,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
             alignItems: 'center',
             gap: 10,
           }}>
-            <span style={{ fontSize: 15 }}>🟢</span>
+            <span style={{ fontSize: 15, color: '#166534', display: 'flex' }}><CheckCircleFilled /></span>
             <span style={{
               fontSize: 12,
               fontWeight: 700,
@@ -742,6 +788,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         title={modalTitle}
         filterType={modalFilterType}
         filterValue={modalFilterValue}
+        initialStatus={modalInitialStatus}
         allProducts={allProducts}
         allSellers={allSellers}
       />

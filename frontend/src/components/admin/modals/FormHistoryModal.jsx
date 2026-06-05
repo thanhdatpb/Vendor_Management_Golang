@@ -3,11 +3,17 @@ import { HC } from '../constants';
 import { fmtDate, getMediaUrls } from '../utils';
 import { MediaGallery } from '../ui';
 
-export default function FormHistoryModal({ open, onClose, title, filterType, filterValue, allProducts, allSellers = [] }) {
+export default function FormHistoryModal({ open, onClose, title, filterType, filterValue, initialStatus = 'all', allProducts, allSellers = [] }) {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterSeller, setFilterSeller] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  useEffect(() => {
+    if (open) {
+      setFilterStatus(initialStatus);
+    }
+  }, [open, initialStatus]);
 
   useEffect(() => {
     setCurrentPage(1);
