@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HC } from '../constants';
-import { fmtDate } from '../utils';
+import { fmtDate, getMediaUrls } from '../utils';
+import { MediaGallery } from '../ui';
 
 export default function FormHistoryModal({ open, onClose, title, filterType, filterValue, allProducts, allSellers = [] }) {
   const [filterStatus, setFilterStatus] = useState('all');
@@ -153,6 +154,7 @@ export default function FormHistoryModal({ open, onClose, title, filterType, fil
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: HC.muted }}>Seller Name</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: HC.muted }}>Project</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: HC.muted }}>Product Type</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: HC.muted }}>Hình ảnh</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: HC.muted }}>Ngày gửi</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: HC.muted }}>Deadline</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: 11, fontWeight: 800, color: HC.muted }}>Trạng thái</th>
@@ -165,6 +167,7 @@ export default function FormHistoryModal({ open, onClose, title, filterType, fil
                     <td style={{ padding: '12px', fontSize: 12, fontWeight: 700, color: HC.orangeDark }}>{product.seller_name || product.sellerName || product.user_name || product.userName || '—'}</td>
                     <td style={{ padding: '12px', fontSize: 12 }}>{product.project || '—'}</td>
                     <td style={{ padding: '12px', fontSize: 12 }}>{product.product_type || '—'}</td>
+                    <td style={{ padding: '12px', fontSize: 12 }}><MediaGallery mediaUrls={getMediaUrls(product)} /></td>
                     <td style={{ padding: '12px', fontSize: 12 }}>{fmtDate(product.created_at)}</td>
                     <td style={{ padding: '12px', fontSize: 12 }}>{fmtDate(product.deadline_date)}</td>
                     <td style={{ padding: '12px', fontSize: 12 }}>{getStatusBadge(product.status)}</td>
