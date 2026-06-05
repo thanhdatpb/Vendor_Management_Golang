@@ -59,7 +59,7 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
               fontFamily: "'Nunito',sans-serif",
               letterSpacing: '-0.02em',
             }}>
-              Happy Creative
+              Happy Creative LLC
             </div>
             <div style={{
               color: HC.orange,

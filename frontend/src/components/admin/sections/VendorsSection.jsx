@@ -14,7 +14,6 @@ export default function VendorsSection() {
     product_type: '',
     vendor_type: ''
   });
-  const [showFilters, setShowFilters] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const uniqueProductTypes = useRef([]);
@@ -84,7 +83,6 @@ export default function VendorsSection() {
   const resetFilters = () => {
     setSearchTerm('');
     setFilters({ product_type: '', vendor_type: '' });
-    setShowFilters(false);
   };
 
   const TH = (extra = {}) => ({
@@ -120,9 +118,6 @@ export default function VendorsSection() {
           <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>
             Danh sách Vendor
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, fontSize: 11, fontWeight: 700, color: HC.brown, fontFamily: "'Nunito',sans-serif" }}>
-            👁 Chế độ chỉ xem
-          </div>
         </div>
         <Spinner />
       </div>
@@ -153,7 +148,7 @@ export default function VendorsSection() {
                 border: `1.5px solid ${HC.border}`,
                 background: HC.surface,
                 fontSize: 12,
-                width: 320,
+                width: 420,
                 outline: 'none',
                 fontFamily: "'Nunito Sans',sans-serif",
                 transition: 'all 0.2s'
@@ -163,25 +158,26 @@ export default function VendorsSection() {
             />
           </div>
 
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 10,
-              background: showFilters ? HC.orangeLight : HC.surface,
-              border: `1.5px solid ${showFilters ? HC.orange : HC.border}`,
-              cursor: 'pointer',
-              fontSize: 12,
-              fontWeight: 700,
-              color: showFilters ? HC.orangeDark : HC.brown,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontFamily: "'Nunito',sans-serif",
-            }}
+          <select
+            value={filters.product_type}
+            onChange={(e) => setFilters(prev => ({ ...prev, product_type: e.target.value }))}
+            style={{ padding: '8px 12px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, fontSize: 12, outline: 'none', fontFamily: "'Nunito Sans',sans-serif", minWidth: 140 }}
           >
-            <FilterOutlined /> Lọc
-          </button>
+            <option value="">All Product Type</option>
+            {uniqueProductTypes.current.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            value={filters.vendor_type}
+            onChange={(e) => setFilters(prev => ({ ...prev, vendor_type: e.target.value }))}
+            style={{ padding: '8px 12px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, fontSize: 12, outline: 'none', fontFamily: "'Nunito Sans',sans-serif", minWidth: 140 }}
+          >
+            <option value="">All Vendor Type</option>
+            {uniqueVendorTypes.current.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
 
           <button
             onClick={async () => {
@@ -228,9 +224,6 @@ export default function VendorsSection() {
             </button>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, fontSize: 11, fontWeight: 700, color: HC.brown, fontFamily: "'Nunito',sans-serif" }}>
-            👁 Chế độ chỉ xem
-          </div>
         </div>
       </div>
 
@@ -241,88 +234,11 @@ export default function VendorsSection() {
         </div>
       )}
 
-      {showFilters && (
-        <div style={{
-          marginBottom: 20,
-          padding: '16px 20px',
-          borderRadius: 14,
-          background: HC.surface,
-          border: `1.5px solid ${HC.border}`,
-          display: 'flex',
-          gap: 16,
-          flexWrap: 'wrap',
-          alignItems: 'flex-end'
-        }}>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, marginBottom: 5, display: 'block', fontFamily: "'Nunito',sans-serif" }}>Product Type</label>
-            <select
-              value={filters.product_type}
-              onChange={(e) => setFilters(prev => ({ ...prev, product_type: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: 10,
-                border: `1.5px solid ${HC.border}`,
-                background: HC.surface2,
-                fontSize: 12,
-                outline: 'none',
-                fontFamily: "'Nunito Sans',sans-serif"
-              }}
-            >
-              <option value="">Tất cả</option>
-              {uniqueProductTypes.current.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
 
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, marginBottom: 5, display: 'block', fontFamily: "'Nunito',sans-serif" }}>Vendor Type</label>
-            <select
-              value={filters.vendor_type}
-              onChange={(e) => setFilters(prev => ({ ...prev, vendor_type: e.target.value }))}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: 10,
-                border: `1.5px solid ${HC.border}`,
-                background: HC.surface2,
-                fontSize: 12,
-                outline: 'none',
-                fontFamily: "'Nunito Sans',sans-serif"
-              }}
-            >
-              <option value="">Tất cả</option>
-              {uniqueVendorTypes.current.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <button
-              onClick={() => setShowFilters(false)}
-              style={{
-                padding: '9px 20px',
-                borderRadius: 10,
-                background: HC.orange,
-                border: 'none',
-                color: '#fff',
-                fontWeight: 800,
-                fontSize: 12,
-                cursor: 'pointer',
-                fontFamily: "'Nunito',sans-serif"
-              }}
-            >
-              Áp dụng
-            </button>
-          </div>
-        </div>
-      )}
 
       <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 12, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, fontSize: 11, color: HC.brown, fontFamily: "'Nunito Sans',sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 16 }}>💡</span>
-        <span>Danh sách vendor được quản lý bởi <b>Staff Dashboard B</b>. Trang này chỉ hiển thị để tham khảo.</span>
+        <span>Danh sách vendor được quản lý bởi <b>tài khoản Vendor</b>. Trang này chỉ hiển thị để tham khảo.</span>
       </div>
 
       {filteredList.length === 0 ? (

@@ -50,7 +50,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
           {sidebarOpen && (
             <div style={{ animation: 'fadeIn 0.3s ease' }}>
               <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.02em' }}>
-                Happy Creative
+                Happy Creative LLC
               </div>
               <div style={{ color: HC.orange, fontSize: 10, letterSpacing: '0.2em', fontWeight: 800, textTransform: 'uppercase', marginTop: 2 }}>
                 Seller Dashboard

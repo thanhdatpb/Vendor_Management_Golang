@@ -58,7 +58,6 @@ export default function VendorsSection() {
         Danh sách Vendor
         {!loading && <span style={{ marginLeft: 10, padding: '2px 10px', borderRadius: 999, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11 }}>{vendorList.length} vendor</span>}
       </div>
-      <div style={{ padding: '7px 14px', borderRadius: 10, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, fontSize: 11, fontWeight: 700, color: HC.brown }}>👁 Chế độ chỉ xem</div>
     </div>
   );
 
@@ -75,7 +74,7 @@ export default function VendorsSection() {
       )}
       <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 12, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, fontSize: 11, color: HC.brown, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span>💡</span>
-        <span>Danh sách vendor được quản lý bởi <b>Staff Dashboard B</b>. Trang này chỉ hiển thị để tham khảo.</span>
+        <span>Danh sách vendor được quản lý bởi <b>tài khoản Vendor</b>. Trang này chỉ hiển thị để tham khảo.</span>
       </div>
       {vendorList.length === 0 ? (
         <EmptyState msg="Chưa có vendor nào được thêm vào hệ thống" />

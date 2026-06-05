@@ -190,7 +190,7 @@ export default function Login() {
               letterSpacing: "-0.02em",
               lineHeight: 1.2,
             }}>
-              Happy Creative
+                Happy Creative LLC
             </div>
 
             <div style={{
@@ -305,7 +305,7 @@ export default function Login() {
             fontWeight: 600,
             letterSpacing: "0.06em",
           }}>
-            Happy Creative © {new Date().getFullYear()} · #It'sAlwaysDay1
+            Happy Creative LLC © {new Date().getFullYear()} · #It'sAlwaysDay1
           </div>
         </div>
       </div>
