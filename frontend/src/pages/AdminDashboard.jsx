@@ -6,7 +6,6 @@ import { normalizeList } from '../components/admin/utils';
 import Sidebar from '../components/admin/Sidebar';
 import NotificationCenter from '../components/admin/notifications/NotificationCenter';
 import OverviewSection from '../components/admin/sections/OverviewSection';
-import ProductsSection from '../components/admin/sections/ProductsSection';
 import VendorsSection from '../components/admin/sections/VendorsSection';
 
 window.sendNewsToAdmin = function (newsData) {
@@ -138,7 +137,7 @@ export default function AdminDashboard() {
     const productId = notification.product_id;
     if (!productId) return;
 
-    setActive('products');
+    setActive('overview');
 
     let product = pendingProducts.find(p => String(p.id) === String(productId));
 
@@ -218,16 +217,11 @@ export default function AdminDashboard() {
   const renderSection = () => {
     switch (active) {
       case 'overview':
-        return <OverviewSection />;
-      case 'products':
-        return <ProductsSection
-          externalViewProduct={viewProduct}
-          setExternalViewProduct={setViewProduct}
-        />;
+        return <OverviewSection externalViewProduct={viewProduct} setExternalViewProduct={setViewProduct} />;
       case 'vendors':
         return <VendorsSection />;
       default:
-        return <OverviewSection />;
+        return <OverviewSection externalViewProduct={viewProduct} setExternalViewProduct={setViewProduct} />;
     }
   };
 

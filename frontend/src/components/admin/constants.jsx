@@ -20,13 +20,11 @@ export const STATUS_CFG = {
 
 export const MENU = [
   { id: 'overview', icon: <DashboardOutlined />, label: 'Tổng Quan', desc: 'Overview' },
-  { id: 'products', icon: <AppstoreOutlined />, label: 'Duyệt Form Sản Phẩm', desc: 'Form Approval Management' },
   { id: 'vendors', icon: <ShopOutlined />, label: 'Thư Viện Vendor', desc: 'Vendor Library' },
 ];
 
 export const PAGE_TITLES = {
   overview: 'Overview — Tổng Quan',
-  products: 'Products — Duyệt Form Sản Phẩm',
   vendors: 'Vendors — Thư Viện Vendor',
 };
 
