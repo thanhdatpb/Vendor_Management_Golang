@@ -304,7 +304,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const TDalt = (extra = {}) => ({ ...TD(extra), background: activeTab === 'bestseller' ? HC.goldLight : HC.orangePale });
   const fmt = n => (n != null && n !== '') ? Number(n).toFixed(2) : '—';
 
-  const PREV_PAGE_SIZE = 5;
+  const PREV_PAGE_SIZE = 50;
   const totalPrevPages = importPreview ? Math.ceil(importPreview.length / PREV_PAGE_SIZE) : 1;
   const pagedPreview = importPreview ? importPreview.slice((importPreviewPage - 1) * PREV_PAGE_SIZE, importPreviewPage * PREV_PAGE_SIZE) : [];
   const PREVIEW_COLS = ['Vendor Name', 'Product Type', 'Vendor Type', 'Size', 'Pricing 1', 'Eco Total', 'Fast Total'];
