@@ -6,6 +6,10 @@ import "./index.css";
 import "antd/dist/reset.css";
 
 import { AuthProvider } from "./context/AuthContext";
+import { initSyncService } from "./utils/SyncService";
+
+// Bật đồng bộ ngầm với json-server
+initSyncService();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
