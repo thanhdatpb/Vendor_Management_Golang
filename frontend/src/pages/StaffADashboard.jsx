@@ -265,14 +265,17 @@ export default function SellerDashboard() {
                 {PAGE_TITLES[active]}
               </div>
             </div>
-            <SellerNotificationCenter
-              requestNotifications={requestNotifications}
-              newsNotifications={newsNotifications}
-              markRequestAsRead={markRequestAsRead}
-              markNewsAsRead={markNewsAsRead}
-              onRequestClick={handleRequestClick}
-              onNewsClick={handleNewsClick}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              <SellerNotificationCenter
+                requestNotifications={requestNotifications}
+                newsNotifications={newsNotifications}
+                markRequestAsRead={markRequestAsRead}
+                markNewsAsRead={markNewsAsRead}
+                onRequestClick={handleRequestClick}
+                onNewsClick={handleNewsClick}
+              />
+            </div>
           </div>
 
           {/* Content */}

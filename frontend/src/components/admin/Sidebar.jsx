@@ -1,10 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, CalendarOutlined, CrownOutlined } from '@ant-design/icons';
 import { HC, MENU } from './constants';
 import { HCLogo } from './ui';
 
 export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen, user, logout }) {
   const [hoveredItem, setHoveredItem] = useState(null);
+  const [lastActiveTime, setLastActiveTime] = useState(() => localStorage.getItem(`LAST_ACTIVE_${user?.role || 'admin'}`) || Date.now().toString());
+
+  useEffect(() => {
+    const roleKey = `LAST_ACTIVE_${user?.role || 'admin'}`;
+    let timeout;
+    const handleActivity = () => {
+      if (!timeout) {
+        const now = Date.now().toString();
+        localStorage.setItem(roleKey, now);
+        setLastActiveTime(now);
+        timeout = setTimeout(() => { timeout = null; }, 60000);
+      }
+    };
+    const handleStorage = (e) => { if (e.key === roleKey && e.newValue) setLastActiveTime(e.newValue); };
+    window.addEventListener('click', handleActivity);
+    window.addEventListener('storage', handleStorage);
+    return () => { window.removeEventListener('click', handleActivity); window.removeEventListener('storage', handleStorage); };
+  }, [user?.role]);
+
+  const formatLastActive = (ts) => {
+    const d = new Date(Number(ts));
+    return `Hoạt động lần cuối lúc ${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+  };
 
   return (
     <div style={{
@@ -111,15 +134,15 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
           </div>
           <div style={{
             fontSize: 10,
-            color: HC.muted,
+            color: HC.success,
             paddingTop: 8,
             borderTop: `1px solid ${HC.orangeMid}`,
             display: 'flex',
             alignItems: 'center',
             gap: 6,
           }}>
-            <CalendarOutlined style={{ fontSize: 10 }} />
-            <span>Last login: {new Date().toLocaleDateString('vi-VN')}</span>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: HC.success, boxShadow: `0 0 0 2px ${HC.success}33` }}></div>
+            <span style={{ fontWeight: 700 }}>{formatLastActive(lastActiveTime)}</span>
           </div>
         </div>
       )}
