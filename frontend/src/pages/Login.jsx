@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logoImg from "../assets/logo.png";
@@ -6,6 +6,15 @@ import logoImg from "../assets/logo.png";
 export default function Login() {
   const { login, user: contextUser } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (contextUser) {
+      const role = typeof contextUser.role === "object" ? contextUser.role?.name : contextUser.role;
+      if (role === "admin") navigate("/admin");
+      else if (role === "staffa" || role === "staff_a") navigate("/staff-a");
+      else if (role === "staffb" || role === "staff_b") navigate("/staff-b");
+    }
+  }, [contextUser, navigate]);
 
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
