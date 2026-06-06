@@ -18,6 +18,8 @@ class Vendor extends Model
         'product_type',
         'size',
         'optional',
+        'overview',
+        'media_url',
         'pricing1',
         'pricing2',
         'eco_price',

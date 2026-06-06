@@ -5,7 +5,7 @@
 export const VENDOR_TYPES = ['Old', 'New', 'Best Seller'];
 
 export const VENDOR_EXCEL_HEADERS = [
-  'Vendor Name', 'Product Type', 'Vendor Type', 'Size', 'Optional',
+  'Vendor Name', 'Product Type', 'Vendor Type', 'Image URL', 'Overview', 'Size', 'Optional',
   'Pricing 1', 'Pricing 2', 'Economy Price Ship', 'Economy Total',
   'Fast Price Ship', 'Fast Total', 'Express Price Ship', 'Express Total',
   'Overnight Price Ship', 'Overnight Total',
@@ -15,6 +15,8 @@ const COL_ALIASES = {
   name: ['vendor name', 'vendor_name', 'ten vendor', 'tên vendor', 'name'],
   product_type: ['product type', 'product_type', 'loại sản phẩm', 'loai san pham'],
   vendor_type: ['vendor type', 'vendor_type', 'loại vendor', 'loai vendor'],
+  media_url: ['image url', 'image_url', 'image', 'hình ảnh', 'avatar', 'avatar url', 'media url'],
+  overview: ['overview', 'tổng quan', 'tong quan', 'chất liệu', 'chat lieu', 'description', 'mô tả', 'mo ta'],
   size: ['size', 'kích thước', 'kich thuoc', 'detail size'],
   optional: ['optional', 'tùy chọn', 'tuy chon', 'detail optional'],
   pricing1: ['pricing 1', 'pricing1', 'giá 1', 'gia 1'],
@@ -93,6 +95,8 @@ export function buildVendorPayload(row) {
 
   const size = normalizeOptionalField(row.size ?? row.Size ?? mapColumn(row, 'size'));
   const optional = normalizeOptionalField(row.optional ?? row.Optional ?? mapColumn(row, 'optional'));
+  const overview = normalizeOptionalField(row.overview ?? row.Overview ?? mapColumn(row, 'overview'));
+  const mediaUrl = normalizeOptionalField(row.media_url ?? row['Image URL'] ?? mapColumn(row, 'media_url'));
 
   const getNum = (field, extraKeys = []) => {
     for (const k of [field, ...extraKeys]) {
@@ -107,6 +111,8 @@ export function buildVendorPayload(row) {
     vendor_type: vendorType,
     size,
     optional,
+    overview,
+    media_url: mediaUrl,
     pricing1: getNum('pricing1', ['Pricing 1', 'pricing1']) ?? 0,
     pricing2: getNum('pricing2', ['Pricing 2', 'pricing2']) ?? 0,
     eco_price: getNum('eco_price', ['Economy Price Ship', 'eco_price']),

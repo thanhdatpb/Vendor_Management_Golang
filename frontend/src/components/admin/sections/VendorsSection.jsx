@@ -238,7 +238,9 @@ export default function VendorsSection() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1100 }}>
             <thead>
               <tr>
-                <th rowSpan={2} style={{ ...TH(), borderRadius: '14px 0 0 0', minWidth: 160 }}>Vendor Name</th>
+                <th rowSpan={2} style={{ ...TH(), borderRadius: '14px 0 0 0', minWidth: 50 }}>STT</th>
+                <th rowSpan={2} style={{ ...TH(), minWidth: 60 }}>Image</th>
+                <th rowSpan={2} style={{ ...TH(), minWidth: 160 }}>Vendor Name</th>
                 <th rowSpan={2} style={{ ...TH(), minWidth: 130 }}>Product Type</th>
                 <th rowSpan={2} style={TH({ minWidth: 120 })}>Vendor Type</th>
                 {/* 🆕 Cột Pricing gộp - đặt trước Detail */}
@@ -266,7 +268,14 @@ export default function VendorsSection() {
 
                 return (
                   <tr key={v.id || i}>
-                    <td style={{ ...C(), fontWeight: 800, color: HC.ink2 }}>{v.name || v.vendor_type || '—'}</td>
+                    <td style={{ ...C(), color: HC.muted, fontWeight: 700 }}>{i + 1}</td>
+                    <td style={{ ...C(), verticalAlign: 'middle', padding: '4px' }}>
+                      {v.media_url ? <img src={v.media_url} alt="Vendor" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: `1px solid ${HC.border}` }} /> : <div style={{ width: 40, height: 40, borderRadius: 6, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#ccc', border: `1px dashed ${HC.border}` }}>N/A</div>}
+                    </td>
+                    <td style={{ ...C(), fontWeight: 800, color: HC.ink2, verticalAlign: 'middle' }}>
+                      {v.name || v.vendor_type || '—'}
+                      {v.overview && <div style={{ fontSize: 10, color: HC.muted, fontWeight: 'normal', marginTop: 4, maxWidth: 180, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>{v.overview}</div>}
+                    </td>
                     <td style={{ ...C(), fontWeight: 800, color: HC.orange }}>{v.product_type || '—'}</td>
                     <td style={{ ...C(), fontWeight: 800 }}>
                       {v.vendor_type === 'Best Seller' ? (

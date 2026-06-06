@@ -8,7 +8,7 @@ import { Spinner, EmptyState, BestSellerBadge } from '../ui/StaffBUI';
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
   const [activeTab, setActiveTab] = useState('all'); 
   const EMPTY_VENDOR = {
-    name: '', vendor_type: '', product_type: '', size: '', optional: '', pricing: '',
+    name: '', vendor_type: '', product_type: '', size: '', optional: '', overview: '', media_url: '', pricing: '',
     eco_price: '', eco_total: '', fast_price: '', fast_total: '',
     express_price: '', express_total: '', overnight_price: '', overnight_total: ''
   };
@@ -108,7 +108,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
   const handleExportSample = () => {
     const columns = [
-      'Vendor Name', 'Product Type', 'Vendor Type', 'Size', 'Optional',
+      'Vendor Name', 'Product Type', 'Vendor Type', 'Image URL', 'Overview', 'Size', 'Optional',
       'Pricing 1', 'Pricing 2', 'Economy Price Ship', 'Economy Total',
       'Fast Price Ship', 'Fast Total', 'Express Price Ship', 'Express Total',
       'Overnight Price Ship', 'Overnight Total'
@@ -120,6 +120,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         'Vendor Name': v.name || v.vendor_name || '',
         'Product Type': v.product_type || '',
         'Vendor Type': v.vendor_type || '',
+        'Image URL': v.media_url || '',
+        'Overview': v.overview || '',
         'Size': v.size || '',
         'Optional': v.optional || '',
         'Pricing 1': v.pricing1 != null ? Number(v.pricing1).toFixed(2) : '',
@@ -139,7 +141,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     ws['!cols'] = [
-      { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
+      { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 40 }, { wch: 30 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 12 },
       { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 18 }, { wch: 15 },
     ];
     const headerStyle = {
@@ -148,7 +150,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       alignment: { horizontal: 'center', vertical: 'center' },
       border: { top: { style: 'thin', color: { rgb: 'CCCCCC' } }, bottom: { style: 'thin', color: { rgb: 'CCCCCC' } }, left: { style: 'thin', color: { rgb: 'CCCCCC' } }, right: { style: 'thin', color: { rgb: 'CCCCCC' } } }
     };
-    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:O1');
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:Q1');
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const address = XLSX.utils.encode_cell({ r: 0, c: C });
       if (!ws[address]) continue;
@@ -259,7 +261,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       const pricing2 = totalPricing / 2;
       const dataToSend = {
         product_type: vForm.product_type, vendor_type: normalizeVendorType(vForm.vendor_type), name: vForm.name || '',
-        size: vForm.size || '', optional: vForm.optional || '', pricing1, pricing2,
+        size: vForm.size || '', optional: vForm.optional || '', overview: vForm.overview || '', media_url: vForm.media_url || '', pricing1, pricing2,
         eco_price: vForm.eco_price ? parseFloat(vForm.eco_price) : null, eco_total: vForm.eco_total ? parseFloat(vForm.eco_total) : null,
         fast_price: vForm.fast_price ? parseFloat(vForm.fast_price) : null, fast_total: vForm.fast_total ? parseFloat(vForm.fast_total) : null,
         express_price: vForm.express_price ? parseFloat(vForm.express_price) : null, express_total: vForm.express_total ? parseFloat(vForm.express_total) : null,
@@ -279,7 +281,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     const totalPricing = (vendor.pricing1 || 0) + (vendor.pricing2 || 0);
     setVForm({
       name: vendor.name || '', product_type: vendor.product_type || '', vendor_type: vendor.vendor_type || '',
-      size: vendor.size || '', optional: vendor.optional || '', pricing: totalPricing,
+      size: vendor.size || '', optional: vendor.optional || '', overview: vendor.overview || '', media_url: vendor.media_url || '', pricing: totalPricing,
       eco_price: vendor.eco_price ?? '', eco_total: vendor.eco_total ?? '', fast_price: vendor.fast_price ?? '', fast_total: vendor.fast_total ?? '',
       express_price: vendor.express_price ?? '', express_total: vendor.express_total ?? '', overnight_price: vendor.overnight_price ?? '', overnight_total: vendor.overnight_total ?? ''
     });
@@ -311,11 +313,11 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const PREV_PAGE_SIZE = 50;
   const totalPrevPages = importPreview ? Math.ceil(importPreview.length / PREV_PAGE_SIZE) : 1;
   const pagedPreview = importPreview ? importPreview.slice((importPreviewPage - 1) * PREV_PAGE_SIZE, importPreviewPage * PREV_PAGE_SIZE) : [];
-  const PREVIEW_COLS = ['Vendor Name', 'Product Type', 'Vendor Type', 'Size', 'Pricing 1', 'Eco Total', 'Fast Total'];
+  const PREVIEW_COLS = ['Vendor Name', 'Product Type', 'Vendor Type', 'Image URL', 'Overview', 'Size', 'Pricing 1', 'Eco Total', 'Fast Total'];
   const getCell = (v, col) => {
     const map = {
       'Vendor Name': v.name || v.vendor_name || v['Vendor Name'] || '', 'Product Type': v.product_type || v['Product Type'] || '',
-      'Vendor Type': v.vendor_type || v['Vendor Type'] || '', 'Size': v.size || v.Size || '',
+      'Vendor Type': v.vendor_type || v['Vendor Type'] || '', 'Image URL': v.media_url || v['Image URL'] || '', 'Overview': v.overview || v.Overview || '', 'Size': v.size || v.Size || '',
       'Pricing 1': v.pricing1 || v['Pricing 1'] ? `$${Number(v.pricing1 || v['Pricing 1']).toFixed(2)}` : '',
       'Eco Total': v.eco_total || v['Eco Total'] ? `$${Number(v.eco_total || v['Eco Total']).toFixed(2)}` : '',
       'Fast Total': v.fast_total || v['Fast Total'] ? `$${Number(v.fast_total || v['Fast Total']).toFixed(2)}` : ''
@@ -512,7 +514,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                     </div>
                   </th>
                   <th rowSpan={2} style={{ ...TH2(), minWidth: 36 }}>ID</th>
-                  <th rowSpan={2} style={{ ...TH2(), minWidth: 130 }}>Vendor Name</th>
+                  <th rowSpan={2} style={{ ...TH2(), minWidth: 60 }}>Image</th>
+                  <th rowSpan={2} style={{ ...TH2(), minWidth: 150 }}>Vendor Name</th>
                   <th rowSpan={2} style={TH2({ minWidth: 110 })}>Vendor Type</th>
                   <th rowSpan={2} style={{ ...TH2(), minWidth: 120 }}>Product Type</th>
                   <th rowSpan={2} style={{ ...TH2({ minWidth: 90, background: activeTab === 'bestseller' ? '#C8A000' : HC.orange }), color: '#fff' }}>💰 Pricing</th>
@@ -596,7 +599,15 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                           <td rowSpan={rowSpan} style={{ ...C(), color: HC.muted, fontWeight: 700, verticalAlign: 'middle' }}>{vendorGroupIndex}</td>
                         )}
                         {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), fontWeight: 800, color: HC.ink2, verticalAlign: 'middle' }}>{vendorName}</td>
+                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', padding: '4px' }}>
+                            {v.media_url ? <img src={v.media_url} alt="Vendor" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: `1px solid ${HC.border}` }} /> : <div style={{ width: 40, height: 40, borderRadius: 6, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#ccc', border: `1px dashed ${HC.border}` }}>N/A</div>}
+                          </td>
+                        )}
+                        {!isSameAsPrev && (
+                          <td rowSpan={rowSpan} style={{ ...C(), fontWeight: 800, color: HC.ink2, verticalAlign: 'middle' }}>
+                            {vendorName}
+                            {v.overview && <div style={{ fontSize: 10, color: HC.muted, fontWeight: 'normal', marginTop: 4, maxWidth: 180, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>{v.overview}</div>}
+                          </td>
                         )}
                         <td style={{ ...C(), fontWeight: 800, whiteSpace: 'nowrap' }}>
                           {v.vendor_type === 'Best Seller' ? <BestSellerBadge /> : (v.vendor_type || '—')}
@@ -666,6 +677,16 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Size</label>
                   <input type="text" value={vForm.size} onChange={vf('size')} placeholder="VD: M, L, XL..." style={inp3} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Image URL</label>
+                  <input type="text" value={vForm.media_url} onChange={vf('media_url')} placeholder="https://..." style={inp3} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Product Overview (Chất liệu, mô tả)</label>
+                  <input type="text" value={vForm.overview} onChange={vf('overview')} placeholder="Mô tả chất liệu, kiểu dáng..." style={inp3} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
