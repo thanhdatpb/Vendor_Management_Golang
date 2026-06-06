@@ -130,7 +130,7 @@ export default function SellerNotificationCenter({
     <div style={{ overflowY: 'auto', maxHeight: 530, scrollbarWidth: 'thin', scrollbarColor: `${HC.orangeMid} transparent` }}>
       <div style={{ padding: '10px 16px', background: HC.cream, borderBottom: `1px solid ${HC.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 2 }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
-          📋 Yêu cầu từ Admin & Staff B
+          📋 Yêu cầu từ Admin & Vendor Approver
           {localRequests.length > 0 && <span style={{ marginLeft: 6, color: HC.muted2 }}>({localRequests.filter(n => n.read).length}/{localRequests.length} đã đọc)</span>}
         </span>
         <button onClick={markAllRequestsAsRead} style={{ background: unreadRequests > 0 ? HC.orangeLight : 'transparent', border: unreadRequests > 0 ? `1px solid ${HC.orangeMid}` : 'none', color: unreadRequests > 0 ? HC.orangeDark : HC.muted2, fontSize: 10, fontWeight: 700, cursor: unreadRequests > 0 ? 'pointer' : 'default', borderRadius: 6, padding: '3px 8px' }}>
@@ -141,7 +141,7 @@ export default function SellerNotificationCenter({
         <div style={{ padding: '60px 20px', textAlign: 'center', color: HC.muted }}>
           <span style={{ fontSize: 48, opacity: 0.5 }}>📭</span>
           <div style={{ fontSize: 13, fontWeight: 600, marginTop: 12 }}>Không có yêu cầu mới</div>
-          <div style={{ fontSize: 11, marginTop: 4 }}>Thông báo từ Admin và Staff B sẽ hiển thị tại đây</div>
+          <div style={{ fontSize: 11, marginTop: 4 }}>Thông báo từ Admin và Vendor Approver sẽ hiển thị tại đây</div>
         </div>
       ) : localRequests.map((notif, idx) => {
         const isAdminApproved = notif.source === 'admin' && notif.type === 'approved';
@@ -175,8 +175,8 @@ export default function SellerNotificationCenter({
                   {notif.productType && notif.productType !== 'undefined' && <span>📦 {notif.productType}</span>}
                   {notif.vendorType && <span>🏪 {notif.vendorType}</span>}
                   {notif.source === 'admin' && <span>👑 Từ Admin</span>}
-                  {notif.source === 'staffb' && notif.type === 'vendor_assigned' && <span>📢 Từ Staff B (Gán vendor)</span>}
-                  {notif.source === 'staffb' && notif.type === 'seller_feedback' && <span>📢 Từ Staff B (Phản hồi)</span>}
+                  {notif.source === 'staffb' && notif.type === 'vendor_assigned' && <span>📢 Từ Vendor Approver (Gán vendor)</span>}
+                  {notif.source === 'staffb' && notif.type === 'seller_feedback' && <span>📢 Từ Vendor Approver (Phản hồi)</span>}
                 </div>
               </div>
               {!notif.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, flexShrink: 0, marginTop: 8 }} />}
@@ -192,7 +192,7 @@ export default function SellerNotificationCenter({
     <div style={{ overflowY: 'auto', maxHeight: 530, scrollbarWidth: 'thin', scrollbarColor: `${HC.orangeMid} transparent` }}>
       <div style={{ padding: '10px 16px', background: HC.cream, borderBottom: `1px solid ${HC.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 2 }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
-          📰 Tin tức & Cập nhật từ Staff B
+          📰 Tin tức & Cập nhật từ Vendor Approver
           {localNews.length > 0 && <span style={{ marginLeft: 6, color: HC.muted2 }}>({localNews.filter(n => n.read).length}/{localNews.length} đã đọc)</span>}
         </span>
         <button onClick={markAllNewsAsRead} style={{ background: unreadNews > 0 ? HC.orangeLight : 'transparent', border: unreadNews > 0 ? `1px solid ${HC.orangeMid}` : 'none', color: unreadNews > 0 ? HC.orangeDark : HC.muted2, fontSize: 10, fontWeight: 700, cursor: unreadNews > 0 ? 'pointer' : 'default', borderRadius: 6, padding: '3px 8px' }}>
@@ -203,7 +203,7 @@ export default function SellerNotificationCenter({
         <div style={{ padding: '60px 20px', textAlign: 'center', color: HC.muted }}>
           <span style={{ fontSize: 48, opacity: 0.5 }}>📰</span>
           <div style={{ fontSize: 13, fontWeight: 600, marginTop: 12 }}>Chưa có tin tức mới</div>
-          <div style={{ fontSize: 11, marginTop: 4 }}>Thông báo từ Staff B sẽ hiển thị tại đây</div>
+          <div style={{ fontSize: 11, marginTop: 4 }}>Thông báo từ Vendor Approver sẽ hiển thị tại đây</div>
         </div>
       ) : localNews.map((notif, idx) => (
         <div key={notif.id || idx} onClick={() => handleNewsClick(notif)}
@@ -223,7 +223,7 @@ export default function SellerNotificationCenter({
                 🕒 {notif.time || new Date(notif.timestamp || Date.now()).toLocaleString('vi-VN')}
               </div>
               {notif.source === 'staff_b' && (
-                <div style={{ marginTop: 6, display: 'inline-block', padding: '2px 8px', background: HC.orangeLight, borderRadius: 12, fontSize: 9, color: HC.orangeDark, fontWeight: 600 }}>📢 Từ Staff B</div>
+                <div style={{ marginTop: 6, display: 'inline-block', padding: '2px 8px', background: HC.orangeLight, borderRadius: 12, fontSize: 9, color: HC.orangeDark, fontWeight: 600 }}>📢 Từ Vendor Approver</div>
               )}
             </div>
             {!notif.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: HC.orange, flexShrink: 0, marginTop: 8 }} />}

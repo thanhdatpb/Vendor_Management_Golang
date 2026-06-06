@@ -546,7 +546,7 @@ export default function NotificationCenter({ onClose, notifications, newsNotific
                     zIndex: 2,
                   }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
-                      📰 Tin tức & Cập nhật từ Staff B
+                      📰 Tin tức & Cập nhật từ Vendor Approver
                       {localNews.length > 0 && (
                         <span style={{ marginLeft: 6, color: HC.muted2 }}>
                           ({localNews.filter(n => n.read).length}/{localNews.length} đã đọc)
@@ -578,7 +578,7 @@ export default function NotificationCenter({ onClose, notifications, newsNotific
                     }}>
                       <span style={{ fontSize: 48, opacity: 0.5 }}>📰</span>
                       <div style={{ fontSize: 13, fontWeight: 600, marginTop: 12 }}>Chưa có tin tức mới</div>
-                      <div style={{ fontSize: 11, marginTop: 4 }}>Thông báo từ Staff B sẽ hiển thị tại đây</div>
+                      <div style={{ fontSize: 11, marginTop: 4 }}>Thông báo từ Vendor Approver sẽ hiển thị tại đây</div>
                     </div>
                   ) : (
                     localNews.map(notif => (
