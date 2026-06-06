@@ -24,6 +24,8 @@ export default function SetupPriceSection() {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [componentError, setComponentError] = useState(null);
 
+  // State so sánh
+  const [comparisonList, setComparisonList] = useState([]);
 
   // State cho nhiều giá trị
   const [displayPrices, setDisplayPrices] = useState([0]);
@@ -208,6 +210,7 @@ export default function SetupPriceSection() {
       coupon_fee: vendor.coupon_fee || 0,
       amz_fee: vendor.amz_fee || 0,
     });
+    setComparisonList([]);
     setShowSetupModal(true);
   };
 
@@ -300,6 +303,22 @@ export default function SetupPriceSection() {
       ...prev,
       shipping_method: method
     }));
+  };
+
+  const handleAddComparison = () => {
+    setComparisonList(prev => [...prev, {
+      id: Date.now(),
+      shipping_method_label: getShippingMethodLabel(setupForm.shipping_method),
+      coupon_percent: setupForm.coupon_percent,
+      profit: setupForm.profit,
+      profit_margin: setupForm.profit_margin,
+      profit_fulfill: shipInfo.total_price ? (setupForm.profit / shipInfo.total_price * 100) : 0,
+      total_price_1: setupForm.final_price,
+    }]);
+  };
+
+  const handleRemoveComparison = (id) => {
+    setComparisonList(prev => prev.filter(c => c.id !== id));
   };
 
   // Hàm lưu setup giá
@@ -1100,6 +1119,48 @@ export default function SetupPriceSection() {
                   </div>
                 </div>
               </div>
+              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={handleAddComparison} style={{ padding: '8px 16px', borderRadius: 8, background: HC.surface, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>⚖️</span> Thêm vào so sánh
+                </button>
+              </div>
+
+              {comparisonList.length > 0 && (
+                <div style={{ background: HC.surface2, borderRadius: 12, padding: '16px', border: `1px solid ${HC.border}`, marginBottom: 20 }}>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: HC.ink, marginBottom: 12 }}>⚖️ Bảng so sánh các kịch bản</div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, background: '#fff', borderRadius: 8, overflow: 'hidden' }}>
+                      <thead style={{ background: HC.orangePale }}>
+                        <tr>
+                          <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Kịch bản</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Total (1)</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Profit ($)</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Profit Margin</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Profit/Fulfill</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Xóa</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonList.map((item, idx) => (
+                          <tr key={item.id} style={{ borderBottom: `1px solid ${HC.border}` }}>
+                            <td style={{ padding: '8px 10px', fontWeight: 600, color: HC.ink2 }}>
+                              <div>{item.shipping_method_label}</div>
+                              <div style={{ fontSize: 10, color: HC.muted }}>Coupon: {item.coupon_percent}%</div>
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>${item.total_price_1.toFixed(2)}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.profit > 0 ? HC.success : HC.danger }}>${item.profit.toFixed(2)}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.profit_margin > 20 ? HC.success : HC.warning }}>{item.profit_margin.toFixed(2)}%</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.profit_fulfill > 0 ? HC.success : HC.danger }}>{item.profit_fulfill.toFixed(2)}%</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                              <button onClick={() => handleRemoveComparison(item.id)} style={{ padding: '4px 8px', borderRadius: 6, background: '#fee2e2', border: '1px solid #fecaca', color: HC.danger, cursor: 'pointer', fontSize: 11 }}>✕</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ padding: '16px 24px', borderTop: `1px solid ${HC.border}`, display: 'flex', gap: 12, justifyContent: 'flex-end', background: HC.surface2, borderRadius: '0 0 20px 20px' }}>
