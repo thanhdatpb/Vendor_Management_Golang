@@ -141,7 +141,14 @@ export default function SellerDashboard() {
     try {
       const sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
       sellerNotifs.filter(n => n.type === 'news').forEach(n => {
-        if (!news.some(ex => ex.id === n.id)) {
+        // Lọc theo project của seller:
+        // - Nhận các tin tức dành cho 'seller', 'both' hoặc không có target
+        // - Nếu có targetProject là tên dự án, thì phải khớp với user.project
+        const isTargetMatch = !n.targetProject || 
+                              ['seller', 'both'].includes(n.targetProject) || 
+                              n.targetProject === user?.project;
+                              
+        if (isTargetMatch && !news.some(ex => ex.id === n.id)) {
           news.push({
             id: n.id, type: 'news', icon: n.icon || '📰',
             title: n.title || 'Tin tức mới', message: n.message || '',

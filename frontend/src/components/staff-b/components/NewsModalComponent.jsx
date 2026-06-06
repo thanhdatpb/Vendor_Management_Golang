@@ -166,7 +166,7 @@ const NewsModalComponent = React.memo(({
                 border: `1px solid ${form.target === 'both' ? HC.orange : HC.border}`,
               }}>
                 <input type="radio" checked={form.target === 'both'} onChange={() => handleTargetChange('both')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>📋 Admin + 👤 Seller</span>
+                <span style={{ fontSize: 13 }}>Tất cả (Admin & Seller)</span>
               </label>
               <label style={{
                 display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
@@ -174,7 +174,7 @@ const NewsModalComponent = React.memo(({
                 border: `1px solid ${form.target === 'admin' ? HC.orange : HC.border}`,
               }}>
                 <input type="radio" checked={form.target === 'admin'} onChange={() => handleTargetChange('admin')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>📋 Chỉ Admin</span>
+                <span style={{ fontSize: 13 }}>Chỉ Admin</span>
               </label>
               <label style={{
                 display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
@@ -182,7 +182,39 @@ const NewsModalComponent = React.memo(({
                 border: `1px solid ${form.target === 'seller' ? HC.orange : HC.border}`,
               }}>
                 <input type="radio" checked={form.target === 'seller'} onChange={() => handleTargetChange('seller')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>👤 Chỉ Seller</span>
+                <span style={{ fontSize: 13 }}>Tất cả Seller</span>
+              </label>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                borderRadius: 10, background: form.target === 'Creative Project' ? HC.orangeLight : 'transparent',
+                border: `1px solid ${form.target === 'Creative Project' ? HC.orange : HC.border}`,
+              }}>
+                <input type="radio" checked={form.target === 'Creative Project'} onChange={() => handleTargetChange('Creative Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <span style={{ fontSize: 13 }}>Creative Project</span>
+              </label>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                borderRadius: 10, background: form.target === 'Happy Project' ? HC.orangeLight : 'transparent',
+                border: `1px solid ${form.target === 'Happy Project' ? HC.orange : HC.border}`,
+              }}>
+                <input type="radio" checked={form.target === 'Happy Project'} onChange={() => handleTargetChange('Happy Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <span style={{ fontSize: 13 }}>Happy Project</span>
+              </label>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                borderRadius: 10, background: form.target === 'Global Project' ? HC.orangeLight : 'transparent',
+                border: `1px solid ${form.target === 'Global Project' ? HC.orange : HC.border}`,
+              }}>
+                <input type="radio" checked={form.target === 'Global Project'} onChange={() => handleTargetChange('Global Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <span style={{ fontSize: 13 }}>Global Project</span>
+              </label>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                borderRadius: 10, background: form.target === 'Pilot Project' ? HC.orangeLight : 'transparent',
+                border: `1px solid ${form.target === 'Pilot Project' ? HC.orange : HC.border}`,
+              }}>
+                <input type="radio" checked={form.target === 'Pilot Project'} onChange={() => handleTargetChange('Pilot Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                <span style={{ fontSize: 13 }}>Pilot Project</span>
               </label>
             </div>
           </div>

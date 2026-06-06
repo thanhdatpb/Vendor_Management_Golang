@@ -61,53 +61,205 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem("auth_token");
-      window.location.href = "/login";
+      const token = localStorage.getItem("auth_token");
+      // Nếu đang dùng mock token cho local demo, không tự động văng ra login
+      if (token && token.startsWith("mock_token_")) {
+        console.warn("⚠️ API trả về 401 nhưng đang dùng mock_token, bỏ qua auto-logout.");
+      } else {
+        localStorage.removeItem("auth_token");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
 );
 
 // ===============================
-// PRODUCT API
+// PRODUCT API MOCK CHO DEMO
 // ===============================
-export const productApi = {
+const getMockProducts = () => JSON.parse(localStorage.getItem('MOCK_PRODUCTS') || '[]');
+const saveMockProducts = (products) => {
+  localStorage.setItem('MOCK_PRODUCTS', JSON.stringify(products));
+  window.dispatchEvent(new Event('storage'));
+};
 
-  // Lấy toàn bộ sản phẩm (admin)
-  list: (params) => api.get("/products", { params }),
-
-  // Lấy sản phẩm của staff hiện tại
-  mySubmitted: (params) => api.get("/products", { params }),
-
-  getApprovedProducts: () => api.get("/products-approved"),
-
-  getById: (id) => api.get(`/products/${id}`),
-
-  create: (data) => api.post("/products", data),
-
-  // PHP không parse files từ PUT — dùng POST + _method=PUT (Laravel method spoofing)
-  update: (id, data) => {
-    if (data instanceof FormData) {
-      data.append("_method", "PUT");
-      return api.post(`/products/${id}`, data);
+const withMock = (apiCall, mockCall) => {
+  return async (...args) => {
+    const token = localStorage.getItem("auth_token");
+    if (token && token.startsWith("mock_token_")) {
+      // Simulate network delay
+      await new Promise(r => setTimeout(r, 300));
+      return mockCall(...args);
     }
-    return api.put(`/products/${id}`, data);
-  },
+    return apiCall(...args);
+  };
+};
 
-  delete: (id) => api.delete(`/products/${id}`),
+export const productApi = {
+  list: withMock(
+    (params) => api.get("/products", { params }),
+    () => {
+      const all = getMockProducts();
+      return { data: { data: all } };
+    }
+  ),
 
-  pendingApprovals: (params) => api.get("/admin/product-approvals", { params }),
+  mySubmitted: withMock(
+    (params) => api.get("/products", { params }),
+    () => {
+      const all = getMockProducts();
+      const user = JSON.parse(localStorage.getItem("user") || '{}');
+      const mine = all.filter(p => p.project === user.project || p.seller_name === user.sellerName);
+      return { data: { data: mine } };
+    }
+  ),
 
-  approve: (id, data) => api.post(`/admin/products/${id}/approve`, data), // ✅ ĐÃ SỬA: thêm data
-  reject: (id, data) => api.post(`/admin/products/${id}/reject`, data),
-  sendToAdmin: (id) => api.post(`/products/${id}/submit`),
+  getApprovedProducts: withMock(
+    () => api.get("/products-approved"),
+    () => {
+      const all = getMockProducts();
+      return { data: { data: all.filter(p => p.status === 'approved') } };
+    }
+  ),
 
-  // Staff B gửi phản hồi về sản phẩm → Staff A nhận thông báo
-  sendFeedback: (id, data) => api.post(`/products/${id}/feedback`, data),
+  getById: withMock(
+    (id) => api.get(`/products/${id}`),
+    (id) => {
+      const all = getMockProducts();
+      const p = all.find(x => String(x.id) === String(id));
+      if (!p) throw new Error("Not found");
+      return { data: { data: p } };
+    }
+  ),
 
-  // Gán vendor cho sản phẩm (admin)
-  assignVendor: (id, data) => api.post(`/admin/products/${id}/select-vendor`, data),
-  updateDeadline: (id, data) => api.put(`/products/${id}/deadline`, data),
+  create: withMock(
+    (data) => api.post("/products", data),
+    (data) => {
+      const all = getMockProducts();
+      const newProduct = {
+        id: Date.now(),
+        status: 'draft',
+        created_at: new Date().toISOString(),
+      };
+      if (data instanceof FormData) {
+        for (let [key, value] of data.entries()) {
+          if (key !== 'media[]') newProduct[key] = value;
+        }
+      } else {
+        Object.assign(newProduct, data);
+      }
+      all.unshift(newProduct);
+      saveMockProducts(all);
+      return { data: { data: newProduct, message: "Created successfully" } };
+    }
+  ),
+
+  update: withMock(
+    (id, data) => {
+      if (data instanceof FormData) {
+        data.append("_method", "PUT");
+        return api.post(`/products/${id}`, data);
+      }
+      return api.put(`/products/${id}`, data);
+    },
+    (id, data) => {
+      const all = getMockProducts();
+      const idx = all.findIndex(x => String(x.id) === String(id));
+      if (idx === -1) throw new Error("Not found");
+      
+      if (data instanceof FormData) {
+        for (let [key, value] of data.entries()) {
+          if (key !== 'media[]' && key !== '_method') all[idx][key] = value;
+        }
+      } else {
+        Object.assign(all[idx], data);
+      }
+      saveMockProducts(all);
+      return { data: { message: "Updated successfully", data: all[idx] } };
+    }
+  ),
+
+  delete: withMock(
+    (id) => api.delete(`/products/${id}`),
+    (id) => {
+      let all = getMockProducts();
+      all = all.filter(x => String(x.id) !== String(id));
+      saveMockProducts(all);
+      return { data: { message: "Deleted successfully" } };
+    }
+  ),
+
+  pendingApprovals: withMock(
+    (params) => api.get("/admin/product-approvals", { params }),
+    () => {
+      const all = getMockProducts();
+      return { data: { data: all.filter(p => p.status === 'pending') } };
+    }
+  ),
+
+  approve: withMock(
+    (id, data) => api.post(`/admin/products/${id}/approve`, data),
+    (id, data) => {
+      const all = getMockProducts();
+      const p = all.find(x => String(x.id) === String(id));
+      if (p) {
+        p.status = data.approved ? 'approved' : 'rejected';
+        if (!data.approved) p.reason = data.reason;
+        saveMockProducts(all);
+      }
+      return { data: { message: "Success" } };
+    }
+  ),
+
+  reject: withMock(
+    (id, data) => api.post(`/admin/products/${id}/reject`, data),
+    (id, data) => {
+      const all = getMockProducts();
+      const p = all.find(x => String(x.id) === String(id));
+      if (p) {
+        p.status = 'rejected';
+        p.reason = data.reason;
+        saveMockProducts(all);
+      }
+      return { data: { message: "Success" } };
+    }
+  ),
+
+  sendToAdmin: withMock(
+    (id) => api.post(`/products/${id}/submit`),
+    (id) => {
+      const all = getMockProducts();
+      const p = all.find(x => String(x.id) === String(id));
+      if (p) {
+        p.status = 'pending';
+        saveMockProducts(all);
+      }
+      return { data: { message: "Success" } };
+    }
+  ),
+
+  sendFeedback: withMock(
+    (id, data) => api.post(`/products/${id}/feedback`, data),
+    () => ({ data: { message: "Success" } })
+  ),
+
+  assignVendor: withMock(
+    (id, data) => api.post(`/admin/products/${id}/select-vendor`, data),
+    () => ({ data: { message: "Success" } })
+  ),
+  
+  updateDeadline: withMock(
+    (id, data) => api.put(`/products/${id}/deadline`, data),
+    (id, data) => {
+      const all = getMockProducts();
+      const p = all.find(x => String(x.id) === String(id));
+      if (p) {
+        p.deadline_date = data.deadline_date;
+        saveMockProducts(all);
+      }
+      return { data: { message: "Success" } };
+    }
+  ),
 };
 
 
@@ -175,27 +327,96 @@ export const paymentApi = {
 
 
 // ===============================
-// VENDOR API
+// VENDOR API MOCK CHO DEMO
 // ===============================
+const getMockVendors = () => JSON.parse(localStorage.getItem('MOCK_VENDORS') || '[]');
+const saveMockVendors = (vendors) => {
+  localStorage.setItem('MOCK_VENDORS', JSON.stringify(vendors));
+  window.dispatchEvent(new Event('storage'));
+};
+
 export const vendorApi = {
-  // Lấy tất cả vendor
-  list: (params) => api.get("/vendors", { params }),
+  list: withMock(
+    (params) => api.get("/vendors", { params }),
+    () => {
+      const all = getMockVendors();
+      return { data: { data: all } };
+    }
+  ),
 
-  // Lọc theo product_type — dùng cho modal Gán Vendor
-  listByProductType: (productType) =>
-    api.get("/vendors", { params: { product_type: productType } }),
+  listByProductType: withMock(
+    (productType) => api.get("/vendors", { params: { product_type: productType } }),
+    (productType) => {
+      const all = getMockVendors();
+      // Lọc cơ bản cho demo (tuỳ ý)
+      return { data: { data: all } };
+    }
+  ),
 
-  getById: (id) => api.get(`/vendors/${id}`),
+  getById: withMock(
+    (id) => api.get(`/vendors/${id}`),
+    (id) => {
+      const all = getMockVendors();
+      const v = all.find(x => String(x.id) === String(id));
+      if (!v) throw new Error("Not found");
+      return { data: { data: v } };
+    }
+  ),
 
-  // ⚠️ Dùng api instance (có token), KHÔNG dùng axios trực tiếp
-  compare: (params) => api.get("/vendors/compare", { params }),
+  compare: withMock(
+    (params) => api.get("/vendors/compare", { params }),
+    () => ({ data: { data: [] } })
+  ),
 
-  // Bulk import (create/update theo composite key)
-  importBulk: (vendors) => api.post("/vendors/import", { vendors }),
+  importBulk: withMock(
+    (vendors) => api.post("/vendors/import", { vendors }),
+    (payload) => {
+      const all = getMockVendors();
+      const newVendors = payload.vendors || payload;
+      const combined = [...newVendors, ...all];
+      // Loại bỏ trùng lặp đơn giản theo email hoặc name
+      const unique = combined.filter((v, i, a) => a.findIndex(t => (t.email === v.email)) === i);
+      saveMockVendors(unique);
+      return { data: { message: "Imported successfully" } };
+    }
+  ),
 
-  create: (data) => api.post("/vendors", data),
-  update: (id, data) => api.put(`/vendors/${id}`, data),
-  delete: (id) => api.delete(`/vendors/${id}`),
+  create: withMock(
+    (data) => api.post("/vendors", data),
+    (data) => {
+      const all = getMockVendors();
+      const newVendor = {
+        id: Date.now(),
+        created_at: new Date().toISOString(),
+        ...data
+      };
+      all.unshift(newVendor);
+      saveMockVendors(all);
+      return { data: { data: newVendor, message: "Created successfully" } };
+    }
+  ),
+
+  update: withMock(
+    (id, data) => api.put(`/vendors/${id}`, data),
+    (id, data) => {
+      const all = getMockVendors();
+      const idx = all.findIndex(x => String(x.id) === String(id));
+      if (idx === -1) throw new Error("Not found");
+      Object.assign(all[idx], data);
+      saveMockVendors(all);
+      return { data: { message: "Updated successfully", data: all[idx] } };
+    }
+  ),
+
+  delete: withMock(
+    (id) => api.delete(`/vendors/${id}`),
+    (id) => {
+      let all = getMockVendors();
+      all = all.filter(x => String(x.id) !== String(id));
+      saveMockVendors(all);
+      return { data: { message: "Deleted successfully" } };
+    }
+  ),
 };
 
 

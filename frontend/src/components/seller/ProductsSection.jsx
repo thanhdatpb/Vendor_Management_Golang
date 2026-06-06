@@ -317,6 +317,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       data.append('seller_name', user.sellerName || user.seller_name);
       console.log('📤 Đang gửi seller_name:', user.sellerName || user.seller_name);
     }
+    if (user?.project) {
+      data.append('project', user.project);
+    }
 
     form.mediaFiles.forEach(file => {
       data.append('media[]', file);
@@ -477,6 +480,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       if (row.other_packaging) data.append('other_packaging', row.other_packaging);
       if (row.product_type_links?.length) data.append('product_type_links', JSON.stringify(row.product_type_links));
       if (user?.sellerName || user?.seller_name) data.append('seller_name', user.sellerName || user.seller_name);
+      if (user?.project) data.append('project', user.project);
 
       try {
         await productApi.create(data);
@@ -500,6 +504,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
 
   const filteredProducts = submittedProducts.filter(p => {
+    if (user?.project && p.project !== user.project && p.project) return false; // Lọc theo project (nếu có)
     const hay = `${p.product_type || ''} ${p.other_specs || ''}`.toLowerCase();
     const status = getStatus(p);
     return (!search || hay.includes(search.toLowerCase())) && (!filterStatus || status === filterStatus);

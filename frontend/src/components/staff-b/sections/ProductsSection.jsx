@@ -22,6 +22,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const [sendingFeedback, setSendingFeedback] = useState(false);
   const [viewVendorProduct, setViewVendorProduct] = useState(null);
   const [productVendors, setProductVendors] = useState(() => lsGet(LS_PRODUCT_VENDORS, {}));
+  const [libraryVendorCounts, setLibraryVendorCounts] = useState({});
 
   const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
   const [deadlineProduct, setDeadlineProduct] = useState(null);
@@ -30,11 +31,46 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const processedProductIdRef = useRef(null);
 
   useEffect(() => {
-    const sync = () => setProductVendors(lsGet(LS_PRODUCT_VENDORS, {}));
+    const sync = () => {
+      setProductVendors(lsGet(LS_PRODUCT_VENDORS, {}));
+      try {
+        const list = JSON.parse(localStorage.getItem('STAFF_VENDOR_LIST_V1') || '[]');
+        const counts = {};
+        list.forEach(v => {
+          const type = (v.product_type || '').toLowerCase();
+          if(type) counts[type] = (counts[type] || 0) + 1;
+        });
+        setLibraryVendorCounts(counts);
+      } catch(e){}
+    };
+    sync();
     window.addEventListener('storage', sync);
     const id = setInterval(sync, 5000);
     return () => { window.removeEventListener('storage', sync); clearInterval(id); };
   }, []);
+
+  const handleQuickAssign = (product) => {
+    try {
+      const allVendors = JSON.parse(localStorage.getItem('STAFF_VENDOR_LIST_V1') || '[]');
+      const matchingVendors = allVendors.filter(v => (v.product_type || '').toLowerCase() === (product.product_type || '').toLowerCase());
+      
+      if (matchingVendors.length === 0) {
+        alert('Không tìm thấy vendor nào trong thư viện cho loại sản phẩm này!');
+        return;
+      }
+
+      const allAssigned = lsGet(LS_PRODUCT_VENDORS, {});
+      allAssigned[product.id] = matchingVendors;
+      lsSet(LS_PRODUCT_VENDORS, allAssigned);
+      setProductVendors(allAssigned);
+      window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
+      
+      alert(`✅ Đã gán nhanh ${matchingVendors.length} vendor từ thư viện cho sản phẩm này!`);
+    } catch (err) {
+      console.error(err);
+      alert('Có lỗi xảy ra khi gán nhanh!');
+    }
+  };
 
   const getStatus = p => { const s = p.status || 'draft'; return s === 'rejected' ? 'reject' : s; };
 
@@ -171,7 +207,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                 <tr>
                   <th style={TH()}>ID</th>
                   <th style={TH({ color: HC.orange })}>Project</th>
-                  <th style={TH({ color: HC.orange })}>Seller</th>
                   <th style={TH()}>Product Type</th>
                   <th style={TH()}>Hình ảnh</th>
                   <th style={TH()}>Date Request</th>
@@ -201,6 +236,8 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   const hasVendors = assignedVendors.length > 0;
                   const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
                   const aSelectedCount = Object.values(aSelections).filter(s => s?.checked).length;
+                  const pTypeLower = (p.product_type || '').toLowerCase();
+                  const availableCount = libraryVendorCounts[pTypeLower] || 0;
 
                   return (
                     <tr key={p.id || i} style={{ borderBottom: `1px solid ${HC.border}` }} onMouseEnter={e => e.currentTarget.style.background = HC.orangePale} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -210,10 +247,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
                       <td style={{ padding: '12px 13px', fontWeight: 800, color: HC.orangeDark }}>
                         {p.project || '—'}
-                      </td>
-
-                      <td style={{ padding: '12px 13px', fontWeight: 800, color: HC.orange }}>
-                        {p.seller_name || p.sellerName || '—'}
                       </td>
 
                       <td style={{ padding: '12px 13px', fontWeight: 800, color: HC.ink2 }}>
@@ -270,6 +303,18 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                           >
                             📅 Tạo Deadline
                           </button>
+                          {availableCount > 0 && !hasVendors && (
+                            <button
+                              onClick={() => handleQuickAssign(p)}
+                              style={{
+                                padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.success}`,
+                                background: '#ecfdf5', cursor: 'pointer', fontSize: 11, fontWeight: 800,
+                                color: HC.success
+                              }}
+                            >
+                              ⚡ Gán nhanh ({availableCount})
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

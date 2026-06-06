@@ -70,10 +70,10 @@ export default function NewsManagementSection() {
       } catch (err) { }
     }
 
-    if (news.target === 'seller' || news.target === 'both') {
+    if (news.target !== 'admin') { // Gửi tới seller, both, hoặc các project cụ thể
       try {
         const sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
-        sellerNotifs.unshift({ ...notification, id: `seller_${news.id}` });
+        sellerNotifs.unshift({ ...notification, id: `seller_${news.id}`, targetProject: news.target });
         localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(sellerNotifs.slice(0, 100)));
         window.dispatchEvent(new StorageEvent('storage', { key: 'SELLER_NOTIFICATIONS' }));
       } catch (err) { }
@@ -110,9 +110,9 @@ export default function NewsManagementSection() {
       const existIdx = sellerNotifs.findIndex(n => n.id === `seller_${news.id}`);
       if (existIdx !== -1) {
         if (news.target === 'admin') sellerNotifs.splice(existIdx, 1);
-        else sellerNotifs[existIdx] = { ...sellerNotifs[existIdx], title: news.title, message: news.message };
-      } else if (news.target === 'seller' || news.target === 'both') {
-        sellerNotifs.unshift({ ...notification, id: `seller_${news.id}` });
+        else sellerNotifs[existIdx] = { ...sellerNotifs[existIdx], title: news.title, message: news.message, targetProject: news.target };
+      } else if (news.target !== 'admin') {
+        sellerNotifs.unshift({ ...notification, id: `seller_${news.id}`, targetProject: news.target });
       }
       localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(sellerNotifs.slice(0, 100)));
       window.dispatchEvent(new StorageEvent('storage', { key: 'SELLER_NOTIFICATIONS' }));
@@ -241,13 +241,20 @@ export default function NewsManagementSection() {
   const getTargetLabel = (target) => {
     switch (target) {
       case 'admin': return '📋 Admin';
-      case 'seller': return '👤 Seller';
-      case 'both': return '📋👤 Cả hai';
-      default: return '—';
+      case 'seller': return '👤 Tất cả Seller';
+      case 'both': return '📋👤 Tất cả';
+      case 'Creative Project': return '🎨 Creative Project';
+      case 'Happy Project': return '😊 Happy Project';
+      case 'Global Project': return '🌍 Global Project';
+      case 'Pilot Project': return '🚀 Pilot Project';
+      default: return target || '—';
     }
   };
 
   const getTargetColor = (target) => {
+    if (['Creative Project', 'Happy Project', 'Global Project', 'Pilot Project'].includes(target)) {
+      return '#8b5cf6'; // purple for projects
+    }
     switch (target) {
       case 'admin': return '#3b82f6';
       case 'seller': return '#16a34a';
