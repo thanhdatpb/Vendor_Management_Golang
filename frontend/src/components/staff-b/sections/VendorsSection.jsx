@@ -476,7 +476,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <span>✅</span> Gán {uniqueSelectedCount} Vendor
             </button>
           )}
-          <button onClick={loadVendors} style={{ padding: '7px 14px', borderRadius: 9, border: `1.5px solid ${HC.border}`, background: HC.cream, color: HC.brown, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>↻ Làm mới</button>
           <button onClick={openCreateVendorModal} style={{ padding: '9px 16px', borderRadius: 10, background: HC.cream, border: `1.5px solid ${HC.border}`, color: HC.brown, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
             {activeTab === 'bestseller' ? '⭐ Tạo Best Seller' : '＋ Thêm thủ công'}
           </button>

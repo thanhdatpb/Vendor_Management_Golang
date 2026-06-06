@@ -96,7 +96,7 @@ export default function NewsManagementSection() {
       let adminNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
       const existIdx = adminNotifs.findIndex(n => n.id === `admin_${news.id}`);
       if (existIdx !== -1) {
-        if (news.target === 'seller') adminNotifs.splice(existIdx, 1);
+        if (news.target === 'seller' || Array.isArray(news.target)) adminNotifs.splice(existIdx, 1);
         else adminNotifs[existIdx] = { ...adminNotifs[existIdx], title: news.title, message: news.message };
       } else if (news.target === 'admin' || news.target === 'both') {
         adminNotifs.unshift({ ...notification, id: `admin_${news.id}` });
@@ -239,6 +239,7 @@ export default function NewsManagementSection() {
   }, [formErrors.title, formErrors.message]);
 
   const getTargetLabel = (target) => {
+    if (Array.isArray(target)) return '🎯 ' + target.map(t => t.replace(' Project', '')).join(', ');
     switch (target) {
       case 'admin': return '📋 Admin';
       case 'seller': return '👤 Tất cả Seller';
@@ -252,6 +253,7 @@ export default function NewsManagementSection() {
   };
 
   const getTargetColor = (target) => {
+    if (Array.isArray(target)) return '#8b5cf6';
     if (['Creative Project', 'Happy Project', 'Global Project', 'Pilot Project'].includes(target)) {
       return '#8b5cf6'; // purple for projects
     }

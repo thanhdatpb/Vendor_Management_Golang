@@ -146,7 +146,7 @@ export default function SellerDashboard() {
         // - Nếu có targetProject là tên dự án, thì phải khớp với user.project
         const isTargetMatch = !n.targetProject || 
                               ['seller', 'both'].includes(n.targetProject) || 
-                              n.targetProject === user?.project;
+                              (Array.isArray(n.targetProject) ? n.targetProject.includes(user?.project) : n.targetProject === user?.project);
                               
         if (isTargetMatch && !news.some(ex => ex.id === n.id)) {
           news.push({
