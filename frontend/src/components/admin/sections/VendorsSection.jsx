@@ -139,7 +139,7 @@ export default function VendorsSection() {
             <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14 }} />
             <input
               type="text"
-              placeholder="Tìm theo Vendor Name, Product Type hoặc Vendor Type..."
+              placeholder="Tìm theo Vendor Name hoặc Product Type..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -165,16 +165,6 @@ export default function VendorsSection() {
           >
             <option value="">All Product Type</option>
             {uniqueProductTypes.current.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          <select
-            value={filters.vendor_type}
-            onChange={(e) => setFilters(prev => ({ ...prev, vendor_type: e.target.value }))}
-            style={{ padding: '8px 12px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, fontSize: 12, outline: 'none', fontFamily: "'Nunito Sans',sans-serif", minWidth: 140 }}
-          >
-            <option value="">All Vendor Type</option>
-            {uniqueVendorTypes.current.map(type => (
               <option key={type} value={type}>{type}</option>
             ))}
           </select>

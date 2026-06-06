@@ -183,7 +183,6 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
 export default function OverviewSection({ externalViewProduct, setExternalViewProduct }) {
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [allSellers, setAllSellers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalFilterType, setModalFilterType] = useState('');
@@ -273,13 +272,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       const all = normalizeList(allRes).map(normalizeProduct);
       setAllProducts(all);
       computeStats(all);
-      const token = localStorage.getItem('auth_token');
-      try {
-        const usersRes = await axios.get(`${API_BASE_URL}/api/users/sellers`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-        });
-        setAllSellers(usersRes.data?.data || []);
-      } catch { setAllSellers([]); }
+
     } catch (err) {
       console.error('❌ Lỗi tải dữ liệu:', err);
       setFormStats({ pending: 0, approved: 0, rejected: 0, total: 0 });
@@ -538,7 +531,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     return () => clearInterval(interval);
   }, [loadAllData, loadPending]);
 
-  const TABLE_COLS = ['STT', 'Project', 'Seller Name', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];
+  const TABLE_COLS = ['STT', 'Project', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];
 
   const viewBtn = (p) => (
     <button
@@ -725,7 +718,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
                 .map((p, i) => [
                   (pendingPage - 1) * ITEMS_PER_PAGE + i + 1,
                   p.project || '—',
-                  getSellerName(p),
                   p.product_type || p.category || p.name || '—',
                   <MediaGallery mediaUrls={getMediaUrls(p)} />,
                   fmtDate(p.created_at),
@@ -790,7 +782,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         filterValue={modalFilterValue}
         initialStatus={modalInitialStatus}
         allProducts={allProducts}
-        allSellers={allSellers}
+        
       />
 
       <ProductViewerModal product={viewProduct} onClose={() => setViewProduct(null)} />
