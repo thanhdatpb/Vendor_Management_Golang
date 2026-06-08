@@ -4,6 +4,7 @@ import { lsGet, fmtDate } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/StaffBUI';
 import VendorViewerModal from '../components/VendorViewerModal';
 import { productApi } from '../../../services/api';
+import { SearchOutlined } from '@ant-design/icons';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -190,8 +191,16 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span>⚠️ {apiError}</span><button onClick={loadProducts} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button></div>}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16, padding: '12px 16px', background: HC.surface, borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
         <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-          <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: HC.muted, pointerEvents: 'none', fontSize: 14 }}>🔍</span>
-          <input type="text" placeholder="Tìm loại sản phẩm..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inp, paddingLeft: 34 }} {...focusStyle} />
+          <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Tìm loại sản phẩm..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ ...inp, paddingLeft: 36 }}
+            onFocus={e => e.target.style.borderColor = HC.orange}
+            onBlur={e => e.target.style.borderColor = HC.border}
+          />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9, background: '#ecfdf5', border: '1.5px solid #bbf7d0', fontSize: 11, fontWeight: 800, color: '#065f46', whiteSpace: 'nowrap' }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />Chỉ hiển thị: Approved</div>
         <button onClick={loadProducts} style={{ padding: '6px 14px', borderRadius: 9, border: `1.5px solid ${HC.border}`, background: HC.cream, color: HC.brown, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>↻ Làm mới</button>

@@ -4,6 +4,7 @@ import { vendorApi } from '../../../services/api';
 import { HC, LS_PRODUCT_VENDORS, VENDOR_TYPES, VENDOR_PAGE_SIZE } from '../utils/constants';
 import { lsGet, lsSet, parseVendorExcel, buildVendorPayload, VENDOR_TYPE_LIST, normalizeVendorType } from '../utils/helpers';
 import { Spinner, EmptyState, BestSellerBadge } from '../ui/StaffBUI';
+import { SearchOutlined } from '@ant-design/icons';
 
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
   const [activeTab, setActiveTab] = useState('all'); 
@@ -463,8 +464,16 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
           {!filterProductType && (
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 12, pointerEvents: 'none' }}>🔍</span>
-              <input type="text" placeholder="Lọc product type..." value={searchFilter} onChange={e => { setSearchFilter(e.target.value); setVPage(1); }} style={{ ...inp3, width: 170, paddingLeft: 28 }} onFocus={e => e.target.style.borderColor = HC.orange} onBlur={e => e.target.style.borderColor = HC.border} />
+              <SearchOutlined style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 13, pointerEvents: 'none' }} />
+              <input
+                type="text"
+                placeholder="Lọc product type..."
+                value={searchFilter}
+                onChange={e => { setSearchFilter(e.target.value); setVPage(1); }}
+                style={{ ...inp3, width: 170, paddingLeft: 30 }}
+                onFocus={e => e.target.style.borderColor = HC.orange}
+                onBlur={e => e.target.style.borderColor = HC.border}
+              />
             </div>
           )}
           {searchFilter && !filterProductType && <button onClick={() => { setSearchFilter(''); setVPage(1); }} style={{ padding: '5px 10px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕</button>}

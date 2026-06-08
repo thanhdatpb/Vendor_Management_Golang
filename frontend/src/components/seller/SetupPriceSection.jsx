@@ -7,6 +7,7 @@ import { LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE } from 
 import { lsGet } from '../../utils/sellerHelpers';
 import { Pagination } from './SellerUI';
 import { inp } from './SellerUI';
+import { SearchOutlined } from '@ant-design/icons';
 
 export default function SetupPriceSection() {
   const LS_PRICE_KEY = 'STAFF_PRICE_LIST_V3';
@@ -835,8 +836,16 @@ export default function SetupPriceSection() {
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20, padding: '12px 16px', background: HC.surface, borderRadius: 12, border: `1px solid ${HC.border}` }}>
         <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-          <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: HC.muted }}>🔍</span>
-          <input type="text" placeholder="Tìm product type..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inp, paddingLeft: 34 }} />
+          <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Tìm product type..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ ...inp, paddingLeft: 36 }}
+            onFocus={e => e.target.style.borderColor = HC.orange}
+            onBlur={e => e.target.style.borderColor = HC.border}
+          />
         </div>
         {productTypes.length > 0 && (
           <select value={filterProductType} onChange={e => setFilterProductType(e.target.value)} style={{ padding: '9px 12px', borderRadius: 8, border: `1px solid ${HC.border}`, fontSize: 12, background: HC.surface2, minWidth: 130 }}>
