@@ -192,8 +192,8 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const [activeFilter, setActiveFilter] = useState('all');
   const [formStats, setFormStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
   const [projectStats, setProjectStats] = useState({
-    'Creative Project': { approved: 0, rejected: 0, total: 0 },
     'Happy Project':    { approved: 0, rejected: 0, total: 0 },
+    'Creative Project': { approved: 0, rejected: 0, total: 0 },
     'Global Project':   { approved: 0, rejected: 0, total: 0 },
     'Pilot Project':    { approved: 0, rejected: 0, total: 0 },
   });
@@ -254,7 +254,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     const approved = products.filter(p => p.status === 'approved').length;
     const rejected = products.filter(p => p.status === 'rejected' || p.status === 'reject').length;
     setFormStats({ pending, approved, rejected, total: products.length });
-    const projects = ['Creative Project', 'Happy Project', 'Global Project', 'Pilot Project'];
+    const projects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
     const ps = {};
     projects.forEach(proj => {
       const pp = products.filter(p => p.project === proj);
@@ -580,7 +580,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
   if (loading) return <Spinner />;
 
-  const displayProjects = ['Creative Project', 'Happy Project', 'Global Project', 'Pilot Project'];
+  const displayProjects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
   const filteredProjects = activeFilter === 'all'
     ? displayProjects
     : displayProjects.filter(p => {
