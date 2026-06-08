@@ -37,7 +37,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
   // Thêm link mới
   const addLink = () => {
-    console.log("addLink clicked!", tempLink); // ✅ Thêm log để debug
     if (tempLink.trim()) {
       let url = tempLink.trim();
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -289,6 +288,18 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       .finally(() => setLoading(false));
   }, []);
 
+  // Helper: chuẩn hoá links từ server response — dùng cho optimistic update
+  const normalizeLinks = (p) => {
+    let links = [];
+    if (p.product_type_links) {
+      if (Array.isArray(p.product_type_links)) links = p.product_type_links;
+      else if (typeof p.product_type_links === 'string') {
+        try { links = JSON.parse(p.product_type_links); } catch { links = [p.product_type_links]; }
+      }
+    } else if (p.product_type_link) links = [p.product_type_link];
+    return { ...p, product_type_links: links, media_urls: p.media_urls || (p.media_url ? [p.media_url] : []) };
+  };
+
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const showToast = (type, title, message, duration = 3000) => {
@@ -315,7 +326,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     if (user?.sellerName || user?.seller_name) {
       data.append('seller_name', user.sellerName || user.seller_name);
-      console.log('📤 Đang gửi seller_name:', user.sellerName || user.seller_name);
     }
     if (user?.project) {
       data.append('project', user.project);
@@ -325,29 +335,27 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       data.append('media[]', file);
     });
 
-    for (let pair of data.entries()) {
-      console.log(pair[0], pair[1]);
-    }
-
     try {
-      await productApi.create(data);
-      await loadProducts();
-
-      const savedFormLinks = [...form.product_type_links];
-      const savedMaterial = form.material;
-      const savedOtherSpecs = form.other_specs;
-      const savedPrintArea = form.print_area;
-      setSubmittedProducts(prev => prev.map((p, idx) => {
-        if (idx !== 0) return p;
-        return {
-          ...p,
-          material: savedMaterial || p.material,
-          other_specs: savedOtherSpecs || p.other_specs,
-          print_area: savedPrintArea || p.print_area,
-          product_type_links: savedFormLinks.length ? savedFormLinks : p.product_type_links,
-        };
-      }));
-
+      const res = await productApi.create(data);
+      // Optimistic update: thêm sản phẩm mới vào đầu danh sách ngay lập tức
+      const newProduct = normalizeLinks(res?.data?.data || {
+        id: Date.now(),
+        status: 'draft',
+        created_at: new Date().toISOString(),
+        product_type: form.product_type,
+        other_specs: form.other_specs,
+        material: form.material,
+        print_area: form.print_area,
+        good_review: form.good_review,
+        bad_review: form.bad_review,
+        packaging_links: form.packaging_links,
+        other_packaging: form.other_packaging,
+        product_type_links: form.product_type_links,
+        seller_name: user?.sellerName || user?.seller_name,
+        project: user?.project,
+        media_urls: previewUrls,
+      });
+      setSubmittedProducts(prev => [newProduct, ...prev]);
       closeModal();
       showToast('success', '✅ Tạo mới thành công!', `Sản phẩm được tạo bởi: ${user?.sellerName || user?.seller_name || user?.email}`);
     } catch (err) {
@@ -391,13 +399,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     try {
       await productApi.update(savedProductId, data);
-      await loadProducts();
-
-      setSubmittedProducts(prev => prev.map(p => {
-        if (p.id !== savedProductId) return p;
-        return { ...p, ...savedFormData };
-      }));
-
+      // Optimistic update: cập nhật local state ngay, không reload
+      setSubmittedProducts(prev => prev.map(p =>
+        p.id !== savedProductId ? p : { ...p, ...savedFormData }
+      ));
       closeModal();
       showToast('success', '✅ Cập nhật thành công!', 'Sản phẩm đã được cập nhật.');
     } catch (err) {
@@ -411,7 +416,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     setProcessingId(id);
     try {
       await productApi.delete(id);
-      await loadProducts();
+      // Optimistic update: xóa khỏi local state ngay
+      setSubmittedProducts(prev => prev.filter(p => p.id !== id));
       setConfirmDeleteId(null);
       showToast('success', '🗑 Đã xóa!', 'Sản phẩm đã được xóa thành công.');
     } catch (err) {
@@ -423,7 +429,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     setProcessingId(id);
     try {
       await productApi.sendToAdmin(id);
-      await loadProducts();
+      // Optimistic update: đổi status thành pending ngay lập tức
+      setSubmittedProducts(prev => prev.map(p =>
+        p.id === id ? { ...p, status: 'pending' } : p
+      ));
       showToast('success', '📤 Đã gửi!', 'Form đã được gửi đến Admin để xét duyệt.');
     } catch (err) {
       showToast('error', '❌ Lỗi gửi!', err.response?.data?.message || err.message);

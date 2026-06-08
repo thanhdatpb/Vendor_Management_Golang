@@ -72,7 +72,6 @@ export function MediaGallery({ mediaUrls = [] }) {
 export function Spinner() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: HC.muted }}>
-      <HCLogo size={36} color={HC.orange} />
       <div>Đang tải...</div>
     </div>
   );
@@ -82,7 +81,6 @@ export function Spinner() {
 export function EmptyState({ msg }) {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: HC.muted }}>
-      <HCLogo size={40} color={HC.orangeMid} />
       <div>{msg}</div>
     </div>
   );

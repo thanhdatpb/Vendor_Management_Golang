@@ -45,18 +45,6 @@ api.interceptors.request.use(
 // Thêm vào cuối file api.js, trước export default
 api.interceptors.response.use(
   (response) => {
-    // Log response để debug ảnh
-    if (response.config.url === '/products' || response.config.url === '/products-approved') {
-      console.log('API Response from', response.config.url, ':', response.data);
-      if (response.data && response.data.data) {
-        const products = response.data.data.data || response.data.data;
-        if (Array.isArray(products)) {
-          products.forEach(p => {
-            console.log(`  Product ${p.id}: media_path=${p.media_path}, media_url=${p.media_url}`);
-          });
-        }
-      }
-    }
     return response;
   },
   (error) => {

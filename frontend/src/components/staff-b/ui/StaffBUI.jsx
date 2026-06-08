@@ -15,7 +15,6 @@ export function HCLogo({ size = 32 }) {
 export function Spinner() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: HC.muted, fontSize: 13, fontFamily: "'Nunito Sans',sans-serif" }}>
-      <HCLogo size={36} color={HC.orange} />
       <div style={{ marginTop: 10 }}>Đang tải...</div>
     </div>
   );
@@ -24,7 +23,6 @@ export function Spinner() {
 export function EmptyState({ msg = 'Không có dữ liệu' }) {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: HC.muted, fontSize: 13, fontFamily: "'Nunito Sans',sans-serif" }}>
-      <HCLogo size={40} color={HC.orangeMid} />
       <div style={{ marginTop: 12 }}>{msg}</div>
     </div>
   );

@@ -109,7 +109,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
   const handleExportSample = () => {
     const columns = [
-      'Vendor Name', 'Product Type', 'Vendor Type', 'Image URL', 'Overview', 'Size', 'Optional',
+      'Vendor Name', 'Product Type', 'Thông tin tổng quan', 'Image URL', 'Size', 'Optional',
       'Pricing 1', 'Pricing 2', 'Economy Price Ship', 'Economy Total',
       'Fast Price Ship', 'Fast Total', 'Express Price Ship', 'Express Total',
       'Overnight Price Ship', 'Overnight Total'
@@ -120,9 +120,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       exportData = filteredVendors.map(v => ({
         'Vendor Name': v.name || v.vendor_name || '',
         'Product Type': v.product_type || '',
-        'Vendor Type': v.vendor_type || '',
+        'Thông tin tổng quan': v.overview || '',
         'Image URL': v.media_url || '',
-        'Overview': v.overview || '',
         'Size': v.size || '',
         'Optional': v.optional || '',
         'Pricing 1': v.pricing1 != null ? Number(v.pricing1).toFixed(2) : '',
@@ -522,9 +521,9 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                     </div>
                   </th>
                   <th rowSpan={2} style={{ ...TH2(), minWidth: 36 }}>ID</th>
-                  <th rowSpan={2} style={{ ...TH2(), minWidth: 60 }}>Image</th>
-                  <th rowSpan={2} style={{ ...TH2(), minWidth: 150 }}>Vendor Name</th>
-                  <th rowSpan={2} style={TH2({ minWidth: 110 })}>Vendor Type</th>
+                  <th rowSpan={2} style={{ ...TH2(), minWidth: 72 }}>Hình ảnh</th>
+                  <th rowSpan={2} style={{ ...TH2(), minWidth: 140 }}>Vendor Name</th>
+                  <th rowSpan={2} style={{ ...TH2({ minWidth: 180 }) }}>Thông tin tổng quan</th>
                   <th rowSpan={2} style={{ ...TH2(), minWidth: 120 }}>Product Type</th>
                   <th rowSpan={2} style={{ ...TH2({ minWidth: 90, background: activeTab === 'bestseller' ? '#C8A000' : HC.orange }), color: '#fff' }}>💰 Pricing</th>
                   <th colSpan={2} style={TH2()}>Detail</th>
@@ -607,19 +606,28 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                           <td rowSpan={rowSpan} style={{ ...C(), color: HC.muted, fontWeight: 700, verticalAlign: 'middle' }}>{vendorGroupIndex}</td>
                         )}
                         {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', padding: '4px' }}>
-                            {v.media_url ? <img src={v.media_url} alt="Vendor" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: `1px solid ${HC.border}` }} /> : <div style={{ width: 40, height: 40, borderRadius: 6, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#ccc', border: `1px dashed ${HC.border}` }}>N/A</div>}
+                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', padding: '6px' }}>
+                            {v.media_url ? (
+                              <img src={v.media_url} alt="Vendor" style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover', border: `1.5px solid ${HC.border}`, display: 'block' }} />
+                            ) : (
+                              <div style={{ width: 60, height: 60, borderRadius: 8, background: HC.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: HC.muted, border: `1px dashed ${HC.border}` }}>N/A</div>
+                            )}
                           </td>
                         )}
                         {!isSameAsPrev && (
                           <td rowSpan={rowSpan} style={{ ...C(), fontWeight: 800, color: HC.ink2, verticalAlign: 'middle' }}>
                             {vendorName}
-                            {v.overview && <div style={{ fontSize: 10, color: HC.muted, fontWeight: 'normal', marginTop: 4, maxWidth: 180, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>{v.overview}</div>}
                           </td>
                         )}
-                        <td style={{ ...C(), fontWeight: 800, whiteSpace: 'nowrap' }}>
-                          {v.vendor_type === 'Best Seller' ? <BestSellerBadge /> : (v.vendor_type || '—')}
-                        </td>
+                        {!isSameAsPrev && (
+                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', maxWidth: 200 }}>
+                            {v.overview ? (
+                              <span style={{ fontSize: 11, color: HC.ink2, whiteSpace: 'normal', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>
+                                {v.overview}
+                              </span>
+                            ) : <span style={{ color: HC.muted2, fontStyle: 'italic' }}>—</span>}
+                          </td>
+                        )}
                         <td style={{ ...C(), fontWeight: 800, color: activeTab === 'bestseller' ? HC.gold : HC.orange }}>{v.product_type || '—'}</td>
                         <td style={{ ...C(), fontWeight: 800, color: HC.success, fontSize: 13 }}>${totalPricing.toFixed(2)}</td>
                         <td style={C()}>{v.size || '—'}</td>

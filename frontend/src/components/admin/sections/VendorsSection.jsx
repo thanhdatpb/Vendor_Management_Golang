@@ -239,11 +239,10 @@ export default function VendorsSection() {
             <thead>
               <tr>
                 <th rowSpan={2} style={{ ...TH(), borderRadius: '14px 0 0 0', minWidth: 50 }}>STT</th>
-                <th rowSpan={2} style={{ ...TH(), minWidth: 60 }}>Image</th>
-                <th rowSpan={2} style={{ ...TH(), minWidth: 160 }}>Vendor Name</th>
+                <th rowSpan={2} style={{ ...TH(), minWidth: 72 }}>Hình ảnh</th>
+                <th rowSpan={2} style={{ ...TH(), minWidth: 150 }}>Vendor Name</th>
                 <th rowSpan={2} style={{ ...TH(), minWidth: 130 }}>Product Type</th>
-                <th rowSpan={2} style={TH({ minWidth: 120 })}>Vendor Type</th>
-                {/* 🆕 Cột Pricing gộp - đặt trước Detail */}
+                <th rowSpan={2} style={{ ...TH({ minWidth: 190 }) }}>Thông tin tổng quan</th>
                 <th rowSpan={2} style={{ ...TH({ minWidth: 100, background: HC.orange }), color: '#fff' }}>💰 Pricing</th>
                 <th colSpan={2} style={TH()}>Detail</th>
                 <th colSpan={2} style={{ ...TH(), background: HC.orange, borderLeft: `2px solid ${HC.orangeDark}` }}>Economy</th>
@@ -269,20 +268,23 @@ export default function VendorsSection() {
                 return (
                   <tr key={v.id || i}>
                     <td style={{ ...C(), color: HC.muted, fontWeight: 700 }}>{i + 1}</td>
-                    <td style={{ ...C(), verticalAlign: 'middle', padding: '4px' }}>
-                      {v.media_url ? <img src={v.media_url} alt="Vendor" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover', border: `1px solid ${HC.border}` }} /> : <div style={{ width: 40, height: 40, borderRadius: 6, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#ccc', border: `1px dashed ${HC.border}` }}>N/A</div>}
+                    <td style={{ ...C(), verticalAlign: 'middle', padding: '6px' }}>
+                      {v.media_url ? (
+                        <img src={v.media_url} alt="Vendor" style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover', border: `1.5px solid ${HC.border}`, display: 'block' }} />
+                      ) : (
+                        <div style={{ width: 60, height: 60, borderRadius: 8, background: HC.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: HC.muted, border: `1px dashed ${HC.border}` }}>N/A</div>
+                      )}
                     </td>
                     <td style={{ ...C(), fontWeight: 800, color: HC.ink2, verticalAlign: 'middle' }}>
                       {v.name || v.vendor_type || '—'}
-                      {v.overview && <div style={{ fontSize: 10, color: HC.muted, fontWeight: 'normal', marginTop: 4, maxWidth: 180, whiteSpace: 'normal', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>{v.overview}</div>}
                     </td>
                     <td style={{ ...C(), fontWeight: 800, color: HC.orange }}>{v.product_type || '—'}</td>
-                    <td style={{ ...C(), fontWeight: 800 }}>
-                      {v.vendor_type === 'Best Seller' ? (
-                        <BestSellerBadge />
-                      ) : (
-                        v.vendor_type || '—'
-                      )}
+                    <td style={{ ...C(), verticalAlign: 'middle', maxWidth: 200 }}>
+                      {v.overview ? (
+                        <span style={{ fontSize: 11, color: HC.ink2, whiteSpace: 'normal', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>
+                          {v.overview}
+                        </span>
+                      ) : <span style={{ color: HC.muted2, fontStyle: 'italic' }}>—</span>}
                     </td>
                     <td style={{ ...C(), fontWeight: 800, color: HC.success, fontSize: 13, background: i % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
                       ${totalPricing.toFixed(2)}

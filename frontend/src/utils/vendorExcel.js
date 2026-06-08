@@ -5,7 +5,7 @@
 export const VENDOR_TYPES = ['Old', 'New', 'Best Seller'];
 
 export const VENDOR_EXCEL_HEADERS = [
-  'Vendor Name', 'Product Type', 'Vendor Type', 'Image URL', 'Overview', 'Size', 'Optional',
+  'Vendor Name', 'Product Type', 'Thông tin tổng quan', 'Image URL', 'Size', 'Optional',
   'Pricing 1', 'Pricing 2', 'Economy Price Ship', 'Economy Total',
   'Fast Price Ship', 'Fast Total', 'Express Price Ship', 'Express Total',
   'Overnight Price Ship', 'Overnight Total',
@@ -16,7 +16,7 @@ const COL_ALIASES = {
   product_type: ['product type', 'product_type', 'loại sản phẩm', 'loai san pham'],
   vendor_type: ['vendor type', 'vendor_type', 'loại vendor', 'loai vendor'],
   media_url: ['image url', 'image_url', 'image', 'hình ảnh', 'avatar', 'avatar url', 'media url'],
-  overview: ['overview', 'tổng quan', 'tong quan', 'chất liệu', 'chat lieu', 'description', 'mô tả', 'mo ta'],
+  overview: ['overview', 'thông tin tổng quan', 'thong tin tong quan', 'tổng quan', 'tong quan', 'chất liệu', 'chat lieu', 'description', 'mô tả', 'mo ta'],
   size: ['size', 'kích thước', 'kich thuoc', 'detail size'],
   optional: ['optional', 'tùy chọn', 'tuy chon', 'detail optional'],
   pricing1: ['pricing 1', 'pricing1', 'giá 1', 'gia 1'],
@@ -105,10 +105,13 @@ export function buildVendorPayload(row) {
     return parseNumber(mapColumn(row, field));
   };
 
+  // Nếu không có vendor_type (đã bỏ cột này), dùng mặc định 'New'
+  const finalVendorType = vendorType || 'New';
+
   return {
     name,
     product_type: productType,
-    vendor_type: vendorType,
+    vendor_type: finalVendorType,
     size,
     optional,
     overview,
@@ -129,7 +132,6 @@ export function buildVendorPayload(row) {
 export function vendorMatchesExisting(existing, payload) {
   return (
     existing.product_type === payload.product_type &&
-    existing.vendor_type === payload.vendor_type &&
     normalizeOptionalField(existing.size) === payload.size &&
     normalizeOptionalField(existing.optional) === payload.optional
   );
@@ -155,9 +157,10 @@ export async function parseVendorExcel(file) {
 
         for (let r = 0; r < aoa.length; r++) {
           const cells = (aoa[r] || []).map((c) => normalizeKey(c));
-          const hasProduct = cells.some((c) => c === 'product type' || c === 'product_type');
-          const hasVendor = cells.some((c) => c === 'vendor type' || c === 'vendor_type');
-          if (hasProduct && hasVendor) {
+          // Tìm header row chỉ cần có 'product type' (không bắt buộc 'vendor type' nữa)
+          const hasProduct = cells.some((c) => c === 'product type' || c === 'product_type' || c === 'loai san pham');
+          const hasPricing = cells.some((c) => c.includes('pricing') || c.includes('economy') || c.includes('vendor name') || c.includes('vendor_name'));
+          if (hasProduct && hasPricing) {
             headerRowIdx = r;
             break;
           }
@@ -195,21 +198,22 @@ export async function parseVendorExcel(file) {
             }
 
             const payload = buildVendorPayload(rowObj);
-            if (!payload.product_type || !payload.vendor_type) continue;
+            // Chỉ bắt buộc product_type, vendor_type không còn bắt buộc
+            if (!payload.product_type) continue;
             vendors.push(payload);
           }
         } else {
           const rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
           for (const row of rawData) {
             const payload = buildVendorPayload(row);
-            if (!payload.product_type || !payload.vendor_type) continue;
+            if (!payload.product_type) continue;
             vendors.push(payload);
           }
         }
 
         if (vendors.length === 0) {
           reject(new Error(
-            'Không tìm thấy dữ liệu vendor hợp lệ. Dùng nút Export để tải file mẫu, điền Product Type + Vendor Type (Old/New/Best Seller).'
+            'Không tìm thấy dữ liệu vendor hợp lệ. Dùng nút Export để tải file mẫu, điền Vendor Name + Product Type + giá.'
           ));
           return;
         }
