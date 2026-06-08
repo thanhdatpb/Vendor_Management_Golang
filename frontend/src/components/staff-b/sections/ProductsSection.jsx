@@ -300,7 +300,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                             👁 Xem
                           </button>
                           <button onClick={() => onGotoVendors(p.product_type, p.id)} style={{ padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orange}`, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: '#fff' }}>
-                            🔍 Tìm Vendor
+                            Tìm Vendor
                           </button>
                           <button
                             onClick={() => handleOpenDeadlineModal(p)}
@@ -310,7 +310,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                               color: HC.orangeDark
                             }}
                           >
-                            📅 Tạo Deadline
+                            Tạo Deadline
                           </button>
                           {availableCount > 0 && !hasVendors && (
                             <button

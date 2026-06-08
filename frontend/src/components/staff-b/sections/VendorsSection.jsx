@@ -426,7 +426,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     >
       {icon && <span>{icon}</span>}
       {label}
-      {id === 'bestseller' && <BestSellerBadge />}
     </button>
   );
 
@@ -436,7 +435,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span>⚠️ {apiError}</span><button onClick={loadVendors} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button></div>}
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
-        <TabButton id="all" label="Tất cả Vendor" icon="🏪" />
+        <TabButton id="all" label="Tất cả Vendor" />
         <TabButton id="bestseller" label="Best Seller" icon="⭐" />
       </div>
 
@@ -488,10 +487,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
             {activeTab === 'bestseller' ? '⭐ Tạo Best Seller' : '＋ Thêm thủ công'}
           </button>
           <button onClick={() => importFileRef.current?.click()} style={{ padding: '9px 20px', borderRadius: 10, background: activeTab === 'bestseller' ? `linear-gradient(135deg,#FFD700,#FFA500)` : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: activeTab === 'bestseller' ? '#7A5C00' : '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span>📥</span> Import
+            Import
           </button>
           <button onClick={handleExportSample} style={{ padding: '9px 20px', borderRadius: 10, background: `linear-gradient(135deg,${HC.brown},${HC.brownLight})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span>📤</span> Export
+            Export
           </button>
         </div>
       </div>
@@ -505,7 +504,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       )}
 
       {loading ? <Spinner /> : filteredVendors.length === 0 && !vendorModalOpen ? (
-        <EmptyState msg={activeTab === 'bestseller' ? <span>Chưa có Best Seller vendor nào. Nhấn <b style={{ color: HC.gold }}>⭐ Tạo Best Seller</b> để bắt đầu.</span> : <span>Chưa có vendor. Nhấn <b style={{ color: HC.orange }}>📥 Import</b> để bắt đầu.</span>} />
+        <EmptyState msg={activeTab === 'bestseller' ? <span>Chưa có Best Seller vendor nào. Nhấn <b style={{ color: HC.gold }}>⭐ Tạo Best Seller</b> để bắt đầu.</span> : <span>Chưa có vendor. Nhấn <b style={{ color: HC.orange }}>Import</b> để bắt đầu.</span>} />
       ) : filteredVendors.length > 0 && (
         <div style={{ borderRadius: 16, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.border}`, boxShadow: activeTab === 'bestseller' ? '0 8px 32px rgba(212,160,23,0.15)' : HC.shadow, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>

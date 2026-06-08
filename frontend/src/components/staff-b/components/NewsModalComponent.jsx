@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditOutlined, SendOutlined } from '@ant-design/icons';
+import { EditOutlined, SendOutlined, NotificationOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 
 const NewsModalComponent = React.memo(({
@@ -88,7 +88,7 @@ const NewsModalComponent = React.memo(({
           flexShrink: 0
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>{editingNews ? '✏️' : '📰'}</span>
+            <span style={{ fontSize: 24, display: 'flex' }}>{editingNews ? <EditOutlined /> : <NotificationOutlined />}</span>
             <div>
               <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
                 {editingNews ? 'Sửa thông báo' : 'Tạo thông báo mới'}

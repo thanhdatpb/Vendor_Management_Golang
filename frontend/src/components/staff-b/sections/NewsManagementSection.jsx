@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ProfileOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 import { playNotificationSound } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination } from '../ui/StaffBUI';
@@ -393,7 +393,7 @@ export default function NewsManagementSection() {
 
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <span style={{ fontSize: 18 }}>📋</span>
+          <span style={{ fontSize: 18, color: HC.orangeDark, display: 'flex' }}><ProfileOutlined /></span>
           <span style={{ fontWeight: 900, fontSize: 14, color: HC.ink }}>Danh sách thông báo đã tạo</span>
           <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>
             {newsList.length} thông báo

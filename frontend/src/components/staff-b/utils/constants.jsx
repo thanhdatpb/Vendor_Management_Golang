@@ -30,9 +30,9 @@ export const MENU = [
 ];
 
 export const PAGE_TITLES = {
-  products: 'Product Approval — Quản Lý Form Duyệt',
-  library: 'Library Vendor — Thư Viện Vendor',
-  news: 'News Management — Tạo Thông Báo',
+  products: 'Quản Lý Form Duyệt',
+  library: 'Thư Viện Vendor',
+  news: 'Tạo Thông Báo',
 };
 
 export const EMPTY_FORM = {
