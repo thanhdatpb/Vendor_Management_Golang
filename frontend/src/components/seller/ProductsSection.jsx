@@ -2,7 +2,7 @@
 //  PRODUCTS SECTION (Seller)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
 import { lsGet, fmtDate, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
@@ -550,8 +550,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16, padding: '12px 16px', background: HC.surface, borderRadius: 14, border: `1.5px solid ${HC.border}` }}>
         <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-          <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: HC.muted }}>🔍</span>
-          <input type="text" placeholder="Tìm loại sản phẩm..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inp, paddingLeft: 34 }} />
+          <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Tìm loại sản phẩm..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ ...inp, paddingLeft: 36 }}
+            onFocus={e => e.target.style.borderColor = HC.orange}
+            onBlur={e => e.target.style.borderColor = HC.border}
+          />
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', minWidth: 130, padding: '9px 12px', borderRadius: 9, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2 }}>
           <option value="">Tất cả trạng thái</option>
