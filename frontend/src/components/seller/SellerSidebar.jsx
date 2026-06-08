@@ -79,15 +79,6 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
           }}>
             {item.label}
           </div>
-          <div style={{
-            fontSize: 10,
-            color: HC.muted,
-            marginTop: 2,
-            fontFamily: "'Nunito Sans',sans-serif",
-            opacity: 0.7,
-          }}>
-            {item.desc}
-          </div>
         </div>
       )}
 
@@ -120,9 +111,6 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
           animation: 'seller-slide-in 0.15s ease',
         }}>
           <div style={{ marginBottom: 1 }}>{item.label}</div>
-          {item.desc && (
-            <div style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>{item.desc}</div>
-          )}
           <div style={{
             position: 'absolute',
             right: '100%',
