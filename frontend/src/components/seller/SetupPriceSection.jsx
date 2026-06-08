@@ -729,8 +729,8 @@ export default function SetupPriceSection() {
                 <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.success }}>${(p.after_price || 0).toFixed(2)}</td>
                 <td style={{ padding: '10px 10px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={() => onSetupPrice(p)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>⚙️ Setup giá</button>
-                    <button onClick={() => onDelete(p)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>🗑 Xóa</button>
+                    <button onClick={() => onSetupPrice(p)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Setup giá</button>
+                    <button onClick={() => onDelete(p)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Xóa</button>
                   </div>
                 </td>
               </tr>
