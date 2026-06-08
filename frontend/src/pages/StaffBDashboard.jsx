@@ -240,7 +240,7 @@ export default function StaffDashboard() {
             {sidebarOpen && (
               <div style={{ animation: 'staffb-fadein 0.3s ease' }}>
                 <div style={{ color: HC.ink, fontWeight: 900, fontSize: 15, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.02em' }}>Happy Creative LLC</div>
-                <div style={{ color: HC.orange, fontSize: 9.5, letterSpacing: '0.22em', fontWeight: 800, textTransform: 'uppercase', marginTop: 3 }}>Vendor Dashboard</div>
+                <div style={{ color: HC.orange, fontSize: 9.5, letterSpacing: '0.22em', fontWeight: 800, textTransform: 'uppercase', marginTop: 3 }}>Vendor Management</div>
               </div>
             )}
           </div>

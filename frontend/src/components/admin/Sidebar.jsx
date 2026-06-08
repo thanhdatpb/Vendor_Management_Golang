@@ -233,7 +233,7 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
               textTransform: 'uppercase',
               marginTop: 3,
             }}>
-              CCO Portal
+              Vendor Management
             </div>
           </div>
         )}

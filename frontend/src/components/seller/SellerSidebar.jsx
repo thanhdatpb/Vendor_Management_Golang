@@ -215,7 +215,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
               Happy Creative LLC
             </div>
             <div style={{ color: HC.orange, fontSize: 9.5, letterSpacing: '0.22em', fontWeight: 800, textTransform: 'uppercase', marginTop: 3 }}>
-              Seller Dashboard
+              Vendor Management
             </div>
           </div>
         )}
