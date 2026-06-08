@@ -5,7 +5,8 @@ import {
   CheckCircleOutlined, CloseCircleOutlined, CheckCircleFilled,
   WarningFilled, CloseCircleFilled, AimOutlined, FireOutlined,
   FormatPainterOutlined, SmileOutlined, GlobalOutlined, RocketOutlined,
-  ClockCircleOutlined, CheckOutlined
+  ClockCircleOutlined, CheckOutlined, EyeOutlined, CloseOutlined, LoadingOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { HC, API_BASE_URL, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
@@ -537,21 +538,19 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     <button
       onClick={() => handleViewProduct(p)}
       disabled={loadingProductId === p.id}
+      className="hc-btn-secondary"
       style={{
         padding: '5px 12px',
-        borderRadius: 7,
-        border: `1.5px solid ${HC.border}`,
-        background: HC.cream,
-        cursor: loadingProductId === p.id ? 'wait' : 'pointer',
         fontSize: 11,
-        fontWeight: 800,
-        color: HC.brown,
+        borderRadius: 7,
+        opacity: loadingProductId === p.id ? 0.6 : 1,
+        cursor: loadingProductId === p.id ? 'wait' : 'pointer',
         fontFamily: "'Nunito',sans-serif",
-        transition: 'all 0.15s',
-        opacity: loadingProductId === p.id ? 0.6 : 1
       }}
     >
-      {loadingProductId === p.id ? '⏳ Đang tải...' : '👁 Xem'}
+      {loadingProductId === p.id
+        ? <><LoadingOutlined spin style={{ fontSize: 12 }} /> Đang tải...</>
+        : <><EyeOutlined /> Xem</>}
     </button>
   );
 
@@ -565,20 +564,16 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         try { await fn(); } finally { setIsRefreshing(false); }
       }}
       disabled={isRefreshing}
+      className="hc-btn-secondary"
       style={{
         marginLeft: 'auto', padding: '5px 14px', borderRadius: 8,
-        border: `1.5px solid ${isRefreshing ? HC.orangeMid : HC.border}`,
-        background: isRefreshing ? HC.orangeLight : HC.cream,
-        color: isRefreshing ? HC.orangeDark : HC.brown,
         fontSize: 11, fontWeight: 800,
         cursor: isRefreshing ? 'not-allowed' : 'pointer',
         fontFamily: "'Nunito',sans-serif",
-        transition: 'all 0.2s',
-        opacity: isRefreshing ? 0.85 : 1,
-        display: 'flex', alignItems: 'center', gap: 5,
+        opacity: isRefreshing ? 0.8 : 1,
       }}
     >
-      <span style={{ display: 'inline-block', animation: isRefreshing ? 'spin360 0.7s linear infinite' : 'none' }}>↻</span>
+      <ReloadOutlined style={{ fontSize: 11, animation: isRefreshing ? 'hc-spin 0.7s linear infinite' : 'none', display: 'inline-block' }} />
       {isRefreshing ? 'Đang tải...' : 'Làm mới'}
     </button>
   );
@@ -728,38 +723,32 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
                     <button
                       onClick={() => handleApprove(p)}
                       disabled={processingId === p.id}
+                      className="hc-btn-success"
                       style={{
                         padding: '5px 14px',
                         borderRadius: 7,
-                        border: '1.5px solid #bbf7d0',
-                        background: processingId === p.id ? '#d1fae5' : '#ecfdf5',
-                        cursor: processingId === p.id ? 'wait' : 'pointer',
                         fontSize: 11,
-                        fontWeight: 800,
-                        color: '#065f46',
-                        fontFamily: "'Nunito',sans-serif",
                         opacity: processingId === p.id ? 0.7 : 1,
+                        cursor: processingId === p.id ? 'wait' : 'pointer',
                       }}
                     >
-                      {processingId === p.id ? '⟳ Đang xử lý...' : '✓ Duyệt'}
+                      {processingId === p.id
+                        ? <><LoadingOutlined spin style={{ fontSize: 11 }} /> Đang xử lý...</>
+                        : <><CheckOutlined /> Duyệt</>}
                     </button>
                     <button
                       onClick={() => setRejectModal({ open: true, productId: p.id, reason: '' })}
                       disabled={processingId === p.id}
+                      className="hc-btn-danger"
                       style={{
                         padding: '5px 14px',
                         borderRadius: 7,
-                        border: '1.5px solid #fecaca',
-                        background: processingId === p.id ? '#fee2e2' : '#fef2f2',
-                        cursor: processingId === p.id ? 'wait' : 'pointer',
                         fontSize: 11,
-                        fontWeight: 800,
-                        color: '#991b1b',
-                        fontFamily: "'Nunito',sans-serif",
                         opacity: processingId === p.id ? 0.7 : 1,
+                        cursor: processingId === p.id ? 'wait' : 'pointer',
                       }}
                     >
-                      ✕ Từ chối
+                      <CloseOutlined /> Từ chối
                     </button>
                   </div>,
                 ])}

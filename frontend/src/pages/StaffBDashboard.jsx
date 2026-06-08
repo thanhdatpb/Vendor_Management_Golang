@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppstoreOutlined, ShopOutlined, BellOutlined, StarFilled, MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, CalendarOutlined } from '@ant-design/icons';
+import { MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
 
@@ -33,7 +33,7 @@ export default function StaffDashboard() {
 
   const formatLastActive = (ts) => {
     const d = new Date(Number(ts));
-    return `Hoạt động lần cuối lúc ${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+    return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
   };
   const [active, setActive] = useState('products');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -163,67 +163,118 @@ export default function StaffDashboard() {
     }
   };
 
+  // ── Tooltip Nav Item helper ──────────────────────────────
+  function StaffBNavItem({ item, isActive, isCollapsed, onClick }) {
+    const [hov, setHov] = useState(false);
+    const isBest = item.id === 'library';
+    const activeColor = isBest ? HC.gold : HC.orange;
+    const activeDark  = isBest ? '#B8860B' : HC.orangeDark;
+    return (
+      <div
+        onClick={onClick}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          position: 'relative', display: 'flex', alignItems: 'center', gap: 12,
+          padding: isCollapsed ? '12px' : '12px 16px', marginBottom: 6, borderRadius: 12,
+          background: isActive
+            ? (isBest ? HC.goldLight : `linear-gradient(135deg, ${HC.orangeLight}, ${HC.cream})`)
+            : hov ? `${activeColor}08` : 'transparent',
+          border: `1px solid ${isActive ? (isBest ? HC.goldMid : HC.orangeMid) : 'transparent'}`,
+          cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: hov && !isActive ? 'translateX(4px)' : 'none',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
+          overflow: 'visible',
+        }}
+      >
+        {isActive && (
+          <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 3, height: 32, background: `linear-gradient(180deg, ${activeColor}, ${activeDark})`, borderRadius: '0 4px 4px 0' }} />
+        )}
+        <div style={{
+          width: 32, height: 32, borderRadius: 10,
+          background: isActive ? `${activeColor}20` : hov ? `${activeColor}10` : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 17, color: isActive ? activeColor : hov ? activeDark : HC.muted,
+          transition: 'all 0.2s ease', flexShrink: 0,
+        }}>{item.icon}</div>
+        {!isCollapsed && (
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: isActive ? 800 : 600, color: isActive ? activeDark : HC.brown, fontFamily: "'Nunito',sans-serif", transition: 'color 0.2s ease' }}>{item.label}</div>
+          </div>
+        )}
+        {!isCollapsed && isActive && (
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: activeColor, boxShadow: `0 0 0 3px ${activeColor}30` }} />
+        )}
+        {/* Tooltip when collapsed */}
+        {isCollapsed && hov && (
+          <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: 'rgba(26,15,0,0.90)', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: "'Nunito',sans-serif", padding: '6px 12px', borderRadius: 8, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 9999, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+            {item.label}
+            <div style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', border: '5px solid transparent', borderRightColor: 'rgba(26,15,0,0.90)' }} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');*{box-sizing:border-box;}::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:${HC.cream};}::-webkit-scrollbar-thumb{background:${HC.orangeMid};border-radius:99px;}::-webkit-scrollbar-thumb:hover{background:${HC.orange};}@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.8;transform:scale(1.15);}}`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');
+        *{box-sizing:border-box;}
+        ::-webkit-scrollbar{width:7px;height:7px;}
+        ::-webkit-scrollbar-track{background:${HC.cream};border-radius:10px;}
+        ::-webkit-scrollbar-thumb{background:${HC.orangeMid};border-radius:10px;}
+        ::-webkit-scrollbar-thumb:hover{background:${HC.orange};}
+        @keyframes staffb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0.5);}50%{box-shadow:0 0 0 4px rgba(22,163,74,0);}}
+        @keyframes staffb-fadein{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+      `}</style>
       <div style={{ display: 'flex', height: '100vh', background: HC.orangePale, fontFamily: "'Nunito Sans',sans-serif", color: HC.ink, overflow: 'hidden' }}>
-        <div style={{ width: sidebarOpen ? 280 : 80, background: '#FFFFFF', display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'hidden', position: 'relative', boxShadow: '2px 0 12px rgba(0, 0, 0, 0.05)', borderRight: `1px solid ${HC.border}` }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(circle at 20% 40%, ${HC.orange}08 1px, transparent 1px)`, backgroundSize: '24px 24px', pointerEvents: 'none', opacity: 0.4 }} />
-          <div style={{ padding: sidebarOpen ? '28px 24px' : '28px 20px', borderBottom: `1px solid ${HC.border}`, display: 'flex', alignItems: 'center', gap: 12, justifyContent: sidebarOpen ? 'space-between' : 'center', position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 14, background: `linear-gradient(135deg, ${HC.orange}10, ${HC.orange}05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${HC.orange}20`, boxShadow: `0 2px 8px ${HC.orange}10`, flexShrink: 0 }}>
-                <HCLogo size={28} color={HC.orange} />
-              </div>
-              {sidebarOpen && (
-                <div style={{ animation: 'fadeIn 0.3s ease' }}>
-                  <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.02em' }}>Happy Creative LLC</div>
-                  <div style={{ color: HC.orange, fontSize: 10, letterSpacing: '0.2em', fontWeight: 800, textTransform: 'uppercase', marginTop: 2 }}>Vendor Dashboard</div>
-                </div>
-              )}
+        {/* ── Sidebar ── */}
+        <div style={{ width: sidebarOpen ? 280 : 72, background: '#FFFFFF', display: 'flex', flexDirection: 'column', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'visible', position: 'relative', boxShadow: '4px 0 20px rgba(0,0,0,0.04)', borderRight: `1px solid ${HC.border}`, zIndex: 100, flexShrink: 0 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: `radial-gradient(circle at 20% 40%, ${HC.orange}06 1px, transparent 1px)`, backgroundSize: '24px 24px', pointerEvents: 'none', opacity: 0.5, overflow: 'hidden' }} />
+          {/* Logo */}
+          <div style={{ padding: sidebarOpen ? '24px 20px' : '24px 14px', borderBottom: `1px solid ${HC.border}`, display: 'flex', alignItems: 'center', gap: 12, justifyContent: sidebarOpen ? 'flex-start' : 'center', flexShrink: 0 }}>
+            <div style={{ width: 42, height: 42, borderRadius: 13, background: `linear-gradient(135deg, ${HC.orange}15, ${HC.orange}05)`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${HC.orange}20`, boxShadow: `0 2px 8px ${HC.orange}12`, flexShrink: 0 }}>
+              <HCLogo size={26} color={HC.orange} />
             </div>
+            {sidebarOpen && (
+              <div style={{ animation: 'staffb-fadein 0.3s ease' }}>
+                <div style={{ color: HC.ink, fontWeight: 900, fontSize: 15, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.02em' }}>Happy Creative LLC</div>
+                <div style={{ color: HC.orange, fontSize: 9.5, letterSpacing: '0.22em', fontWeight: 800, textTransform: 'uppercase', marginTop: 3 }}>Vendor Dashboard</div>
+              </div>
+            )}
           </div>
+          {/* User card */}
           {sidebarOpen && (
-            <div style={{ margin: '20px 16px', padding: '16px', borderRadius: 16, background: `linear-gradient(135deg, ${HC.orangeLight}, ${HC.cream})`, border: `1px solid ${HC.orangeMid}`, animation: 'fadeIn 0.3s ease' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#fff' }}><ShopOutlined /></div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>{(user?.name === 'Vendor' ? 'Vendor' : user?.name) || 'Vendor'}</div>
-                  <div style={{ fontSize: 10, color: HC.brown, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}><StarFilled style={{ fontSize: 10, color: HC.orange }} /><span>Vendor</span></div>
+            <div style={{ margin: '16px 14px', padding: '14px', borderRadius: 14, background: `linear-gradient(135deg, ${HC.orangeLight}, ${HC.cream})`, border: `1px solid ${HC.orangeMid}`, animation: 'staffb-fadein 0.3s ease', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', boxShadow: `0 3px 10px ${HC.orange}40`, flexShrink: 0 }}><ShopOutlined /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: HC.ink, fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(user?.name === 'Vendor' ? 'Vendor' : user?.name) || 'Vendor'}</div>
+                  <div style={{ fontSize: 10, color: HC.brown, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}><ShopOutlined style={{ fontSize: 9, color: HC.orange }} /><span>Vendor Account</span></div>
                 </div>
               </div>
               <div style={{ fontSize: 10, color: HC.success, paddingTop: 8, borderTop: `1px solid ${HC.orangeMid}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: HC.success, boxShadow: `0 0 0 2px ${HC.success}33` }}></div>
-                <span style={{ fontWeight: 700 }}>{formatLastActive(lastActiveTime)}</span>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: HC.success, animation: 'staffb-pulse 2.5s ease-in-out infinite' }}></div>
+                <span style={{ fontWeight: 700 }}>Online · {formatLastActive(lastActiveTime)}</span>
               </div>
             </div>
           )}
-          <nav style={{ flex: 1, padding: sidebarOpen ? '8px 16px' : '8px 12px', marginTop: 8 }}>
-            {MENU.map(item => {
-              const isActive = active === item.id;
-              const isBest = item.id === 'library';
-              return (
-                <div key={item.id} onClick={() => setActive(item.id)} onMouseEnter={(e) => { e.currentTarget.style.transform = !isActive ? 'translateX(4px)' : 'none'; e.currentTarget.style.background = !isActive ? (isBest ? `${HC.gold}10` : `${HC.orange}10`) : undefined; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; if (!isActive) e.currentTarget.style.background = 'transparent'; }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: sidebarOpen ? '12px 16px' : '12px', marginBottom: 6, borderRadius: 12, background: isActive ? (isBest ? `${HC.goldLight}` : `linear-gradient(135deg, ${HC.orangeLight}, ${HC.cream})`) : 'transparent', border: `1px solid ${isActive ? (isBest ? HC.goldMid : HC.orangeMid) : 'transparent'}`, cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', position: 'relative', overflow: 'hidden' }}>
-                  {isActive && <div style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 3, height: 32, background: isBest ? `linear-gradient(180deg, ${HC.gold}, #FFA500)` : `linear-gradient(180deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: '0 4px 4px 0' }} />}
-                  <div style={{ width: 32, height: 32, borderRadius: 10, background: isActive ? (isBest ? `${HC.gold}20` : `linear-gradient(135deg, ${HC.orange}20, ${HC.orange}10)`) : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: isActive ? (isBest ? HC.gold : HC.orange) : HC.muted, transition: 'all 0.2s ease', flexShrink: 0 }}>{item.icon}</div>
-                  {sidebarOpen && (
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: isActive ? 800 : 600, color: isActive ? (isBest ? HC.gold : HC.orangeDark) : HC.brown, fontFamily: "'Nunito',sans-serif", transition: 'color 0.2s ease' }}>{item.label}</div>
-                      <div style={{ fontSize: 10, color: HC.muted, marginTop: 2, fontFamily: "'Nunito Sans',sans-serif", opacity: 0.7 }}>{item.id === 'products' ? 'Form Approval Management' : 'Vendor Library'}</div>
-                    </div>
-                  )}
-                  {!sidebarOpen && isActive && <div style={{ position: 'absolute', right: 8, width: 6, height: 6, borderRadius: '50%', background: isBest ? HC.gold : HC.orange }} />}
-                </div>
-              );
-            })}
+          {/* Nav */}
+          <nav style={{ flex: 1, padding: sidebarOpen ? '6px 14px' : '6px 10px', overflowY: 'auto', overflowX: 'visible', scrollbarWidth: 'none' }}>
+            {MENU.map(item => (
+              <StaffBNavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
+            ))}
           </nav>
-          <div style={{ padding: sidebarOpen ? '16px 16px 24px' : '16px 12px 24px' }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ width: '100%', padding: '10px', borderRadius: 12, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s ease', fontFamily: "'Nunito',sans-serif" }} onMouseEnter={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.borderColor = HC.orangeMid; e.currentTarget.style.color = HC.orangeDark; }} onMouseLeave={e => { e.currentTarget.style.background = HC.cream; e.currentTarget.style.borderColor = HC.border; e.currentTarget.style.color = HC.brown; }}>
-              {sidebarOpen ? <><MenuFoldOutlined /><span>Thu gọn menu</span></> : <MenuUnfoldOutlined />}
+          {/* Footer */}
+          <div style={{ padding: sidebarOpen ? '12px 14px 20px' : '12px 10px 20px', flexShrink: 0 }}>
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ width: '100%', padding: '9px', borderRadius: 11, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all 0.2s ease', fontFamily: "'Nunito',sans-serif", fontWeight: 700 }} onMouseEnter={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.borderColor = HC.orangeMid; e.currentTarget.style.color = HC.orangeDark; }} onMouseLeave={e => { e.currentTarget.style.background = HC.cream; e.currentTarget.style.borderColor = HC.border; e.currentTarget.style.color = HC.brown; }}>
+              {sidebarOpen ? <><MenuFoldOutlined /><span>Thu gọn</span></> : <MenuUnfoldOutlined />}
             </button>
-            <button onClick={logout} style={{ width: '100%', marginTop: 12, padding: '10px', borderRadius: 12, background: '#fee2e2', border: `1px solid #fecaca`, color: HC.danger, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s ease', fontFamily: "'Nunito',sans-serif" }} onMouseEnter={e => { e.currentTarget.style.background = '#fecaca'; e.currentTarget.style.borderColor = '#f87171'; }} onMouseLeave={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#fecaca'; }}>
+            <button onClick={logout} style={{ width: '100%', marginTop: 8, padding: '9px', borderRadius: 11, background: '#fff5f5', border: '1px solid #fecaca', color: HC.danger, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all 0.2s ease', fontFamily: "'Nunito',sans-serif", fontWeight: 700 }} onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#f87171'; }} onMouseLeave={e => { e.currentTarget.style.background = '#fff5f5'; e.currentTarget.style.borderColor = '#fecaca'; }}>
               <LogoutOutlined />{sidebarOpen && <span>Đăng xuất</span>}
             </button>
-            {sidebarOpen && <div style={{ marginTop: 20, textAlign: 'center', fontSize: 9, fontWeight: 800, color: HC.muted2, letterSpacing: '0.2em', fontFamily: "'Nunito',sans-serif" }}>#IT'S ALWAYS DAY 1</div>}
+            {sidebarOpen && <div style={{ marginTop: 16, textAlign: 'center', fontSize: 9, fontWeight: 800, color: HC.muted2, letterSpacing: '0.22em', fontFamily: "'Nunito',sans-serif" }}>#IT'S ALWAYS DAY 1</div>}
           </div>
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

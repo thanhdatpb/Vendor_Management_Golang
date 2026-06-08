@@ -1,5 +1,5 @@
 import React from 'react';
-import { DashboardOutlined, AppstoreOutlined, ShopOutlined } from '@ant-design/icons';
+import { PieChartOutlined, ShopOutlined } from '@ant-design/icons';
 
 export const HC = {
   orange: '#F5A623', orangeDark: '#E09415', orangeDeep: '#C47F10',
@@ -19,7 +19,7 @@ export const STATUS_CFG = {
 };
 
 export const MENU = [
-  { id: 'overview', icon: <DashboardOutlined />, label: 'Tổng Quan', desc: 'Overview' },
+  { id: 'overview', icon: <PieChartOutlined />, label: 'Tổng Quan', desc: 'Overview & Analytics' },
   { id: 'vendors', icon: <ShopOutlined />, label: 'Thư Viện Vendor', desc: 'Vendor Library' },
 ];
 

@@ -2,6 +2,15 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logoImg from "../assets/logo.png";
+import {
+  UserOutlined,
+  LockOutlined,
+  EyeOutlined,
+  EyeInvisibleOutlined,
+  ExclamationCircleFilled,
+  LoadingOutlined,
+  ArrowRightOutlined,
+} from "@ant-design/icons";
 
 export default function Login() {
   const { login, user: contextUser } = useAuth();
@@ -20,6 +29,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [focused, setFocused] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async () => {
     if (!form.email || !form.password) {
@@ -39,8 +49,6 @@ export default function Login() {
       const role = typeof user.role === "object"
         ? user.role?.name
         : user.role;
-
-      console.log("Role sau chuẩn hóa:", role);
 
       if (role === "admin") {
         navigate("/admin");
@@ -87,18 +95,54 @@ export default function Login() {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50%       { opacity: 0.7; transform: scale(1.08); }
+        @keyframes shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
         }
 
         .hc-card   { animation: fadeUp 0.65s ease both; }
         .hc-float-a { animation: floatA 6s ease-in-out infinite; }
         .hc-float-b { animation: floatB 8s ease-in-out infinite 1s; }
 
+        .hc-input-wrap {
+          position: relative;
+          width: 100%;
+        }
+        .hc-input-icon {
+          position: absolute;
+          left: 13px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 15px;
+          color: #C4B49A;
+          pointer-events: none;
+          transition: color 0.2s;
+          display: flex;
+          align-items: center;
+        }
+        .hc-input-icon.focused { color: #F5A623; }
+
+        .hc-eye-btn {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #C4B49A;
+          font-size: 15px;
+          padding: 2px 4px;
+          display: flex;
+          align-items: center;
+          transition: color 0.2s;
+          line-height: 1;
+        }
+        .hc-eye-btn:hover { color: #F5A623; }
+
         .hc-input {
           width: 100%;
-          padding: 13px 16px;
+          padding: 13px 16px 13px 40px;
           border-radius: 12px;
           border: 1.5px solid #E8E0D5;
           background: #FFFDF9;
@@ -108,6 +152,7 @@ export default function Login() {
           outline: none;
           transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         }
+        .hc-input.has-eye { padding-right: 42px; }
         .hc-input:focus {
           border-color: #F5A623;
           background: #fff;
@@ -126,12 +171,34 @@ export default function Login() {
           cursor: pointer;
           transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
           letter-spacing: 0.02em;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
         .hc-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 8px 28px rgba(245,166,35,0.45);
         }
         .hc-btn:active:not(:disabled) { transform: translateY(0); }
+
+        .hc-logo-wrap {
+          border-radius: 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #FFF8EE 0%, #FDE8B8 100%);
+          border: 2px solid #FDE8B8;
+          padding: 10px;
+        }
+
+        .hc-divider-line {
+          background: linear-gradient(90deg, transparent, #F5A623, transparent);
+          height: 1px;
+          border: none;
+          margin: 16px 0;
+          opacity: 0.4;
+        }
       `}</style>
 
       {/* Full-page background */}
@@ -161,6 +228,13 @@ export default function Login() {
           animation: "spinSlow 22s linear infinite reverse",
           pointerEvents: "none",
         }} />
+        <div style={{
+          position: "absolute", top: "20%", right: "6%",
+          width: 120, height: 120, borderRadius: "50%",
+          border: `16px solid ${ORANGE}10`,
+          animation: "spinSlow 18s linear infinite",
+          pointerEvents: "none",
+        }} />
         <div className="hc-float-b" style={{
           position: "absolute", top: "12%", right: "8%",
           width: 52, height: 52, borderRadius: "50%",
@@ -171,16 +245,21 @@ export default function Login() {
           width: 36, height: 36, borderRadius: "50%",
           background: `${ORANGE}38`, pointerEvents: "none",
         }} />
+        <div className="hc-float-b" style={{
+          position: "absolute", bottom: "30%", right: "12%",
+          width: 20, height: 20, borderRadius: "50%",
+          background: `${ORANGE}50`, pointerEvents: "none",
+        }} />
 
         {/* ── Login Card ── */}
         <div className="hc-card" style={{
           width: "100%",
           maxWidth: 440,
-          background: "rgba(255, 253, 249, 0.92)",
-          backdropFilter: "blur(12px)",
-          borderRadius: 24,
+          background: "rgba(255, 253, 249, 0.95)",
+          backdropFilter: "blur(16px)",
+          borderRadius: 28,
           border: `1.5px solid ${ORANGE_MID}`,
-          boxShadow: `0 8px 48px rgba(245,166,35,0.14), 0 2px 12px rgba(0,0,0,0.06)`,
+          boxShadow: `0 12px 56px rgba(245,166,35,0.18), 0 2px 16px rgba(0,0,0,0.06)`,
           padding: "44px 40px 36px",
           position: "relative",
           zIndex: 1,
@@ -188,8 +267,10 @@ export default function Login() {
 
           {/* Brand header */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ display: "inline-block", marginBottom: 12 }}>
-              <img src={logoImg} alt="Happy Creative Logo" style={{ width: 72, height: 72, objectFit: "contain" }} />
+            <div style={{ display: "inline-block", marginBottom: 14 }}>
+              <div className="hc-logo-wrap">
+                <img src={logoImg} alt="Happy Creative Logo" style={{ width: 64, height: 64, objectFit: "contain" }} />
+              </div>
             </div>
 
             <div style={{
@@ -199,7 +280,7 @@ export default function Login() {
               letterSpacing: "-0.02em",
               lineHeight: 1.2,
             }}>
-                Happy Creative LLC
+              Happy Creative LLC
             </div>
 
             <div style={{
@@ -216,9 +297,10 @@ export default function Login() {
 
             {/* Divider */}
             <div style={{
-              width: 40, height: 2.5, borderRadius: 99,
+              width: 48, height: 3, borderRadius: 99,
               background: `linear-gradient(90deg, ${ORANGE}, ${ORANGE_DARK})`,
               margin: "0 auto 20px",
+              boxShadow: `0 2px 8px ${ORANGE}40`,
             }} />
 
             <div style={{ fontSize: 26, fontWeight: 900, color: "#1A0F00", letterSpacing: "-0.02em" }}>
@@ -247,41 +329,83 @@ export default function Login() {
               display: "flex",
               alignItems: "center",
               gap: 8,
+              animation: "fadeUp 0.3s ease",
             }}>
-              <span style={{ fontSize: 16 }}>⚠️</span> {error}
+              <ExclamationCircleFilled style={{ fontSize: 16, color: "#EF4444", flexShrink: 0 }} />
+              {error}
             </div>
           )}
 
           {/* Fields */}
-          {[
-            { label: "Tài khoản", key: "email", type: "text", placeholder: "happyc.admin" },
-            { label: "Mật khẩu", key: "password", type: "password", placeholder: "••••••••••" },
-          ].map(f => (
-            <div key={f.key} style={{ marginBottom: 20 }}>
-              <label style={{
-                display: "block",
-                fontSize: 11,
-                fontWeight: 800,
-                color: focused === f.key ? ORANGE_DARK : "#7A5C32",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                marginBottom: 8,
-                transition: "color 0.2s",
-              }}>
-                {f.label}
-              </label>
+          {/* Tài khoản */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{
+              display: "block",
+              fontSize: 11,
+              fontWeight: 800,
+              color: focused === "email" ? ORANGE_DARK : "#7A5C32",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              transition: "color 0.2s",
+            }}>
+              Tài khoản
+            </label>
+            <div className="hc-input-wrap">
+              <span className={`hc-input-icon${focused === "email" ? " focused" : ""}`}>
+                <UserOutlined />
+              </span>
               <input
                 className="hc-input"
-                type={f.type}
-                placeholder={f.placeholder}
-                value={form[f.key]}
-                onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                type="text"
+                placeholder="happyc.admin"
+                value={form.email}
+                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                onFocus={() => setFocused(f.key)}
+                onFocus={() => setFocused("email")}
                 onBlur={() => setFocused("")}
               />
             </div>
-          ))}
+          </div>
+
+          {/* Mật khẩu */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{
+              display: "block",
+              fontSize: 11,
+              fontWeight: 800,
+              color: focused === "password" ? ORANGE_DARK : "#7A5C32",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              transition: "color 0.2s",
+            }}>
+              Mật khẩu
+            </label>
+            <div className="hc-input-wrap">
+              <span className={`hc-input-icon${focused === "password" ? " focused" : ""}`}>
+                <LockOutlined />
+              </span>
+              <input
+                className="hc-input has-eye"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••••"
+                value={form.password}
+                onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                onFocus={() => setFocused("password")}
+                onBlur={() => setFocused("")}
+              />
+              <button
+                className="hc-eye-btn"
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword(v => !v)}
+              >
+                {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              </button>
+            </div>
+          </div>
 
           {/* Submit */}
           <div style={{ marginTop: 28 }}>
@@ -294,11 +418,21 @@ export default function Login() {
                   ? "#D4C4A8"
                   : `linear-gradient(135deg, ${ORANGE} 0%, ${ORANGE_DARK} 100%)`,
                 color: loading ? "#9C8870" : "#fff",
-                boxShadow: loading ? "none" : `0 4px 20px rgba(245,166,35,0.35)`,
+                boxShadow: loading ? "none" : `0 4px 20px rgba(245,166,35,0.40)`,
                 cursor: loading ? "not-allowed" : "pointer",
               }}
             >
-              {loading ? "⟳ Đang đăng nhập..." : "Đăng Nhập →"}
+              {loading ? (
+                <>
+                  <LoadingOutlined spin style={{ fontSize: 16 }} />
+                  Đang đăng nhập...
+                </>
+              ) : (
+                <>
+                  Đăng Nhập
+                  <ArrowRightOutlined />
+                </>
+              )}
             </button>
           </div>
 

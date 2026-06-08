@@ -1,4 +1,4 @@
-import { AppstoreOutlined, ShopOutlined, BellOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, ShopOutlined, NotificationOutlined } from '@ant-design/icons';
 import React from 'react';
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || ""; // "" = dùng Vite proxy → /storage → laravel
@@ -26,7 +26,7 @@ export const HC = {
 export const MENU = [
   { id: 'products', icon: <AppstoreOutlined />, label: 'Quản Lý Form Duyệt' },
   { id: 'library', icon: <ShopOutlined />, label: 'Thư Viện Vendor' },
-  { id: 'news', icon: <BellOutlined />, label: 'Tạo thông báo' },
+  { id: 'news', icon: <NotificationOutlined />, label: 'Tạo thông báo' },
 ];
 
 export const PAGE_TITLES = {
