@@ -98,7 +98,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
       type: 'new_form',
       icon: '📋',
       title: `Yêu cầu duyệt sản phẩm mới`,
-      message: `Seller "${sellerName}" thuộc Project "${projectName}" vừa gửi form request mới.`,  // ✅ Đã sửa
+      message: `Seller của project ${projectName} vừa gửi form request mới.`,
       product_id: product.id,
       product_type: product.product_type,
       project: projectName,

@@ -58,7 +58,23 @@ export default function AdminDashboard() {
 
   const loadRequestNotifications = useCallback(() => {
     try {
-      const staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
+      let staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
+      
+      // Tự động fix lại text của các thông báo cũ còn kẹt trong localStorage
+      let hasChanges = false;
+      staffANotifs = staffANotifs.map(n => {
+        if (n.type === 'new_form' && n.message && n.message.includes('thuộc Project')) {
+          const match = n.message.match(/thuộc Project\s+"([^"]+)"/);
+          const projectName = match ? match[1] : (n.project || 'Không xác định');
+          hasChanges = true;
+          return { ...n, message: `Seller của project ${projectName} vừa gửi form request mới.` };
+        }
+        return n;
+      });
+      if (hasChanges) {
+        localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(staffANotifs));
+      }
+
       const requests = staffANotifs
         .filter(n => n.type === 'new_form')
         .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))

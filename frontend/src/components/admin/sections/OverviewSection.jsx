@@ -114,7 +114,6 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
       }}
     >
       <div onClick={onClick} style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.2s', cursor: 'pointer' }}>
-        <span style={{ width: 38, height: 38, borderRadius: 10, background: '#F8F9FA', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{meta.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
           <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>{stats.total} form tổng cộng</div>
@@ -291,7 +290,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       type: 'new_form',
       icon: '📋',
       title: `Yêu cầu duyệt sản phẩm mới`,
-      message: `Seller "${sellerName}" thuộc Project "${projectName}" vừa gửi form request mới.`,
+      message: `Seller của project ${projectName} vừa gửi form request mới.`,
       product_id: product.id,
       product_type: product.product_type,
       project: projectName,
