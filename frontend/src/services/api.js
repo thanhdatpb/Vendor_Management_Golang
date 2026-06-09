@@ -405,6 +405,38 @@ export const vendorApi = {
       return { data: { message: "Deleted successfully" } };
     }
   ),
+
+  uploadMedia: withMock(
+    (id, formData) => api.post(`/vendors/${id}/upload-media`, formData),
+    (id, formData) => {
+      // Mock: không thực sự upload, trả về URL giả
+      const all = getMockVendors();
+      const v = all.find(x => String(x.id) === String(id));
+      if (v) {
+        const mockUrl = `https://via.placeholder.com/300?text=Vendor+Media`;
+        v.media_urls = [...(v.media_urls || []), mockUrl];
+        v.media_url = v.media_urls[0];
+        saveMockVendors(all);
+        return { data: { success: true, media_urls: v.media_urls, media_url: v.media_url } };
+      }
+      return { data: { success: false } };
+    }
+  ),
+
+  deleteMedia: withMock(
+    (id, index) => api.delete(`/vendors/${id}/delete-media`, { data: { index } }),
+    (id, index) => {
+      const all = getMockVendors();
+      const v = all.find(x => String(x.id) === String(id));
+      if (v && v.media_urls) {
+        v.media_urls.splice(index, 1);
+        v.media_url = v.media_urls[0] || null;
+        saveMockVendors(all);
+        return { data: { success: true, media_urls: v.media_urls, media_url: v.media_url } };
+      }
+      return { data: { success: false } };
+    }
+  ),
 };
 
 

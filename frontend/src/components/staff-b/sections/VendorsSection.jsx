@@ -35,6 +35,9 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const vf = key => e => setVForm(p => ({ ...p, [key]: e.target.value }));
   const [vendorModalOpen, setVendorModalOpen] = useState(false);
   const [vendorModalMode, setVendorModalMode] = useState('create');
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [modalMediaUrls, setModalMediaUrls] = useState([]);
+  const mediaUploadRef = useRef(null);
 
   const loadVendors = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -115,9 +118,13 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       'Overnight Price Ship', 'Overnight Total'
     ];
 
+    const selectedVendors = vendorList.filter(v => selectedIds.has(v.id));
+    const hasSelection = selectedVendors.length > 0;
+
     let exportData = [];
-    if (filteredVendors.length > 0) {
-      exportData = filteredVendors.map(v => ({
+    if (hasSelection) {
+      // Có tick → export những vendor đã chọn
+      exportData = selectedVendors.map(v => ({
         'Vendor Name': v.name || v.vendor_name || '',
         'Product Type': v.product_type || '',
         'Thông tin tổng quan': v.overview || '',
@@ -136,7 +143,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         'Overnight Total': v.overnight_total != null ? Number(v.overnight_total).toFixed(2) : '',
       }));
     } else {
-      const emptyRow = {}; columns.forEach(col => { emptyRow[col] = ''; }); exportData = [emptyRow];
+      // Không tick → export file trắng chỉ có tiêu đề (template)
+      const emptyRow = {};
+      columns.forEach(col => { emptyRow[col] = ''; });
+      exportData = [emptyRow];
     }
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -156,14 +166,29 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       if (!ws[address]) continue;
       ws[address].s = headerStyle;
     }
+    // Nếu export template (không tick), xóa dòng dữ liệu trống, chỉ giữ header
+    if (!hasSelection) {
+      // Xóa row dữ liệu (row index 1), chỉ giữ header (row index 0)
+      const ref = XLSX.utils.decode_range(ws['!ref']);
+      for (let C = ref.s.c; C <= ref.e.c; ++C) {
+        const cellAddr = XLSX.utils.encode_cell({ r: 1, c: C });
+        delete ws[cellAddr];
+      }
+      ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: columns.length - 1 } });
+    }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, activeTab === 'bestseller' ? 'Best_Seller' : 'Vendors');
     const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-    const filename = filteredVendors.length > 0 ? `Vendors_${activeTab === 'bestseller' ? 'BestSeller_' : 'All_'}_${ts}.xlsx` : `Vendor_Template_${ts}.xlsx`;
+    const filename = hasSelection
+      ? `Vendors_Export_${ts}.xlsx`
+      : `Vendor_Template_${ts}.xlsx`;
     XLSX.writeFile(wb, filename);
 
-    if (filteredVendors.length === 0) alert('📋 Đã tải file Excel mẫu! Hãy điền dữ liệu và Import lại.');
-    else alert(`✅ Đã xuất ${filteredVendors.length} vendor ra file Excel!`);
+    if (!hasSelection) {
+      alert('📋 Đã tải file Excel mẫu (template)! Hãy điền dữ liệu và Import lại.');
+    } else {
+      alert(`✅ Đã xuất ${selectedVendors.length} vendor đã chọn ra file Excel!`);
+    }
   };
 
   const handleConfirmImport = async () => {
@@ -267,8 +292,24 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         express_price: vForm.express_price ? parseFloat(vForm.express_price) : null, express_total: vForm.express_total ? parseFloat(vForm.express_total) : null,
         overnight_price: vForm.overnight_price ? parseFloat(vForm.overnight_price) : null, overnight_total: vForm.overnight_total ? parseFloat(vForm.overnight_total) : null,
       };
-      if (editingVId !== null) { await vendorApi.update(editingVId, dataToSend); alert('✅ Cập nhật vendor thành công!'); }
-      else { await vendorApi.create(dataToSend); alert('✅ Tạo vendor thành công!'); }
+      if (editingVId !== null) {
+        await vendorApi.update(editingVId, dataToSend);
+        alert('✅ Cập nhật vendor thành công!');
+      } else {
+        const res = await vendorApi.create(dataToSend);
+        const newVendorId = res.data?.data?.id;
+        // Upload ảnh pending nếu có
+        if (newVendorId && vForm._pendingFiles && vForm._pendingFiles.length > 0) {
+          try {
+            const formData = new FormData();
+            vForm._pendingFiles.forEach(f => formData.append('media[]', f));
+            await vendorApi.uploadMedia(newVendorId, formData);
+          } catch (uploadErr) {
+            console.warn('Upload media sau khi tạo vendor thất bại:', uploadErr);
+          }
+        }
+        alert('✅ Tạo vendor thành công!');
+      }
       await loadVendors(); closeVendorModal();
     } catch (err) { alert('Lỗi: ' + getDetailedError(err)); } finally { setSubmitting(false); }
   };
@@ -276,7 +317,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const handleVEdit = vendor => openEditVendorModal(vendor);
   const handleVDelete = async (vendor) => { setVendorToDelete(vendor); setDeleteModalOpen(true); };
   
-  const openCreateVendorModal = () => { setVForm(EMPTY_VENDOR); setEditingVId(null); setVendorModalMode('create'); setVendorModalOpen(true); };
+  const openCreateVendorModal = () => { setVForm(EMPTY_VENDOR); setEditingVId(null); setVendorModalMode('create'); setModalMediaUrls([]); setVendorModalOpen(true); };
   const openEditVendorModal = (vendor) => {
     const totalPricing = (vendor.pricing1 || 0) + (vendor.pricing2 || 0);
     setVForm({
@@ -285,9 +326,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       eco_price: vendor.eco_price ?? '', eco_total: vendor.eco_total ?? '', fast_price: vendor.fast_price ?? '', fast_total: vendor.fast_total ?? '',
       express_price: vendor.express_price ?? '', express_total: vendor.express_total ?? '', overnight_price: vendor.overnight_price ?? '', overnight_total: vendor.overnight_total ?? ''
     });
+    setModalMediaUrls(Array.isArray(vendor.media_urls) ? vendor.media_urls : (vendor.media_url ? [vendor.media_url] : []));
     setEditingVId(vendor.id); setVendorModalMode('edit'); setVendorModalOpen(true);
   };
-  const closeVendorModal = () => { setVendorModalOpen(false); setVForm(EMPTY_VENDOR); setEditingVId(null); setVendorModalMode('create'); };
+  const closeVendorModal = () => { setVendorModalOpen(false); setVForm(EMPTY_VENDOR); setEditingVId(null); setVendorModalMode('create'); setModalMediaUrls([]); };
   
   const confirmDelete = async () => {
     if (!vendorToDelete) return;
@@ -694,15 +736,105 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                   <input type="text" value={vForm.size} onChange={vf('size')} placeholder="VD: M, L, XL..." style={inp3} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Image URL</label>
-                  <input type="text" value={vForm.media_url} onChange={vf('media_url')} placeholder="https://..." style={inp3} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Product Overview (Chất liệu, mô tả)</label>
-                  <input type="text" value={vForm.overview} onChange={vf('overview')} placeholder="Mô tả chất liệu, kiểu dáng..." style={inp3} />
-                </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>
+                  📷 Hình ảnh / Video sản phẩm
+                  <span style={{ fontSize: 11, color: HC.muted, fontWeight: 600, marginLeft: 8 }}>Ảnh đầu tiên sẽ làm ảnh đại diện</span>
+                </label>
+
+                {/* Hiển thị media đã upload */}
+                {modalMediaUrls.length > 0 && (
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                    {modalMediaUrls.map((url, idx) => {
+                      const isVideo = /\.(mp4|webm)$/i.test(url);
+                      return (
+                        <div key={idx} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: idx === 0 ? `2.5px solid ${HC.orange}` : `1.5px solid ${HC.border}`, width: 90, height: 90, flexShrink: 0 }}>
+                          {idx === 0 && (
+                            <span style={{ position: 'absolute', top: 3, left: 3, background: HC.orange, color: '#fff', fontSize: 9, fontWeight: 900, padding: '2px 6px', borderRadius: 99, zIndex: 2 }}>Thumbnail</span>
+                          )}
+                          {isVideo ? (
+                            <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                          ) : (
+                            <img src={url} alt={`media-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          )}
+                          <button
+                            onClick={async () => {
+                              if (editingVId) {
+                                if (!window.confirm('Xóa ảnh này?')) return;
+                                try {
+                                  const res = await vendorApi.deleteMedia(editingVId, idx);
+                                  setModalMediaUrls(res.data.media_urls || []);
+                                  setVForm(p => ({ ...p, media_url: res.data.media_url || '' }));
+                                  await loadVendors(true);
+                                } catch { alert('Lỗi xóa media!'); }
+                              } else {
+                                const updated = modalMediaUrls.filter((_, i) => i !== idx);
+                                setModalMediaUrls(updated);
+                                setVForm(p => ({ ...p, media_url: updated[0] || '' }));
+                              }
+                            }}
+                            style={{ position: 'absolute', top: 3, right: 3, width: 20, height: 20, borderRadius: '50%', background: 'rgba(220,38,38,0.85)', border: 'none', color: '#fff', fontSize: 11, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}
+                          >✕</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <input ref={mediaUploadRef} type="file" accept="image/*,video/mp4,video/webm" multiple style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (mediaUploadRef.current) mediaUploadRef.current.value = '';
+                    if (!files.length) return;
+
+                    if (editingVId) {
+                      // Đã có vendor ID → upload ngay lên server
+                      setMediaUploading(true);
+                      try {
+                        const formData = new FormData();
+                        files.forEach(f => formData.append('media[]', f));
+                        const res = await vendorApi.uploadMedia(editingVId, formData);
+                        setModalMediaUrls(res.data.media_urls || []);
+                        setVForm(p => ({ ...p, media_url: res.data.media_url || p.media_url }));
+                        await loadVendors(true);
+                      } catch (err) { alert('Lỗi upload: ' + (err.response?.data?.message || err.message)); }
+                      finally { setMediaUploading(false); }
+                    } else {
+                      // Chưa có vendor (tạo mới) → preview local bằng Object URL
+                      const newUrls = files.map(f => URL.createObjectURL(f));
+                      const combined = [...modalMediaUrls, ...newUrls];
+                      setModalMediaUrls(combined);
+                      setVForm(p => ({ ...p, media_url: combined[0] || p.media_url }));
+                      // Lưu files để upload sau khi create xong
+                      setVForm(p => ({ ...p, _pendingFiles: [...(p._pendingFiles || []), ...files] }));
+                    }
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => mediaUploadRef.current?.click()}
+                  disabled={mediaUploading}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px',
+                    borderRadius: 10, border: `2px dashed ${HC.orangeMid}`,
+                    background: HC.orangeLight, color: HC.orangeDark,
+                    fontSize: 12, fontWeight: 800, cursor: mediaUploading ? 'not-allowed' : 'pointer',
+                    opacity: mediaUploading ? 0.6 : 1, transition: 'all 0.2s',
+                    width: '100%', justifyContent: 'center',
+                  }}
+                  onMouseEnter={e => { if (!mediaUploading) e.currentTarget.style.background = HC.orangeMid; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                >
+                  {mediaUploading ? '⟳ Đang tải lên...' : '📁 Chọn ảnh / video từ máy tính'}
+                </button>
+                <div style={{ fontSize: 10, color: HC.muted, marginTop: 5, textAlign: 'center' }}>JPG, PNG, WEBP, GIF, MP4, WEBM • Tối đa 50MB/file</div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Product Overview (Chất liệu, mô tả)</label>
+                <input type="text" value={vForm.overview} onChange={vf('overview')} placeholder="Mô tả chất liệu, kiểu dáng..." style={inp3} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 <div>

@@ -20,6 +20,7 @@ class Vendor extends Model
         'optional',
         'overview',
         'media_url',
+        'media_urls',
         'pricing1',
         'pricing2',
         'eco_price',
@@ -56,5 +57,6 @@ class Vendor extends Model
         'express_total'    => 'float',
         'overnight_price'  => 'float',
         'overnight_total'  => 'float',
+        'media_urls'       => 'array',
     ];
 }

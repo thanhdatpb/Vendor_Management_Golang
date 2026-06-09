@@ -7,6 +7,7 @@ use App\Models\Vendor;
 use App\Models\Product;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class VendorController extends Controller
 {
@@ -152,11 +153,12 @@ class VendorController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'            => 'nullable|string|max:255',  // ← THÊM DÒNG NÀY
+            'name'            => 'nullable|string|max:255',
             'product_type'    => 'required|string|max:255',
             'vendor_type'     => 'required|in:Old,New,Best Seller',
             'size'            => 'nullable|string|max:255',
             'optional'        => 'nullable|string|max:255',
+            'overview'        => 'nullable|string',
             'pricing1'        => 'nullable|numeric|min:0',
             'pricing2'        => 'nullable|numeric|min:0',
             'eco_price'       => 'nullable|numeric|min:0',
@@ -169,7 +171,6 @@ class VendorController extends Controller
             'overnight_total' => 'nullable|numeric|min:0',
         ]);
 
-        // Chỉ set name = vendor_type nếu không có name được gửi lên
         if (empty($validated['name'])) {
             $validated['name'] = $validated['vendor_type'];
         }
@@ -183,6 +184,89 @@ class VendorController extends Controller
             'message' => 'Tạo vendor thành công!',
             'data'    => $vendor,
         ], 201);
+    }
+
+
+
+    // =========================
+    // UPLOAD MEDIA FOR VENDOR
+    // =========================
+
+    public function uploadMedia(Request $request, $id)
+    {
+        $vendor = Vendor::findOrFail($id);
+
+        $request->validate([
+            'media'   => 'required|array|min:1|max:20',
+            'media.*' => 'required|file|max:51200|mimetypes:image/jpeg,image/png,image/webp,image/gif,image/jpg,video/mp4,video/webm',
+        ]);
+
+        $currentUrls = $vendor->media_urls ?? [];
+        $newUrls = [];
+
+        foreach ($request->file('media') as $file) {
+            $path    = $file->store('vendors', 'public');
+            $fullUrl = Storage::url($path);
+            $newUrls[] = $fullUrl;
+        }
+
+        $allUrls = array_merge($currentUrls, $newUrls);
+
+        // Ảnh đầu tiên là thumbnail
+        $vendor->media_urls = $allUrls;
+        $vendor->media_url  = $allUrls[0] ?? $vendor->media_url;
+        $vendor->save();
+
+        Cache::flush();
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'Upload thành công!',
+            'media_urls' => $allUrls,
+            'media_url'  => $vendor->media_url,
+        ]);
+    }
+
+
+
+    // =========================
+    // DELETE MEDIA FOR VENDOR
+    // =========================
+
+    public function deleteMedia(Request $request, $id)
+    {
+        $vendor = Vendor::findOrFail($id);
+
+        $request->validate([
+            'index' => 'required|integer|min:0',
+        ]);
+
+        $index       = (int) $request->input('index');
+        $currentUrls = $vendor->media_urls ?? [];
+
+        if (!isset($currentUrls[$index])) {
+            return response()->json(['message' => 'Media không tồn tại'], 404);
+        }
+
+        $urlToDelete = $currentUrls[$index];
+        // Xóa file vật lý
+        $relativePath = ltrim(str_replace('/storage', '', parse_url($urlToDelete, PHP_URL_PATH)), '/');
+        Storage::disk('public')->delete($relativePath);
+
+        array_splice($currentUrls, $index, 1);
+
+        $vendor->media_urls = $currentUrls;
+        $vendor->media_url  = $currentUrls[0] ?? null;
+        $vendor->save();
+
+        Cache::flush();
+
+        return response()->json([
+            'success'    => true,
+            'message'    => 'Đã xóa media!',
+            'media_urls' => $currentUrls,
+            'media_url'  => $vendor->media_url,
+        ]);
     }
 
 
