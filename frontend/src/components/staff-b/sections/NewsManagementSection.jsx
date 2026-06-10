@@ -412,6 +412,7 @@ export default function NewsManagementSection() {
         onClose={closeModal}
         onSubmit={editingNews ? handleUpdateNews : handleCreateNews}
         onFormChange={handleFormChange}
+        vendorMode={true}
       />
 
       {deleteConfirm && (

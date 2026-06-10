@@ -10,7 +10,8 @@ const NewsModalComponent = React.memo(({
   submitting,
   onClose,
   onSubmit,
-  onFormChange
+  onFormChange,
+  vendorMode = false
 }) => {
   if (!isOpen) return null;
 
@@ -183,61 +184,65 @@ const NewsModalComponent = React.memo(({
             </label>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                borderRadius: 10, background: isSelected('both') ? HC.orangeLight : 'transparent',
-                border: `1px solid ${isSelected('both') ? HC.orange : HC.border}`,
+                display: 'flex', alignItems: 'center', gap: 10, cursor: vendorMode ? 'default' : 'pointer', padding: '8px 16px',
+                borderRadius: 10, background: HC.orangeLight,
+                border: `1px solid ${HC.orange}`,
               }}>
-                <input type="radio" checked={isSelected('both')} onChange={() => handleTargetChange('both')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>Tất cả (Admin & Seller)</span>
+                <input type="radio" checked={true} readOnly disabled={vendorMode} style={{ width: 18, height: 18, cursor: vendorMode ? 'default' : 'pointer' }} />
+                <span style={{ fontSize: 13 }}>Tất cả (Admin &amp; Seller)</span>
               </label>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                borderRadius: 10, background: isSelected('admin') ? HC.orangeLight : 'transparent',
-                border: `1px solid ${isSelected('admin') ? HC.orange : HC.border}`,
-              }}>
-                <input type="radio" checked={isSelected('admin')} onChange={() => handleTargetChange('admin')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>Chỉ Admin</span>
-              </label>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                borderRadius: 10, background: isSelected('seller') ? HC.orangeLight : 'transparent',
-                border: `1px solid ${isSelected('seller') ? HC.orange : HC.border}`,
-              }}>
-                <input type="radio" checked={isSelected('seller')} onChange={() => handleTargetChange('seller')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>Tất cả Seller</span>
-              </label>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                borderRadius: 10, background: isSelected('Creative Project') ? HC.orangeLight : 'transparent',
-                border: `1px solid ${isSelected('Creative Project') ? HC.orange : HC.border}`,
-              }}>
-                <input type="checkbox" checked={isSelected('Creative Project')} onChange={() => handleTargetChange('Creative Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>Creative Project</span>
-              </label>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                borderRadius: 10, background: isSelected('Happy Project') ? HC.orangeLight : 'transparent',
-                border: `1px solid ${isSelected('Happy Project') ? HC.orange : HC.border}`,
-              }}>
-                <input type="checkbox" checked={isSelected('Happy Project')} onChange={() => handleTargetChange('Happy Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>Happy Project</span>
-              </label>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                borderRadius: 10, background: isSelected('Global Project') ? HC.orangeLight : 'transparent',
-                border: `1px solid ${isSelected('Global Project') ? HC.orange : HC.border}`,
-              }}>
-                <input type="checkbox" checked={isSelected('Global Project')} onChange={() => handleTargetChange('Global Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>Global Project</span>
-              </label>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                borderRadius: 10, background: isSelected('Pilot Project') ? HC.orangeLight : 'transparent',
-                border: `1px solid ${isSelected('Pilot Project') ? HC.orange : HC.border}`,
-              }}>
-                <input type="checkbox" checked={isSelected('Pilot Project')} onChange={() => handleTargetChange('Pilot Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                <span style={{ fontSize: 13 }}>Pilot Project</span>
-              </label>
+              {!vendorMode && (
+                <>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                    borderRadius: 10, background: isSelected('admin') ? HC.orangeLight : 'transparent',
+                    border: `1px solid ${isSelected('admin') ? HC.orange : HC.border}`,
+                  }}>
+                    <input type="radio" checked={isSelected('admin')} onChange={() => handleTargetChange('admin')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ fontSize: 13 }}>Chỉ Admin</span>
+                  </label>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                    borderRadius: 10, background: isSelected('seller') ? HC.orangeLight : 'transparent',
+                    border: `1px solid ${isSelected('seller') ? HC.orange : HC.border}`,
+                  }}>
+                    <input type="radio" checked={isSelected('seller')} onChange={() => handleTargetChange('seller')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ fontSize: 13 }}>Tất cả Seller</span>
+                  </label>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                    borderRadius: 10, background: isSelected('Creative Project') ? HC.orangeLight : 'transparent',
+                    border: `1px solid ${isSelected('Creative Project') ? HC.orange : HC.border}`,
+                  }}>
+                    <input type="checkbox" checked={isSelected('Creative Project')} onChange={() => handleTargetChange('Creative Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ fontSize: 13 }}>Creative Project</span>
+                  </label>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                    borderRadius: 10, background: isSelected('Happy Project') ? HC.orangeLight : 'transparent',
+                    border: `1px solid ${isSelected('Happy Project') ? HC.orange : HC.border}`,
+                  }}>
+                    <input type="checkbox" checked={isSelected('Happy Project')} onChange={() => handleTargetChange('Happy Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ fontSize: 13 }}>Happy Project</span>
+                  </label>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                    borderRadius: 10, background: isSelected('Global Project') ? HC.orangeLight : 'transparent',
+                    border: `1px solid ${isSelected('Global Project') ? HC.orange : HC.border}`,
+                  }}>
+                    <input type="checkbox" checked={isSelected('Global Project')} onChange={() => handleTargetChange('Global Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ fontSize: 13 }}>Global Project</span>
+                  </label>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
+                    borderRadius: 10, background: isSelected('Pilot Project') ? HC.orangeLight : 'transparent',
+                    border: `1px solid ${isSelected('Pilot Project') ? HC.orange : HC.border}`,
+                  }}>
+                    <input type="checkbox" checked={isSelected('Pilot Project')} onChange={() => handleTargetChange('Pilot Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ fontSize: 13 }}>Pilot Project</span>
+                  </label>
+                </>
+              )}
             </div>
           </div>
         </div>
