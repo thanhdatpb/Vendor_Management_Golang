@@ -36,9 +36,7 @@ Dự án phần mềm quản lý nhà cung cấp (Vendors) và người bán (Se
 ├── backend/                # Mã nguồn API Laravel
 ├── frontend/               # Mã nguồn giao diện React (Vite)
 ├── docker-compose.yml      # Cấu hình container MySQL & phpMyAdmin
-├── .gitignore              # Cấu hình Git bỏ qua file rác
-└── start-dev.bat           # Script khởi động nhanh môi trường local
-```
+├── .gitignore              # Cấu hình Git bỏ qua file rác/private
 
 ## 🚀 Hướng dẫn cài đặt (Installation)
 
@@ -95,16 +93,11 @@ npm run dev
 ```
 *(Frontend sẽ chạy tại: http://localhost:5173 - Cấu hình Vite đã proxy tự động các request `/api` và `/storage` qua cổng 8000 của backend).*
 
-## 🔑 Tài khoản Test (Default Accounts)
-
-Dữ liệu Seeder đã tạo sẵn các tài khoản sau (Tất cả đều có mật khẩu chung là `123456`):
-
 | Quyền hạn | Email đăng nhập |
 |---|---|
 | **Admin** | `happyc.admin` |
-| **Vendor (Staff B)** | `happyc.uyenho.vendor` |
-| **Seller (Staff A)** | `happyc.phuochuynh.seller` |
-| **Seller (Test)** | `tran.hoang.seller@gmail.com` |
+| **Vendor (Staff B)** | `happyc.vendor` |
+| **Seller (Staff A)** | `happyc.seller.happy, happyc.seller.creative, happyc.seller.global, happyc.seller.pilot` |
 
 ## 📦 Triển khai (Deployment)
 
