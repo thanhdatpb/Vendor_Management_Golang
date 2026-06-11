@@ -4,7 +4,10 @@
 .codex/
 
 # Documents tài liệu liên quan đến hệ thống
-.documents/
+documents/
+
+# VSCode settings
+.vscode/
 
 start-dev.bat
 start-laravel.bat
