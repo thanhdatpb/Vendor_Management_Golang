@@ -1,6 +1,6 @@
 # HappC Hub Vendor Manager
 
-Dự án phần mềm quản lý nhà cung cấp (Vendors) và người bán (Sellers) cho hệ thống TechStore (HappC Hub).
+Dự án phần mềm quản lý nhà cung cấp (Vendors) và người bán (Sellers) cho hệ thống Vendor Management (Vendor Hub).
 
 ## 🌟 Tính năng chính (Features)
 
@@ -93,7 +93,7 @@ npm run dev
 ```
 *(Frontend sẽ chạy tại: http://localhost:5173 - Cấu hình Vite đã proxy tự động các request `/api` và `/storage` qua cổng 8000 của backend).*
 
-| Quyền hạn | Email đăng nhập |
+| Quyền hạn | User đăng nhập |
 |---|---|
 | **Admin** | `happyc.admin` |
 | **Vendor (Staff B)** | `happyc.vendor` |

@@ -31,7 +31,7 @@ const NewsModalComponent = React.memo(({
       if (typeof form.target === 'string' && !['both', 'admin', 'seller'].includes(form.target)) {
         currentTarget = [form.target];
       }
-      
+
       if (currentTarget.includes(targetValue)) {
         currentTarget = currentTarget.filter(t => t !== targetValue);
         if (currentTarget.length === 0) onFormChange({ ...form, target: 'both' });
