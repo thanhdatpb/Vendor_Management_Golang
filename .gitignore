@@ -18,3 +18,5 @@ start-vite.bat
 read_excel.js
 excel_output.json
 output.json
+fix_db.js
+fix_db.cjs
