@@ -1,5 +1,3 @@
-Options -MultiViews
-Options +FollowSymlinks
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteRule ^index\.html$ - [L]
