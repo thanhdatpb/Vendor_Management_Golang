@@ -7,12 +7,12 @@ $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 
 try {
-    // Tắt kiểm tra khoá ngoại để có thể xoá dữ liệu mà không bị lỗi ràng buộc
+    // Tắt kiểm tra khoá ngoại
     Schema::disableForeignKeyConstraints();
 
-    // Xoá sạch toàn bộ dữ liệu trong các bảng sau (Reset Data)
     $tablesToTruncate = [
         'vendors',
         'vendor_details',
@@ -35,9 +35,12 @@ try {
     // Bật lại kiểm tra khoá ngoại
     Schema::enableForeignKeyConstraints();
 
+    // XOÁ CACHE (QUAN TRỌNG: Để frontend không hiển thị lại dữ liệu cũ)
+    Cache::flush();
+
     echo json_encode([
         'status' => 'success',
-        'message' => 'Đã dọn dẹp SẠCH SẼ toàn bộ dữ liệu thư viện Vendor, Sản phẩm và Đơn hàng cũ! Hệ thống đã sẵn sàng đón dữ liệu chuẩn mới.'
+        'message' => 'Đã dọn dẹp SẠCH SẼ dữ liệu và XOÁ CACHE thành công!'
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
 } catch (\Exception $e) {
