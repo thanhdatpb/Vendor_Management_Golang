@@ -20,8 +20,8 @@ export default function Login() {
     if (contextUser) {
       const role = typeof contextUser.role === "object" ? contextUser.role?.name : contextUser.role;
       if (role === "admin") navigate("/admin");
-      else if (role === "staffa" || role === "staff_a") navigate("/staff-a");
-      else if (role === "staffb" || role === "staff_b") navigate("/staff-b");
+      else if (role === "staffa" || role === "staff_a") navigate("/seller");
+      else if (role === "staffb" || role === "staff_b") navigate("/vendor");
     }
   }, [contextUser, navigate]);
 
@@ -53,9 +53,9 @@ export default function Login() {
       if (role === "admin") {
         navigate("/admin");
       } else if (role === "staffa" || role === "staff_a") {
-        navigate("/staff-a");
+        navigate("/seller");
       } else if (role === "staffb" || role === "staff_b") {
-        navigate("/staff-b");
+        navigate("/vendor");
       } else {
         navigate("/");
       }
