@@ -1,7 +1,15 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  
-  # Ngăn lặp vô hạn
+
+  # Ngăn lặp vô hạn do internal redirect
   RewriteCond %{ENV:REDIRECT_STATUS} ^$
-  RewriteRule ^(.*)$ /frontend/dist/$1 [L]
+
+  # 1. Nếu request bắt đầu bằng /api hoặc /sanctum hoặc /storage, chuyển vào backend (Laravel)
+  RewriteCond %{REQUEST_URI} ^/(api|sanctum|storage) [NC]
+  RewriteRule ^(.*)$ backend/public/$1 [L]
+
+  # 2. Các traffic còn lại chuyển vào frontend/dist (React)
+  RewriteCond %{REQUEST_URI} !^/frontend/dist/
+  RewriteCond %{REQUEST_URI} !^/backend/public/
+  RewriteRule ^(.*)$ frontend/dist/$1 [L]
 </IfModule>
