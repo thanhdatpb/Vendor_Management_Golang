@@ -29,7 +29,7 @@ export default function App() {
         path="/seller"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["staffa"]}>
+            <RoleRoute allow={["staffa", "staff", "seller"]}>
               <StaffADashboard />
             </RoleRoute>
           </ProtectedRoute>
@@ -40,7 +40,7 @@ export default function App() {
         path="/vendor"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["staffb"]}>
+            <RoleRoute allow={["staffb", "vendor"]}>
               <StaffBDashboard />
             </RoleRoute>
           </ProtectedRoute>
