@@ -53,7 +53,7 @@ api.interceptors.response.use(
       // Nếu đang dùng mock token cho local demo, không tự động văng ra login
       if (token && token.startsWith("mock_token_")) {
         console.warn("⚠️ API trả về 401 nhưng đang dùng mock_token, bỏ qua auto-logout.");
-      } else {
+      } else if (window.location.pathname !== "/login") {
         localStorage.removeItem("auth_token");
         window.location.href = "/login";
       }
