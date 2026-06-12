@@ -73,12 +73,6 @@ const saveMockProducts = (products) => {
 
 const withMock = (apiCall, mockCall) => {
   return async (...args) => {
-    const token = localStorage.getItem("auth_token");
-    if (token && token.startsWith("mock_token_")) {
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 300));
-      return mockCall(...args);
-    }
     return apiCall(...args);
   };
 };
