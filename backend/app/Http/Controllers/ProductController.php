@@ -47,7 +47,13 @@ class ProductController extends Controller
             $query = Product::with('creator:id,name,email,project,seller_name')->latest();
 
             if ($user && method_exists($user, 'isStaff') && $user->isStaff()) {
-                $query->where('created_by', $user->id);
+                if (!empty($user->project)) {
+                    $query->whereHas('creator', function($q) use ($user) {
+                        $q->where('project', $user->project);
+                    });
+                } else {
+                    $query->where('created_by', $user->id);
+                }
             }
 
             if ($request->filled('search')) {
@@ -161,8 +167,11 @@ public function update(Request $request, $id)
     $isStaff = $user && method_exists($user, 'isStaff') && $user->isStaff();
 
     if ($isStaff) {
-        if ((int)$product->created_by !== (int)$user->id) {
-            return response()->json(['message' => 'Forbidden'], 403);
+        $creator = \App\Models\User::find($product->created_by);
+        $isSameProject = !empty($user->project) && !empty($creator->project) && $user->project === $creator->project;
+        
+        if (!$isSameProject && (int)$product->created_by !== (int)$user->id) {
+            return response()->json(['message' => 'Forbidden - Không cùng project'], 403);
         }
         if (!in_array($product->status, ['draft', 'rejected'], true)) {
             return response()->json(['message' => 'Sản phẩm đang chờ duyệt hoặc đã duyệt'], 422);
@@ -294,8 +303,11 @@ public function update(Request $request, $id)
         }
 
         if ($isStaff) {
-            if ((int)$product->created_by !== (int)$user->id) {
-                return response()->json(['message' => 'Bạn không phải người tạo sản phẩm này'], 403);
+            $creator = \App\Models\User::find($product->created_by);
+            $isSameProject = !empty($user->project) && !empty($creator->project) && $user->project === $creator->project;
+            
+            if (!$isSameProject && (int)$product->created_by !== (int)$user->id) {
+                return response()->json(['message' => 'Bạn không có quyền xóa sản phẩm của project khác'], 403);
             }
             if (!in_array($product->status, ['draft', 'rejected'], true)) {
                 return response()->json(['message' => 'Không thể xóa sản phẩm đã gửi duyệt'], 422);
