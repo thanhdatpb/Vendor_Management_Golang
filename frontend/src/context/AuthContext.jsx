@@ -31,26 +31,7 @@ export function AuthProvider({ children }) {
     try {
       console.log("Login attempt with:", { email, password });
 
-      // MOCK USERS CHO DEMO PROJECTS
-      const mockUsers = {
-        "happyc.admin": { id: 1, role: "admin", name: "Admin", email: "happyc.admin" },
-        "happyc.vendor": { id: 2, role: "staffb", name: "Vendor Approver", email: "happyc.vendor" },
-        "happyc.seller.creative": { id: 3, role: "staffa", name: "Creative Project", email: "happyc.seller.creative", project: "Creative Project", seller_name: "Creative Project", sellerName: "Creative Project" },
-        "happyc.seller.happy": { id: 4, role: "staffa", name: "Happy Project", email: "happyc.seller.happy", project: "Happy Project", seller_name: "Happy Project", sellerName: "Happy Project" },
-        "happyc.seller.global": { id: 5, role: "staffa", name: "Global Project", email: "happyc.seller.global", project: "Global Project", seller_name: "Global Project", sellerName: "Global Project" },
-        "happyc.seller.pilot": { id: 6, role: "staffa", name: "Pilot Project", email: "happyc.seller.pilot", project: "Pilot Project", seller_name: "Pilot Project", sellerName: "Pilot Project" },
-      };
-
-      if (mockUsers[email]) {
-        console.log("Using MOCK login for", email);
-        const userData = mockUsers[email];
-        const token = "mock_token_" + Date.now();
-        
-        localStorage.setItem("auth_token", token);
-        localStorage.setItem("user", JSON.stringify(userData));
-        setUser(userData);
-        return userData;
-      }
+      // Đã tắt hệ thống MOCK để đảm bảo đồng bộ dữ liệu với server thật
 
       const res = await authApi.login(email, password);
       console.log("Login response:", res);
