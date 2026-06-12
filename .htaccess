@@ -1,14 +1,13 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Bỏ qua nếu đã được redirect nội bộ
-  RewriteCond %{ENV:REDIRECT_STATUS} !^$
-  RewriteRule ^ - [L]
+  # 1. Bỏ qua nếu đường dẫn hiện tại đã nằm trong backend/public hoặc frontend/dist
+  RewriteRule ^(backend/public|frontend/dist)/ - [L]
 
-  # 1. API/Sanctum/Storage -> Backend
+  # 2. API/Sanctum/Storage -> Backend
   RewriteCond %{REQUEST_URI} ^/(api|sanctum|storage) [NC]
   RewriteRule ^(.*)$ backend/public/$1 [L]
 
-  # 2. Mọi thứ khác -> Frontend React
+  # 3. Mọi thứ khác -> Frontend React
   RewriteRule ^(.*)$ frontend/dist/$1 [L]
 </IfModule>
