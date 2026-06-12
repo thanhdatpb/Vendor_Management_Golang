@@ -153,62 +153,145 @@ export async function parseVendorExcel(file) {
         }
 
         const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        let headerRowIdx = -1;
-
+        
+        // 1. Kiểm tra format "Happy Creative" đặc biệt
+        let isHappyFormat = false;
+        let happyPricingRowIdx = -1;
         for (let r = 0; r < aoa.length; r++) {
-          const cells = (aoa[r] || []).map((c) => normalizeKey(c));
-          // Tìm header row chỉ cần có 'product type' (không bắt buộc 'vendor type' nữa)
-          const hasProduct = cells.some((c) => c === 'product type' || c === 'product_type' || c === 'loai san pham');
-          const hasPricing = cells.some((c) => c.includes('pricing') || c.includes('economy') || c.includes('vendor name') || c.includes('vendor_name'));
-          if (hasProduct && hasPricing) {
-            headerRowIdx = r;
-            break;
-          }
+            const row = aoa[r] || [];
+            const col0 = String(row[0]).trim();
+            const col1 = String(row[1]).trim();
+            if (col0 === 'Ký hiệu' && col1.toLowerCase().startsWith('product type')) {
+                isHappyFormat = true;
+                happyPricingRowIdx = r;
+                break;
+            }
         }
 
         let vendors = [];
 
-        if (headerRowIdx >= 0) {
-          const headers = (aoa[headerRowIdx] || []).map((h) => normalizeKey(h));
-          let lastVendorName = ''; // carry-forward for merged/empty Vendor Name cells
-          for (let r = headerRowIdx + 1; r < aoa.length; r++) {
-            const rowArr = aoa[r] || [];
-            if (rowArr.every((c) => String(c).trim() === '')) continue;
+        if (isHappyFormat) {
+            // Parse định dạng Happy Creative
+            const generalInfo = {};
+            let notesColIdx = 10;
+            let chatLieuColIdx = 5;
+            
+            // Tìm cột Notes và Chất liệu từ các dòng đầu
+            for(let r = 0; r < 10; r++) {
+                const row = aoa[r] || [];
+                for(let c = 0; c < row.length; c++) {
+                   const val = String(row[c]).toLowerCase();
+                   if(val.includes('notes')) notesColIdx = c;
+                   if(val.includes('chất liệu') || val.includes('material')) chatLieuColIdx = c;
+                }
+            }
 
-            const rowObj = {};
-            headers.forEach((h, c) => {
-              if (h) rowObj[h] = rowArr[c];
-            });
+            for (let r = 0; r < happyPricingRowIdx; r++) {
+                const row = aoa[r] || [];
+                const kyHieu = String(row[0]).trim();
+                // Bỏ qua các Ký hiệu không hợp lệ
+                if (kyHieu && kyHieu.length <= 5 && kyHieu !== 'Ký hiệu' && !kyHieu.includes('CAP') && !kyHieu.includes('MUG')) {
+                    const chatLieu = String(row[chatLieuColIdx] || '').trim();
+                    const notes = String(row[notesColIdx] || '').trim();
+                    if (chatLieu || notes) {
+                        generalInfo[kyHieu] = { chatLieu, notes };
+                    }
+                }
+            }
 
-            // Carry-forward: nếu Vendor Name trống, dùng tên từ dòng trước
-            const nameAliases = ['vendor name', 'vendor_name', 'ten vendor', 'tên vendor', 'name'];
-            let currentName = '';
-            for (const alias of nameAliases) {
-              if (rowObj[alias] !== undefined && String(rowObj[alias]).trim() !== '') {
-                currentName = String(rowObj[alias]).trim();
+            const parseN = (val) => {
+               if (val === 'N/A' || val === '' || val === null || val === undefined) return null;
+               const n = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+               return Number.isFinite(n) ? n : null;
+            };
+
+            for (let r = happyPricingRowIdx + 2; r < aoa.length; r++) {
+                const row = aoa[r] || [];
+                if (row.every(c => String(c).trim() === '')) continue;
+                
+                const kyHieu = String(row[0]).trim();
+                const productType = String(row[1]).trim();
+                if (!productType || productType.toLowerCase().includes('product type')) continue;
+
+                let overview = '';
+                if (generalInfo[kyHieu]) {
+                    if (generalInfo[kyHieu].chatLieu) overview += 'Chất liệu:\n' + generalInfo[kyHieu].chatLieu + '\n\n';
+                    if (generalInfo[kyHieu].notes) overview += 'Notes:\n' + generalInfo[kyHieu].notes;
+                }
+
+                vendors.push({
+                    name: '', // Vendor name có thể để trống, tuỳ chỉnh sau
+                    product_type: productType,
+                    vendor_type: 'New', 
+                    size: row[2] === 'N/A' ? null : String(row[2] || '').trim(),
+                    optional: row[3] === 'N/A' ? null : String(row[3] || '').trim(),
+                    overview: overview.trim(),
+                    media_url: null,
+                    pricing1: parseN(row[4]),
+                    pricing2: parseN(row[5]),
+                    eco_price: parseN(row[6]),
+                    eco_total: parseN(row[7]),
+                    fast_price: parseN(row[8]),
+                    fast_total: parseN(row[9]),
+                    express_price: parseN(row[10]),
+                    express_total: parseN(row[11]),
+                    overnight_price: parseN(row[12]),
+                    overnight_total: parseN(row[13])
+                });
+            }
+        } else {
+            // Logic parse file chuẩn cũ
+            let headerRowIdx = -1;
+
+            for (let r = 0; r < aoa.length; r++) {
+              const cells = (aoa[r] || []).map((c) => normalizeKey(c));
+              const hasProduct = cells.some((c) => c === 'product type' || c === 'product_type' || c === 'loai san pham');
+              const hasPricing = cells.some((c) => c.includes('pricing') || c.includes('economy') || c.includes('vendor name') || c.includes('vendor_name'));
+              if (hasProduct && hasPricing) {
+                headerRowIdx = r;
                 break;
               }
             }
-            if (currentName) {
-              lastVendorName = currentName;
-            } else if (lastVendorName) {
-              // Điền tên từ dòng trước vào rowObj
-              const firstAlias = nameAliases.find(a => rowObj[a] !== undefined) || nameAliases[0];
-              rowObj[firstAlias] = lastVendorName;
-            }
 
-            const payload = buildVendorPayload(rowObj);
-            // Chỉ bắt buộc product_type, vendor_type không còn bắt buộc
-            if (!payload.product_type) continue;
-            vendors.push(payload);
-          }
-        } else {
-          const rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
-          for (const row of rawData) {
-            const payload = buildVendorPayload(row);
-            if (!payload.product_type) continue;
-            vendors.push(payload);
-          }
+            if (headerRowIdx >= 0) {
+              const headers = (aoa[headerRowIdx] || []).map((h) => normalizeKey(h));
+              let lastVendorName = ''; 
+              for (let r = headerRowIdx + 1; r < aoa.length; r++) {
+                const rowArr = aoa[r] || [];
+                if (rowArr.every((c) => String(c).trim() === '')) continue;
+
+                const rowObj = {};
+                headers.forEach((h, c) => {
+                  if (h) rowObj[h] = rowArr[c];
+                });
+
+                const nameAliases = ['vendor name', 'vendor_name', 'ten vendor', 'tên vendor', 'name'];
+                let currentName = '';
+                for (const alias of nameAliases) {
+                  if (rowObj[alias] !== undefined && String(rowObj[alias]).trim() !== '') {
+                    currentName = String(rowObj[alias]).trim();
+                    break;
+                  }
+                }
+                if (currentName) {
+                  lastVendorName = currentName;
+                } else if (lastVendorName) {
+                  const firstAlias = nameAliases.find(a => rowObj[a] !== undefined) || nameAliases[0];
+                  rowObj[firstAlias] = lastVendorName;
+                }
+
+                const payload = buildVendorPayload(rowObj);
+                if (!payload.product_type) continue;
+                vendors.push(payload);
+              }
+            } else {
+              const rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+              for (const row of rawData) {
+                const payload = buildVendorPayload(row);
+                if (!payload.product_type) continue;
+                vendors.push(payload);
+              }
+            }
         }
 
         if (vendors.length === 0) {
