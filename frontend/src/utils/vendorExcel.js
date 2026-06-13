@@ -76,7 +76,8 @@ function mapColumn(row, field) {
 
 function parseNumber(value) {
   if (value === null || value === undefined || value === '') return null;
-  const n = parseFloat(String(value).replace(/[^\d.-]/g, ''));
+  const str = String(value).trim().replace(',', '.');
+  const n = parseFloat(str.replace(/[^\d.-]/g, ''));
   return Number.isFinite(n) ? n : null;
 }
 
@@ -201,7 +202,9 @@ export async function parseVendorExcel(file) {
 
             const parseN = (val) => {
                if (val === 'N/A' || val === '' || val === null || val === undefined) return null;
-               const n = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+               // Đổi phẩy sang chấm cho format số thập phân tiếng Việt (13,2 -> 13.2)
+               const str = String(val).trim().replace(',', '.');
+               const n = parseFloat(str.replace(/[^\d.-]/g, ''));
                return Number.isFinite(n) ? n : null;
             };
 
@@ -235,8 +238,8 @@ export async function parseVendorExcel(file) {
                     fast_total: parseN(row[9]),
                     express_price: parseN(row[10]),
                     express_total: parseN(row[11]),
-                    overnight_price: parseN(row[12]),
-                    overnight_total: parseN(row[13])
+                    overnight_price: parseN(row[14]),
+                    overnight_total: parseN(row[15])
                 });
             }
         } else {

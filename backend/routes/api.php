@@ -154,6 +154,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/vendors/import',     [VendorController::class, 'import']); // bulk import
     Route::get('/vendors/{id}',        [VendorController::class, 'show']);
     Route::put('/vendors/{id}',        [VendorController::class, 'update']);
+    Route::delete('/vendors/truncate', [VendorController::class, 'truncate']);
     Route::delete('/vendors/{id}',     [VendorController::class, 'destroy']);
     Route::post('/vendors/{id}/upload-media',  [VendorController::class, 'uploadMedia']);
     Route::delete('/vendors/{id}/delete-media', [VendorController::class, 'deleteMedia']);
