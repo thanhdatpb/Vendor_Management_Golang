@@ -47,7 +47,7 @@ class VendorController extends BaseApiController {
         $vendor = Vendor::findOrFail($id);
         $urls = $vendor->media_urls ?? [];
         
-        $destinationPath = public_path('uploads/vendors');
+        $destinationPath = storage_path('app/vendors');
         if (!file_exists($destinationPath)) {
             mkdir($destinationPath, 0755, true);
         }
@@ -56,7 +56,7 @@ class VendorController extends BaseApiController {
             foreach ($request->file('media') as $file) {
                 $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->move($destinationPath, $fileName);
-                $urls[] = '/uploads/vendors/' . $fileName;
+                $urls[] = '/api/vendors/media/' . $fileName;
             }
             $vendor->media_urls = $urls;
             $vendor->media_url = $urls[0] ?? null;

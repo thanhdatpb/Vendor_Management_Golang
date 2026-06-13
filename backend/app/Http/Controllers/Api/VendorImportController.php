@@ -62,12 +62,12 @@ class VendorImportController extends BaseApiController {
                 $extension = str_contains($type, 'png') ? 'png' : 'jpg';
                 $imageName = 'vendor_' . $vendorName . '_' . time() . '.' . $extension;
                 
-                $destinationPath = public_path('uploads/vendors');
+                $destinationPath = storage_path('app/vendors');
                 if (!file_exists($destinationPath)) {
                     mkdir($destinationPath, 0755, true);
                 }
                 file_put_contents($destinationPath . '/' . $imageName, $data);
-                $mediaUrl = '/uploads/vendors/' . $imageName;
+                $mediaUrl = '/api/vendors/media/' . $imageName;
             }
 
             foreach ($v['products'] as $p) {
