@@ -279,15 +279,32 @@ export default function VendorsSection() {
                       {v.name || v.vendor_type || '—'}
                     </td>
                     <td style={{ ...C(), fontWeight: 800, color: HC.orange }}>{v.product_type || '—'}</td>
-                    <td style={{ ...C(), verticalAlign: 'middle', maxWidth: 200 }}>
-                      {v.overview ? (
-                        <span style={{ fontSize: 11, color: HC.ink2, whiteSpace: 'normal', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>
-                          {v.overview}
-                        </span>
-                      ) : <span style={{ color: HC.muted2, fontStyle: 'italic' }}>—</span>}
+                    <td style={{ ...C(), verticalAlign: 'top', maxWidth: 220, padding: '8px 10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {v.overview && (
+                          <div style={{ fontSize: 11, color: HC.ink2, lineHeight: 1.4 }}>
+                            <span style={{ fontWeight: 800, color: HC.brown }}>🧵 Chất liệu:</span> {v.overview}
+                          </div>
+                        )}
+                        {v.avg_time_vendor && (
+                          <div style={{ fontSize: 10, color: HC.muted, lineHeight: 1.4, marginTop: 2 }}>
+                            <span style={{ fontWeight: 700, color: HC.orangeDark }}>⏱ Vendor:</span> {v.avg_time_vendor}
+                          </div>
+                        )}
+                        {v.avg_time_actual && (
+                          <div style={{ fontSize: 10, color: HC.muted, lineHeight: 1.4 }}>
+                            <span style={{ fontWeight: 700, color: '#16a34a' }}>⏱ Thực tế:</span> {v.avg_time_actual}
+                          </div>
+                        )}
+                        {!v.overview && !v.avg_time_vendor && <span style={{ color: HC.muted2, fontStyle: 'italic', fontSize: 11 }}>—</span>}
+                      </div>
                     </td>
-                    <td style={{ ...C(), fontWeight: 800, color: HC.success, fontSize: 13, background: i % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
-                      ${totalPricing.toFixed(2)}
+                    <td style={{ ...C(), fontSize: 11, textAlign: 'center', background: i % 2 === 0 ? '#ecfdf5' : '#d1fae5' }}>
+                      <div style={{ fontWeight: 800, color: '#16a34a' }}>${((v.pricing1||0)+(v.pricing2||0)).toFixed(2)}</div>
+                      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
+                        {v.pricing1 != null && <span>P1: ${Number(v.pricing1).toFixed(2)}</span>}
+                        {v.pricing2 != null && Number(v.pricing2) > 0 && <span style={{ marginLeft: 4 }}>P2: ${Number(v.pricing2).toFixed(2)}</span>}
+                      </div>
                     </td>
                     <td style={C()}>{v.size || '—'}</td>
                     <td style={C()}>{v.optional || '—'}</td>

@@ -9,7 +9,9 @@ import { SearchOutlined } from '@ant-design/icons';
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
   const [activeTab, setActiveTab] = useState('all'); 
   const EMPTY_VENDOR = {
-    name: '', vendor_type: '', product_type: '', size: '', optional: '', overview: '', media_url: '', pricing: '',
+    name: '', vendor_type: '', product_type: '', size: '', optional: '', overview: '',
+    avg_time_vendor: '', avg_time_actual: '', notes: '',
+    media_url: '', pricing1: '', pricing2: '',
     eco_price: '', eco_total: '', fast_price: '', fast_total: '',
     express_price: '', express_total: '', overnight_price: '', overnight_total: ''
   };
@@ -295,7 +297,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       const pricing2 = totalPricing / 2;
       const dataToSend = {
         product_type: vForm.product_type, vendor_type: normalizeVendorType(vForm.vendor_type), name: vForm.name || '',
-        size: vForm.size || '', optional: vForm.optional || '', overview: vForm.overview || '', media_url: vForm.media_url || '', pricing1, pricing2,
+        size: vForm.size || '', optional: vForm.optional || '',
+        overview: vForm.overview || '',
+        avg_time_vendor: vForm.avg_time_vendor || '',
+        avg_time_actual: vForm.avg_time_actual || '',
+        notes: vForm.notes || '',
+        media_url: vForm.media_url || '',
+        pricing1: vForm.pricing1 ? parseFloat(vForm.pricing1) : pricing1,
+        pricing2: vForm.pricing2 ? parseFloat(vForm.pricing2) : pricing2,
         eco_price: vForm.eco_price ? parseFloat(vForm.eco_price) : null, eco_total: vForm.eco_total ? parseFloat(vForm.eco_total) : null,
         fast_price: vForm.fast_price ? parseFloat(vForm.fast_price) : null, fast_total: vForm.fast_total ? parseFloat(vForm.fast_total) : null,
         express_price: vForm.express_price ? parseFloat(vForm.express_price) : null, express_total: vForm.express_total ? parseFloat(vForm.express_total) : null,
@@ -328,12 +337,20 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   
   const openCreateVendorModal = () => { setVForm(EMPTY_VENDOR); setEditingVId(null); setVendorModalMode('create'); setModalMediaUrls([]); setVendorModalOpen(true); };
   const openEditVendorModal = (vendor) => {
-    const totalPricing = (vendor.pricing1 || 0) + (vendor.pricing2 || 0);
     setVForm({
       name: vendor.name || '', product_type: vendor.product_type || '', vendor_type: vendor.vendor_type || '',
-      size: vendor.size || '', optional: vendor.optional || '', overview: vendor.overview || '', media_url: vendor.media_url || '', pricing: totalPricing,
-      eco_price: vendor.eco_price ?? '', eco_total: vendor.eco_total ?? '', fast_price: vendor.fast_price ?? '', fast_total: vendor.fast_total ?? '',
-      express_price: vendor.express_price ?? '', express_total: vendor.express_total ?? '', overnight_price: vendor.overnight_price ?? '', overnight_total: vendor.overnight_total ?? ''
+      size: vendor.size || '', optional: vendor.optional || '',
+      overview: vendor.overview || '',
+      avg_time_vendor: vendor.avg_time_vendor || '',
+      avg_time_actual: vendor.avg_time_actual || '',
+      notes: vendor.notes || '',
+      media_url: vendor.media_url || '',
+      pricing1: vendor.pricing1 ?? '',
+      pricing2: vendor.pricing2 ?? '',
+      eco_price: vendor.eco_price ?? '', eco_total: vendor.eco_total ?? '',
+      fast_price: vendor.fast_price ?? '', fast_total: vendor.fast_total ?? '',
+      express_price: vendor.express_price ?? '', express_total: vendor.express_total ?? '',
+      overnight_price: vendor.overnight_price ?? '', overnight_total: vendor.overnight_total ?? ''
     });
     setModalMediaUrls(Array.isArray(vendor.media_urls) ? vendor.media_urls : (vendor.media_url ? [vendor.media_url] : []));
     setEditingVId(vendor.id); setVendorModalMode('edit'); setVendorModalOpen(true);
@@ -670,16 +687,35 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                           </td>
                         )}
                         {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', maxWidth: 200 }}>
-                            {v.overview ? (
-                              <span style={{ fontSize: 11, color: HC.ink2, whiteSpace: 'normal', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>
-                                {v.overview}
-                              </span>
-                            ) : <span style={{ color: HC.muted2, fontStyle: 'italic' }}>—</span>}
+                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'top', maxWidth: 220, padding: '8px 10px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {v.overview && (
+                                <div style={{ fontSize: 11, color: HC.ink2, lineHeight: 1.4 }}>
+                                  <span style={{ fontWeight: 800, color: HC.brown }}>🧵 Chất liệu:</span> {v.overview}
+                                </div>
+                              )}
+                              {v.avg_time_vendor && (
+                                <div style={{ fontSize: 10, color: HC.muted, lineHeight: 1.4, marginTop: 2 }}>
+                                  <span style={{ fontWeight: 700, color: HC.orangeDark }}>⏱ Vendor:</span> {v.avg_time_vendor}
+                                </div>
+                              )}
+                              {v.avg_time_actual && (
+                                <div style={{ fontSize: 10, color: HC.muted, lineHeight: 1.4 }}>
+                                  <span style={{ fontWeight: 700, color: HC.success }}>⏱ Thực tế:</span> {v.avg_time_actual}
+                                </div>
+                              )}
+                              {!v.overview && !v.avg_time_vendor && <span style={{ color: HC.muted2, fontStyle: 'italic', fontSize: 11 }}>—</span>}
+                            </div>
                           </td>
                         )}
                         <td style={{ ...C(), fontWeight: 800, color: activeTab === 'bestseller' ? HC.gold : HC.orange }}>{v.product_type || '—'}</td>
-                        <td style={{ ...C(), fontWeight: 800, color: HC.success, fontSize: 13 }}>${totalPricing.toFixed(2)}</td>
+                        <td style={{ ...C(), fontSize: 11, textAlign: 'center' }}>
+                          <div style={{ fontWeight: 800, color: HC.success }}>${((v.pricing1||0)+(v.pricing2||0)).toFixed(2)}</div>
+                          <div style={{ fontSize: 10, color: HC.muted, marginTop: 2 }}>
+                            {v.pricing1 != null && <span>P1: ${Number(v.pricing1).toFixed(2)}</span>}
+                            {v.pricing2 != null && Number(v.pricing2) > 0 && <span style={{ marginLeft: 4 }}>P2: ${Number(v.pricing2).toFixed(2)}</span>}
+                          </div>
+                        </td>
                         <td style={C()}>{v.size || '—'}</td>
                         <td style={C()}>{v.optional || '—'}</td>
                         <td style={{ ...C(), borderLeft: `2px solid ${HC.border}` }}>{fmt(v.eco_price)}</td>
@@ -842,17 +878,37 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               </div>
 
               <div>
-                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Product Overview (Chất liệu, mô tả)</label>
-                <input type="text" value={vForm.overview} onChange={vf('overview')} placeholder="Mô tả chất liệu, kiểu dáng..." style={inp3} />
+                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>🧵 Chất liệu (Overview)</label>
+                <input type="text" value={vForm.overview} onChange={vf('overview')} placeholder="VD: Vải polyester, lưới thoáng khí..." style={inp3} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 4 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>⏱ AVG thời gian sx+ship (Vendor)</label>
+                  <input type="text" value={vForm.avg_time_vendor} onChange={vf('avg_time_vendor')} placeholder="VD: Sx 2-4 bds, Ship 4-7 bds" style={inp3} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>⏱ AVG thời gian sx+ship (Thực tế)</label>
+                  <input type="text" value={vForm.avg_time_actual} onChange={vf('avg_time_actual')} placeholder="VD: Update sau 5 tuần chạy phối" style={inp3} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>📝 Notes</label>
+                <input type="text" value={vForm.notes} onChange={vf('notes')} placeholder="Ghi chú thêm về vendor..." style={inp3} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Optional</label>
                   <input type="text" value={vForm.optional} onChange={vf('optional')} placeholder="Tùy chọn..." style={inp3} />
                 </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Pricing <span style={{ color: HC.danger }}>*</span></label>
-                  <input type="number" step="0.01" min="0" value={vForm.pricing} onChange={vf('pricing')} placeholder="0.00" style={inp3} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Pricing 1 <span style={{ color: HC.danger }}>*</span></label>
+                    <input type="number" step="0.01" min="0" value={vForm.pricing1} onChange={vf('pricing1')} placeholder="0.00" style={inp3} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Pricing 2</label>
+                    <input type="number" step="0.01" min="0" value={vForm.pricing2} onChange={vf('pricing2')} placeholder="0.00" style={inp3} />
+                  </div>
                 </div>
               </div>
               <div style={{ marginBottom: 16 }}>
