@@ -28,11 +28,11 @@ class UserSeeder extends Seeder {
         User::updateOrCreate(
             ['email' => 'happyc.vendor'],
             [
-                'name'       => 'Chị Uyên',
+                'name'       => 'Uyên Hồ',
                 'password'   => Hash::make('Happyc123@'),
                 'role'       => 'staff_b',
                 'seller_name'=> null,
-                'full_name'  => 'Uyên Ho',
+                'full_name'  => 'Uyên Hồ',
                 'is_active'  => true,
             ]
         );

@@ -1,0 +1,248 @@
+[
+  {
+    "name": "A",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "AOP CAP",
+        "pricing1": 13.2,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "AOP CAP",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "B",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "All-over Print Trucker Cap",
+        "pricing1": 19.3,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "All-over Print Trucker Cap",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "C",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "Leather Patch Snapback Trucker Cap 112 (Made in US)",
+        "pricing1": 11.75,
+        "eco_price": 4.55,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Leather Patch Snapback Trucker Cap 112 (Made in US)",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "K",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "Engraved Leather Patch Snapback Trucker Cap 112 (Made in US)",
+        "pricing1": 11.99,
+        "eco_price": 4.99,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Engraved Leather Patch Snapback Trucker Cap 112 (Made in US)",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "I",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "Frame Two-Tone Cap",
+        "pricing1": 15.44,
+        "eco_price": 4.49,
+        "fast_price": 4.89,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Frame Two-Tone Cap",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "D",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "CAP/HAT/DAD CAP/VINATAGE (thêu)",
+        "pricing1": 13,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "CAP/HAT/DAD CAP/VINATAGE (thêu)",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "E",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "NORMAL (thêu)",
+        "pricing1": 13,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "NORMAL (thêu)",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "F",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "Baseball Cap (thêu)",
+        "pricing1": 14,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Baseball Cap (thêu)",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "G",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "Trucker Cap (thêu)",
+        "pricing1": 15,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Trucker Cap (thêu)",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  },
+  {
+    "name": "H",
+    "image_base64": null,
+    "overview": "",
+    "products": [
+      {
+        "product_type": "Snap back (thêu)",
+        "pricing1": 16,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Set up giá bán",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Size",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 2.5,
+        "express_price": 0,
+        "overnight_price": 0
+      },
+      {
+        "product_type": "Snap back (thêu)",
+        "pricing1": 0,
+        "eco_price": 0,
+        "fast_price": 0,
+        "express_price": 0,
+        "overnight_price": 0
+      }
+    ]
+  }
+]

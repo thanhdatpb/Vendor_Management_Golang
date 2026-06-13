@@ -269,11 +269,19 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     if (!file) return;
     setImportResult(null);
     if (!['xlsx', 'xls', 'csv'].includes(file.name.split('.').pop().toLowerCase())) { alert('Vui lòng chọn file Excel!'); return; }
+    
+    setImporting(true);
     try {
-      const parsed = await parseVendorExcel(file);
-      if (parsed.length === 0) { alert('File không có dữ liệu!'); return; }
-      setImportPreview(parsed); setImportPreviewPage(1); setImportConfirmOpen(true);
-    } catch (err) { alert('Lỗi đọc file: ' + err.message); }
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await vendorApi.importBulk(formData);
+      alert(res.data?.message || 'Import thành công!');
+      loadVendors();
+    } catch (err) {
+      alert('Lỗi import: ' + getDetailedError(err));
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleVSubmit = async () => {

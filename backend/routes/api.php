@@ -8,6 +8,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\Api\VendorImportController;
 use App\Http\Controllers\UserController;
 /*
 |--------------------------------------------------------------------------
@@ -148,10 +149,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // =========================
 
     Route::get('/vendors/compare',  [VendorController::class, 'compare']);
+    Route::post('/vendors/import', [VendorImportController::class, 'import']);
 
     Route::get('/vendors',             [VendorController::class, 'index']);
     Route::post('/vendors',            [VendorController::class, 'store']);
-    Route::post('/vendors/import',     [VendorController::class, 'import']); // bulk import
     Route::get('/vendors/{id}',        [VendorController::class, 'show']);
     Route::put('/vendors/{id}',        [VendorController::class, 'update']);
     Route::delete('/vendors/truncate', [VendorController::class, 'truncate']);
