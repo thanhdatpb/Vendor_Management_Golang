@@ -37,6 +37,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [vendorModalMode, setVendorModalMode] = useState('create');
   const [mediaUploading, setMediaUploading] = useState(false);
   const [modalMediaUrls, setModalMediaUrls] = useState([]);
+  const [viewingMediaFor, setViewingMediaFor] = useState(null);
   const mediaUploadRef = useRef(null);
 
   const loadVendors = useCallback(async (silent = false) => {
@@ -657,7 +658,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                         {!isSameAsPrev && (
                           <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', padding: '6px' }}>
                             {v.media_url ? (
-                              <img src={v.media_url} alt="Vendor" style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover', border: `1.5px solid ${HC.border}`, display: 'block' }} />
+                              <img onClick={() => setViewingMediaFor(v)} src={v.media_url} alt="Vendor" style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover', border: `1.5px solid ${HC.border}`, display: 'block', cursor: 'pointer' }} />
                             ) : (
                               <div style={{ width: 60, height: 60, borderRadius: 8, background: HC.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: HC.muted, border: `1px dashed ${HC.border}` }}>N/A</div>
                             )}
@@ -905,6 +906,39 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                 <button onClick={() => { setDeleteModalOpen(false); setVendorToDelete(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e8d4a8', background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
                 <button onClick={() => confirmDelete()} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#dc2626', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Xóa</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingMediaFor && (
+        <div onClick={() => setViewingMediaFor(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, backdropFilter: 'blur(5px)', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 800, background: HC.surface, borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+            <div style={{ padding: '16px 24px', background: HC.ink, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 900, color: '#fff', fontSize: 16 }}>Ảnh Vendor: {viewingMediaFor.name || viewingMediaFor.vendor_type}</div>
+              <button onClick={() => setViewingMediaFor(null)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ padding: 24, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+              {(() => {
+                const urls = Array.isArray(viewingMediaFor.media_urls) && viewingMediaFor.media_urls.length > 0 
+                  ? viewingMediaFor.media_urls 
+                  : (viewingMediaFor.media_url ? [viewingMediaFor.media_url] : []);
+                
+                if (urls.length === 0) return <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: HC.muted }}>Không có hình ảnh nào.</div>;
+                
+                return urls.map((url, idx) => {
+                  const isVideo = /\.(mp4|webm)$/i.test(url);
+                  return (
+                    <div key={idx} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${HC.border}`, aspectRatio: '1', background: '#000' }}>
+                      {isVideo ? (
+                        <video src={url} controls style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <img src={url} alt={`Media ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
