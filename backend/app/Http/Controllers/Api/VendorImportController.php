@@ -67,7 +67,7 @@ class VendorImportController extends BaseApiController {
                     mkdir($destinationPath, 0755, true);
                 }
                 file_put_contents($destinationPath . '/' . $imageName, $data);
-                $mediaUrl = url('/api/vendors/media/' . $imageName);
+                $mediaUrl = url('api/vendors/media/' . $imageName);
             }
 
             foreach ($v['products'] as $p) {
