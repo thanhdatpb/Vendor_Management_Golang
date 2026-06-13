@@ -20,7 +20,11 @@ use App\Http\Controllers\UserController;
 // =========================
 // MEDIA PUBLIC
 // =========================
-Route::get('/vendors/media/{filename}', function ($filename) {
+Route::get('/vendors/media', function (Request $request) {
+    $filename = $request->query('f');
+    if (!$filename) {
+        abort(404);
+    }
     $path = storage_path('app/vendors/' . $filename);
     if (!file_exists($path)) {
         abort(404);
