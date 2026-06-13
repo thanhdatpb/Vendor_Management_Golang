@@ -18,6 +18,17 @@ use App\Http\Controllers\UserController;
 
 
 // =========================
+// MEDIA PUBLIC
+// =========================
+Route::get('/vendors/media/{filename}', function ($filename) {
+    $path = storage_path('app/vendors/' . $filename);
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    return response()->file($path);
+});
+
+// =========================
 // AUTH PUBLIC
 // =========================
 Route::get('/login', function() {
