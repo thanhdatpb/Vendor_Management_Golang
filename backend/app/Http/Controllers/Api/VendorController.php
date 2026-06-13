@@ -56,7 +56,7 @@ class VendorController extends BaseApiController {
             foreach ($request->file('media') as $file) {
                 $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->move($destinationPath, $fileName);
-                $urls[] = '/api/vendors/media/' . $fileName;
+                $urls[] = url('/api/vendors/media/' . $fileName);
             }
             $vendor->media_urls = $urls;
             $vendor->media_url = $urls[0] ?? null;
