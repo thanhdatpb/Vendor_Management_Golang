@@ -61,8 +61,13 @@ class VendorImportController extends BaseApiController {
                 
                 $extension = str_contains($type, 'png') ? 'png' : 'jpg';
                 $imageName = 'vendor_' . $vendorName . '_' . time() . '.' . $extension;
-                Storage::disk('public')->put('vendors/' . $imageName, $data);
-                $mediaUrl = '/storage/vendors/' . $imageName;
+                
+                $destinationPath = public_path('uploads/vendors');
+                if (!file_exists($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                file_put_contents($destinationPath . '/' . $imageName, $data);
+                $mediaUrl = '/uploads/vendors/' . $imageName;
             }
 
             foreach ($v['products'] as $p) {

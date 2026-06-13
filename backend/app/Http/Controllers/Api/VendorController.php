@@ -47,11 +47,16 @@ class VendorController extends BaseApiController {
         $vendor = Vendor::findOrFail($id);
         $urls = $vendor->media_urls ?? [];
         
+        $destinationPath = public_path('uploads/vendors');
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+
         if ($request->hasFile('media')) {
             foreach ($request->file('media') as $file) {
                 $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-                $file->storeAs('vendors', $fileName, 'public');
-                $urls[] = '/storage/vendors/' . $fileName;
+                $file->move($destinationPath, $fileName);
+                $urls[] = '/uploads/vendors/' . $fileName;
             }
             $vendor->media_urls = $urls;
             $vendor->media_url = $urls[0] ?? null;
