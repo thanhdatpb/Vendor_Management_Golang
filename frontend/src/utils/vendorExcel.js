@@ -313,3 +313,185 @@ export async function parseVendorExcel(file) {
     reader.readAsArrayBuffer(file);
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  parseHappyCreativeLibrary — parse định dạng "Happy Creative" vendor library
+//  Trả về: { title, generalInfo: [], pricing: [] }
+// ─────────────────────────────────────────────────────────────────────────────
+export async function parseHappyCreativeLibrary(file) {
+  const xlsxModule = await import('xlsx');
+  const XLSX = xlsxModule.default ?? xlsxModule;
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+
+        // Ưu tiên sheet đầu tiên không phải "Bản sao"
+        let sheetName = wb.SheetNames[0];
+        for (const name of wb.SheetNames) {
+          if (!name.toLowerCase().includes('bản sao') && !name.toLowerCase().includes('ban sao')) {
+            sheetName = name;
+            break;
+          }
+        }
+        const ws = wb.Sheets[sheetName];
+        if (!ws) {
+          reject(new Error('File Excel không có sheet dữ liệu'));
+          return;
+        }
+
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        // ── Tiện ích ─────────────────────────────────────────────────────────
+        const cellStr = (v) => String(v ?? '').trim();
+        const parseN = (val) => {
+          if (val === 'N/A' || val === '' || val === null || val === undefined) return null;
+          const str = cellStr(val).replace(',', '.');
+          const n = parseFloat(str.replace(/[^\d.-]/g, ''));
+          return Number.isFinite(n) ? n : null;
+        };
+
+        // ── Tìm title (tên loại sản phẩm, VD: "CAP", "MUG") ─────────────────
+        let title = sheetName;
+        for (let r = 0; r < Math.min(5, aoa.length); r++) {
+          const row = aoa[r] || [];
+          for (let c = 0; c < row.length; c++) {
+            const v = cellStr(row[c]);
+            if (v && v.length < 30 && !v.includes(':') && !v.includes('Ngày')) {
+              const upper = v.toUpperCase();
+              if (upper === upper && /^[A-Z\s]+$/.test(upper) && v.length >= 2) {
+                title = v;
+                break;
+              }
+            }
+          }
+        }
+
+        // ── Tìm các row mốc ──────────────────────────────────────────────────
+        let generalInfoHeaderRow = -1; // dòng header của Section 1
+        let pricingHeaderRow = -1;     // dòng "Ký hiệu | Product Type (CAP)" của Section 2
+        let pricingSubHeaderRow = -1;  // dòng "Size | Optional | ..." sub-header
+        let setupRow = -1;             // dòng "Setup giá bán" — dừng đọc
+
+        for (let r = 0; r < aoa.length; r++) {
+          const row = aoa[r] || [];
+          const col0 = cellStr(row[0]).toLowerCase();
+          const col1 = cellStr(row[1]).toLowerCase();
+
+          // Section 1 header: "Product Type" ở col 0 hoặc "Thông tin chung"
+          if ((col0 === 'product type' || col0.includes('thông tin chung') || col0.includes('thong tin chung'))
+              && generalInfoHeaderRow === -1) {
+            generalInfoHeaderRow = r;
+          }
+
+          // Section 2 header: "Ký hiệu" ở col 0 + "product type" ở col 1
+          if ((col0 === 'ký hiệu' || col0 === 'ky hieu' || col0 === 'kí hiệu')
+              && col1.includes('product type') && pricingHeaderRow === -1) {
+            pricingHeaderRow = r;
+            pricingSubHeaderRow = r + 1;
+          }
+
+          // Dừng khi gặp "Setup giá bán"
+          if (col0.includes('setup') && (col0.includes('giá') || col0.includes('gia'))) {
+            setupRow = r;
+            break;
+          }
+        }
+
+        // ── Parse Section 1 — Thông tin chung về phôi ────────────────────────
+        const generalInfo = [];
+
+        // Tìm chỉ số cột từ header row
+        let col_kyHieu = 0, col_productType = 1, col_hinhAnh = 1;
+        let col_chatLieu = 5, col_chiTietSize = 6;
+        let col_avgVendor = 7, col_avgActual = 9, col_notes = 10;
+
+        if (generalInfoHeaderRow >= 0) {
+          const hRow = aoa[generalInfoHeaderRow] || [];
+          hRow.forEach((h, c) => {
+            const s = cellStr(h).toLowerCase();
+            if (s.includes('product type')) col_productType = c;
+            if (s.includes('chất liệu') || s.includes('material')) col_chatLieu = c;
+            if (s.includes('chi tiết size') || s.includes('chi tiet size')) col_chiTietSize = c;
+            if (s.includes('avg') && (s.includes('vendor') || s.includes('theo vendor'))) col_avgVendor = c;
+            if (s.includes('avg') && (s.includes('thực tế') || s.includes('thuc te'))) col_avgActual = c;
+            if (s.includes('notes') || s.includes('ghi chú')) col_notes = c;
+          });
+
+          const endRow = pricingHeaderRow >= 0 ? pricingHeaderRow : aoa.length;
+          for (let r = generalInfoHeaderRow + 1; r < endRow; r++) {
+            const row = aoa[r] || [];
+            if (row.every(c => cellStr(c) === '')) continue;
+            const kyHieu = cellStr(row[col_kyHieu]);
+            const productType = cellStr(row[col_productType]);
+            if (!productType || productType.toLowerCase().includes('product type')) continue;
+            // Bỏ các dòng "Thông tin chung" header
+            if (kyHieu.toLowerCase().includes('thông tin') || kyHieu.toLowerCase().includes('thong tin')) continue;
+
+            generalInfo.push({
+              kyHieu,
+              productType,
+              chatLieu: cellStr(row[col_chatLieu]),
+              chiTietSize: cellStr(row[col_chiTietSize]),
+              avgTimeVendor: cellStr(row[col_avgVendor]),
+              avgTimeActual: cellStr(row[col_avgActual]),
+              notes: cellStr(row[col_notes]),
+            });
+          }
+        }
+
+        // ── Parse Section 2 — Về giá ─────────────────────────────────────────
+        const pricing = [];
+
+        if (pricingHeaderRow >= 0) {
+          const endRow = setupRow >= 0 ? setupRow : aoa.length;
+          // Data bắt đầu từ sub-header + 1 (skip cả 2 dòng header)
+          const dataStart = pricingSubHeaderRow >= 0 ? pricingSubHeaderRow + 1 : pricingHeaderRow + 2;
+
+          for (let r = dataStart; r < endRow; r++) {
+            const row = aoa[r] || [];
+            if (row.every(c => cellStr(c) === '')) continue;
+
+            const kyHieu = cellStr(row[0]);
+            const productType = cellStr(row[1]);
+            if (!productType || productType.toLowerCase().includes('product type')) continue;
+            // Bỏ header rows lạc
+            if (kyHieu.toLowerCase().includes('ký hiệu') || kyHieu.toLowerCase() === 'ky hieu') continue;
+
+            pricing.push({
+              kyHieu,
+              productType,
+              size: cellStr(row[2]) === 'N/A' ? '' : cellStr(row[2]),
+              optional: cellStr(row[3]) === 'N/A' ? '' : cellStr(row[3]),
+              pricing1: parseN(row[4]),
+              pricing2: parseN(row[5]),
+              eco_price: parseN(row[6]),
+              eco_total: parseN(row[7]),
+              ground_price: parseN(row[8]),
+              ground_total: parseN(row[9]),
+              express_price: parseN(row[10]),
+              express_total: parseN(row[11]),
+              twoday_price: parseN(row[12]),
+              twoday_total: parseN(row[13]),
+              overnight_price: parseN(row[14]),
+              overnight_total: parseN(row[15]),
+            });
+          }
+        }
+
+        if (generalInfo.length === 0 && pricing.length === 0) {
+          reject(new Error('Không nhận diện được định dạng Happy Creative. Kiểm tra file Excel.'));
+          return;
+        }
+
+        resolve({ title, generalInfo, pricing });
+      } catch (err) {
+        reject(new Error('Lỗi đọc file thư viện: ' + err.message));
+      }
+    };
+    reader.onerror = () => reject(new Error('Không thể đọc file'));
+    reader.readAsArrayBuffer(file);
+  });
+}
