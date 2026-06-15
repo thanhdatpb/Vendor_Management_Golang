@@ -468,6 +468,7 @@ export async function parseHappyCreativeLibrary(file) {
             }
 
             generalInfo.push({
+              id: 'row-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 6),
               kyHieu: originalKyHieu,
               images,
               chatLieu: cellStr(row[col_chatLieu]),
