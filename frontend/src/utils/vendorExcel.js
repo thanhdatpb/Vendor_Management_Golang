@@ -427,9 +427,14 @@ export async function parseHappyCreativeLibrary(file) {
             const row = aoa[r] || [];
             if (row.every(c => cellStr(c) === '')) continue;
             
-            const kyHieu = cellStr(row[col_kyHieu]);
+            const originalKyHieu = cellStr(row[col_kyHieu]);
+            const kyHieuLower = originalKyHieu.toLowerCase();
+            
             // Bỏ qua các dòng trống hoặc dòng header trùng lặp
-            if (!kyHieu || kyHieu.toLowerCase().includes('thông tin') || kyHieu.toLowerCase().includes('product type')) continue;
+            if (!originalKyHieu || kyHieuLower.includes('thông tin') || kyHieuLower.includes('product type')) continue;
+
+            // Nếu gặp tiêu đề của phần 2 ("Về giá") thì dừng đọc Section 1
+            if (kyHieuLower.includes('về giá') || kyHieuLower.includes('ve gia')) break;
 
             // Trích xuất hình ảnh từ cell formula (nếu có `=IMAGE("url")`) hoặc từ URL trực tiếp
             const images = [];
@@ -444,7 +449,7 @@ export async function parseHappyCreativeLibrary(file) {
             }
 
             generalInfo.push({
-              kyHieu,
+              kyHieu: originalKyHieu,
               images,
               chatLieu: cellStr(row[col_chatLieu]),
               chiTietSize: cellStr(row[col_chiTietSize]),
