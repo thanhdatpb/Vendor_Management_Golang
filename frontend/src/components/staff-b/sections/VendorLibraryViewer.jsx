@@ -62,7 +62,7 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
         <thead>
           <tr>
-            <th style={{ ...TH(), width: 44 }}>Ký hiệu</th>
+            <th style={{ ...TH(), width: 44 }}>Product Type</th>
             {!readOnly && <th style={{ ...TH(), width: 60 }}>Thao tác</th>}
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
