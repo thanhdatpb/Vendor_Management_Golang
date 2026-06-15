@@ -21,6 +21,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [excelVendors, setExcelVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState('');
+  const [toast, setToast] = useState(null);
   const [vForm, setVForm] = useState(EMPTY_VENDOR);
   const [editingVId, setEditingVId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -70,6 +71,12 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   useEffect(() => { loadVendors(); }, [loadVendors]);
   useEffect(() => { setVPage(1); setSelectedIds(new Set()); setSearchFilter(''); }, [filterProductType, filterProductId, activeTab]);
   useEffect(() => { setVForm(EMPTY_VENDOR); }, []);
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   let filteredVendors = activeTab === 'bestseller' ? vendorList.filter(v => v.vendor_type === 'Best Seller') : vendorList;
 
@@ -124,10 +131,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     }
 
     const productId = filterProductId;
-    if (!productId) { alert('Không xác định được sản phẩm.'); return; }
+    if (!productId) { setToast({ type: 'error', msg: 'Không xác định được sản phẩm.' }); return; }
     const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = selected; lsSet(LS_PRODUCT_VENDORS, all);
     window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
-    alert(`✅ Đã gán ${uniqueSelectedCount} vendor cho sản phẩm!`);
+    setToast({ type: 'success', msg: `✅ Đã gán ${selected.length} vendor cho sản phẩm!` });
     setSelectedIds(new Set()); onAssignComplete();
   };
 
@@ -525,6 +532,20 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
   return (
     <div>
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 24, right: 24, zIndex: 10000, animation: 'slideInRight 0.3s ease-out' }}>
+          <div style={{
+            background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : `linear-gradient(135deg, #dc2626, #b91c1c)`,
+            borderRadius: 12, boxShadow: '0 10px 25px rgba(0,0,0,0.2)', minWidth: 260, maxWidth: 380,
+            padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10, border: '1px solid rgba(255,255,255,0.2)'
+          }}>
+            <span style={{ fontSize: 20 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+            <div style={{ fontSize: 13, color: '#fff', fontWeight: 700, fontFamily: "'Nunito',sans-serif" }}>{toast.msg}</div>
+            <button onClick={() => setToast(null)} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+          </div>
+        </div>
+      )}
       <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
       {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span>⚠️ {apiError}</span><button onClick={loadVendors} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button></div>}
 
