@@ -334,6 +334,11 @@ export const vendorApi = {
   deleteMedia: (id, index) => api.delete(`/vendors/${id}/delete-media`, { data: { index } }),
 };
 
+export const vendorLibraryApi = {
+  get: () => api.get('/vendor-library'),
+  save: (data) => api.post('/vendor-library', data),
+};
+
 
 // ===============================
 // NOTIFICATION API

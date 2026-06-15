@@ -9,6 +9,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\Api\VendorImportController;
+use App\Http\Controllers\Api\VendorLibraryController;
 use App\Http\Controllers\UserController;
 /*
 |--------------------------------------------------------------------------
@@ -165,6 +166,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/vendors/compare',  [VendorController::class, 'compare']);
     Route::post('/vendors/import', [VendorImportController::class, 'import']);
+
+    Route::get('/vendor-library', [VendorLibraryController::class, 'getLibrary']);
+    Route::post('/vendor-library', [VendorLibraryController::class, 'saveLibrary']);
 
     Route::get('/vendors',             [VendorController::class, 'index']);
     Route::post('/vendors',            [VendorController::class, 'store']);
