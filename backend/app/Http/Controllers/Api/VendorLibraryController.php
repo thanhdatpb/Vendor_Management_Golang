@@ -14,12 +14,13 @@ class VendorLibraryController extends Controller
     {
         $mode = $request->query('mode', 'all');
         $fileName = $mode === 'new_products' ? 'vendor_library_new.json' : 'vendor_library.json';
+        $path = storage_path('app/' . $fileName);
 
-        if (!Storage::exists($fileName)) {
+        if (!file_exists($path)) {
             return response()->json([]);
         }
 
-        $data = Storage::get($fileName);
+        $data = file_get_contents($path);
         return response($data)->header('Content-Type', 'application/json');
     }
 
@@ -27,9 +28,10 @@ class VendorLibraryController extends Controller
     {
         $mode = $request->query('mode', 'all');
         $fileName = $mode === 'new_products' ? 'vendor_library_new.json' : 'vendor_library.json';
+        $path = storage_path('app/' . $fileName);
 
-        $data = $request->all();
-        Storage::put($fileName, json_encode($data));
+        $data = $request->getContent();
+        file_put_contents($path, $data);
 
         return response()->json(['message' => 'Library saved successfully']);
     }
