@@ -20,8 +20,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [vendorList, setVendorList] = useState([]);
   const [excelVendors, setExcelVendors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [apiError, setApiError] = useState('');
   const [toast, setToast] = useState(null);
+  const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
   const [vForm, setVForm] = useState(EMPTY_VENDOR);
   const [editingVId, setEditingVId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -36,7 +36,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [importResult, setImportResult] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [vendorToDelete, setVendorToDelete] = useState(null);
-  const [toast, setToast] = useState(null);
   const vf = key => e => setVForm(p => ({ ...p, [key]: e.target.value }));
   const [vendorModalOpen, setVendorModalOpen] = useState(false);
   const [vendorModalMode, setVendorModalMode] = useState('create');
@@ -103,6 +102,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const uniqueSelectedCount = new Set(selectedVendorsList.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size;
 
 
+  const openAssignConfirm = () => {
+    if (selectedIds.size === 0) {
+      setToast({ type: 'error', msg: 'Vui lòng chọn ít nhất 1 vendor!' });
+      return;
+    }
+    setAssignConfirmOpen(true);
+  };
+
   const handleAssignVendor = () => {
     if (selectedIds.size === 0) return;
     
@@ -131,11 +138,20 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     }
 
     const productId = filterProductId;
-    if (!productId) { setToast({ type: 'error', msg: 'Không xác định được sản phẩm.' }); return; }
+    if (!productId) { setToast({ type: 'error', msg: 'Không xác định được sản phẩm.' }); setAssignConfirmOpen(false); return; }
+    
+    if (selected.length === 0) {
+      setToast({ type: 'error', msg: 'Không tìm thấy dữ liệu vendor đã chọn.' });
+      setAssignConfirmOpen(false);
+      return;
+    }
+
     const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = selected; lsSet(LS_PRODUCT_VENDORS, all);
     window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
     setToast({ type: 'success', msg: `✅ Đã gán ${selected.length} vendor cho sản phẩm!` });
-    setSelectedIds(new Set()); onAssignComplete();
+    setSelectedIds(new Set()); 
+    setAssignConfirmOpen(false);
+    onAssignComplete();
   };
 
   const getDetailedError = (err) => {
@@ -532,6 +548,21 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
   return (
     <div>
+      {/* Assign Confirm Modal */}
+      {assignConfirmOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px 32px', width: 400, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: 18, color: HC.ink, fontWeight: 900 }}>Xác nhận gán Vendor</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted }}>Bạn có chắc chắn muốn gán <b>{selectedIds.size}</b> vendor đã chọn cho sản phẩm này không?</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button onClick={() => setAssignConfirmOpen(false)} style={{ padding: '10px 24px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Hủy</button>
+              <button onClick={handleAssignVendor} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: HC.success, color: '#fff', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>Gán Vendor</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toast && (
         <div style={{ position: 'fixed', top: 24, right: 24, zIndex: 10000, animation: 'slideInRight 0.3s ease-out' }}>
@@ -567,7 +598,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                 <div style={{ fontSize: 11, color: '#075985', marginTop: 2 }}>Tích chọn dòng trong file Excel rồi nhấn <b>Gán Vendor</b></div>
               </div>
               {selectedIds.size > 0 && filterProductId && (
-                <button onClick={handleAssignVendor} style={{ padding: '8px 16px', borderRadius: 8, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <button onClick={openAssignConfirm} style={{ padding: '8px 16px', borderRadius: 8, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
                   ✅ Gán {selectedIds.size} Vendor
                 </button>
               )}
@@ -619,7 +650,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {selectedIds.size > 0 && filterProductId && (
-            <button onClick={handleAssignVendor} style={{ padding: '9px 20px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <button onClick={openAssignConfirm} style={{ padding: '9px 20px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
               <span>✅</span> Gán {uniqueSelectedCount} Vendor
             </button>
           )}
