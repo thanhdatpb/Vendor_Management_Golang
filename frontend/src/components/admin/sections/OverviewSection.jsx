@@ -256,7 +256,11 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     const projects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
     const ps = {};
     projects.forEach(proj => {
-      const pp = products.filter(p => p.project === proj);
+      const pp = products.filter(p => {
+        const dbProj = (p.project || '').toLowerCase().trim();
+        const uiProj = proj.toLowerCase().replace(' project', '');
+        return dbProj === uiProj || dbProj === proj.toLowerCase();
+      });
       ps[proj] = {
         approved: pp.filter(p => p.status === 'approved').length,
         rejected: pp.filter(p => p.status === 'rejected' || p.status === 'reject').length,

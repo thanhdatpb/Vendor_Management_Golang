@@ -32,7 +32,11 @@ export default function FormHistoryModal({ open, onClose, title, filterType, fil
       filteredProducts = filteredProducts.filter(p => p.status === 'rejected' || p.status === 'reject');
     }
   } else if (filterType === 'project') {
-    filteredProducts = filteredProducts.filter(p => p.project === filterValue);
+    filteredProducts = filteredProducts.filter(p => {
+      const dbProj = (p.project || '').toLowerCase().trim();
+      const uiProj = (filterValue || '').toLowerCase().replace(' project', '');
+      return dbProj === uiProj || dbProj === (filterValue || '').toLowerCase();
+    });
   }
 
 
