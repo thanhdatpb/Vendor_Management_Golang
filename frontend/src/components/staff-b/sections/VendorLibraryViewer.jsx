@@ -62,7 +62,7 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
         <thead>
           <tr>
-            <th style={{ ...TH(), width: 44 }}>Ký hiệu</th>
+            <th style={{ ...TH(), width: 44 }}>Product Type</th>
             {!readOnly && <th style={{ ...TH(), width: 60 }}>Thao tác</th>}
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
@@ -110,7 +110,14 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
                   )}
                 </td>
                 <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.chatLieu)}</td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.chiTietSize)}</td>
+                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                  {r.chiTietSizeImage && (
+                    <a href={r.chiTietSizeImage} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: r.chiTietSize ? 8 : 0 }}>
+                      <img src={r.chiTietSizeImage} alt="Size Guide" style={{ width: '100%', maxWidth: 160, borderRadius: 6, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
+                    </a>
+                  )}
+                  {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
+                </td>
                 <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>
                 <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>
                 <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.notes)}</td>
