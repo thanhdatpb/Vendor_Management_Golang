@@ -452,11 +452,27 @@ export async function parseHappyCreativeLibrary(file) {
               }
             }
 
+            // Kiểm tra ảnh trong cột Chi tiết Size
+            let chiTietSizeImage = null;
+            const sizeCell = ws[XLSX.utils.encode_cell({r, c: col_chiTietSize})];
+            if (sizeCell && sizeCell.f) {
+              const m = sizeCell.f.match(/image\(\s*["'](.*?)["']\s*\)/i);
+              if (m && m[1]) chiTietSizeImage = m[1];
+            } else if (sizeCell && sizeCell.v && cellStr(sizeCell.v).startsWith('http') && cellStr(sizeCell.v).match(/\.(jpeg|jpg|gif|png)$/i)) {
+              chiTietSizeImage = cellStr(sizeCell.v);
+            }
+
+            let chiTietSizeText = cellStr(row[col_chiTietSize]);
+            if (chiTietSizeText.startsWith('http') && chiTietSizeText === chiTietSizeImage) {
+              chiTietSizeText = ''; // Nếu text là URL ảnh thì bỏ qua text
+            }
+
             generalInfo.push({
               kyHieu: originalKyHieu,
               images,
               chatLieu: cellStr(row[col_chatLieu]),
-              chiTietSize: cellStr(row[col_chiTietSize]),
+              chiTietSize: chiTietSizeText,
+              chiTietSizeImage,
               avgTimeVendor: cellStr(row[col_avgVendor]),
               avgTimeActual: cellStr(row[col_avgActual]),
               notes: cellStr(row[col_notes]),
