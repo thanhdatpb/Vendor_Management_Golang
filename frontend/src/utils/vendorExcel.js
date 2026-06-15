@@ -326,7 +326,7 @@ export async function parseHappyCreativeLibrary(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+        const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true, cellFormula: true });
 
         // Ưu tiên sheet đầu tiên không phải "Bản sao"
         let sheetName = wb.SheetNames[0];
@@ -403,41 +403,55 @@ export async function parseHappyCreativeLibrary(file) {
         // ── Parse Section 1 — Thông tin chung về phôi ────────────────────────
         const generalInfo = [];
 
-        // Tìm chỉ số cột từ header row
-        let col_kyHieu = 0, col_productType = 1, col_hinhAnh = 1;
+        // Khởi tạo cột mặc định
+        let col_kyHieu = 0, col_imagesStart = 1;
         let col_chatLieu = 5, col_chiTietSize = 6;
-        let col_avgVendor = 7, col_avgActual = 9, col_notes = 10;
+        let col_avgVendor = 7, col_avgActual = 9, col_notes = 10, col_linkFolder = 11;
 
         if (generalInfoHeaderRow >= 0) {
           const hRow = aoa[generalInfoHeaderRow] || [];
           hRow.forEach((h, c) => {
             const s = cellStr(h).toLowerCase();
-            if (s.includes('product type')) col_productType = c;
+            if (s.includes('product type')) col_kyHieu = c; // Note: header là Product Type nhưng chứa ký hiệu
+            if (s.includes('hình ảnh') || s.includes('video')) col_imagesStart = c;
             if (s.includes('chất liệu') || s.includes('material')) col_chatLieu = c;
             if (s.includes('chi tiết size') || s.includes('chi tiet size')) col_chiTietSize = c;
             if (s.includes('avg') && (s.includes('vendor') || s.includes('theo vendor'))) col_avgVendor = c;
             if (s.includes('avg') && (s.includes('thực tế') || s.includes('thuc te'))) col_avgActual = c;
             if (s.includes('notes') || s.includes('ghi chú')) col_notes = c;
+            if (s.includes('link folder') || s.includes('thư mục')) col_linkFolder = c;
           });
 
           const endRow = pricingHeaderRow >= 0 ? pricingHeaderRow : aoa.length;
           for (let r = generalInfoHeaderRow + 1; r < endRow; r++) {
             const row = aoa[r] || [];
             if (row.every(c => cellStr(c) === '')) continue;
+            
             const kyHieu = cellStr(row[col_kyHieu]);
-            const productType = cellStr(row[col_productType]);
-            if (!productType || productType.toLowerCase().includes('product type')) continue;
-            // Bỏ các dòng "Thông tin chung" header
-            if (kyHieu.toLowerCase().includes('thông tin') || kyHieu.toLowerCase().includes('thong tin')) continue;
+            // Bỏ qua các dòng trống hoặc dòng header trùng lặp
+            if (!kyHieu || kyHieu.toLowerCase().includes('thông tin') || kyHieu.toLowerCase().includes('product type')) continue;
+
+            // Trích xuất hình ảnh từ cell formula (nếu có `=IMAGE("url")`) hoặc từ URL trực tiếp
+            const images = [];
+            for (let c = col_imagesStart; c <= col_imagesStart + 3; c++) {
+              const cell = ws[XLSX.utils.encode_cell({r, c})];
+              if (cell && cell.f) {
+                const m = cell.f.match(/image\(\s*["'](.*?)["']\s*\)/i);
+                if (m && m[1]) images.push(m[1]);
+              } else if (cell && cell.v && cellStr(cell.v).startsWith('http')) {
+                images.push(cellStr(cell.v));
+              }
+            }
 
             generalInfo.push({
               kyHieu,
-              productType,
+              images,
               chatLieu: cellStr(row[col_chatLieu]),
               chiTietSize: cellStr(row[col_chiTietSize]),
               avgTimeVendor: cellStr(row[col_avgVendor]),
               avgTimeActual: cellStr(row[col_avgActual]),
               notes: cellStr(row[col_notes]),
+              linkFolder: cellStr(row[col_linkFolder]),
             });
           }
         }

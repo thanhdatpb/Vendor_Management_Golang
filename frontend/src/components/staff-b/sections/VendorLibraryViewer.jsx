@@ -31,34 +31,97 @@ const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` 
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
 // ── Section 1 Table ──────────────────────────────────────────────────────────
-function GeneralInfoTable({ rows }) {
+function GeneralInfoTable({ rows, onSave }) {
+  const [editIdx, setEditIdx] = useState(-1);
+  const [editForm, setEditForm] = useState(null);
+
   if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu thông tin chung.</div>;
+
+  const startEdit = (idx, row) => {
+    setEditIdx(idx);
+    setEditForm({
+      linkFolder: row.linkFolder || '',
+      img0: row.images?.[0] || '',
+      img1: row.images?.[1] || '',
+      img2: row.images?.[2] || '',
+      img3: row.images?.[3] || '',
+    });
+  };
+
+  const saveEdit = (idx) => {
+    const newRows = [...rows];
+    const images = [editForm.img0, editForm.img1, editForm.img2, editForm.img3].filter(Boolean);
+    newRows[idx] = { ...newRows[idx], linkFolder: editForm.linkFolder, images };
+    setEditIdx(-1);
+    setEditForm(null);
+    onSave(newRows);
+  };
+
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 800 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
         <thead>
           <tr>
             <th style={{ ...TH(), width: 44 }}>Ký hiệu</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Product Type</th>
+            <th style={{ ...TH(), width: 60 }}>Thao tác</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Chi tiết Size</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 200 }}>AVG Thời gian (Vendor)</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>AVG Thời gian (Thực tế)</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 240 }}>Notes</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Link Folder</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
-              <td style={{ ...TD(i), fontWeight: 700 }}>{r.productType || '—'}</td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.chatLieu)}</td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.chiTietSize)}</td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.notes)}</td>
-            </tr>
-          ))}
+          {rows.map((r, i) => {
+            const isEditing = editIdx === i;
+            return (
+              <tr key={i}>
+                <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
+                <td style={{ ...TD(i), textAlign: 'center' }}>
+                  {isEditing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <button onClick={() => saveEdit(i)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
+                      <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
+                  )}
+                </td>
+                <td style={{ ...TD(i) }}>
+                  {isEditing ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <input type="text" placeholder="URL Hình 1" value={editForm.img0} onChange={e => setEditForm(p => ({ ...p, img0: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                      <input type="text" placeholder="URL Hình 2" value={editForm.img1} onChange={e => setEditForm(p => ({ ...p, img1: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                      <input type="text" placeholder="URL Hình 3" value={editForm.img2} onChange={e => setEditForm(p => ({ ...p, img2: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                      <input type="text" placeholder="URL Hình 4" value={editForm.img3} onChange={e => setEditForm(p => ({ ...p, img3: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
+                        <a key={idx} href={img} target="_blank" rel="noreferrer">
+                          <img src={img} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} />
+                        </a>
+                      )) : <span style={{ color: HC.muted, fontSize: 11, fontStyle: 'italic' }}>Không có ảnh</span>}
+                    </div>
+                  )}
+                </td>
+                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.chatLieu)}</td>
+                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.chiTietSize)}</td>
+                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>
+                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>
+                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.notes)}</td>
+                <td style={{ ...TD(i) }}>
+                  {isEditing ? (
+                    <input type="text" placeholder="Link Folder..." value={editForm.linkFolder} onChange={e => setEditForm(p => ({ ...p, linkFolder: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                  ) : (
+                    r.linkFolder ? <a href={r.linkFolder} target="_blank" rel="noreferrer" style={{ color: HC.orangeDark, textDecoration: 'underline', wordBreak: 'break-all' }}>{r.linkFolder}</a> : <span style={{ color: HC.muted2 }}>—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -125,7 +188,7 @@ function PricingTable({ rows }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, onDelete }) {
+function LibraryCard({ entry, onDelete, onUpdate }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
 
@@ -202,7 +265,7 @@ function LibraryCard({ entry, onDelete }) {
 
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
-            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} />}
+            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} />}
             {activeSection === 'pricing' && <PricingTable rows={entry.pricing} />}
           </div>
         </div>
@@ -282,6 +345,15 @@ export default function VendorLibraryViewer() {
       return updated;
     });
     showToast('success', '🗑 Đã xóa file thư viện');
+  }, []);
+
+  const handleUpdateEntry = useCallback((updatedEntry) => {
+    setLibraryFiles(prev => {
+      const updated = prev.map(e => e.id === updatedEntry.id ? updatedEntry : e);
+      lsSetLibrary(updated);
+      return updated;
+    });
+    showToast('success', '💾 Đã lưu thay đổi cục bộ');
   }, []);
 
   const handleClearAll = () => {
@@ -374,7 +446,7 @@ export default function VendorLibraryViewer() {
         </div>
       ) : (
         libraryFiles.map(entry => (
-          <LibraryCard key={entry.id} entry={entry} onDelete={handleDelete} />
+          <LibraryCard key={entry.id} entry={entry} onDelete={handleDelete} onUpdate={handleUpdateEntry} />
         ))
       )}
 
