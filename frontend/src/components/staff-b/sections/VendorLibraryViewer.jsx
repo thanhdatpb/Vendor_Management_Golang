@@ -55,7 +55,6 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
         <thead>
           <tr>
             <th style={{ ...TH(), width: 44 }}>Product Type</th>
-            {!readOnly && <th style={{ ...TH(), width: 60 }}>Thao tác</th>}
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Chi tiết Size</th>
@@ -63,6 +62,7 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
             <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>AVG Thời gian (Thực tế)</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 240 }}>Notes</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Link Folder</th>
+            {!readOnly && <th style={{ ...TH(), width: 60 }}>Thao tác</th>}
           </tr>
         </thead>
         <tbody>
@@ -71,18 +71,6 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
             return (
               <tr key={i}>
                 <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
-                {!readOnly && (
-                  <td style={{ ...TD(i), textAlign: 'center' }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <button onClick={() => saveEdit(i)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
-                        <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
-                    )}
-                  </td>
-                )}
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -120,6 +108,18 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
                     r.linkFolder ? <a href={r.linkFolder} target="_blank" rel="noreferrer" style={{ color: HC.orangeDark, textDecoration: 'underline', wordBreak: 'break-all' }}>{r.linkFolder}</a> : <span style={{ color: HC.muted2 }}>—</span>
                   )}
                 </td>
+                {!readOnly && (
+                  <td style={{ ...TD(i), textAlign: 'center' }}>
+                    {isEditing ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <button onClick={() => saveEdit(i)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
+                        <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
+                    )}
+                  </td>
+                )}
               </tr>
             );
           })}
