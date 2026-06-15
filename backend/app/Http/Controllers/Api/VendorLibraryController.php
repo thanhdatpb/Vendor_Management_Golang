@@ -10,21 +10,26 @@ class VendorLibraryController extends Controller
 {
     private $filePath = 'vendor_library.json';
 
-    public function getLibrary()
+    public function getLibrary(Request $request)
     {
-        if (!Storage::exists($this->filePath)) {
+        $mode = $request->query('mode', 'all');
+        $fileName = $mode === 'new_products' ? 'vendor_library_new.json' : 'vendor_library.json';
+
+        if (!Storage::exists($fileName)) {
             return response()->json([]);
         }
 
-        $data = Storage::get($this->filePath);
+        $data = Storage::get($fileName);
         return response($data)->header('Content-Type', 'application/json');
     }
 
     public function saveLibrary(Request $request)
     {
+        $mode = $request->query('mode', 'all');
+        $fileName = $mode === 'new_products' ? 'vendor_library_new.json' : 'vendor_library.json';
+
         $data = $request->all();
-        // Since $data could be an array of files
-        Storage::put($this->filePath, json_encode($data));
+        Storage::put($fileName, json_encode($data));
 
         return response()->json(['message' => 'Library saved successfully']);
     }

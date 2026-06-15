@@ -18,6 +18,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   };
 
   const [vendorList, setVendorList] = useState([]);
+  const [excelVendors, setExcelVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState('');
   const [vForm, setVForm] = useState(EMPTY_VENDOR);
@@ -96,8 +97,32 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
 
   const handleAssignVendor = () => {
-    if (selectedIds.size === 0) { alert('Vui lòng chọn ít nhất 1 vendor!'); return; }
-    const selected = vendorList.filter(v => selectedIds.has(v.id));
+    if (selectedIds.size === 0) return;
+    
+    let selected = vendorList.filter(v => selectedIds.has(v.id));
+    
+    if (activeTab === 'all') {
+      const excelSelected = [];
+      excelVendors.forEach(file => {
+        if (file.generalInfo) {
+          const matched = file.generalInfo.filter(r => selectedIds.has(r.id));
+          matched.forEach(m => {
+            excelSelected.push({
+              id: m.id,
+              name: m.kyHieu || 'Excel Vendor',
+              product_type: m.kyHieu || '',
+              vendor_type: 'New',
+              overview: m.chatLieu || '',
+              size: m.chiTietSize || '',
+              media_url: (m.images && m.images.length > 0) ? m.images[0] : '',
+              is_excel: true
+            });
+          });
+        }
+      });
+      selected = excelSelected;
+    }
+
     const productId = filterProductId;
     if (!productId) { alert('Không xác định được sản phẩm.'); return; }
     const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = selected; lsSet(LS_PRODUCT_VENDORS, all);
@@ -509,10 +534,30 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         <TabButton id="bestseller" label="Best Seller" icon="⭐" />
       </div>
 
-      {/* ── Thư Viện File tab (now Sản phẩm mới) ───────────────────────── */}
-      {activeTab === 'new_products' && <VendorLibraryViewer />}
+      {/* ── Thư Viện File tab (now Tất cả Vendor và Sản phẩm mới) ───────────────────────── */}
+      {activeTab === 'new_products' && <VendorLibraryViewer mode="new_products" />}
+      {activeTab === 'all' && (
+        <>
+          {filterProductType && (
+            <div style={{ marginBottom: 14, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,#e0f2fe,#bae6fd)`, border: `1.5px solid #38bdf8`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🔍</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900, fontSize: 13, color: '#0369a1' }}>Đang tìm vendor cho: <span style={{ color: '#0c4a6e' }}>"{filterProductType}"</span></div>
+                <div style={{ fontSize: 11, color: '#075985', marginTop: 2 }}>Tích chọn dòng trong file Excel rồi nhấn <b>Gán Vendor</b></div>
+              </div>
+              {selectedIds.size > 0 && filterProductId && (
+                <button onClick={handleAssignVendor} style={{ padding: '8px 16px', borderRadius: 8, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+                  ✅ Gán {selectedIds.size} Vendor
+                </button>
+              )}
+              <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #0284c7`, background: '#fff', color: '#0284c7', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
+            </div>
+          )}
+          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onLibraryLoaded={setExcelVendors} />
+        </>
+      )}
 
-      {(activeTab === 'all' || activeTab === 'bestseller') && filterProductType && (
+      {activeTab === 'bestseller' && filterProductType && (
         <div style={{ marginBottom: 14, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,${HC.orangeLight},${HC.orangeMid})`, border: `1.5px solid ${HC.orange}`, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18 }}>🔍</span>
           <div style={{ flex: 1 }}>
@@ -523,7 +568,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         </div>
       )}
 
-      {(activeTab === 'all' || activeTab === 'bestseller') && (
+      {activeTab === 'bestseller' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ fontWeight: 900, fontSize: 15, color: activeTab === 'bestseller' ? HC.gold : HC.ink, fontFamily: "'Nunito',sans-serif" }}>
@@ -570,7 +615,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       </div>
       )}
 
-      {(activeTab === 'all' || activeTab === 'bestseller') && selectedIds.size > 0 && (
+      {activeTab === 'bestseller' && selectedIds.size > 0 && (
         <div style={{ marginBottom: 12, padding: '10px 16px', borderRadius: 12, background: '#ecfdf5', border: '1.5px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 900, color: HC.success }}>✓ Đã chọn {uniqueSelectedCount} vendor</span>
           <button onClick={() => setSelectedIds(new Set())} style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${HC.success}`, background: 'transparent', color: HC.success, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Bỏ chọn tất cả</button>
@@ -578,7 +623,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         </div>
       )}
 
-      {(activeTab === 'all' || activeTab === 'bestseller') && (loading ? <Spinner /> : filteredVendors.length === 0 && !vendorModalOpen ? (
+      {activeTab === 'bestseller' && (loading ? <Spinner /> : filteredVendors.length === 0 && !vendorModalOpen ? (
         <EmptyState msg={activeTab === 'bestseller' ? <span>Chưa có Best Seller vendor nào. Nhấn <b style={{ color: HC.gold }}>⭐ Tạo Best Seller</b> để bắt đầu.</span> : <span>Chưa có vendor. Nhấn <b style={{ color: HC.orange }}>Import</b> để bắt đầu.</span>} />
       ) : filteredVendors.length > 0 && (
         <div style={{ borderRadius: 16, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.border}`, boxShadow: activeTab === 'bestseller' ? '0 8px 32px rgba(212,160,23,0.15)' : HC.shadow, overflow: 'hidden' }}>

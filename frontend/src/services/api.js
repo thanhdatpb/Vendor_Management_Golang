@@ -335,8 +335,8 @@ export const vendorApi = {
 };
 
 export const vendorLibraryApi = {
-  get: () => api.get('/vendor-library'),
-  save: (data) => api.post('/vendor-library', data),
+  get: (mode = 'all') => api.get(`/vendor-library?mode=${mode}`),
+  save: (data, mode = 'all') => api.post(`/vendor-library?mode=${mode}`, data),
 };
 
 

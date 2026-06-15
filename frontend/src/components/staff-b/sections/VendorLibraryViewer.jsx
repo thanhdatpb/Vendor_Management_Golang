@@ -23,7 +23,7 @@ const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` 
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
 // ── Section 1 Table ──────────────────────────────────────────────────────────
-function GeneralInfoTable({ rows, onSave, readOnly }) {
+function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
 
@@ -54,6 +54,8 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
         <thead>
           <tr>
+            {selectable && <th style={{ ...TH(), width: 36, textAlign: 'center' }}>✓</th>}
+            {selectable && <th style={{ ...TH(), width: 60, textAlign: 'center' }}>ID</th>}
             <th style={{ ...TH(), width: 44 }}>Product Type</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
@@ -70,6 +72,12 @@ function GeneralInfoTable({ rows, onSave, readOnly }) {
             const isEditing = editIdx === i;
             return (
               <tr key={i}>
+                {selectable && (
+                  <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer' }} onClick={() => onSelectRow(r.id)}>
+                    <input type="checkbox" checked={selectedIds?.has(r.id)} onChange={() => onSelectRow(r.id)} style={{ cursor: 'pointer' }} />
+                  </td>
+                )}
+                {selectable && <td style={{ ...TD(i), textAlign: 'center', fontWeight: 900, color: HC.muted, fontSize: 11 }}>{r.id ? r.id.split('-').slice(1).join('-') : '—'}</td>}
                 <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
@@ -189,7 +197,7 @@ function PricingTable({ rows }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, onDelete, onUpdate, readOnly }) {
+function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
 
@@ -268,7 +276,7 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly }) {
 
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
-            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} />}
+            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} />}
             {activeSection === 'pricing' && <PricingTable rows={entry.pricing} />}
           </div>
         </div>
@@ -278,7 +286,7 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer({ readOnly = false }) {
+export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onLibraryLoaded }) {
   const [libraryFiles, setLibraryFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -289,8 +297,40 @@ export default function VendorLibraryViewer({ readOnly = false }) {
 
   const fetchLibrary = useCallback(async () => {
     try {
-      const res = await vendorLibraryApi.get();
-      setLibraryFiles(Array.isArray(res.data) ? res.data : []);
+      const res = await vendorLibraryApi.get(mode);
+      let data = Array.isArray(res.data) ? res.data : [];
+
+      if (readOnly && mode === 'all') {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const MOCK_PRODUCTS = JSON.parse(localStorage.getItem('MOCK_PRODUCTS') || '[]');
+        
+        const myProductIds = new Set();
+        MOCK_PRODUCTS.forEach(p => {
+          if (user.role === 'admin' || p.seller_name === user.sellerName || p.project === user.project) {
+            myProductIds.add(String(p.id));
+          }
+        });
+
+        const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
+        const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
+        const assignedIds = new Set();
+        
+        Object.entries(assigned).forEach(([pId, list]) => {
+          if (myProductIds.has(String(pId))) {
+            list.forEach(v => {
+              if (v.is_excel) assignedIds.add(v.id);
+            });
+          }
+        });
+
+        data = data.map(file => {
+          if (!file.generalInfo) return file;
+          return { ...file, generalInfo: file.generalInfo.filter(r => assignedIds.has(r.id)) };
+        }).filter(file => file.generalInfo && file.generalInfo.length > 0);
+      }
+
+      setLibraryFiles(data);
+      if (onLibraryLoaded) onLibraryLoaded(data);
     } catch (err) {
       console.error('Error fetching vendor library:', err);
     } finally {
@@ -304,8 +344,9 @@ export default function VendorLibraryViewer({ readOnly = false }) {
 
   const saveLibrary = async (newData) => {
     try {
-      await vendorLibraryApi.save(newData);
+      await vendorLibraryApi.save(newData, mode);
       setLibraryFiles(newData);
+      if (onLibraryLoaded) onLibraryLoaded(newData);
     } catch (err) {
       console.error('Error saving vendor library:', err);
       alert('Có lỗi xảy ra khi lưu dữ liệu!');
@@ -481,7 +522,7 @@ export default function VendorLibraryViewer({ readOnly = false }) {
         </div>
       ) : (
         libraryFiles.map(entry => (
-          <LibraryCard key={entry.id} entry={entry} onDelete={handleDelete} onUpdate={handleUpdateEntry} readOnly={readOnly} />
+          <LibraryCard key={entry.id} entry={entry} onDelete={handleDelete} onUpdate={handleUpdateEntry} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} />
         ))
       )}
 
