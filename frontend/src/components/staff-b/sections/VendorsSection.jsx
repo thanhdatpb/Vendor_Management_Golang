@@ -20,6 +20,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [vendorList, setVendorList] = useState([]);
   const [excelVendors, setExcelVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
   const [toast, setToast] = useState(null);
   const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
   const [vForm, setVForm] = useState(EMPTY_VENDOR);
