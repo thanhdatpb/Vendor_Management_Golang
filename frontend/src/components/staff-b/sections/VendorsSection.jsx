@@ -505,13 +505,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
         <TabButton id="all" label="Tất cả Vendor" icon="📚" />
+        <TabButton id="new_products" label="Sản phẩm mới" icon="🆕" />
         <TabButton id="bestseller" label="Best Seller" icon="⭐" />
       </div>
 
-      {/* ── Thư Viện File tab (now Tất cả Vendor) ───────────────────────── */}
-      {activeTab === 'all' && <VendorLibraryViewer />}
+      {/* ── Thư Viện File tab (now Sản phẩm mới) ───────────────────────── */}
+      {activeTab === 'new_products' && <VendorLibraryViewer />}
 
-      {activeTab === 'bestseller' && filterProductType && (
+      {(activeTab === 'all' || activeTab === 'bestseller') && filterProductType && (
         <div style={{ marginBottom: 14, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,${HC.orangeLight},${HC.orangeMid})`, border: `1.5px solid ${HC.orange}`, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18 }}>🔍</span>
           <div style={{ flex: 1 }}>
@@ -522,7 +523,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         </div>
       )}
 
-      {activeTab === 'bestseller' && (
+      {(activeTab === 'all' || activeTab === 'bestseller') && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ fontWeight: 900, fontSize: 15, color: activeTab === 'bestseller' ? HC.gold : HC.ink, fontFamily: "'Nunito',sans-serif" }}>
@@ -569,7 +570,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       </div>
       )}
 
-      {activeTab === 'bestseller' && selectedIds.size > 0 && (
+      {(activeTab === 'all' || activeTab === 'bestseller') && selectedIds.size > 0 && (
         <div style={{ marginBottom: 12, padding: '10px 16px', borderRadius: 12, background: '#ecfdf5', border: '1.5px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 900, color: HC.success }}>✓ Đã chọn {uniqueSelectedCount} vendor</span>
           <button onClick={() => setSelectedIds(new Set())} style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${HC.success}`, background: 'transparent', color: HC.success, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Bỏ chọn tất cả</button>
@@ -577,7 +578,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         </div>
       )}
 
-      {activeTab === 'bestseller' && (loading ? <Spinner /> : filteredVendors.length === 0 && !vendorModalOpen ? (
+      {(activeTab === 'all' || activeTab === 'bestseller') && (loading ? <Spinner /> : filteredVendors.length === 0 && !vendorModalOpen ? (
         <EmptyState msg={activeTab === 'bestseller' ? <span>Chưa có Best Seller vendor nào. Nhấn <b style={{ color: HC.gold }}>⭐ Tạo Best Seller</b> để bắt đầu.</span> : <span>Chưa có vendor. Nhấn <b style={{ color: HC.orange }}>Import</b> để bắt đầu.</span>} />
       ) : filteredVendors.length > 0 && (
         <div style={{ borderRadius: 16, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.border}`, boxShadow: activeTab === 'bestseller' ? '0 8px 32px rgba(212,160,23,0.15)' : HC.shadow, overflow: 'hidden' }}>
