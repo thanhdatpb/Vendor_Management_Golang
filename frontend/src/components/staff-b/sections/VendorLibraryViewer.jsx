@@ -55,7 +55,6 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
         <thead>
           <tr>
             {selectable && <th style={{ ...TH(), width: 36, textAlign: 'center' }}>✓</th>}
-            {selectable && <th style={{ ...TH(), width: 60, textAlign: 'center' }}>ID</th>}
             <th style={{ ...TH(), width: 44 }}>Product Type</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
@@ -77,7 +76,6 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                     <input type="checkbox" checked={selectedIds?.has(r.id)} onChange={() => onSelectRow(r.id)} style={{ cursor: 'pointer' }} />
                   </td>
                 )}
-                {selectable && <td style={{ ...TD(i), textAlign: 'center', fontWeight: 900, color: HC.muted, fontSize: 11 }}>{r.id ? r.id.split('-').slice(1).join('-') : '—'}</td>}
                 <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
