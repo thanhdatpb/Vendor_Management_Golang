@@ -858,18 +858,18 @@ export default function SetupPriceSection() {
         )}
       </div>
 
-      {/* Bảng Vendor từ Staff B gán */}
+      {/* Bảng Vendor từ Uyên Hồ gán */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})` }} />
-          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>🏪 Vendor từ Staff B gán</div>
+          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>🏪 Vendor từ Uyên Hồ gán</div>
           <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filteredAssignedList.length} vendor</span>
         </div>
         {filteredAssignedList.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 12, border: `1px solid ${HC.border}` }}>
             <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.5 }}>🏪</div>
-            <div style={{ fontWeight: 600, color: HC.muted }}>Chưa có vendor nào được Staff B gán và duyệt</div>
-            <div style={{ fontSize: 12, color: HC.muted2, marginTop: 4 }}>Vui lòng chờ Staff B gán vendor cho sản phẩm</div>
+            <div style={{ fontWeight: 600, color: HC.muted }}>Chưa có vendor nào được Uyên Hồ gán và duyệt</div>
+            <div style={{ fontSize: 12, color: HC.muted2, marginTop: 4 }}>Vui lòng chờ Uyên Hồ gán vendor cho sản phẩm</div>
           </div>
         ) : (
           <>
