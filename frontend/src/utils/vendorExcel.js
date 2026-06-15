@@ -428,13 +428,17 @@ export async function parseHappyCreativeLibrary(file) {
             if (row.every(c => cellStr(c) === '')) continue;
             
             const originalKyHieu = cellStr(row[col_kyHieu]);
-            const kyHieuLower = originalKyHieu.toLowerCase();
+            const kyHieuLower = originalKyHieu.toLowerCase().trim();
             
             // Bỏ qua các dòng trống hoặc dòng header trùng lặp
             if (!originalKyHieu || kyHieuLower.includes('thông tin') || kyHieuLower.includes('product type')) continue;
 
             // Nếu gặp tiêu đề của phần 2 ("Về giá") thì dừng đọc Section 1
-            if (kyHieuLower.includes('về giá') || kyHieuLower.includes('ve gia')) break;
+            const isPricingSection = row.some(cell => {
+              const str = cellStr(cell).toLowerCase().trim();
+              return str === 'về giá' || str === 've gia' || str.includes('về giá') || str.includes('ve gia');
+            });
+            if (isPricingSection) break;
 
             // Trích xuất hình ảnh từ cell formula (nếu có `=IMAGE("url")`) hoặc từ URL trực tiếp
             const images = [];

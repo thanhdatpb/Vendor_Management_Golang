@@ -6,7 +6,7 @@ import VendorLibraryViewer from '../staff-b/sections/VendorLibraryViewer';
 export default function VendorsSection() {
   return (
     <div>
-      <VendorLibraryViewer />
+      <VendorLibraryViewer readOnly={true} />
     </div>
   );
 }

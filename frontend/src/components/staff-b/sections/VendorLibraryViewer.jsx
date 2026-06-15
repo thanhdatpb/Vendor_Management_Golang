@@ -31,7 +31,7 @@ const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` 
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
 // ── Section 1 Table ──────────────────────────────────────────────────────────
-function GeneralInfoTable({ rows, onSave }) {
+function GeneralInfoTable({ rows, onSave, readOnly }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
 
@@ -63,7 +63,7 @@ function GeneralInfoTable({ rows, onSave }) {
         <thead>
           <tr>
             <th style={{ ...TH(), width: 44 }}>Ký hiệu</th>
-            <th style={{ ...TH(), width: 60 }}>Thao tác</th>
+            {!readOnly && <th style={{ ...TH(), width: 60 }}>Thao tác</th>}
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Chi tiết Size</th>
@@ -79,16 +79,18 @@ function GeneralInfoTable({ rows, onSave }) {
             return (
               <tr key={i}>
                 <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
-                <td style={{ ...TD(i), textAlign: 'center' }}>
-                  {isEditing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <button onClick={() => saveEdit(i)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
-                      <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
-                  )}
-                </td>
+                {!readOnly && (
+                  <td style={{ ...TD(i), textAlign: 'center' }}>
+                    {isEditing ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <button onClick={() => saveEdit(i)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
+                        <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
+                    )}
+                  </td>
+                )}
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -188,7 +190,7 @@ function PricingTable({ rows }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, onDelete, onUpdate }) {
+function LibraryCard({ entry, onDelete, onUpdate, readOnly }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
 
@@ -230,11 +232,13 @@ function LibraryCard({ entry, onDelete, onUpdate }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
-            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.4)', background: 'rgba(220,38,38,0.15)', color: '#fca5a5', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
-            title="Xóa file này"
-          >🗑 Xóa</button>
+          {!readOnly && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.4)', background: 'rgba(220,38,38,0.15)', color: '#fca5a5', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              title="Xóa file này"
+            >🗑 Xóa</button>
+          )}
           <span style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', transition: 'transform 0.2s', transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▾</span>
         </div>
       </div>
@@ -265,7 +269,7 @@ function LibraryCard({ entry, onDelete, onUpdate }) {
 
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
-            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} />}
+            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} />}
             {activeSection === 'pricing' && <PricingTable rows={entry.pricing} />}
           </div>
         </div>
@@ -275,7 +279,7 @@ function LibraryCard({ entry, onDelete, onUpdate }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer() {
+export default function VendorLibraryViewer({ readOnly = false }) {
   const [libraryFiles, setLibraryFiles] = useState(() => lsGetLibrary());
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState([]);
@@ -400,20 +404,22 @@ export default function VendorLibraryViewer() {
             {libraryFiles.length} file
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {libraryFiles.length > 0 && (
-            <button onClick={handleClearAll} style={{ padding: '9px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#dc2626', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-              🗑 Xóa tất cả
+        {!readOnly && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {libraryFiles.length > 0 && (
+              <button onClick={handleClearAll} style={{ padding: '9px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#dc2626', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                🗑 Xóa tất cả
+              </button>
+            )}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: importing ? HC.muted2 : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 12, fontWeight: 800, cursor: importing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              {importing ? '⟳ Đang import...' : '📥 Import thư viện Excel'}
             </button>
-          )}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: importing ? HC.muted2 : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 12, fontWeight: 800, cursor: importing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-          >
-            {importing ? '⟳ Đang import...' : '📥 Import thư viện Excel'}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Import hint */}
@@ -436,17 +442,21 @@ export default function VendorLibraryViewer() {
         <div style={{ padding: '60px 40px', textAlign: 'center', background: HC.surface, borderRadius: 16, border: `1.5px dashed ${HC.border}` }}>
           <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>📚</div>
           <div style={{ fontWeight: 700, fontSize: 15, color: HC.muted, marginBottom: 8 }}>Chưa có file thư viện nào</div>
-          <div style={{ fontSize: 12, color: HC.muted2, marginBottom: 24 }}>Nhấn <b style={{ color: HC.orangeDark }}>Import thư viện Excel</b> để import file Happy Creative format</div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            style={{ padding: '11px 28px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
-          >
-            📥 Import thư viện Excel
-          </button>
+          {!readOnly && (
+            <>
+              <div style={{ fontSize: 12, color: HC.muted2, marginBottom: 24 }}>Nhấn <b style={{ color: HC.orangeDark }}>Import thư viện Excel</b> để import file Happy Creative format</div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{ padding: '11px 28px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
+              >
+                📥 Import thư viện Excel
+              </button>
+            </>
+          )}
         </div>
       ) : (
         libraryFiles.map(entry => (
-          <LibraryCard key={entry.id} entry={entry} onDelete={handleDelete} onUpdate={handleUpdateEntry} />
+          <LibraryCard key={entry.id} entry={entry} onDelete={handleDelete} onUpdate={handleUpdateEntry} readOnly={readOnly} />
         ))
       )}
 
