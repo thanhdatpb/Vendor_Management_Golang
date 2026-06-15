@@ -2,18 +2,10 @@
 //  VENDOR LIBRARY VIEWER — Thư Viện File (Happy Creative Format)
 //  Mỗi file Excel import → lưu localStorage → hiển thị thành card riêng
 // ════════════════════════════════════════════════════════════════════════════
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary } from '../../../utils/vendorExcel';
-
-const LS_KEY = 'VENDOR_LIBRARY_FILES_V1';
-
-const lsGetLibrary = () => {
-  try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : []; } catch { return []; }
-};
-const lsSetLibrary = (data) => {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch {}
-};
+import { vendorLibraryApi } from '../../../services/api';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -287,11 +279,37 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function VendorLibraryViewer({ readOnly = false }) {
-  const [libraryFiles, setLibraryFiles] = useState(() => lsGetLibrary());
+  const [libraryFiles, setLibraryFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState([]);
   const [toast, setToast] = useState(null);
   const fileInputRef = useRef(null);
+
+  const fetchLibrary = useCallback(async () => {
+    try {
+      const res = await vendorLibraryApi.get();
+      setLibraryFiles(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Error fetching vendor library:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLibrary();
+  }, [fetchLibrary]);
+
+  const saveLibrary = async (newData) => {
+    try {
+      await vendorLibraryApi.save(newData);
+      setLibraryFiles(newData);
+    } catch (err) {
+      console.error('Error saving vendor library:', err);
+      alert('Có lỗi xảy ra khi lưu dữ liệu!');
+    }
+  };
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -329,14 +347,10 @@ export default function VendorLibraryViewer({ readOnly = false }) {
     }
 
     if (newEntries.length > 0) {
-      setLibraryFiles(prev => {
-        // Tránh trùng tên file — cập nhật nếu đã có
-        const map = Object.fromEntries(prev.map(e => [e.filename, e]));
-        newEntries.forEach(ne => { map[ne.filename] = ne; });
-        const updated = Object.values(map);
-        lsSetLibrary(updated);
-        return updated;
-      });
+      const map = Object.fromEntries(libraryFiles.map(e => [e.filename, e]));
+      newEntries.forEach(ne => { map[ne.filename] = ne; });
+      const updated = Object.values(map);
+      await saveLibrary(updated);
       showToast('success', `✅ Import ${newEntries.length} file thành công${errors.length ? `, ${errors.length} lỗi` : ''}`);
     }
 
@@ -346,31 +360,24 @@ export default function VendorLibraryViewer({ readOnly = false }) {
 
     setImportErrors(errors);
     setImporting(false);
-  }, []);
+  }, [libraryFiles]);
 
-  const handleDelete = useCallback((id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Xóa file thư viện này?')) return;
-    setLibraryFiles(prev => {
-      const updated = prev.filter(e => e.id !== id);
-      lsSetLibrary(updated);
-      return updated;
-    });
+    const updated = libraryFiles.filter(e => e.id !== id);
+    await saveLibrary(updated);
     showToast('success', '🗑 Đã xóa file thư viện');
-  }, []);
+  };
 
-  const handleUpdateEntry = useCallback((updatedEntry) => {
-    setLibraryFiles(prev => {
-      const updated = prev.map(e => e.id === updatedEntry.id ? updatedEntry : e);
-      lsSetLibrary(updated);
-      return updated;
-    });
-    showToast('success', '💾 Đã lưu thay đổi cục bộ');
-  }, []);
+  const handleUpdateEntry = async (updatedEntry) => {
+    const updated = libraryFiles.map(e => e.id === updatedEntry.id ? updatedEntry : e);
+    await saveLibrary(updated);
+    showToast('success', '💾 Đã lưu thay đổi');
+  };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (!window.confirm(`Xóa toàn bộ ${libraryFiles.length} file thư viện? Hành động không thể hoàn tác.`)) return;
-    setLibraryFiles([]);
-    lsSetLibrary([]);
+    await saveLibrary([]);
     showToast('success', '🗑 Đã xóa toàn bộ thư viện');
   };
 
@@ -445,7 +452,9 @@ export default function VendorLibraryViewer({ readOnly = false }) {
       )}
 
       {/* Library list */}
-      {libraryFiles.length === 0 ? (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>
+      ) : libraryFiles.length === 0 ? (
         <div style={{ padding: '60px 40px', textAlign: 'center', background: HC.surface, borderRadius: 16, border: `1.5px dashed ${HC.border}` }}>
           <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>📚</div>
           <div style={{ fontWeight: 700, fontSize: 15, color: HC.muted, marginBottom: 8 }}>Chưa có file thư viện nào</div>
