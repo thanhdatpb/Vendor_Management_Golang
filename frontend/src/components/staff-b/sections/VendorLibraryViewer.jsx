@@ -284,6 +284,7 @@ export default function VendorLibraryViewer({ readOnly = false }) {
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState([]);
   const [toast, setToast] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const fileInputRef = useRef(null);
 
   const fetchLibrary = useCallback(async () => {
@@ -362,23 +363,31 @@ export default function VendorLibraryViewer({ readOnly = false }) {
     setImporting(false);
   }, [libraryFiles]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Xóa file thư viện này?')) return;
-    const updated = libraryFiles.filter(e => e.id !== id);
-    await saveLibrary(updated);
-    showToast('success', '🗑 Đã xóa file thư viện');
+  const handleDelete = (id) => {
+    setDeleteConfirm({ type: 'single', id });
+  };
+
+  const handleClearAll = () => {
+    setDeleteConfirm({ type: 'all' });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === 'all') {
+      await saveLibrary([]);
+      showToast('success', '🗑 Đã xóa toàn bộ thư viện');
+    } else if (deleteConfirm.type === 'single') {
+      const updated = libraryFiles.filter(e => e.id !== deleteConfirm.id);
+      await saveLibrary(updated);
+      showToast('success', '🗑 Đã xóa file thư viện');
+    }
+    setDeleteConfirm(null);
   };
 
   const handleUpdateEntry = async (updatedEntry) => {
     const updated = libraryFiles.map(e => e.id === updatedEntry.id ? updatedEntry : e);
     await saveLibrary(updated);
     showToast('success', '💾 Đã lưu thay đổi');
-  };
-
-  const handleClearAll = async () => {
-    if (!window.confirm(`Xóa toàn bộ ${libraryFiles.length} file thư viện? Hành động không thể hoàn tác.`)) return;
-    await saveLibrary([]);
-    showToast('success', '🗑 Đã xóa toàn bộ thư viện');
   };
 
   return (
@@ -476,8 +485,27 @@ export default function VendorLibraryViewer({ readOnly = false }) {
         ))
       )}
 
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
+          <div style={{ background: '#fff', padding: 24, borderRadius: 12, width: 400, boxShadow: HC.shadowStrong, animation: 'scaleIn 0.2s ease-out' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: 18, color: '#dc2626', fontFamily: "'Nunito',sans-serif" }}>Xác nhận xóa</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted, lineHeight: 1.5 }}>
+              {deleteConfirm.type === 'all' 
+                ? `Bạn có chắc chắn muốn xóa toàn bộ ${libraryFiles.length} file thư viện? Hành động này không thể hoàn tác.`
+                : 'Bạn có chắc chắn muốn xóa file thư viện này? Hành động này không thể hoàn tác.'}
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeleteConfirm(null)} style={{ padding: '8px 16px', borderRadius: 8, background: HC.surface, border: `1px solid ${HC.border}`, color: HC.ink, cursor: 'pointer', fontWeight: 700 }}>Hủy</button>
+              <button onClick={executeDelete} style={{ padding: '8px 16px', borderRadius: 8, background: '#dc2626', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>Xác nhận xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
       `}</style>
     </div>
   );
