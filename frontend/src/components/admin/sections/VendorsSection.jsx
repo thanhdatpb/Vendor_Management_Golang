@@ -9,15 +9,15 @@ export default function VendorsSection() {
     <button
       onClick={() => setActiveTab(id)}
       style={{
-        padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: activeTab === id ? 900 : 700,
-        background: activeTab === id ? `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})` : HC.surface,
-        color: activeTab === id ? '#fff' : HC.muted,
-        boxShadow: activeTab === id ? '0 4px 12px rgba(234,88,12,0.3)' : 'none',
-        transition: 'all 0.2s', fontFamily: "'Nunito',sans-serif",
+        padding: '10px 24px', borderRadius: 12, border: `2px solid ${activeTab === id ? (id === 'best_seller' ? '#D4A017' : HC.orange) : HC.border}`,
+        background: activeTab === id ? (id === 'best_seller' ? '#FDF5E6' : HC.orangeLight) : HC.surface,
+        color: activeTab === id ? (id === 'best_seller' ? '#D4A017' : HC.orangeDark) : HC.muted,
+        fontSize: 13, fontWeight: activeTab === id ? 900 : 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s'
       }}
+      onMouseEnter={e => { if (activeTab !== id) e.currentTarget.style.background = HC.orangePale || '#FFFBF4'; }}
+      onMouseLeave={e => { if (activeTab !== id) e.currentTarget.style.background = HC.surface; }}
     >
-      <span style={{ fontSize: 16 }}>{icon}</span> {label}
+      {icon && <span style={{ fontSize: 16 }}>{icon}</span>} {label}
     </button>
   );
 
