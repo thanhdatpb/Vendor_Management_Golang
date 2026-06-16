@@ -13,7 +13,13 @@ class VendorLibraryController extends Controller
     public function getLibrary(Request $request)
     {
         $mode = $request->query('mode', 'all');
-        $fileName = $mode === 'new_products' ? 'vendor_library_new.json' : 'vendor_library.json';
+        if ($mode === 'new_products') {
+            $fileName = 'vendor_library_new.json';
+        } elseif ($mode === 'best_seller') {
+            $fileName = 'vendor_library_best.json';
+        } else {
+            $fileName = 'vendor_library.json';
+        }
         $path = storage_path('app/' . $fileName);
 
         if (!file_exists($path)) {
@@ -27,7 +33,13 @@ class VendorLibraryController extends Controller
     public function saveLibrary(Request $request)
     {
         $mode = $request->query('mode', 'all');
-        $fileName = $mode === 'new_products' ? 'vendor_library_new.json' : 'vendor_library.json';
+        if ($mode === 'new_products') {
+            $fileName = 'vendor_library_new.json';
+        } elseif ($mode === 'best_seller') {
+            $fileName = 'vendor_library_best.json';
+        } else {
+            $fileName = 'vendor_library.json';
+        }
         $path = storage_path('app/' . $fileName);
 
         $data = $request->getContent();
