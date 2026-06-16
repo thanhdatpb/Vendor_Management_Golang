@@ -9,11 +9,6 @@ documents/
 # VSCode settings
 .vscode/
 
-start-dev.bat
-start-laravel.bat
-start-servers.bat
-start-servers.ps1
-start-vite.bat
 # Temporary files
 read_excel.js
 excel_output.json
