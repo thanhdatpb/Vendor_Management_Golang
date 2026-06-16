@@ -40,10 +40,10 @@ class UserSeeder extends Seeder {
 
         // ========== 3. DANH SÁCH TÀI KHOẢN STAFF A (SELLER) ==========
         $staffAccounts = [
-            ['email' => 'happyc.seller.creative', 'name' => 'Seller Creative'],
-            ['email' => 'happyc.seller.happy',    'name' => 'Seller Happy'],
-            ['email' => 'happyc.seller.pilot',    'name' => 'Seller Pilot'],
-            ['email' => 'happyc.seller.global',   'name' => 'Seller Global'],
+            ['email' => 'happyc.seller.happy',    'name' => 'Happy Project',    'project' => 'Happy Project'],
+            ['email' => 'happyc.seller.creative', 'name' => 'Creative Project', 'project' => 'Creative Project'],
+            ['email' => 'happyc.seller.global',   'name' => 'Global Project',   'project' => 'Global Project'],
+            ['email' => 'happyc.seller.pilot',    'name' => 'Pilot Project',    'project' => 'Pilot Project'],
         ];
 
         foreach ($staffAccounts as $account) {
@@ -55,6 +55,7 @@ class UserSeeder extends Seeder {
                     'role'       => 'staff_a',
                     'seller_name'=> $account['name'],
                     'full_name'  => $account['name'],
+                    'project'    => $account['project'],
                     'is_active'  => true,
                 ]
             );
