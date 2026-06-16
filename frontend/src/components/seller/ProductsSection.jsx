@@ -591,7 +591,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
-                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : ((user?.project || user?.sellerName || user?.seller_name || user?.name) ? `${user?.project || user?.sellerName || user?.seller_name || user?.name} Request - Product Type` : 'Project Global Request - Product Type')}
+                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : (() => {
+                    const rawName = user?.project || user?.sellerName || user?.seller_name || user?.name || '';
+                    let titleName = 'Project Global';
+                    if (rawName) {
+                      if (rawName.toLowerCase().includes('project')) {
+                        const word = rawName.replace(/project/i, '').trim();
+                        titleName = word ? `Project ${word}` : rawName;
+                      } else {
+                        titleName = rawName;
+                      }
+                    }
+                    return `${titleName} Request - Product Type`;
+                  })()}
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
                   {isEditing ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin để gửi request sản phẩm mới'}
