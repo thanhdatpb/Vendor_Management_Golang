@@ -2,24 +2,42 @@ import { API_BASE_URL } from './constants';
 
 export const getMediaUrls = (product) => {
   if (!product) return [];
+  let urls = [];
+
   if (product.media_urls && Array.isArray(product.media_urls) && product.media_urls.length) {
-    return product.media_urls.map(url =>
+    urls = urls.concat(product.media_urls.map(url =>
       url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
-    );
-  }
-  if (product.media_path) {
+    ));
+  } else if (product.media_path) {
     const full = product.media_path.startsWith('http')
       ? product.media_path
       : `${API_BASE_URL}/storage/${product.media_path.replace(/^\/?storage\//, '')}`;
-    return [full];
-  }
-  if (product.image_url) {
+    urls.push(full);
+  } else if (product.image_url) {
     const full = product.image_url.startsWith('http')
       ? product.image_url
       : `${API_BASE_URL}${product.image_url.startsWith('/') ? '' : '/'}${product.image_url}`;
-    return [full];
+    urls.push(full);
+  } else if (product.media_url) {
+    const full = product.media_url.startsWith('http')
+      ? product.media_url
+      : `${API_BASE_URL}${product.media_url.startsWith('/') ? '' : '/'}${product.media_url}`;
+    urls.push(full);
   }
-  return [];
+
+  if (product.product_type_links && Array.isArray(product.product_type_links)) {
+    urls = urls.concat(product.product_type_links);
+  } else if (product.product_type_link) {
+    urls.push(product.product_type_link);
+  } else if (typeof product.product_type_links === 'string') {
+    try {
+      urls = urls.concat(JSON.parse(product.product_type_links));
+    } catch {
+      urls.push(product.product_type_links);
+    }
+  }
+
+  return [...new Set(urls)].filter(url => typeof url === 'string' && url.trim() !== '');
 };
 
 export const fmtDate = iso => {
