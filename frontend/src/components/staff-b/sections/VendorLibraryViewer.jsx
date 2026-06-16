@@ -507,15 +507,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>📚</div>
           <div style={{ fontWeight: 700, fontSize: 15, color: HC.muted, marginBottom: 8 }}>Chưa có file thư viện nào</div>
           {!readOnly && (
-            <>
-              <div style={{ fontSize: 12, color: HC.muted2, marginBottom: 24 }}>Nhấn <b style={{ color: HC.orangeDark }}>Import thư viện Excel</b> để import file Happy Creative format</div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{ padding: '11px 28px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
-              >
-                📥 Import thư viện Excel
-              </button>
-            </>
+            <div style={{ fontSize: 12, color: HC.muted2, marginBottom: 24 }}>Nhấn nút <b style={{ color: HC.orangeDark }}>Import thư viện Excel</b> ở góc phải để import file</div>
           )}
         </div>
       ) : (
