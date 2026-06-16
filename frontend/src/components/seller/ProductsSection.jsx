@@ -249,8 +249,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     if (!form.other_packaging?.trim()) {
       errors.other_packaging = 'Vui lòng nhập other packaging';
     }
-    if (form.mediaFiles.length === 0 && previewUrls.length === 0) {
-      errors.media = 'Vui lòng chọn ít nhất 1 file media';
+    if (!form.product_type_links || form.product_type_links.length === 0) {
+      errors.product_type_links = 'Vui lòng cung cấp ít nhất 1 link sản phẩm';
     }
 
     setFormErrors(errors);
@@ -591,7 +591,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
-                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : (user?.project ? `${user.project} Request - Product Type` : 'Project Global Request - Product Type')}
+                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : ((user?.project || user?.sellerName || user?.seller_name || user?.name) ? `${user?.project || user?.sellerName || user?.seller_name || user?.name} Request - Product Type` : 'Project Global Request - Product Type')}
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
                   {isEditing ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin để gửi request sản phẩm mới'}
@@ -617,36 +617,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="1.1 Ảnh/Video đính kèm (Bắt buộc ít nhất 1 link hoặc file)" required error={formErrors.media}>
-                  <input
-                    type="file"
-                    accept="image/*,video/mp4,video/webm"
-                    multiple
-                    onChange={handleFileChange}
-                    style={{
-                      ...inp,
-                      padding: '7px 10px',
-                      cursor: 'pointer',
-                      borderColor: formErrors.media ? HC.danger : HC.border
-                    }}
-                  />
-                  {previewUrls.length > 0 && (
-                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {previewUrls.map((url, idx) => (
-                        <div key={idx} style={{ position: 'relative', width: 70, height: 70, borderRadius: 8, overflow: 'hidden', border: `1px solid ${HC.border}`, background: '#2a1a00' }}>
-                          {url.match(/\.(mp4|webm|mov)$/i) || url.includes('video') ? (
-                            <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          )}
-                          <button type="button" onClick={() => removeFile(idx)} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 10 }}><DeleteOutlined /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Field>
-
+              <div style={{ marginBottom: 16 }}>
                 <Field label="1.1 Link hình ảnh và video (Nhiều link, sau mỗi link bấm enter)" required error={formErrors.product_type_links}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input
