@@ -17,6 +17,29 @@ use App\Http\Controllers\UserController;
 |--------------------------------------------------------------------------
 */
 
+// =========================
+// DEMO DATA CLEAR ROUTE
+// =========================
+Route::get('/clear-demo-data', function () {
+    \App\Models\Product::truncate();
+    \App\Models\Notification::truncate();
+    
+    // Xóa file ảnh upload cũ
+    $files = \Illuminate\Support\Facades\Storage::disk('public')->files('products');
+    \Illuminate\Support\Facades\Storage::disk('public')->delete($files);
+    
+    // Xóa dữ liệu thư viện vendor 
+    \Illuminate\Support\Facades\Storage::delete([
+        'vendor_library.json', 
+        'vendor_library_new.json', 
+        'vendor_library_best.json'
+    ]);
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Đã reset toàn bộ dữ liệu (Sản phẩm, Thông báo, Thư viện Vendor) thành công! Để xóa Thiết lập giá của Seller, vui lòng nhấn F12 -> tab Application -> Local Storage -> Clear và tải lại trang.'
+    ]);
+});
 
 // =========================
 // MEDIA PUBLIC

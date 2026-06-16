@@ -107,6 +107,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       product_type: product.product_type || '',
       mediaFiles: [],
       product_type_links: links,
+      production_time: product.production_time || '',
+      shipping_time: product.shipping_time || '',
+      total_cost: product.total_cost || '',
       other_specs: product.other_specs || '',
       material: product.material || '',
       print_area: product.print_area || '',
@@ -211,13 +214,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     const errors = {};
 
     if (!form.product_type?.trim()) {
-      errors.product_type = 'Vui lòng nhập loại sản phẩm';
+      errors.product_type = 'Vui lòng nhập Product Type';
+    }
+    if (!form.production_time?.trim()) {
+      errors.production_time = 'Vui lòng nhập thời gian sản xuất';
+    }
+    if (!form.shipping_time?.trim()) {
+      errors.shipping_time = 'Vui lòng nhập thời gian ship';
+    }
+    if (!form.total_cost?.trim()) {
+      errors.total_cost = 'Vui lòng nhập Total Cost';
     }
     if (!form.product_type_links || form.product_type_links.length === 0) {
       errors.product_type_links = 'Vui lòng thêm ít nhất 1 link sản phẩm';
-    }
-    if (!form.other_specs?.trim()) {
-      errors.other_specs = 'Vui lòng nhập đặc tính kỹ thuật';
     }
     if (!form.material?.trim()) {
       errors.material = 'Vui lòng nhập chất liệu';
@@ -225,11 +234,20 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     if (!form.print_area?.trim()) {
       errors.print_area = 'Vui lòng nhập vùng in/thiết kế';
     }
+    if (!form.other_specs?.trim()) {
+      errors.other_specs = 'Vui lòng nhập other đặc tính kỹ thuật';
+    }
     if (!form.good_review?.trim()) {
       errors.good_review = 'Vui lòng nhập good review';
     }
     if (!form.bad_review?.trim()) {
       errors.bad_review = 'Vui lòng nhập bad review';
+    }
+    if (!form.packaging_links?.trim()) {
+      errors.packaging_links = 'Vui lòng nhập packaging';
+    }
+    if (!form.other_packaging?.trim()) {
+      errors.other_packaging = 'Vui lòng nhập other packaging';
     }
     if (form.mediaFiles.length === 0 && previewUrls.length === 0) {
       errors.media = 'Vui lòng chọn ít nhất 1 file media';
@@ -317,7 +335,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     setSubmitting(true);
     const data = new FormData();
-    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging']
+    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging', 'production_time', 'shipping_time', 'total_cost']
       .forEach(k => { if (form[k]) data.append(k, form[k]); });
 
     if (form.product_type_links && form.product_type_links.length > 0) {
@@ -350,6 +368,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         bad_review: form.bad_review,
         packaging_links: form.packaging_links,
         other_packaging: form.other_packaging,
+        production_time: form.production_time,
+        shipping_time: form.shipping_time,
+        total_cost: form.total_cost,
         product_type_links: form.product_type_links,
         seller_name: user?.sellerName || user?.seller_name,
         project: user?.project,
@@ -382,13 +403,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       bad_review: form.bad_review,
       packaging_links: form.packaging_links,
       other_packaging: form.other_packaging,
+      production_time: form.production_time,
+      shipping_time: form.shipping_time,
+      total_cost: form.total_cost,
       product_type_links: [...form.product_type_links],
     };
     const savedProductId = editingProduct.id;
 
     setSubmitting(true);
     const data = new FormData();
-    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging']
+    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging', 'production_time', 'shipping_time', 'total_cost']
       .forEach(k => { if (form[k]) data.append(k, form[k]); });
 
     if (form.product_type_links && form.product_type_links.length > 0) {
@@ -439,78 +463,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     } finally { setProcessingId(null); }
   };
 
-  const handleExport = async () => {
-    if (!filteredProducts.length) {
-      showToast('warning', '⚠️ Không có dữ liệu', 'Không có sản phẩm nào để xuất!');
-      return;
-    }
-    showToast('success', '⏳ Đang xuất...', 'Đang tải thư viện Excel, vui lòng chờ...');
-    const d = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
-    await exportProductsToExcel(filteredProducts, productVendors, `products_${d}.xlsx`);
-  };
-
-  const handleImportProductsFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (importFileRef.current) importFileRef.current.value = '';
-    if (!file) return;
-    if (!['xlsx', 'xls', 'csv'].includes(file.name.split('.').pop().toLowerCase())) {
-      showToast('error', '❌ Sai định dạng', 'Vui lòng chọn file .xlsx/.xls/.csv');
-      return;
-    }
-
-    let rows = [];
-    try {
-      rows = await parseSellerProductsExcel(file);
-    } catch (err) {
-      showToast('error', '❌ Lỗi đọc file', err.message || 'Không thể parse file Excel');
-      return;
-    }
-
-    if (!rows.length) {
-      showToast('warning', '⚠️ Không có dữ liệu', 'Không tìm thấy dòng sản phẩm hợp lệ trong file.');
-      return;
-    }
-
-    setSubmitting(true);
-    let ok = 0;
-    const errors = [];
-
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const data = new FormData();
-      data.append('product_type', row.product_type || '');
-      if (row.deadline_date) data.append('deadline_date', row.deadline_date);
-      if (row.other_specs) data.append('other_specs', row.other_specs);
-      if (row.material) data.append('material', row.material);
-      if (row.print_area) data.append('print_area', row.print_area);
-      if (row.good_review) data.append('good_review', row.good_review);
-      if (row.bad_review) data.append('bad_review', row.bad_review);
-      if (row.packaging_links) data.append('packaging_links', row.packaging_links);
-      if (row.other_packaging) data.append('other_packaging', row.other_packaging);
-      if (row.product_type_links?.length) data.append('product_type_links', JSON.stringify(row.product_type_links));
-      if (user?.sellerName || user?.seller_name) data.append('seller_name', user.sellerName || user.seller_name);
-      if (user?.project) data.append('project', user.project);
-
-      try {
-        await productApi.create(data);
-        ok++;
-      } catch (err) {
-        const msg = err.response?.data?.message || err.message || 'Không xác định';
-        errors.push(`Dòng ${i + 1} (${row.product_type || 'N/A'}): ${msg}`);
-      }
-    }
-
-    await loadProducts();
-    setSubmitting(false);
-
-    if (!errors.length) {
-      showToast('success', '✅ Import thành công', `Đã import ${ok}/${rows.length} sản phẩm.`);
-    } else {
-      showToast('warning', '⚠️ Import hoàn tất có lỗi', `Thành công ${ok}/${rows.length}. Kiểm tra alert để xem lỗi.`);
-      alert(`Import có lỗi:\n\n${errors.slice(0, 12).join('\n')}`);
-    }
-  };
-
+  // Removed handleExport and handleImportProductsFile as requested
 
   const filteredProducts = submittedProducts.filter(p => {
     if (user?.project && p.project !== user.project && p.project) return false; // Lọc theo project (nếu có)
@@ -536,22 +489,13 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
   return (
     <div>
-      <input
-        ref={importFileRef}
-        type="file"
-        accept=".xlsx,.xls,.csv"
-        style={{ display: 'none' }}
-        onChange={handleImportProductsFile}
-      />
       {toast && (<div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 380 }}><div style={{ background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : toast.type === 'error' ? `linear-gradient(135deg, ${HC.danger}, #b91c1c)` : `linear-gradient(135deg, ${HC.warning}, #d97706)`, color: '#fff', borderRadius: 12, boxShadow: HC.shadowStrong, overflow: 'hidden' }}><div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ fontSize: 24 }}>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : '⚠️'}</span><div><div style={{ fontWeight: 900, fontSize: 13 }}>{toast.title}</div><div style={{ fontSize: 11, opacity: 0.9 }}>{toast.message}</div></div><button onClick={() => setToast(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16 }}>✕</button></div><div style={{ height: 3, background: 'rgba(255,255,255,0.5)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} /></div></div>)}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ fontSize: 16, fontWeight: 900, color: HC.ink }}>Danh Sách Sản Phẩm</h3>
         <div style={{ display: 'flex', gap: 10 }}>
 
-          <button onClick={() => importFileRef.current?.click()} disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: submitting ? HC.muted2 : HC.warning, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer' }}>{submitting ? 'Đang import...' : 'Import Excel'}</button>
-          <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Xuất Excel{hasFilter && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 999, padding: '1px 6px', fontSize: 10 }}>{filteredProducts.length}</span>}</button>
-          <button onClick={openCreateModal} style={{ padding: '9px 16px', borderRadius: 11, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Tạo Sản Phẩm Mới</button>
+          <button onClick={openCreateModal} style={{ padding: '9px 16px', borderRadius: 11, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Request sản phẩm mới</button>
         </div>
       </div>
 
@@ -647,10 +591,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
-                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : '➕ Thêm sản phẩm mới'}
+                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : (user?.project ? `${user.project} Request - Product Type` : 'Project Global Request - Product Type')}
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
-                  {isEditing ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin để tạo sản phẩm mới'}
+                  {isEditing ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin để gửi request sản phẩm mới'}
                 </div>
               </div>
               <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', fontSize: 18, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -659,10 +603,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             {/* Modal Body */}
             <form onSubmit={isEditing ? handleUpdate : handleSubmit} style={{ padding: '24px' }}>
               <div style={{ marginBottom: 16 }}>
-                <Field label="Product Type" required error={formErrors.product_type}>
+                <Field label="1. Product Type (Ghi rõ tên Product Type - Ví dụ: AOP Sweatshirt)" required error={formErrors.product_type}>
                   <input
                     type="text"
-                    placeholder="VD: Áo thun, Cốc sứ..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.product_type}
                     onChange={fld('product_type')}
                     style={{
@@ -674,7 +618,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="Hình ảnh / Video (nhiều file)" required error={formErrors.media}>
+                <Field label="1.1 Ảnh/Video đính kèm (Bắt buộc ít nhất 1 link hoặc file)" required error={formErrors.media}>
                   <input
                     type="file"
                     accept="image/*,video/mp4,video/webm"
@@ -703,11 +647,11 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   )}
                 </Field>
 
-                <Field label="Product Type Link" required error={formErrors.product_type_links}>
+                <Field label="1.1 Link hình ảnh và video (Nhiều link, sau mỗi link bấm enter)" required error={formErrors.product_type_links}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input
                       type="url"
-                      placeholder="https://example.com"
+                      placeholder="Câu trả lời của bạn"
                       value={tempLink}
                       onChange={e => setTempLink(e.target.value)}
                       onKeyPress={e => e.key === 'Enter' && addLink()}
@@ -754,53 +698,45 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <Field label="1.2 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
+                  <input type="text" placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ ...inp, borderColor: formErrors.production_time ? HC.danger : HC.border }} />
+                </Field>
+                <Field label="1.3 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
+                  <input type="text" placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ ...inp, borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
+                </Field>
+                <Field label="1.4 Total Cost (Bao gồm Base và Shipping cost)" required error={formErrors.total_cost}>
+                  <input type="text" placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ ...inp, borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
+                </Field>
+              </div>
+
               <div style={{ marginBottom: 16 }}>
-                <Field label="Đặc tính kĩ thuật" required error={formErrors.other_specs}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>2. Đặc tính kỹ thuật (Mô tả về đặc tính Product Type)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <Field label="2.1 Chất liệu (Ví dụ: 100% cotton)" required error={formErrors.material}>
+                    <input type="text" placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ ...inp, borderColor: formErrors.material ? HC.danger : HC.border }} />
+                  </Field>
+                  <Field label="2.2 Vùng In/Thiết kế (Ví dụ: 2 vùng in trước và sau)" required error={formErrors.print_area}>
+                    <input type="text" placeholder="Câu trả lời của bạn" value={form.print_area} onChange={fld('print_area')} style={{ ...inp, borderColor: formErrors.print_area ? HC.danger : HC.border }} />
+                  </Field>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <Field label="2.3 Other đặc tính kỹ thuật (Ngoài các thông tin trên)" required error={formErrors.other_specs}>
                   <textarea
-                    placeholder="Mô tả yêu cầu kỹ thuật..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.other_specs}
                     onChange={fld('other_specs')}
-                    style={{
-                      ...inp,
-                      minHeight: 72,
-                      resize: 'vertical',
-                      borderColor: formErrors.other_specs ? HC.danger : HC.border
-                    }}
+                    style={{ ...inp, minHeight: 72, resize: 'vertical', borderColor: formErrors.other_specs ? HC.danger : HC.border }}
                   />
                 </Field>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="Chất liệu" required error={formErrors.material}>
-                  <input
-                    type="text"
-                    placeholder="VD: Cotton 100%..."
-                    value={form.material}
-                    onChange={fld('material')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.material ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-                <Field label="Vùng In/Thiết kế" required error={formErrors.print_area}>
-                  <input
-                    type="text"
-                    placeholder="VD: Ngực trái, Full lưng..."
-                    value={form.print_area}
-                    onChange={fld('print_area')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.print_area ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="Good Review" required error={formErrors.good_review}>
+                <Field label="2.4 Good Review" required error={formErrors.good_review}>
                   <textarea
-                    placeholder="Ưu điểm..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.good_review}
                     onChange={fld('good_review')}
                     style={{
@@ -811,9 +747,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     }}
                   />
                 </Field>
-                <Field label="Bad Review" required error={formErrors.bad_review}>
+                <Field label="2.5 Bad Review" required error={formErrors.bad_review}>
                   <textarea
-                    placeholder="Nhược điểm..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.bad_review}
                     onChange={fld('bad_review')}
                     style={{
@@ -826,31 +762,34 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                <Field label="Packing">
-                  <input
-                    type="text"
-                    placeholder="VD: Túi zip..."
-                    value={form.packaging_links}
-                    onChange={fld('packaging_links')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.packaging_links ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-                <Field label="Other Packing">
-                  <input
-                    type="text"
-                    placeholder="Đóng gói khác..."
-                    value={form.other_packaging}
-                    onChange={fld('other_packaging')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.other_packaging ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>3. Packaging & đóng gói (Yêu cầu về đóng gói)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <Field label="3.1 Packaging (Ví dụ: Mỗi sản phẩm được đóng gói hộp xốp)" required error={formErrors.packaging_links}>
+                    <input
+                      type="text"
+                      placeholder="Câu trả lời của bạn"
+                      value={form.packaging_links}
+                      onChange={fld('packaging_links')}
+                      style={{
+                        ...inp,
+                        borderColor: formErrors.packaging_links ? HC.danger : HC.border
+                      }}
+                    />
+                  </Field>
+                  <Field label="3.2 Other Packaging (Phụ kiện đi kèm - Ví dụ: Thank you card)" required error={formErrors.other_packaging}>
+                    <input
+                      type="text"
+                      placeholder="Câu trả lời của bạn"
+                      value={form.other_packaging}
+                      onChange={fld('other_packaging')}
+                      style={{
+                        ...inp,
+                        borderColor: formErrors.other_packaging ? HC.danger : HC.border
+                      }}
+                    />
+                  </Field>
+                </div>
               </div>
 
               {/* Modal Footer */}

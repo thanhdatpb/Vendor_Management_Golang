@@ -38,6 +38,7 @@ export const ITEMS_PER_PAGE = 20;
 export const EMPTY_FORM = {
   product_type: '', mediaFiles: [],
   product_type_links: [],
+  production_time: '', shipping_time: '', total_cost: '',
   other_specs: '', material: '', print_area: '',
   good_review: '', bad_review: '', packaging_links: '', other_packaging: '',
 };
