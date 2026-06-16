@@ -516,7 +516,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         </div>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', minWidth: 130, padding: '9px 12px', borderRadius: 9, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2 }}>
           <option value="">Tất cả trạng thái</option>
-          <option value="draft">Draft (Chưa gửi)</option>
           <option value="pending">Pending (Chờ duyệt)</option>
           <option value="approved">Approved (Đã duyệt)</option>
           <option value="reject">Rejected (Từ chối)</option>
