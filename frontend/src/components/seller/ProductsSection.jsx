@@ -643,7 +643,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   return (
                     <tr
                       key={p.id || i}
-                      style={{ background: rowBg, transition: 'background 0.15s' }}
+                      onClick={() => setViewProduct(p)}
+                      style={{ background: rowBg, transition: 'background 0.15s', cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.background = isRejected ? '#fee2e2' : '#fff8ed'}
                       onMouseLeave={e => e.currentTarget.style.background = rowBg}
                     >
@@ -717,40 +718,33 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       {/* Actions */}
                       <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => setViewProduct(p)}
-                            style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, background: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.brown, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = HC.cream; e.currentTarget.style.borderColor = HC.orangeMid; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = HC.border; }}
-                          >👁 Xem</button>
-
                           {(isDraft || isRejected) && (
                             <button
-                              onClick={() => handleSendToAdmin(p.id)}
+                              onClick={(e) => { e.stopPropagation(); handleSendToAdmin(p.id); }}
                               disabled={processingId === p.id}
                               style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
                               onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#bbf7d0'; }}
                               onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#d1fae5' : '#ecfdf5'; }}
-                            >{processingId === p.id ? 'Đang gửi...' : 'Gửi Admin'}</button>
+                            >{processingId === p.id ? (isRejected ? 'Submitting...' : 'Đang gửi...') : (isRejected ? 'Submit' : 'Gửi Admin')}</button>
                           )}
 
                           {(isDraft || isRejected) && (
                             <button
-                              onClick={() => openEditModal(p)}
+                              onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
                               style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.orangeDark, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
                               onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
                               onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                            >Sửa</button>
+                            >{isRejected ? 'Edit' : 'Sửa'}</button>
                           )}
 
                           {(isDraft || isRejected) && (
                             <button
-                              onClick={() => handleDelete(p.id)}
+                              onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
                               disabled={processingId === p.id}
                               style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fff5f5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: HC.danger, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
                               onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#fee2e2'; }}
                               onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#fee2e2' : '#fff5f5'; }}
-                            >{processingId === p.id ? 'Đang xóa...' : 'Xóa'}</button>
+                            >{processingId === p.id ? (isRejected ? 'Deleting...' : 'Đang xóa...') : (isRejected ? 'Delete' : 'Xóa')}</button>
                           )}
                         </div>
                       </td>
