@@ -26,7 +26,7 @@ export default function SellerDashboard() {
   const [pendingOpenProductId, setPendingOpenProductId] = useState(null);
 
   const PAGE_TITLES = {
-    products: 'Products — Sản Phẩm',
+    products: 'Danh Sách Sản Phẩm',
     vendors: 'Vendors — Nhà Cung Cấp',
     setup_price: 'Setup Price — Cài Đặt Giá',
   };
