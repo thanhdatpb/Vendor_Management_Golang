@@ -29,6 +29,13 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [vPage, setVPage] = useState(1);
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bestSellerIds, setBestSellerIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('BEST_SELLER_IDS_V1');
+      return new Set(saved ? JSON.parse(saved) : []);
+    } catch { return new Set(); }
+  });
+  const [showOnlyBestSeller, setShowOnlyBestSeller] = useState(false);
   const importFileRef = useRef(null);
   const [importPreview, setImportPreview] = useState(null);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
@@ -78,7 +85,21 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     }
   }, [toast]);
 
-  let filteredVendors = activeTab === 'bestseller' ? vendorList.filter(v => v.vendor_type === 'Best Seller') : vendorList;
+  useEffect(() => {
+    if (vendorList.length > 0) {
+      const saved = localStorage.getItem('BEST_SELLER_IDS_V1');
+      if (!saved) {
+        const ids = new Set(vendorList.filter(v => v.vendor_type === 'Best Seller').map(v => String(v.id)));
+        setBestSellerIds(ids);
+        if (ids.size > 0) localStorage.setItem('BEST_SELLER_IDS_V1', JSON.stringify([...ids]));
+      }
+    }
+  }, [vendorList]);
+
+  const bestSellerSorted = [...vendorList].sort((a, b) => (bestSellerIds.has(String(b.id)) ? 1 : 0) - (bestSellerIds.has(String(a.id)) ? 1 : 0));
+  let filteredVendors = activeTab === 'bestseller'
+    ? (showOnlyBestSeller ? vendorList.filter(v => bestSellerIds.has(String(v.id))) : bestSellerSorted)
+    : vendorList;
 
   if (filterProductType) {
     filteredVendors = filteredVendors.filter(v => (v.product_type || '').toLowerCase().includes(filterProductType.toLowerCase()));
@@ -96,6 +117,17 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     const allSel = pageIds.every(id => selectedIds.has(id));
     setSelectedIds(prev => { const n = new Set(prev); if (allSel) { pageIds.forEach(id => n.delete(id)); } else { pageIds.forEach(id => n.add(id)); } return n; });
   };
+  const toggleBestSeller = (vendorId) => {
+    setBestSellerIds(prev => {
+      const n = new Set(prev);
+      const sid = String(vendorId);
+      if (n.has(sid)) n.delete(sid);
+      else n.add(sid);
+      localStorage.setItem('BEST_SELLER_IDS_V1', JSON.stringify([...n]));
+      return n;
+    });
+  };
+
   const pageAllSelected = pagedVendors.length > 0 && pagedVendors.every(v => selectedIds.has(v.id));
   const pageSomeSelected = pagedVendors.some(v => selectedIds.has(v.id));
   
@@ -627,7 +659,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
           <div style={{ fontWeight: 900, fontSize: 15, color: activeTab === 'bestseller' ? HC.gold : HC.ink, fontFamily: "'Nunito',sans-serif" }}>
             {activeTab === 'bestseller' ? '⭐ Best Seller' : 'Tất Cả Vendor'}
             <span style={{ marginLeft: 10, padding: '2px 10px', borderRadius: 999, background: activeTab === 'bestseller' ? HC.goldLight : HC.orangeLight, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.orangeMid}`, color: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
-              {new Set(filteredVendors.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size}
+              {activeTab === 'bestseller' ? `${bestSellerIds.size} ⭐ / ${vendorList.length}` : new Set(filteredVendors.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size}
               {!filterProductType && vendorList.length !== filteredVendors.length ? ` / ${new Set(vendorList.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size}` : ''}
             </span>
           </div>
@@ -655,8 +687,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <span>✅</span> Gán {uniqueSelectedCount} Vendor
             </button>
           )}
+          <button
+            onClick={() => setShowOnlyBestSeller(p => !p)}
+            style={{ padding: '9px 16px', borderRadius: 10, background: showOnlyBestSeller ? `linear-gradient(135deg,#FFD700,#FFA500)` : HC.cream, border: showOnlyBestSeller ? '1.5px solid #D4A017' : `1.5px solid ${HC.border}`, color: showOnlyBestSeller ? '#7A5C00' : HC.brown, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+          >
+            {showOnlyBestSeller ? '⭐ Chỉ Best Seller' : '📊 Tất cả'}
+          </button>
           <button onClick={openCreateVendorModal} style={{ padding: '9px 16px', borderRadius: 10, background: HC.cream, border: `1.5px solid ${HC.border}`, color: HC.brown, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-            {activeTab === 'bestseller' ? '⭐ Tạo Best Seller' : '＋ Thêm thủ công'}
+            ⭐ Thêm Vendor
           </button>
           <button onClick={() => importFileRef.current?.click()} style={{ padding: '9px 20px', borderRadius: 10, background: activeTab === 'bestseller' ? `linear-gradient(135deg,#FFD700,#FFA500)` : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: activeTab === 'bestseller' ? '#7A5C00' : '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
             Import
@@ -677,7 +715,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       )}
 
       {activeTab === 'bestseller' && (loading ? <Spinner /> : filteredVendors.length === 0 && !vendorModalOpen ? (
-        <EmptyState msg={activeTab === 'bestseller' ? <span>Chưa có Best Seller vendor nào. Nhấn <b style={{ color: HC.gold }}>⭐ Tạo Best Seller</b> để bắt đầu.</span> : <span>Chưa có vendor. Nhấn <b style={{ color: HC.orange }}>Import</b> để bắt đầu.</span>} />
+        <EmptyState msg={showOnlyBestSeller ? <span>Chưa có vendor nào được đánh dấu ⭐. Nhấn biểu tượng ⭐ trên mỗi dòng vendor để đánh dấu Best Seller.</span> : <span>Chưa có vendor nào. Nhấn <b style={{ color: HC.orange }}>Import</b> để bắt đầu.</span>} />
       ) : filteredVendors.length > 0 && (
         <div style={{ borderRadius: 16, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.border}`, boxShadow: activeTab === 'bestseller' ? '0 8px 32px rgba(212,160,23,0.15)' : HC.shadow, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
@@ -692,6 +730,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                       </div>
                     </div>
                   </th>
+                  <th rowSpan={2} style={{ ...TH2({ width: 52, minWidth: 52, background: '#8B6914' }) }} title="Click ⭐ để đánh dấu Best Seller">⭐</th>
                   <th rowSpan={2} style={{ ...TH2(), minWidth: 36 }}>ID</th>
                   <th rowSpan={2} style={{ ...TH2(), minWidth: 72 }}>Hình ảnh</th>
                   <th rowSpan={2} style={{ ...TH2(), minWidth: 140 }}>Vendor Name</th>
@@ -748,8 +787,9 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                       }
                     }
 
+                    const isBestSeller = bestSellerIds.has(String(v.id));
                     rows.push(
-                      <tr key={v.id || absIdx} style={{ background: isSelected ? (activeTab === 'bestseller' ? '#FFFDE7' : `${HC.orange}12`) : undefined }} onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.97)'} onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
+                      <tr key={v.id || absIdx} style={{ background: isSelected ? (activeTab === 'bestseller' ? '#FFFDE7' : `${HC.orange}12`) : (activeTab === 'bestseller' && isBestSeller ? 'rgba(255,215,0,0.07)' : undefined) }} onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.97)'} onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
                         {!isSameAsPrev && (
                           <td rowSpan={rowSpan} style={{ ...C(), cursor: 'pointer', width: 44, textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }} onClick={() => {
                             const groupIds = [];
@@ -772,6 +812,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                                 {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
                               </div>
                             </div>
+                          </td>
+                        )}
+                        {!isSameAsPrev && (
+                          <td rowSpan={rowSpan}
+                            style={{ ...C(), textAlign: 'center', verticalAlign: 'middle', cursor: 'pointer', padding: '6px 4px', background: isBestSeller ? 'rgba(255,215,0,0.12)' : undefined, transition: 'background 0.2s' }}
+                            title={isBestSeller ? 'Bỏ đánh dấu Best Seller' : 'Đánh dấu là Best Seller'}
+                            onClick={() => toggleBestSeller(v.id)}>
+                            <div style={{ fontSize: 16, lineHeight: 1, transition: 'all 0.25s ease', transform: isBestSeller ? 'scale(1.35)' : 'scale(1)', opacity: isBestSeller ? 1 : 0.18, filter: isBestSeller ? 'drop-shadow(0 0 5px rgba(255,200,0,0.9))' : 'none' }}>⭐</div>
                           </td>
                         )}
                         {!isSameAsPrev && (
