@@ -23,7 +23,7 @@ const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` 
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
 // ── Section 1 Table ──────────────────────────────────────────────────────────
-function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow }) {
+function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow, bestSellerIds, toggleBestSeller, mode }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
 
@@ -54,6 +54,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
         <thead>
           <tr>
+            {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: 44, textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
             {selectable && <th style={{ ...TH(), width: 36, textAlign: 'center' }}>✓</th>}
             <th style={{ ...TH(), width: 44 }}>Product Type</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
@@ -69,8 +70,14 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
         <tbody>
           {rows.map((r, i) => {
             const isEditing = editIdx === i;
+            const isBestSeller = bestSellerIds?.has(r.id);
             return (
-              <tr key={i}>
+              <tr key={i} style={{ background: isBestSeller ? 'rgba(255,215,0,0.07)' : undefined }}>
+                {!readOnly && (
+                  <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer', background: isBestSeller ? 'rgba(255,215,0,0.15)' : undefined, transition: 'background 0.2s' }} onClick={() => toggleBestSeller && toggleBestSeller(r.id)} title={isBestSeller ? 'Bỏ đánh dấu Best Seller' : 'Đánh dấu Best Seller'}>
+                    <div style={{ fontSize: 16, transition: 'all 0.25s ease', transform: isBestSeller ? 'scale(1.25)' : 'scale(1)', opacity: isBestSeller ? 1 : 0.15, filter: isBestSeller ? 'drop-shadow(0 0 5px rgba(255,200,0,0.9))' : 'none' }}>⭐</div>
+                  </td>
+                )}
                 {selectable && (
                   <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer' }} onClick={() => onSelectRow(r.id)}>
                     <input type="checkbox" checked={selectedIds?.has(r.id)} onChange={() => onSelectRow(r.id)} style={{ cursor: 'pointer' }} />
@@ -195,7 +202,7 @@ function PricingTable({ rows }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow }) {
+function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, bestSellerIds, toggleBestSeller, mode }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
 
@@ -274,7 +281,7 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selected
 
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
-            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} />}
+            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
             {activeSection === 'pricing' && <PricingTable rows={entry.pricing} />}
           </div>
         </div>
@@ -292,6 +299,22 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const fileInputRef = useRef(null);
+
+  const [bestSellerIds, setBestSellerIds] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('BEST_SELLER_EXCEL_IDS_V1') || '[]'));
+    } catch { return new Set(); }
+  });
+
+  const toggleBestSeller = useCallback((id) => {
+    setBestSellerIds(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      localStorage.setItem('BEST_SELLER_EXCEL_IDS_V1', JSON.stringify([...n]));
+      return n;
+    });
+  }, []);
 
   const fetchLibrary = useCallback(async () => {
     try {
@@ -499,22 +522,58 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
       )}
 
-      {/* Library list */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>
-      ) : libraryFiles.length === 0 ? (
-        <div style={{ padding: '60px 40px', textAlign: 'center', background: HC.surface, borderRadius: 16, border: `1.5px dashed ${HC.border}` }}>
-          <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>📚</div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: HC.muted, marginBottom: 8 }}>Chưa có file thư viện nào</div>
-          {!readOnly && (
-            <div style={{ fontSize: 12, color: HC.muted2, marginBottom: 24 }}>Nhấn nút <b style={{ color: HC.orangeDark }}>Import thư viện Excel</b> ở góc phải để import file</div>
-          )}
+      {mode === 'bestseller' && (
+        <div style={{ marginBottom: 16, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,${HC.goldLight},#FFF8DC)`, border: `1.5px solid ${HC.gold}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>⭐</span>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 13, color: '#8B6914' }}>Danh sách Vendor Best Seller</div>
+            <div style={{ fontSize: 11, color: '#B8860B', marginTop: 2 }}>Chỉ hiển thị các sản phẩm được đánh dấu ⭐ từ Tất cả Vendor.</div>
+          </div>
         </div>
-      ) : (
-        libraryFiles.map(entry => (
-          <LibraryCard key={entry.id} entry={entry} onDelete={handleDelete} onUpdate={handleUpdateEntry} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} />
-        ))
       )}
+
+      {/* Library list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {(() => {
+          let displayFiles = libraryFiles;
+          if (mode === 'bestseller') {
+            displayFiles = displayFiles.map(file => {
+              if (!file.generalInfo) return file;
+              return { ...file, generalInfo: file.generalInfo.filter(r => bestSellerIds.has(r.id)) };
+            }).filter(file => file.generalInfo && file.generalInfo.length > 0);
+          }
+          
+          if (loading) {
+             return <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>;
+          }
+
+          if (displayFiles.length === 0) {
+            return (
+              <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
+                <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{mode === 'bestseller' ? '⭐' : '📂'}</div>
+                <div style={{ fontWeight: 800, color: HC.muted, fontSize: 14 }}>{mode === 'bestseller' ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor nào'}</div>
+                {mode === 'bestseller' && <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Hãy vào "Tất cả Vendor" và click biểu tượng ⭐ trên sản phẩm để đánh dấu.</div>}
+              </div>
+            );
+          }
+
+          return displayFiles.map(entry => (
+            <LibraryCard
+              key={entry.id}
+              entry={entry}
+              onDelete={handleDelete}
+              onUpdate={handleUpdateEntry}
+              readOnly={readOnly}
+              selectable={selectable}
+              selectedIds={selectedIds}
+              onSelectRow={onSelectRow}
+              bestSellerIds={bestSellerIds}
+              toggleBestSeller={toggleBestSeller}
+              mode={mode}
+            />
+          ));
+        })()}
+      </div>
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
