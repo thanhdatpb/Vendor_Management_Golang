@@ -16,6 +16,17 @@ export const fmtDate = iso => {
   try { return new Date(iso).toLocaleDateString('vi-VN'); } catch { return iso; }
 };
 
+// ─── DateTime formatter (date + HH:MM) ──────────────────
+export const fmtDateTime = iso => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString('vi-VN');
+    const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return { date, time };
+  } catch { return { date: iso, time: '' }; }
+};
+
 // ─── Media URL helpers ───────────────────────────────────
 export const getMediaUrls = (product) => {
   if (!product) return [];

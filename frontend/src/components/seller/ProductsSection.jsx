@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
-import { lsGet, fmtDate, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
+import { lsGet, fmtDate, fmtDateTime, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
 import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../utils/productExcel';
 import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field } from './SellerUI';
 import { productApi } from '../../services/api';
@@ -502,51 +502,130 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
   if (loading) return <Spinner />;
 
+  const statusMeta = {
+    draft:    { label: 'Draft',    bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', color: '#6b7280', dot: '#9ca3af', icon: '○' },
+    pending:  { label: 'Pending',  bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', color: '#92400e', dot: '#f59e0b', icon: '◌' },
+    approved: { label: 'Approved', bg: 'linear-gradient(135deg,#ecfdf5,#d1fae5)', color: '#065f46', dot: '#16a34a', icon: '●' },
+    reject:   { label: 'Rejected', bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', color: '#991b1b', dot: '#dc2626', icon: '✕' },
+  };
+
   return (
-    <div>
-      {toast && (<div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 380 }}><div style={{ background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : toast.type === 'error' ? `linear-gradient(135deg, ${HC.danger}, #b91c1c)` : `linear-gradient(135deg, ${HC.warning}, #d97706)`, color: '#fff', borderRadius: 12, boxShadow: HC.shadowStrong, overflow: 'hidden' }}><div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ fontSize: 24 }}>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : '⚠️'}</span><div><div style={{ fontWeight: 900, fontSize: 13 }}>{toast.title}</div><div style={{ fontSize: 11, opacity: 0.9 }}>{toast.message}</div></div><button onClick={() => setToast(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16 }}>✕</button></div><div style={{ height: 3, background: 'rgba(255,255,255,0.5)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} /></div></div>)}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 900, color: HC.ink }}>Danh Sách Sản Phẩm</h3>
-        <div style={{ display: 'flex', gap: 10 }}>
-
-          <button onClick={openCreateModal} style={{ padding: '9px 16px', borderRadius: 11, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Request sản phẩm mới</button>
+    <div style={{ fontFamily: "'Inter','Nunito',system-ui,sans-serif" }}>
+      {/* ── Toast ── */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 400 }}>
+          <div style={{ background: toast.type === 'success' ? 'linear-gradient(135deg,#16a34a,#15803d)' : toast.type === 'error' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : '!'}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>{toast.title}</div>
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>{toast.message}</div>
+              </div>
+              <button onClick={() => setToast(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', cursor: 'pointer', width: 28, height: 28, borderRadius: 8, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+            <div style={{ height: 3, background: 'rgba(255,255,255,0.4)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} />
+          </div>
         </div>
+      )}
+
+      {/* ── Page Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h3 style={{ fontSize: 18, fontWeight: 900, color: HC.ink, margin: 0, letterSpacing: '-0.02em' }}>Danh Sách Sản Phẩm</h3>
+          <p style={{ fontSize: 12, color: HC.muted, margin: '3px 0 0', fontWeight: 500 }}>{submittedProducts.length} sản phẩm đã tạo</p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          style={{
+            padding: '10px 20px', borderRadius: 12,
+            background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+            color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+            boxShadow: '0 4px 14px rgba(245,166,35,0.4)',
+            transition: 'transform 0.15s,box-shadow 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(245,166,35,0.4)'; }}
+        >
+          <span style={{ fontSize: 16 }}>＋</span> Request sản phẩm mới
+        </button>
       </div>
 
-      {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700 }}>⚠️ {apiError}<button onClick={loadProducts} style={{ marginLeft: 12, padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer' }}>Thử lại</button></div>}
+      {/* ── Error Banner ── */}
+      {apiError && (
+        <div style={{ marginBottom: 16, padding: '12px 18px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span>⚠️</span> {apiError}
+          <button onClick={loadProducts} style={{ marginLeft: 8, padding: '4px 14px', borderRadius: 8, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button>
+        </div>
+      )}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16, padding: '12px 16px', background: HC.surface, borderRadius: 14, border: `1.5px solid ${HC.border}` }}>
-        <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-          <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
+      {/* ── Filter Bar ── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20, padding: '14px 18px', background: '#fff', borderRadius: 16, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
+          <SearchOutlined style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
           <input
             type="text"
             placeholder="Tìm loại sản phẩm..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ ...inp, paddingLeft: 36 }}
+            style={{ ...inp, paddingLeft: 38, borderRadius: 10 }}
             onFocus={e => e.target.style.borderColor = HC.orange}
             onBlur={e => e.target.style.borderColor = HC.border}
           />
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', minWidth: 130, padding: '9px 12px', borderRadius: 9, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2 }}>
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          style={{ flex: '0 0 180px', padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2, fontWeight: 600, color: HC.ink2, cursor: 'pointer' }}
+        >
           <option value="">Tất cả trạng thái</option>
-          <option value="pending">Pending (Chờ duyệt)</option>
-          <option value="approved">Approved (Đã duyệt)</option>
-          <option value="reject">Rejected (Từ chối)</option>
+          <option value="draft">Draft</option>
+          <option value="pending">Pending — Chờ duyệt</option>
+          <option value="approved">Approved — Đã duyệt</option>
+          <option value="reject">Rejected — Từ chối</option>
         </select>
-        {hasFilter && <button onClick={() => { setSearch(''); setFilterStatus(''); }} style={{ padding: '8px 14px', borderRadius: 9, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Xóa lọc</button>}
-        <div style={{ fontSize: 11, color: HC.muted, fontWeight: 700 }}>{filteredProducts.length} / {submittedProducts.length} sản phẩm</div>
+        {hasFilter && (
+          <button
+            onClick={() => { setSearch(''); setFilterStatus(''); }}
+            style={{ padding: '8px 14px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+          >✕ Xóa bộ lọc</button>
+        )}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: HC.muted, fontWeight: 700 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: HC.orange, display: 'inline-block' }} />
+          {filteredProducts.length} / {submittedProducts.length} sản phẩm
+        </div>
       </div>
 
-      {filteredProducts.length === 0 ? <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào. Hãy tạo sản phẩm mới!' : 'Không tìm thấy kết quả phù hợp'} /> : (
+      {/* ── Table ── */}
+      {filteredProducts.length === 0 ? (
+        <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào. Hãy tạo request đầu tiên!' : 'Không tìm thấy kết quả phù hợp'} />
+      ) : (
         <>
-          <div style={{ overflowX: 'auto', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
-            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 13, background: HC.surface }}>
+          <div style={{ overflowX: 'auto', borderRadius: 18, border: `1.5px solid ${HC.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff' }}>
               <thead>
-                <tr>
-                  {['STT', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Lý do', 'Nhà phân phối', 'Thao tác'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '12px 14px', color: HC.brown, fontWeight: 900, borderBottom: `1.5px solid ${HC.border}`, fontSize: 10, textTransform: 'uppercase', background: HC.cream }}>{h}</th>
+                <tr style={{ background: `linear-gradient(135deg, ${HC.cream}, #fff8ed)` }}>
+                  {[
+                    { label: '#',              w: 48 },
+                    { label: 'Product Type',  w: 180 },
+                    { label: 'Hình ảnh',      w: 80 },
+                    { label: 'Date Request',  w: 120 },
+                    { label: 'Deadline',      w: 100 },
+                    { label: 'Trạng thái',    w: 110 },
+                    { label: 'Lý do từ chối', w: 160 },
+                    { label: 'Nhà phân phối', w: 140 },
+                    { label: 'Thao tác',      w: 160 },
+                  ].map(h => (
+                    <th key={h.label} style={{
+                      textAlign: 'left', padding: '13px 16px',
+                      color: HC.brown, fontWeight: 800,
+                      borderBottom: `2px solid ${HC.border}`,
+                      fontSize: 11, textTransform: 'uppercase',
+                      letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                      width: h.w,
+                    }}>{h.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -556,28 +635,124 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   const status = getStatus(p);
                   const isDraft = status === 'draft';
                   const isRejected = status === 'reject';
+                  const isApproved = status === 'approved';
+                  const sMeta = statusMeta[status] || statusMeta.draft;
+                  const dt = fmtDateTime(p.created_at);
+                  const rowBg = isRejected ? 'linear-gradient(90deg,#fef2f2 0%,#fff 40%)'
+                    : isApproved ? 'linear-gradient(90deg,#f0fdf4 0%,#fff 40%)'
+                    : i % 2 === 0 ? '#fff' : '#fffcf8';
                   return (
-                    <tr key={p.id || i} style={{ borderBottom: `1px solid ${HC.border}`, background: isRejected ? '#fef2f2' : 'transparent' }}>
-                      <td style={{ padding: '12px 14px', color: HC.muted, fontWeight: 700 }}>{(currentPage - 1) * ITEMS_PER_PAGE + i + 1}</td>
-                      <td style={{ padding: '12px 14px', fontWeight: 800, color: HC.ink2 }}>{p.product_type || '—'}</td>
-                      <td style={{ padding: '12px 14px' }}>
+                    <tr
+                      key={p.id || i}
+                      style={{ background: rowBg, transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = isRejected ? '#fee2e2' : '#fff8ed'}
+                      onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                    >
+                      {/* # */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: HC.orangeLight, color: HC.brown, fontWeight: 800, fontSize: 11 }}>
+                          {(currentPage - 1) * ITEMS_PER_PAGE + i + 1}
+                        </span>
+                      </td>
+
+                      {/* Product Type */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, maxWidth: 200 }}>
+                        <div style={{ fontWeight: 800, color: HC.ink, fontSize: 13, lineHeight: 1.4 }}>{p.product_type || '—'}</div>
+                        {p.material && <div style={{ fontSize: 11, color: HC.muted, marginTop: 3, fontWeight: 600 }}>📦 {p.material}</div>}
+                      </td>
+
+                      {/* Hình ảnh */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
                         <MediaGallery mediaUrls={mediaUrls} />
                       </td>
-                      <td style={{ padding: '12px 14px' }}>{fmtDate(p.created_at) || '—'}</td>
-                      <td style={{ padding: '12px 14px' }}>{fmtDate(p.deadline_date) || '—'}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <Badge status={status} />
+
+                      {/* Date Request — date + time */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        {dt ? (
+                          <div>
+                            <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 12 }}>{dt.date}</div>
+                            <div style={{ fontSize: 11, color: HC.muted, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                              <span>🕐</span>{dt.time}
+                            </div>
+                          </div>
+                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
                       </td>
-                      <td style={{ padding: '12px 14px', maxWidth: 200, wordBreak: 'break-word' }}>
-                        {isRejected ? (p.rejection_reason || p.reason || '—') : '—'}
+
+                      {/* Deadline */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        {p.deadline_date ? (
+                          <div style={{ fontSize: 12, fontWeight: 700, color: HC.ink2 }}>{fmtDate(p.deadline_date)}</div>
+                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
                       </td>
-                      <td style={{ padding: '12px 14px' }}>{renderVendorBadge(p)}</td>
-                      <td style={{ padding: '12px 14px' }}>
+
+                      {/* Status Badge */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '5px 12px', borderRadius: 999,
+                          background: sMeta.bg, color: sMeta.color,
+                          fontWeight: 800, fontSize: 11, letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: sMeta.dot, display: 'inline-block', flexShrink: 0 }} />
+                          {sMeta.label}
+                        </span>
+                      </td>
+
+                      {/* Rejection reason */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, maxWidth: 180 }}>
+                        {isRejected && (p.rejection_reason || p.reason) ? (
+                          <div style={{ fontSize: 12, color: HC.danger, fontWeight: 600, lineHeight: 1.4 }}>
+                            {(p.rejection_reason || p.reason).length > 60
+                              ? (p.rejection_reason || p.reason).slice(0, 60) + '…'
+                              : (p.rejection_reason || p.reason)}
+                          </div>
+                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
+                      </td>
+
+                      {/* Vendor badge */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        {renderVendorBadge(p)}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={() => setViewProduct(p)} style={{ padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.border}`, background: HC.cream, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: HC.brown }}>👁 Xem</button>
-                          {(isDraft || isRejected) && <button onClick={() => handleSendToAdmin(p.id)} disabled={processingId === p.id} style={{ padding: '5px 10px', borderRadius: 7, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800, color: '#065f46' }}>{processingId === p.id ? '⟳ Đang gửi...' : '📤 Gửi Admin'}</button>}
-                          {(isDraft || isRejected) && <button onClick={() => openEditModal(p)} style={{ padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>✏️ Sửa</button>}
-                          {(isDraft || isRejected) && <button onClick={() => handleDelete(p.id)} disabled={processingId === p.id} style={{ padding: '5px 10px', borderRadius: 7, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fef2f2', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800, color: HC.danger }}>{processingId === p.id ? '⟳ Đang xóa...' : '🗑 Xóa'}</button>}
+                          <button
+                            onClick={() => setViewProduct(p)}
+                            style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, background: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.brown, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = HC.cream; e.currentTarget.style.borderColor = HC.orangeMid; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = HC.border; }}
+                          >👁 Xem</button>
+
+                          {(isDraft || isRejected) && (
+                            <button
+                              onClick={() => handleSendToAdmin(p.id)}
+                              disabled={processingId === p.id}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                              onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#bbf7d0'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#d1fae5' : '#ecfdf5'; }}
+                            >{processingId === p.id ? '⟳ Đang gửi...' : '📤 Gửi Admin'}</button>
+                          )}
+
+                          {(isDraft || isRejected) && (
+                            <button
+                              onClick={() => openEditModal(p)}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.orangeDark, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                            >✏️ Sửa</button>
+                          )}
+
+                          {(isDraft || isRejected) && (
+                            <button
+                              onClick={() => handleDelete(p.id)}
+                              disabled={processingId === p.id}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fff5f5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: HC.danger, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                              onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#fee2e2'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#fee2e2' : '#fff5f5'; }}
+                            >{processingId === p.id ? '⟳ Xóa...' : '🗑 Xóa'}</button>
+                          )}
                         </div>
                       </td>
                     </tr>
