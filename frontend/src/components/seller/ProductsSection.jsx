@@ -606,21 +606,21 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
               <thead>
                 <tr style={{ background: `linear-gradient(135deg, ${HC.cream}, #fff8ed)` }}>
                   {[
-                    { label: '#',              w: 48 },
+                    { label: 'No',              w: 48 },
                     { label: 'Product Type',  w: 180 },
-                    { label: 'Hình ảnh',      w: 80 },
+                    { label: 'Image',         w: 80 },
                     { label: 'Date Request',  w: 120 },
                     { label: 'Deadline',      w: 100 },
-                    { label: 'Trạng thái',    w: 110 },
-                    { label: 'Lý do từ chối', w: 160 },
-                    { label: 'Nhà phân phối', w: 140 },
-                    { label: 'Thao tác',      w: 160 },
+                    { label: 'Status',        w: 110 },
+                    { label: 'Approve the request', w: 160 },
+                    { label: 'Distributor',   w: 140 },
+                    { label: 'Actions',       w: 160 },
                   ].map(h => (
                     <th key={h.label} style={{
                       textAlign: 'left', padding: '13px 16px',
                       color: HC.brown, fontWeight: 800,
                       borderBottom: `2px solid ${HC.border}`,
-                      fontSize: 11, textTransform: 'uppercase',
+                      fontSize: 11,
                       letterSpacing: '0.06em', whiteSpace: 'nowrap',
                       width: h.w,
                     }}>{h.label}</th>
