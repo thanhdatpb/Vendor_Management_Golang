@@ -373,11 +373,12 @@ export default function NewsManagementSection() {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h3 style={{ fontSize: 16, fontWeight: 900, color: HC.ink, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <BellOutlined style={{ color: HC.orange }} /> Quản lý thông báo
-          </h3>
-          <p style={{ fontSize: 12, color: HC.muted, marginTop: 4 }}>Tạo thông báo gửi đến Admin và Seller</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 18, color: HC.orangeDark, display: 'flex' }}><BellOutlined /></span>
+          <span style={{ fontWeight: 900, fontSize: 16, color: HC.ink }}>Danh sách thông báo</span>
+          <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>
+            {newsList.length} thông báo
+          </span>
         </div>
         <button
           onClick={openCreateModal}
@@ -391,17 +392,7 @@ export default function NewsManagementSection() {
         </button>
       </div>
 
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <span style={{ fontSize: 18, color: HC.orangeDark, display: 'flex' }}><ProfileOutlined /></span>
-          <span style={{ fontWeight: 900, fontSize: 14, color: HC.ink }}>Danh sách thông báo đã tạo</span>
-          <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>
-            {newsList.length} thông báo
-          </span>
-        </div>
-
         {loading ? <Spinner /> : newsList.length === 0 ? <EmptyState msg="Chưa có thông báo nào. Hãy tạo thông báo mới!" /> : <NewsTable />}
-      </div>
 
       <NewsModalComponent
         isOpen={showModal}
