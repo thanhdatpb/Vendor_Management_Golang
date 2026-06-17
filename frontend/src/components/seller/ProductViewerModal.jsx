@@ -312,55 +312,82 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
             <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>✕</button>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-            {/* LEFT COLUMN: Media & Product Info */}
-            <div style={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: `1.5px solid ${HC.border}`, overflow: 'hidden', background: HC.surface }}>
-              <div style={{ height: 220, flexShrink: 0, background: '#2a1a00', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}
-                onClick={() => { if (mediaUrls.length) { setLightboxIndex(0); setLightboxOpen(true); } }}>
-                {mediaUrls.length > 0 ? (
-                  isVideo(mediaUrls[0]) ? (
-                    <video src={mediaUrls[0]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+            {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
+            <div style={{ display: 'flex', flexShrink: 0, height: 320, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
+              {/* Media */}
+              <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}
+                  onClick={() => { if (mediaUrls.length) { setLightboxIndex(0); setLightboxOpen(true); } }}>
+                  {mediaUrls.length > 0 ? (
+                    isVideo(mediaUrls[0]) ? (
+                      <video src={mediaUrls[0]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <img src={mediaUrls[0]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                    )
                   ) : (
-                    <img src={mediaUrls[0]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
-                  )
-                ) : (
-                  <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
-                )}
+                    <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
+                  )}
+                  {mediaUrls.length > 1 && (
+                    <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>
+                      {mediaUrls.length} media
+                    </div>
+                  )}
+                </div>
                 {mediaUrls.length > 1 && (
-                  <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>
-                    {mediaUrls.length} media
+                  <div style={{ display: 'flex', gap: 6, padding: '8px', overflowX: 'auto', background: '#1f1400', borderTop: `1px solid ${HC.border}`, height: 60, flexShrink: 0 }}>
+                    {mediaUrls.map((url, idx) => (
+                      <div key={idx} onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }} style={{ width: 44, height: 44, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === lightboxIndex ? HC.orange : 'transparent'}`, flexShrink: 0 }}>
+                        {isVideo(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-              {mediaUrls.length > 1 && (
-                <div style={{ display: 'flex', gap: 6, padding: '8px', overflowX: 'auto', background: '#1f1400', borderTop: `1px solid ${HC.border}` }}>
-                  {mediaUrls.map((url, idx) => (
-                    <div key={idx} onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }} style={{ width: 50, height: 50, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === lightboxIndex ? HC.orange : 'transparent'}`, flexShrink: 0 }}>
-                      {isVideo(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                  ))}
+
+              {/* Product Info (Horizontal Sheet) */}
+              <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: 20, background: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <span style={{ fontSize: 18 }}>📋</span>
+                  <div style={{ fontWeight: 900, fontSize: 14, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Thông tin sản phẩm (Chi tiết)</div>
                 </div>
-              )}
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <div style={{ padding: '10px 14px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span>📦</span>
-                  <div style={{ fontWeight: 900, fontSize: 10, color: '#fff' }}>Thông tin sản phẩm</div>
+
+                <div style={{ border: `1.5px solid ${HC.border}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 1200 }}>
+                    <thead>
+                      <tr style={{ background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
+                        {productRows.map((r) => (
+                          <th key={r.label} style={{ padding: '12px 16px', fontWeight: 800, fontSize: 11, color: HC.brown, textTransform: 'uppercase', letterSpacing: '0.04em', borderRight: `1px solid ${HC.border}`, whiteSpace: 'nowrap' }}>
+                            {r.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style={{ background: '#fff' }}>
+                        {productRows.map((r) => (
+                          <td key={r.label} style={{ padding: '14px 16px', borderRight: `1px solid ${HC.border}`, verticalAlign: 'top', minWidth: ['Good Review', 'Bad Review', 'Đặc tính KT', 'Link'].includes(r.label) ? 260 : 140 }}>
+                            <div className="custom-scrollbar" style={{ fontSize: 13, color: r.color || HC.ink, fontWeight: r.bold ? 700 : 500, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 160, overflowY: 'auto', paddingRight: 4 }}>
+                              {r.value === '' || r.value === null ? '—' : r.value}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                {productRows.map((r, idx) => (<InfoRow key={r.label} label={r.label} value={r.value} valueColor={r.color} valueBold={r.bold} idx={idx} isLast={idx === productRows.length - 1} />))}
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Vendors List */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-              <div style={{ padding: '12px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* BOTTOM SECTION: Vendors List */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#faf9f8' }}>
+              <div style={{ padding: '12px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>🏪</span>
                   <div>
                     <div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>✓ Chọn nhà cung cấp → Nhập phản hồi → Gửi quyết định</div>
                   </div>
-                </div>
               </div>
 
               <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
