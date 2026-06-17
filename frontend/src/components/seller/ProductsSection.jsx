@@ -355,10 +355,18 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     try {
       const res = await productApi.create(data);
+      const createdData = res?.data?.data || res?.data;
+      if (createdData?.id) {
+        try {
+          await productApi.sendToAdmin(createdData.id);
+        } catch (e) {
+          console.error('Auto send to admin failed:', e);
+        }
+      }
+
       // Optimistic update: thêm sản phẩm mới vào đầu danh sách ngay lập tức
-      const newProduct = normalizeLinks(res?.data?.data || {
+      const baseProduct = createdData || {
         id: Date.now(),
-        status: 'draft',
         created_at: new Date().toISOString(),
         product_type: form.product_type,
         other_specs: form.other_specs,
@@ -375,7 +383,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         seller_name: user?.sellerName || user?.seller_name,
         project: user?.project,
         media_urls: previewUrls,
-      });
+      };
+      
+      const newProduct = normalizeLinks({ ...baseProduct, status: 'pending' });
       setSubmittedProducts(prev => [newProduct, ...prev]);
       closeModal();
       showToast('success', '✅ Tạo mới thành công!', `Sản phẩm được tạo bởi: ${user?.sellerName || user?.seller_name || user?.email}`);
@@ -423,12 +433,17 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     try {
       await productApi.update(savedProductId, data);
+      try {
+        await productApi.sendToAdmin(savedProductId);
+      } catch (e) {
+        console.error('Auto send to admin failed:', e);
+      }
       // Optimistic update: cập nhật local state ngay, không reload
       setSubmittedProducts(prev => prev.map(p =>
-        p.id !== savedProductId ? p : { ...p, ...savedFormData }
+        p.id !== savedProductId ? p : { ...p, ...savedFormData, status: 'pending' }
       ));
       closeModal();
-      showToast('success', '✅ Cập nhật thành công!', 'Sản phẩm đã được cập nhật.');
+      showToast('success', '✅ Thành công!', 'Sản phẩm đã được lưu và gửi Admin.');
     } catch (err) {
       showToast('error', '❌ Lỗi cập nhật!', err.response?.data?.message || err.message);
     } finally {
@@ -790,7 +805,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     cursor: 'pointer'
                   }}
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -806,7 +821,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     cursor: submitting ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {submitting ? '⟳ Đang xử lý...' : isEditing ? '✓ Cập nhật' : '💾 Lưu (Draft)'}
+                  {submitting ? '⟳ Đang xử lý...' : isEditing ? '✓ Submit' : 'Submit'}
                 </button>
               </div>
             </form>
