@@ -531,10 +531,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       )}
 
       {/* ── Page Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h3 style={{ fontSize: 18, fontWeight: 900, color: HC.ink, margin: 0, letterSpacing: '-0.02em' }}>Danh Sách Sản Phẩm</h3>
-          <p style={{ fontSize: 12, color: HC.muted, margin: '3px 0 0', fontWeight: 500 }}>{submittedProducts.length} sản phẩm đã tạo</p>
+          <p style={{ fontSize: 13, color: HC.ink2, margin: 0, fontWeight: 700 }}>Tổng cộng: {submittedProducts.length} sản phẩm đã tạo</p>
         </div>
         <button
           onClick={openCreateModal}
