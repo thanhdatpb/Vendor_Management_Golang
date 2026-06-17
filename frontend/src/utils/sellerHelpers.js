@@ -16,27 +16,51 @@ export const fmtDate = iso => {
   try { return new Date(iso).toLocaleDateString('vi-VN'); } catch { return iso; }
 };
 
+// ─── DateTime formatter (date + HH:MM) ──────────────────
+export const fmtDateTime = iso => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString('vi-VN');
+    const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return { date, time };
+  } catch { return { date: iso, time: '' }; }
+};
+
 // ─── Media URL helpers ───────────────────────────────────
 export const getMediaUrls = (product) => {
   if (!product) return [];
+  let urls = [];
+
   if (product.media_urls && Array.isArray(product.media_urls) && product.media_urls.length) {
-    return product.media_urls.map(url =>
+    urls = urls.concat(product.media_urls.map(url =>
       url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
-    );
-  }
-  if (product.media_url) {
+    ));
+  } else if (product.media_url) {
     const full = product.media_url.startsWith('http')
       ? product.media_url
       : `${API_BASE_URL}${product.media_url.startsWith('/') ? '' : '/'}${product.media_url}`;
-    return [full];
-  }
-  if (product.media_path) {
+    urls.push(full);
+  } else if (product.media_path) {
     let cleanPath = product.media_path;
     if (cleanPath.startsWith('storage/')) cleanPath = cleanPath.replace('storage/', '');
     if (cleanPath.startsWith('/storage/')) cleanPath = cleanPath.replace('/storage/', '');
-    return [`${API_BASE_URL}/storage/${cleanPath}`];
+    urls.push(`${API_BASE_URL}/storage/${cleanPath}`);
   }
-  return [];
+
+  if (product.product_type_links && Array.isArray(product.product_type_links)) {
+    urls = urls.concat(product.product_type_links);
+  } else if (product.product_type_link) {
+    urls.push(product.product_type_link);
+  } else if (typeof product.product_type_links === 'string') {
+    try {
+      urls = urls.concat(JSON.parse(product.product_type_links));
+    } catch {
+      urls.push(product.product_type_links);
+    }
+  }
+
+  return [...new Set(urls)].filter(url => typeof url === 'string' && url.trim() !== '');
 };
 
 export const getMediaUrl = (product) => {

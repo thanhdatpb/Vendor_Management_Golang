@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
-import { lsGet, fmtDate, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
+import { lsGet, fmtDate, fmtDateTime, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
 import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../utils/productExcel';
 import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field } from './SellerUI';
 import { productApi } from '../../services/api';
@@ -107,6 +107,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       product_type: product.product_type || '',
       mediaFiles: [],
       product_type_links: links,
+      production_time: product.production_time || '',
+      shipping_time: product.shipping_time || '',
+      total_cost: product.total_cost || '',
       other_specs: product.other_specs || '',
       material: product.material || '',
       print_area: product.print_area || '',
@@ -211,13 +214,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     const errors = {};
 
     if (!form.product_type?.trim()) {
-      errors.product_type = 'Vui lòng nhập loại sản phẩm';
+      errors.product_type = 'Vui lòng nhập Product Type';
+    }
+    if (!form.production_time?.trim()) {
+      errors.production_time = 'Vui lòng nhập thời gian sản xuất';
+    }
+    if (!form.shipping_time?.trim()) {
+      errors.shipping_time = 'Vui lòng nhập thời gian ship';
+    }
+    if (!form.total_cost?.trim()) {
+      errors.total_cost = 'Vui lòng nhập Total Cost';
     }
     if (!form.product_type_links || form.product_type_links.length === 0) {
       errors.product_type_links = 'Vui lòng thêm ít nhất 1 link sản phẩm';
-    }
-    if (!form.other_specs?.trim()) {
-      errors.other_specs = 'Vui lòng nhập đặc tính kỹ thuật';
     }
     if (!form.material?.trim()) {
       errors.material = 'Vui lòng nhập chất liệu';
@@ -225,14 +234,23 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     if (!form.print_area?.trim()) {
       errors.print_area = 'Vui lòng nhập vùng in/thiết kế';
     }
+    if (!form.other_specs?.trim()) {
+      errors.other_specs = 'Vui lòng nhập other đặc tính kỹ thuật';
+    }
     if (!form.good_review?.trim()) {
       errors.good_review = 'Vui lòng nhập good review';
     }
     if (!form.bad_review?.trim()) {
       errors.bad_review = 'Vui lòng nhập bad review';
     }
-    if (form.mediaFiles.length === 0 && previewUrls.length === 0) {
-      errors.media = 'Vui lòng chọn ít nhất 1 file media';
+    if (!form.packaging_links?.trim()) {
+      errors.packaging_links = 'Vui lòng nhập packaging';
+    }
+    if (!form.other_packaging?.trim()) {
+      errors.other_packaging = 'Vui lòng nhập other packaging';
+    }
+    if (!form.product_type_links || form.product_type_links.length === 0) {
+      errors.product_type_links = 'Vui lòng cung cấp ít nhất 1 link sản phẩm';
     }
 
     setFormErrors(errors);
@@ -317,7 +335,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     setSubmitting(true);
     const data = new FormData();
-    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging']
+    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging', 'production_time', 'shipping_time', 'total_cost']
       .forEach(k => { if (form[k]) data.append(k, form[k]); });
 
     if (form.product_type_links && form.product_type_links.length > 0) {
@@ -337,10 +355,18 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     try {
       const res = await productApi.create(data);
+      const createdData = res?.data?.data || res?.data;
+      if (createdData?.id) {
+        try {
+          await productApi.sendToAdmin(createdData.id);
+        } catch (e) {
+          console.error('Auto send to admin failed:', e);
+        }
+      }
+
       // Optimistic update: thêm sản phẩm mới vào đầu danh sách ngay lập tức
-      const newProduct = normalizeLinks(res?.data?.data || {
+      const baseProduct = createdData || {
         id: Date.now(),
-        status: 'draft',
         created_at: new Date().toISOString(),
         product_type: form.product_type,
         other_specs: form.other_specs,
@@ -350,11 +376,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         bad_review: form.bad_review,
         packaging_links: form.packaging_links,
         other_packaging: form.other_packaging,
+        production_time: form.production_time,
+        shipping_time: form.shipping_time,
+        total_cost: form.total_cost,
         product_type_links: form.product_type_links,
         seller_name: user?.sellerName || user?.seller_name,
         project: user?.project,
         media_urls: previewUrls,
-      });
+      };
+      
+      const newProduct = normalizeLinks({ ...baseProduct, status: 'pending' });
       setSubmittedProducts(prev => [newProduct, ...prev]);
       closeModal();
       showToast('success', '✅ Tạo mới thành công!', `Sản phẩm được tạo bởi: ${user?.sellerName || user?.seller_name || user?.email}`);
@@ -382,13 +413,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       bad_review: form.bad_review,
       packaging_links: form.packaging_links,
       other_packaging: form.other_packaging,
+      production_time: form.production_time,
+      shipping_time: form.shipping_time,
+      total_cost: form.total_cost,
       product_type_links: [...form.product_type_links],
     };
     const savedProductId = editingProduct.id;
 
     setSubmitting(true);
     const data = new FormData();
-    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging']
+    ['product_type', 'other_specs', 'material', 'print_area', 'good_review', 'bad_review', 'packaging_links', 'other_packaging', 'production_time', 'shipping_time', 'total_cost']
       .forEach(k => { if (form[k]) data.append(k, form[k]); });
 
     if (form.product_type_links && form.product_type_links.length > 0) {
@@ -399,12 +433,17 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     try {
       await productApi.update(savedProductId, data);
+      try {
+        await productApi.sendToAdmin(savedProductId);
+      } catch (e) {
+        console.error('Auto send to admin failed:', e);
+      }
       // Optimistic update: cập nhật local state ngay, không reload
       setSubmittedProducts(prev => prev.map(p =>
-        p.id !== savedProductId ? p : { ...p, ...savedFormData }
+        p.id !== savedProductId ? p : { ...p, ...savedFormData, status: 'pending' }
       ));
       closeModal();
-      showToast('success', '✅ Cập nhật thành công!', 'Sản phẩm đã được cập nhật.');
+      showToast('success', '✅ Thành công!', 'Sản phẩm đã được lưu và gửi Admin.');
     } catch (err) {
       showToast('error', '❌ Lỗi cập nhật!', err.response?.data?.message || err.message);
     } finally {
@@ -439,78 +478,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     } finally { setProcessingId(null); }
   };
 
-  const handleExport = async () => {
-    if (!filteredProducts.length) {
-      showToast('warning', '⚠️ Không có dữ liệu', 'Không có sản phẩm nào để xuất!');
-      return;
-    }
-    showToast('success', '⏳ Đang xuất...', 'Đang tải thư viện Excel, vui lòng chờ...');
-    const d = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
-    await exportProductsToExcel(filteredProducts, productVendors, `products_${d}.xlsx`);
-  };
-
-  const handleImportProductsFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (importFileRef.current) importFileRef.current.value = '';
-    if (!file) return;
-    if (!['xlsx', 'xls', 'csv'].includes(file.name.split('.').pop().toLowerCase())) {
-      showToast('error', '❌ Sai định dạng', 'Vui lòng chọn file .xlsx/.xls/.csv');
-      return;
-    }
-
-    let rows = [];
-    try {
-      rows = await parseSellerProductsExcel(file);
-    } catch (err) {
-      showToast('error', '❌ Lỗi đọc file', err.message || 'Không thể parse file Excel');
-      return;
-    }
-
-    if (!rows.length) {
-      showToast('warning', '⚠️ Không có dữ liệu', 'Không tìm thấy dòng sản phẩm hợp lệ trong file.');
-      return;
-    }
-
-    setSubmitting(true);
-    let ok = 0;
-    const errors = [];
-
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const data = new FormData();
-      data.append('product_type', row.product_type || '');
-      if (row.deadline_date) data.append('deadline_date', row.deadline_date);
-      if (row.other_specs) data.append('other_specs', row.other_specs);
-      if (row.material) data.append('material', row.material);
-      if (row.print_area) data.append('print_area', row.print_area);
-      if (row.good_review) data.append('good_review', row.good_review);
-      if (row.bad_review) data.append('bad_review', row.bad_review);
-      if (row.packaging_links) data.append('packaging_links', row.packaging_links);
-      if (row.other_packaging) data.append('other_packaging', row.other_packaging);
-      if (row.product_type_links?.length) data.append('product_type_links', JSON.stringify(row.product_type_links));
-      if (user?.sellerName || user?.seller_name) data.append('seller_name', user.sellerName || user.seller_name);
-      if (user?.project) data.append('project', user.project);
-
-      try {
-        await productApi.create(data);
-        ok++;
-      } catch (err) {
-        const msg = err.response?.data?.message || err.message || 'Không xác định';
-        errors.push(`Dòng ${i + 1} (${row.product_type || 'N/A'}): ${msg}`);
-      }
-    }
-
-    await loadProducts();
-    setSubmitting(false);
-
-    if (!errors.length) {
-      showToast('success', '✅ Import thành công', `Đã import ${ok}/${rows.length} sản phẩm.`);
-    } else {
-      showToast('warning', '⚠️ Import hoàn tất có lỗi', `Thành công ${ok}/${rows.length}. Kiểm tra alert để xem lỗi.`);
-      alert(`Import có lỗi:\n\n${errors.slice(0, 12).join('\n')}`);
-    }
-  };
-
+  // Removed handleExport and handleImportProductsFile as requested
 
   const filteredProducts = submittedProducts.filter(p => {
     if (user?.project && p.project !== user.project && p.project) return false; // Lọc theo project (nếu có)
@@ -534,61 +502,128 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
   if (loading) return <Spinner />;
 
+  const statusMeta = {
+    draft:    { label: 'Draft',    bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', color: '#6b7280', dot: '#9ca3af', icon: '○' },
+    pending:  { label: 'Pending',  bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', color: '#92400e', dot: '#f59e0b', icon: '◌' },
+    approved: { label: 'Approved', bg: 'linear-gradient(135deg,#ecfdf5,#d1fae5)', color: '#065f46', dot: '#16a34a', icon: '●' },
+    reject:   { label: 'Rejected', bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', color: '#991b1b', dot: '#dc2626', icon: '✕' },
+  };
+
   return (
-    <div>
-      <input
-        ref={importFileRef}
-        type="file"
-        accept=".xlsx,.xls,.csv"
-        style={{ display: 'none' }}
-        onChange={handleImportProductsFile}
-      />
-      {toast && (<div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 380 }}><div style={{ background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : toast.type === 'error' ? `linear-gradient(135deg, ${HC.danger}, #b91c1c)` : `linear-gradient(135deg, ${HC.warning}, #d97706)`, color: '#fff', borderRadius: 12, boxShadow: HC.shadowStrong, overflow: 'hidden' }}><div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}><span style={{ fontSize: 24 }}>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : '⚠️'}</span><div><div style={{ fontWeight: 900, fontSize: 13 }}>{toast.title}</div><div style={{ fontSize: 11, opacity: 0.9 }}>{toast.message}</div></div><button onClick={() => setToast(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16 }}>✕</button></div><div style={{ height: 3, background: 'rgba(255,255,255,0.5)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} /></div></div>)}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 900, color: HC.ink }}>Danh Sách Sản Phẩm</h3>
-        <div style={{ display: 'flex', gap: 10 }}>
-
-          <button onClick={() => importFileRef.current?.click()} disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: submitting ? HC.muted2 : HC.warning, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer' }}>{submitting ? 'Đang import...' : 'Import Excel'}</button>
-          <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Xuất Excel{hasFilter && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 999, padding: '1px 6px', fontSize: 10 }}>{filteredProducts.length}</span>}</button>
-          <button onClick={openCreateModal} style={{ padding: '9px 16px', borderRadius: 11, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>Tạo Sản Phẩm Mới</button>
+    <div style={{ fontFamily: "'Inter','Nunito',system-ui,sans-serif" }}>
+      {/* ── Toast ── */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 400 }}>
+          <div style={{ background: toast.type === 'success' ? 'linear-gradient(135deg,#16a34a,#15803d)' : toast.type === 'error' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : '!'}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>{toast.title}</div>
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>{toast.message}</div>
+              </div>
+              <button onClick={() => setToast(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', cursor: 'pointer', width: 28, height: 28, borderRadius: 8, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            </div>
+            <div style={{ height: 3, background: 'rgba(255,255,255,0.4)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} />
+          </div>
         </div>
+      )}
+
+      {/* ── Page Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <p style={{ fontSize: 13, color: HC.ink2, margin: 0, fontWeight: 700 }}>Tổng cộng: {submittedProducts.length} sản phẩm đã tạo</p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          style={{
+            padding: '10px 20px', borderRadius: 12,
+            background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+            color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+            boxShadow: '0 4px 14px rgba(245,166,35,0.4)',
+            transition: 'transform 0.15s,box-shadow 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(245,166,35,0.4)'; }}
+        >
+          <span style={{ fontSize: 16 }}>＋</span> Request sản phẩm mới
+        </button>
       </div>
 
-      {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700 }}>⚠️ {apiError}<button onClick={loadProducts} style={{ marginLeft: 12, padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer' }}>Thử lại</button></div>}
+      {/* ── Error Banner ── */}
+      {apiError && (
+        <div style={{ marginBottom: 16, padding: '12px 18px', borderRadius: 12, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span>⚠️</span> {apiError}
+          <button onClick={loadProducts} style={{ marginLeft: 8, padding: '4px 14px', borderRadius: 8, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button>
+        </div>
+      )}
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16, padding: '12px 16px', background: HC.surface, borderRadius: 14, border: `1.5px solid ${HC.border}` }}>
-        <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-          <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
+      {/* ── Filter Bar ── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20, padding: '14px 18px', background: '#fff', borderRadius: 16, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
+          <SearchOutlined style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
           <input
             type="text"
             placeholder="Tìm loại sản phẩm..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ ...inp, paddingLeft: 36 }}
+            style={{ ...inp, paddingLeft: 38, borderRadius: 10 }}
             onFocus={e => e.target.style.borderColor = HC.orange}
             onBlur={e => e.target.style.borderColor = HC.border}
           />
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ flex: '1 1 150px', minWidth: 130, padding: '9px 12px', borderRadius: 9, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2 }}>
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          style={{ flex: '0 0 180px', padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2, fontWeight: 600, color: HC.ink2, cursor: 'pointer' }}
+        >
           <option value="">Tất cả trạng thái</option>
-          <option value="draft">Draft (Chưa gửi)</option>
-          <option value="pending">Pending (Chờ duyệt)</option>
-          <option value="approved">Approved (Đã duyệt)</option>
-          <option value="reject">Rejected (Từ chối)</option>
+          <option value="pending">Pending — Chờ duyệt</option>
+          <option value="approved">Approved — Đã duyệt</option>
+          <option value="reject">Rejected — Từ chối</option>
         </select>
-        {hasFilter && <button onClick={() => { setSearch(''); setFilterStatus(''); }} style={{ padding: '8px 14px', borderRadius: 9, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Xóa lọc</button>}
-        <div style={{ fontSize: 11, color: HC.muted, fontWeight: 700 }}>{filteredProducts.length} / {submittedProducts.length} sản phẩm</div>
+        {hasFilter && (
+          <button
+            onClick={() => { setSearch(''); setFilterStatus(''); }}
+            style={{ padding: '8px 14px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+          >✕ Xóa bộ lọc</button>
+        )}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: HC.muted, fontWeight: 700 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: HC.orange, display: 'inline-block' }} />
+          {filteredProducts.length} / {submittedProducts.length} sản phẩm
+        </div>
       </div>
 
-      {filteredProducts.length === 0 ? <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào. Hãy tạo sản phẩm mới!' : 'Không tìm thấy kết quả phù hợp'} /> : (
+      {/* ── Table ── */}
+      {filteredProducts.length === 0 ? (
+        <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào. Hãy tạo request đầu tiên!' : 'Không tìm thấy kết quả phù hợp'} />
+      ) : (
         <>
-          <div style={{ overflowX: 'auto', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
-            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 13, background: HC.surface }}>
+          <div style={{ overflowX: 'auto', borderRadius: 18, border: `1.5px solid ${HC.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff' }}>
               <thead>
-                <tr>
-                  {['STT', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Lý do', 'Nhà phân phối', 'Thao tác'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '12px 14px', color: HC.brown, fontWeight: 900, borderBottom: `1.5px solid ${HC.border}`, fontSize: 10, textTransform: 'uppercase', background: HC.cream }}>{h}</th>
+                <tr style={{ background: `linear-gradient(135deg, ${HC.cream}, #fff8ed)` }}>
+                  {[
+                    { label: 'No',              w: 48 },
+                    { label: 'Product Type',  w: 180 },
+                    { label: 'Image',         w: 80 },
+                    { label: 'Date Request',  w: 120 },
+                    { label: 'Deadline',      w: 100 },
+                    { label: 'Status',        w: 110 },
+                    { label: 'Approve the request', w: 160 },
+                    { label: 'Distributor',   w: 140 },
+                    { label: 'Actions',       w: 160 },
+                  ].map(h => (
+                    <th key={h.label} style={{
+                      textAlign: 'left', padding: '13px 16px',
+                      color: HC.brown, fontWeight: 800,
+                      borderBottom: `2px solid ${HC.border}`,
+                      fontSize: 11,
+                      letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                      width: h.w,
+                    }}>{h.label}</th>
                   ))}
                 </tr>
               </thead>
@@ -598,28 +633,118 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   const status = getStatus(p);
                   const isDraft = status === 'draft';
                   const isRejected = status === 'reject';
+                  const isApproved = status === 'approved';
+                  const sMeta = statusMeta[status] || statusMeta.draft;
+                  const dt = fmtDateTime(p.created_at);
+                  const rowBg = isRejected ? 'linear-gradient(90deg,#fef2f2 0%,#fff 40%)'
+                    : isApproved ? 'linear-gradient(90deg,#f0fdf4 0%,#fff 40%)'
+                    : i % 2 === 0 ? '#fff' : '#fffcf8';
                   return (
-                    <tr key={p.id || i} style={{ borderBottom: `1px solid ${HC.border}`, background: isRejected ? '#fef2f2' : 'transparent' }}>
-                      <td style={{ padding: '12px 14px', color: HC.muted, fontWeight: 700 }}>{(currentPage - 1) * ITEMS_PER_PAGE + i + 1}</td>
-                      <td style={{ padding: '12px 14px', fontWeight: 800, color: HC.ink2 }}>{p.product_type || '—'}</td>
-                      <td style={{ padding: '12px 14px' }}>
+                    <tr
+                      key={p.id || i}
+                      onClick={() => setViewProduct(p)}
+                      style={{ background: rowBg, transition: 'background 0.15s', cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background = isRejected ? '#fee2e2' : '#fff8ed'}
+                      onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                    >
+                      {/* # */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: HC.orangeLight, color: HC.brown, fontWeight: 800, fontSize: 11 }}>
+                          {(currentPage - 1) * ITEMS_PER_PAGE + i + 1}
+                        </span>
+                      </td>
+
+                      {/* Product Type */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, maxWidth: 200 }}>
+                        <div style={{ fontWeight: 800, color: HC.ink, fontSize: 13, lineHeight: 1.4 }}>{p.product_type || '—'}</div>
+                        {p.material && <div style={{ fontSize: 11, color: HC.muted, marginTop: 3, fontWeight: 600 }}>📦 {p.material}</div>}
+                      </td>
+
+                      {/* Hình ảnh */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
                         <MediaGallery mediaUrls={mediaUrls} />
                       </td>
-                      <td style={{ padding: '12px 14px' }}>{fmtDate(p.created_at) || '—'}</td>
-                      <td style={{ padding: '12px 14px' }}>{fmtDate(p.deadline_date) || '—'}</td>
-                      <td style={{ padding: '12px 14px' }}>
-                        <Badge status={status} />
+
+                      {/* Date Request — date + time */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        {dt ? (
+                          <div>
+                            <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 12 }}>{dt.date}</div>
+                            <div style={{ fontSize: 11, color: HC.muted, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                              <span>🕐</span>{dt.time}
+                            </div>
+                          </div>
+                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
                       </td>
-                      <td style={{ padding: '12px 14px', maxWidth: 200, wordBreak: 'break-word' }}>
-                        {isRejected ? (p.rejection_reason || p.reason || '—') : '—'}
+
+                      {/* Deadline */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        {p.deadline_date ? (
+                          <div style={{ fontSize: 12, fontWeight: 700, color: HC.ink2 }}>{fmtDate(p.deadline_date)}</div>
+                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
                       </td>
-                      <td style={{ padding: '12px 14px' }}>{renderVendorBadge(p)}</td>
-                      <td style={{ padding: '12px 14px' }}>
+
+                      {/* Status Badge */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '5px 12px', borderRadius: 999,
+                          background: sMeta.bg, color: sMeta.color,
+                          fontWeight: 800, fontSize: 11, letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: sMeta.dot, display: 'inline-block', flexShrink: 0 }} />
+                          {sMeta.label}
+                        </span>
+                      </td>
+
+                      {/* Rejection reason */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, maxWidth: 180 }}>
+                        {isRejected && (p.rejection_reason || p.reason) ? (
+                          <div style={{ fontSize: 12, color: HC.danger, fontWeight: 600, lineHeight: 1.4 }}>
+                            {(p.rejection_reason || p.reason).length > 60
+                              ? (p.rejection_reason || p.reason).slice(0, 60) + '…'
+                              : (p.rejection_reason || p.reason)}
+                          </div>
+                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
+                      </td>
+
+                      {/* Vendor badge */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                        {renderVendorBadge(p)}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={() => setViewProduct(p)} style={{ padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.border}`, background: HC.cream, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: HC.brown }}>👁 Xem</button>
-                          {isDraft && <button onClick={() => handleSendToAdmin(p.id)} disabled={processingId === p.id} style={{ padding: '5px 10px', borderRadius: 7, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800, color: '#065f46' }}>{processingId === p.id ? '⟳ Đang gửi...' : '📤 Gửi Admin'}</button>}
-                          {isDraft && <button onClick={() => openEditModal(p)} style={{ padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>✏️ Sửa</button>}
-                          {isDraft && <button onClick={() => handleDelete(p.id)} disabled={processingId === p.id} style={{ padding: '5px 10px', borderRadius: 7, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fef2f2', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800, color: HC.danger }}>{processingId === p.id ? '⟳ Đang xóa...' : '🗑 Xóa'}</button>}
+                          {(isDraft || isRejected) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSendToAdmin(p.id); }}
+                              disabled={processingId === p.id}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                              onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#bbf7d0'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#d1fae5' : '#ecfdf5'; }}
+                            >{processingId === p.id ? (isRejected ? 'Submitting...' : 'Đang gửi...') : (isRejected ? 'Submit' : 'Gửi Admin')}</button>
+                          )}
+
+                          {(isDraft || isRejected) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.orangeDark, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                            >{isRejected ? 'Edit' : 'Sửa'}</button>
+                          )}
+
+                          {(isDraft || isRejected) && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
+                              disabled={processingId === p.id}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fff5f5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: HC.danger, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                              onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#fee2e2'; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#fee2e2' : '#fff5f5'; }}
+                            >{processingId === p.id ? (isRejected ? 'Deleting...' : 'Đang xóa...') : (isRejected ? 'Delete' : 'Xóa')}</button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -647,10 +772,22 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
-                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : '➕ Thêm sản phẩm mới'}
+                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : (() => {
+                    const rawName = user?.project || user?.sellerName || user?.seller_name || user?.name || '';
+                    let titleName = 'Project Global';
+                    if (rawName) {
+                      if (rawName.toLowerCase().includes('project')) {
+                        const word = rawName.replace(/project/i, '').trim();
+                        titleName = word ? `Project ${word}` : rawName;
+                      } else {
+                        titleName = rawName;
+                      }
+                    }
+                    return `${titleName} Request - Product Type`;
+                  })()}
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
-                  {isEditing ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin để tạo sản phẩm mới'}
+                  {isEditing ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin để gửi request sản phẩm mới'}
                 </div>
               </div>
               <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', fontSize: 18, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -659,10 +796,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             {/* Modal Body */}
             <form onSubmit={isEditing ? handleUpdate : handleSubmit} style={{ padding: '24px' }}>
               <div style={{ marginBottom: 16 }}>
-                <Field label="Product Type" required error={formErrors.product_type}>
+                <Field label="1. Product Type (Ghi rõ tên Product Type - Ví dụ: AOP Sweatshirt)" required error={formErrors.product_type}>
                   <input
                     type="text"
-                    placeholder="VD: Áo thun, Cốc sứ..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.product_type}
                     onChange={fld('product_type')}
                     style={{
@@ -673,41 +810,12 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="Hình ảnh / Video (nhiều file)" required error={formErrors.media}>
-                  <input
-                    type="file"
-                    accept="image/*,video/mp4,video/webm"
-                    multiple
-                    onChange={handleFileChange}
-                    style={{
-                      ...inp,
-                      padding: '7px 10px',
-                      cursor: 'pointer',
-                      borderColor: formErrors.media ? HC.danger : HC.border
-                    }}
-                  />
-                  {previewUrls.length > 0 && (
-                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {previewUrls.map((url, idx) => (
-                        <div key={idx} style={{ position: 'relative', width: 70, height: 70, borderRadius: 8, overflow: 'hidden', border: `1px solid ${HC.border}`, background: '#2a1a00' }}>
-                          {url.match(/\.(mp4|webm|mov)$/i) || url.includes('video') ? (
-                            <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          )}
-                          <button type="button" onClick={() => removeFile(idx)} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 20, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 10 }}><DeleteOutlined /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Field>
-
-                <Field label="Product Type Link" required error={formErrors.product_type_links}>
+              <div style={{ marginBottom: 16 }}>
+                <Field label="1.1 Link hình ảnh và video (Nhiều link, sau mỗi link bấm enter)" required error={formErrors.product_type_links}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input
                       type="url"
-                      placeholder="https://example.com"
+                      placeholder="Câu trả lời của bạn"
                       value={tempLink}
                       onChange={e => setTempLink(e.target.value)}
                       onKeyPress={e => e.key === 'Enter' && addLink()}
@@ -754,53 +862,45 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <Field label="1.2 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
+                  <input type="text" placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ ...inp, borderColor: formErrors.production_time ? HC.danger : HC.border }} />
+                </Field>
+                <Field label="1.3 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
+                  <input type="text" placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ ...inp, borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
+                </Field>
+                <Field label="1.4 Total Cost (Bao gồm Base và Shipping cost)" required error={formErrors.total_cost}>
+                  <input type="text" placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ ...inp, borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
+                </Field>
+              </div>
+
               <div style={{ marginBottom: 16 }}>
-                <Field label="Đặc tính kĩ thuật" required error={formErrors.other_specs}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>2. Đặc tính kỹ thuật (Mô tả về đặc tính Product Type)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <Field label="2.1 Chất liệu (Ví dụ: 100% cotton)" required error={formErrors.material}>
+                    <input type="text" placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ ...inp, borderColor: formErrors.material ? HC.danger : HC.border }} />
+                  </Field>
+                  <Field label="2.2 Vùng In/Thiết kế (Ví dụ: 2 vùng in trước và sau)" required error={formErrors.print_area}>
+                    <input type="text" placeholder="Câu trả lời của bạn" value={form.print_area} onChange={fld('print_area')} style={{ ...inp, borderColor: formErrors.print_area ? HC.danger : HC.border }} />
+                  </Field>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <Field label="2.3 Other đặc tính kỹ thuật (Ngoài các thông tin trên)" required error={formErrors.other_specs}>
                   <textarea
-                    placeholder="Mô tả yêu cầu kỹ thuật..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.other_specs}
                     onChange={fld('other_specs')}
-                    style={{
-                      ...inp,
-                      minHeight: 72,
-                      resize: 'vertical',
-                      borderColor: formErrors.other_specs ? HC.danger : HC.border
-                    }}
+                    style={{ ...inp, minHeight: 72, resize: 'vertical', borderColor: formErrors.other_specs ? HC.danger : HC.border }}
                   />
                 </Field>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="Chất liệu" required error={formErrors.material}>
-                  <input
-                    type="text"
-                    placeholder="VD: Cotton 100%..."
-                    value={form.material}
-                    onChange={fld('material')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.material ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-                <Field label="Vùng In/Thiết kế" required error={formErrors.print_area}>
-                  <input
-                    type="text"
-                    placeholder="VD: Ngực trái, Full lưng..."
-                    value={form.print_area}
-                    onChange={fld('print_area')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.print_area ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="Good Review" required error={formErrors.good_review}>
+                <Field label="2.4 Good Review" required error={formErrors.good_review}>
                   <textarea
-                    placeholder="Ưu điểm..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.good_review}
                     onChange={fld('good_review')}
                     style={{
@@ -811,9 +911,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     }}
                   />
                 </Field>
-                <Field label="Bad Review" required error={formErrors.bad_review}>
+                <Field label="2.5 Bad Review" required error={formErrors.bad_review}>
                   <textarea
-                    placeholder="Nhược điểm..."
+                    placeholder="Câu trả lời của bạn"
                     value={form.bad_review}
                     onChange={fld('bad_review')}
                     style={{
@@ -826,31 +926,34 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                <Field label="Packing">
-                  <input
-                    type="text"
-                    placeholder="VD: Túi zip..."
-                    value={form.packaging_links}
-                    onChange={fld('packaging_links')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.packaging_links ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-                <Field label="Other Packing">
-                  <input
-                    type="text"
-                    placeholder="Đóng gói khác..."
-                    value={form.other_packaging}
-                    onChange={fld('other_packaging')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.other_packaging ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>3. Packaging & đóng gói (Yêu cầu về đóng gói)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <Field label="3.1 Packaging (Ví dụ: Mỗi sản phẩm được đóng gói hộp xốp)" required error={formErrors.packaging_links}>
+                    <input
+                      type="text"
+                      placeholder="Câu trả lời của bạn"
+                      value={form.packaging_links}
+                      onChange={fld('packaging_links')}
+                      style={{
+                        ...inp,
+                        borderColor: formErrors.packaging_links ? HC.danger : HC.border
+                      }}
+                    />
+                  </Field>
+                  <Field label="3.2 Other Packaging (Phụ kiện đi kèm - Ví dụ: Thank you card)" required error={formErrors.other_packaging}>
+                    <input
+                      type="text"
+                      placeholder="Câu trả lời của bạn"
+                      value={form.other_packaging}
+                      onChange={fld('other_packaging')}
+                      style={{
+                        ...inp,
+                        borderColor: formErrors.other_packaging ? HC.danger : HC.border
+                      }}
+                    />
+                  </Field>
+                </div>
               </div>
 
               {/* Modal Footer */}
@@ -869,7 +972,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     cursor: 'pointer'
                   }}
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -885,7 +988,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     cursor: submitting ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {submitting ? '⟳ Đang xử lý...' : isEditing ? '✓ Cập nhật' : '💾 Lưu (Draft)'}
+                  {submitting ? '⟳ Đang xử lý...' : isEditing ? '✓ Submit' : 'Submit'}
                 </button>
               </div>
             </form>

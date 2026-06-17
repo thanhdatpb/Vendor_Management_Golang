@@ -26,10 +26,10 @@ export default function App() {
       />
 
       <Route
-        path="/staff-a"
+        path="/seller"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["staffa"]}>
+            <RoleRoute allow={["staffa", "staff", "seller"]}>
               <StaffADashboard />
             </RoleRoute>
           </ProtectedRoute>
@@ -37,10 +37,10 @@ export default function App() {
       />
 
       <Route
-        path="/staff-b"
+        path="/vendor"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["staffb"]}>
+            <RoleRoute allow={["staffb", "vendor"]}>
               <StaffBDashboard />
             </RoleRoute>
           </ProtectedRoute>

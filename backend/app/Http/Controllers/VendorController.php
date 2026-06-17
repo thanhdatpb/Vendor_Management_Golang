@@ -347,6 +347,21 @@ class VendorController extends Controller
         ]);
     }
 
+    // =========================
+    // DELETE ALL VENDORS
+    // =========================
+
+    public function truncate()
+    {
+        Vendor::truncate();
+        Cache::flush();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xóa toàn bộ dữ liệu vendor thành công!',
+        ]);
+    }
+
 
 
     // =========================

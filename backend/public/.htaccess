@@ -18,14 +18,17 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Bỏ qua các đường dẫn API và Storage (Để Laravel xử lý API)
-    RewriteCond %{REQUEST_URI} ^/(api|storage)
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
+    # Serve existing files and directories directly (PHP, images, css, js...)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # API, storage, and sanctum routes -> Laravel (index.php)
+    RewriteCond %{REQUEST_URI} ^/(api|storage|sanctum)
     RewriteRule ^(.*)$ index.php [L]
 
-    # Các request còn lại gửi về Frontend (React index.html)
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
+    # All other routes -> React SPA (index.html)
     RewriteRule ^(.*)$ index.html [L]
 </IfModule>

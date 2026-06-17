@@ -18,10 +18,12 @@ export default function Login() {
 
   useEffect(() => {
     if (contextUser) {
-      const role = typeof contextUser.role === "object" ? contextUser.role?.name : contextUser.role;
+      const rawRole = typeof contextUser.role === "object" ? contextUser.role?.name : contextUser.role;
+      const role = rawRole ? rawRole.toString().toLowerCase().replace(/[_\-\s]/g, "") : "";
+      
       if (role === "admin") navigate("/admin");
-      else if (role === "staffa" || role === "staff_a") navigate("/staff-a");
-      else if (role === "staffb" || role === "staff_b") navigate("/staff-b");
+      else if (role === "staffa" || role === "staff" || role === "seller") navigate("/seller");
+      else if (role === "staffb" || role === "vendor") navigate("/vendor");
     }
   }, [contextUser, navigate]);
 
@@ -46,16 +48,18 @@ export default function Login() {
 
       if (!user) throw new Error("Không lấy được thông tin người dùng");
 
-      const role = typeof user.role === "object"
+      const rawRole = typeof user.role === "object"
         ? user.role?.name
         : user.role;
+        
+      const role = rawRole ? rawRole.toString().toLowerCase().replace(/[_\-\s]/g, "") : "";
 
       if (role === "admin") {
         navigate("/admin");
-      } else if (role === "staffa" || role === "staff_a") {
-        navigate("/staff-a");
-      } else if (role === "staffb" || role === "staff_b") {
-        navigate("/staff-b");
+      } else if (role === "staffa" || role === "staff" || role === "seller") {
+        navigate("/seller");
+      } else if (role === "staffb" || role === "vendor") {
+        navigate("/vendor");
       } else {
         navigate("/");
       }

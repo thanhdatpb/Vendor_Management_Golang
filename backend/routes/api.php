@@ -8,6 +8,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\Api\VendorImportController;
+use App\Http\Controllers\Api\VendorLibraryController;
 use App\Http\Controllers\UserController;
 /*
 |--------------------------------------------------------------------------
@@ -15,6 +17,44 @@ use App\Http\Controllers\UserController;
 |--------------------------------------------------------------------------
 */
 
+// =========================
+// DEMO DATA CLEAR ROUTE
+// =========================
+Route::get('/clear-demo-data', function () {
+    \App\Models\Product::truncate();
+    \App\Models\Notification::truncate();
+    
+    // Xóa file ảnh upload cũ
+    $files = \Illuminate\Support\Facades\Storage::disk('public')->files('products');
+    \Illuminate\Support\Facades\Storage::disk('public')->delete($files);
+    
+    // Xóa dữ liệu thư viện vendor 
+    \Illuminate\Support\Facades\Storage::delete([
+        'vendor_library.json', 
+        'vendor_library_new.json', 
+        'vendor_library_best.json'
+    ]);
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Đã reset toàn bộ dữ liệu (Sản phẩm, Thông báo, Thư viện Vendor) thành công! Để xóa Thiết lập giá của Seller, vui lòng nhấn F12 -> tab Application -> Local Storage -> Clear và tải lại trang.'
+    ]);
+});
+
+// =========================
+// MEDIA PUBLIC
+// =========================
+Route::get('/vendors/media', function (Request $request) {
+    $filename = $request->query('f');
+    if (!$filename) {
+        abort(404);
+    }
+    $path = storage_path('app/vendors/' . $filename);
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    return response()->file($path);
+});
 
 // =========================
 // AUTH PUBLIC
@@ -148,12 +188,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // =========================
 
     Route::get('/vendors/compare',  [VendorController::class, 'compare']);
+    Route::post('/vendors/import', [VendorImportController::class, 'import']);
+
+    Route::get('/vendor-library', [VendorLibraryController::class, 'getLibrary']);
+    Route::post('/vendor-library', [VendorLibraryController::class, 'saveLibrary']);
 
     Route::get('/vendors',             [VendorController::class, 'index']);
     Route::post('/vendors',            [VendorController::class, 'store']);
-    Route::post('/vendors/import',     [VendorController::class, 'import']); // bulk import
     Route::get('/vendors/{id}',        [VendorController::class, 'show']);
     Route::put('/vendors/{id}',        [VendorController::class, 'update']);
+    Route::delete('/vendors/truncate', [VendorController::class, 'truncate']);
     Route::delete('/vendors/{id}',     [VendorController::class, 'destroy']);
     Route::post('/vendors/{id}/upload-media',  [VendorController::class, 'uploadMedia']);
     Route::delete('/vendors/{id}/delete-media', [VendorController::class, 'deleteMedia']);

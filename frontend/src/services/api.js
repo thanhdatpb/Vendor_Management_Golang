@@ -8,6 +8,7 @@ const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
+    "Accept": "application/json",
   },
 });
 
@@ -53,7 +54,7 @@ api.interceptors.response.use(
       // Nếu đang dùng mock token cho local demo, không tự động văng ra login
       if (token && token.startsWith("mock_token_")) {
         console.warn("⚠️ API trả về 401 nhưng đang dùng mock_token, bỏ qua auto-logout.");
-      } else {
+      } else if (window.location.pathname !== "/login") {
         localStorage.removeItem("auth_token");
         window.location.href = "/login";
       }
@@ -73,12 +74,6 @@ const saveMockProducts = (products) => {
 
 const withMock = (apiCall, mockCall) => {
   return async (...args) => {
-    const token = localStorage.getItem("auth_token");
-    if (token && token.startsWith("mock_token_")) {
-      // Simulate network delay
-      await new Promise(r => setTimeout(r, 300));
-      return mockCall(...args);
-    }
     return apiCall(...args);
   };
 };
@@ -324,119 +319,25 @@ const saveMockVendors = (vendors) => {
 };
 
 export const vendorApi = {
-  list: withMock(
-    (params) => api.get("/vendors", { params }),
-    () => {
-      const all = getMockVendors();
-      return { data: { data: all } };
-    }
-  ),
+  list: (params) => api.get("/vendors", { params }),
+  listByProductType: (productType) => api.get("/vendors", { params: { product_type: productType } }),
+  getById: (id) => api.get(`/vendors/${id}`),
+  compare: (params) => api.get("/vendors/compare", { params }),
+  importBulk: (formData) => {
+    return api.post("/vendors/import", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+  },
+  create: (data) => api.post("/vendors", data),
+  update: (id, data) => api.put(`/vendors/${id}`, data),
+  delete: (id) => api.delete(`/vendors/${id}`),
+  uploadMedia: (id, formData) => api.post(`/vendors/${id}/upload-media`, formData),
+  deleteMedia: (id, index) => api.delete(`/vendors/${id}/delete-media`, { data: { index } }),
+};
 
-  listByProductType: withMock(
-    (productType) => api.get("/vendors", { params: { product_type: productType } }),
-    (productType) => {
-      const all = getMockVendors();
-      // Lọc cơ bản cho demo (tuỳ ý)
-      return { data: { data: all } };
-    }
-  ),
-
-  getById: withMock(
-    (id) => api.get(`/vendors/${id}`),
-    (id) => {
-      const all = getMockVendors();
-      const v = all.find(x => String(x.id) === String(id));
-      if (!v) throw new Error("Not found");
-      return { data: { data: v } };
-    }
-  ),
-
-  compare: withMock(
-    (params) => api.get("/vendors/compare", { params }),
-    () => ({ data: { data: [] } })
-  ),
-
-  importBulk: withMock(
-    (vendors) => api.post("/vendors/import", { vendors }),
-    (payload) => {
-      const all = getMockVendors();
-      const newVendors = payload.vendors || payload;
-      const combined = [...newVendors, ...all];
-      // Loại bỏ trùng lặp đơn giản theo email hoặc name
-      const unique = combined.filter((v, i, a) => a.findIndex(t => (t.email === v.email)) === i);
-      saveMockVendors(unique);
-      return { data: { message: "Imported successfully" } };
-    }
-  ),
-
-  create: withMock(
-    (data) => api.post("/vendors", data),
-    (data) => {
-      const all = getMockVendors();
-      const newVendor = {
-        id: Date.now(),
-        created_at: new Date().toISOString(),
-        ...data
-      };
-      all.unshift(newVendor);
-      saveMockVendors(all);
-      return { data: { data: newVendor, message: "Created successfully" } };
-    }
-  ),
-
-  update: withMock(
-    (id, data) => api.put(`/vendors/${id}`, data),
-    (id, data) => {
-      const all = getMockVendors();
-      const idx = all.findIndex(x => String(x.id) === String(id));
-      if (idx === -1) throw new Error("Not found");
-      Object.assign(all[idx], data);
-      saveMockVendors(all);
-      return { data: { message: "Updated successfully", data: all[idx] } };
-    }
-  ),
-
-  delete: withMock(
-    (id) => api.delete(`/vendors/${id}`),
-    (id) => {
-      let all = getMockVendors();
-      all = all.filter(x => String(x.id) !== String(id));
-      saveMockVendors(all);
-      return { data: { message: "Deleted successfully" } };
-    }
-  ),
-
-  uploadMedia: withMock(
-    (id, formData) => api.post(`/vendors/${id}/upload-media`, formData),
-    (id, formData) => {
-      // Mock: không thực sự upload, trả về URL giả
-      const all = getMockVendors();
-      const v = all.find(x => String(x.id) === String(id));
-      if (v) {
-        const mockUrl = `https://via.placeholder.com/300?text=Vendor+Media`;
-        v.media_urls = [...(v.media_urls || []), mockUrl];
-        v.media_url = v.media_urls[0];
-        saveMockVendors(all);
-        return { data: { success: true, media_urls: v.media_urls, media_url: v.media_url } };
-      }
-      return { data: { success: false } };
-    }
-  ),
-
-  deleteMedia: withMock(
-    (id, index) => api.delete(`/vendors/${id}/delete-media`, { data: { index } }),
-    (id, index) => {
-      const all = getMockVendors();
-      const v = all.find(x => String(x.id) === String(id));
-      if (v && v.media_urls) {
-        v.media_urls.splice(index, 1);
-        v.media_url = v.media_urls[0] || null;
-        saveMockVendors(all);
-        return { data: { success: true, media_urls: v.media_urls, media_url: v.media_url } };
-      }
-      return { data: { success: false } };
-    }
-  ),
+export const vendorLibraryApi = {
+  get: (mode = 'all') => api.get(`/vendor-library?mode=${mode}`),
+  save: (data, mode = 'all') => api.post(`/vendor-library?mode=${mode}`, data),
 };
 
 

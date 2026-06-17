@@ -5,24 +5,37 @@ import { HC, LS_PRODUCT_VENDORS, VENDOR_TYPES, VENDOR_PAGE_SIZE } from '../utils
 import { lsGet, lsSet, parseVendorExcel, buildVendorPayload, VENDOR_TYPE_LIST, normalizeVendorType } from '../utils/helpers';
 import { Spinner, EmptyState, BestSellerBadge } from '../ui/StaffBUI';
 import { SearchOutlined } from '@ant-design/icons';
+import VendorLibraryViewer from './VendorLibraryViewer';
 
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
   const [activeTab, setActiveTab] = useState('all'); 
   const EMPTY_VENDOR = {
-    name: '', vendor_type: '', product_type: '', size: '', optional: '', overview: '', media_url: '', pricing: '',
+    name: '', vendor_type: '', product_type: '', size: '', optional: '', overview: '',
+    avg_time_vendor: '', avg_time_actual: '', notes: '',
+    media_url: '', pricing1: '', pricing2: '',
     eco_price: '', eco_total: '', fast_price: '', fast_total: '',
     express_price: '', express_total: '', overnight_price: '', overnight_total: ''
   };
 
   const [vendorList, setVendorList] = useState([]);
+  const [excelVendors, setExcelVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState('');
+  const [toast, setToast] = useState(null);
+  const [assignConfirmOpen, setAssignConfirmOpen] = useState(false);
   const [vForm, setVForm] = useState(EMPTY_VENDOR);
   const [editingVId, setEditingVId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [vPage, setVPage] = useState(1);
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bestSellerIds, setBestSellerIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('BEST_SELLER_IDS_V1');
+      return new Set(saved ? JSON.parse(saved) : []);
+    } catch { return new Set(); }
+  });
+  const [showOnlyBestSeller, setShowOnlyBestSeller] = useState(false);
   const importFileRef = useRef(null);
   const [importPreview, setImportPreview] = useState(null);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
@@ -31,12 +44,12 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [importResult, setImportResult] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [vendorToDelete, setVendorToDelete] = useState(null);
-  const [toast, setToast] = useState(null);
   const vf = key => e => setVForm(p => ({ ...p, [key]: e.target.value }));
   const [vendorModalOpen, setVendorModalOpen] = useState(false);
   const [vendorModalMode, setVendorModalMode] = useState('create');
   const [mediaUploading, setMediaUploading] = useState(false);
   const [modalMediaUrls, setModalMediaUrls] = useState([]);
+  const [viewingMediaFor, setViewingMediaFor] = useState(null);
   const mediaUploadRef = useRef(null);
 
   const loadVendors = useCallback(async (silent = false) => {
@@ -65,8 +78,28 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   useEffect(() => { loadVendors(); }, [loadVendors]);
   useEffect(() => { setVPage(1); setSelectedIds(new Set()); setSearchFilter(''); }, [filterProductType, filterProductId, activeTab]);
   useEffect(() => { setVForm(EMPTY_VENDOR); }, []);
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
-  let filteredVendors = activeTab === 'bestseller' ? vendorList.filter(v => v.vendor_type === 'Best Seller') : vendorList;
+  useEffect(() => {
+    if (vendorList.length > 0) {
+      const saved = localStorage.getItem('BEST_SELLER_IDS_V1');
+      if (!saved) {
+        const ids = new Set(vendorList.filter(v => v.vendor_type === 'Best Seller').map(v => String(v.id)));
+        setBestSellerIds(ids);
+        if (ids.size > 0) localStorage.setItem('BEST_SELLER_IDS_V1', JSON.stringify([...ids]));
+      }
+    }
+  }, [vendorList]);
+
+  const bestSellerSorted = [...vendorList].sort((a, b) => (bestSellerIds.has(String(b.id)) ? 1 : 0) - (bestSellerIds.has(String(a.id)) ? 1 : 0));
+  let filteredVendors = activeTab === 'bestseller'
+    ? (showOnlyBestSeller ? vendorList.filter(v => bestSellerIds.has(String(v.id))) : bestSellerSorted)
+    : vendorList;
 
   if (filterProductType) {
     filteredVendors = filteredVendors.filter(v => (v.product_type || '').toLowerCase().includes(filterProductType.toLowerCase()));
@@ -84,6 +117,17 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     const allSel = pageIds.every(id => selectedIds.has(id));
     setSelectedIds(prev => { const n = new Set(prev); if (allSel) { pageIds.forEach(id => n.delete(id)); } else { pageIds.forEach(id => n.add(id)); } return n; });
   };
+  const toggleBestSeller = (vendorId) => {
+    setBestSellerIds(prev => {
+      const n = new Set(prev);
+      const sid = String(vendorId);
+      if (n.has(sid)) n.delete(sid);
+      else n.add(sid);
+      localStorage.setItem('BEST_SELLER_IDS_V1', JSON.stringify([...n]));
+      return n;
+    });
+  };
+
   const pageAllSelected = pagedVendors.length > 0 && pagedVendors.every(v => selectedIds.has(v.id));
   const pageSomeSelected = pagedVendors.some(v => selectedIds.has(v.id));
   
@@ -91,15 +135,56 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const uniqueSelectedCount = new Set(selectedVendorsList.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size;
 
 
+  const openAssignConfirm = () => {
+    if (selectedIds.size === 0) {
+      setToast({ type: 'error', msg: 'Vui lòng chọn ít nhất 1 vendor!' });
+      return;
+    }
+    setAssignConfirmOpen(true);
+  };
+
   const handleAssignVendor = () => {
-    if (selectedIds.size === 0) { alert('Vui lòng chọn ít nhất 1 vendor!'); return; }
-    const selected = vendorList.filter(v => selectedIds.has(v.id));
+    if (selectedIds.size === 0) return;
+    
+    let selected = vendorList.filter(v => selectedIds.has(v.id));
+    
+    if (activeTab === 'all') {
+      const excelSelected = [];
+      excelVendors.forEach(file => {
+        if (file.generalInfo) {
+          const matched = file.generalInfo.filter(r => selectedIds.has(r.id));
+          matched.forEach(m => {
+            excelSelected.push({
+              id: m.id,
+              name: m.kyHieu || 'Excel Vendor',
+              product_type: m.kyHieu || '',
+              vendor_type: 'New',
+              overview: m.chatLieu || '',
+              size: m.chiTietSize || '',
+              media_url: (m.images && m.images.length > 0) ? m.images[0] : '',
+              is_excel: true
+            });
+          });
+        }
+      });
+      selected = excelSelected;
+    }
+
     const productId = filterProductId;
-    if (!productId) { alert('Không xác định được sản phẩm.'); return; }
+    if (!productId) { setToast({ type: 'error', msg: 'Không xác định được sản phẩm.' }); setAssignConfirmOpen(false); return; }
+    
+    if (selected.length === 0) {
+      setToast({ type: 'error', msg: 'Không tìm thấy dữ liệu vendor đã chọn.' });
+      setAssignConfirmOpen(false);
+      return;
+    }
+
     const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = selected; lsSet(LS_PRODUCT_VENDORS, all);
     window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
-    alert(`✅ Đã gán ${uniqueSelectedCount} vendor cho sản phẩm!`);
-    setSelectedIds(new Set()); onAssignComplete();
+    setToast({ type: 'success', msg: `✅ Đã gán ${selected.length} vendor cho sản phẩm!` });
+    setSelectedIds(new Set()); 
+    setAssignConfirmOpen(false);
+    onAssignComplete();
   };
 
   const getDetailedError = (err) => {
@@ -269,11 +354,19 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     if (!file) return;
     setImportResult(null);
     if (!['xlsx', 'xls', 'csv'].includes(file.name.split('.').pop().toLowerCase())) { alert('Vui lòng chọn file Excel!'); return; }
+    
+    setImporting(true);
     try {
-      const parsed = await parseVendorExcel(file);
-      if (parsed.length === 0) { alert('File không có dữ liệu!'); return; }
-      setImportPreview(parsed); setImportPreviewPage(1); setImportConfirmOpen(true);
-    } catch (err) { alert('Lỗi đọc file: ' + err.message); }
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await vendorApi.importBulk(formData);
+      alert(res.data?.message || 'Import thành công!');
+      loadVendors();
+    } catch (err) {
+      alert('Lỗi import: ' + getDetailedError(err));
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleVSubmit = async () => {
@@ -286,7 +379,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       const pricing2 = totalPricing / 2;
       const dataToSend = {
         product_type: vForm.product_type, vendor_type: normalizeVendorType(vForm.vendor_type), name: vForm.name || '',
-        size: vForm.size || '', optional: vForm.optional || '', overview: vForm.overview || '', media_url: vForm.media_url || '', pricing1, pricing2,
+        size: vForm.size || '', optional: vForm.optional || '',
+        overview: vForm.overview || '',
+        avg_time_vendor: vForm.avg_time_vendor || '',
+        avg_time_actual: vForm.avg_time_actual || '',
+        notes: vForm.notes || '',
+        media_url: vForm.media_url || '',
+        pricing1: vForm.pricing1 ? parseFloat(vForm.pricing1) : pricing1,
+        pricing2: vForm.pricing2 ? parseFloat(vForm.pricing2) : pricing2,
         eco_price: vForm.eco_price ? parseFloat(vForm.eco_price) : null, eco_total: vForm.eco_total ? parseFloat(vForm.eco_total) : null,
         fast_price: vForm.fast_price ? parseFloat(vForm.fast_price) : null, fast_total: vForm.fast_total ? parseFloat(vForm.fast_total) : null,
         express_price: vForm.express_price ? parseFloat(vForm.express_price) : null, express_total: vForm.express_total ? parseFloat(vForm.express_total) : null,
@@ -319,12 +419,20 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   
   const openCreateVendorModal = () => { setVForm(EMPTY_VENDOR); setEditingVId(null); setVendorModalMode('create'); setModalMediaUrls([]); setVendorModalOpen(true); };
   const openEditVendorModal = (vendor) => {
-    const totalPricing = (vendor.pricing1 || 0) + (vendor.pricing2 || 0);
     setVForm({
       name: vendor.name || '', product_type: vendor.product_type || '', vendor_type: vendor.vendor_type || '',
-      size: vendor.size || '', optional: vendor.optional || '', overview: vendor.overview || '', media_url: vendor.media_url || '', pricing: totalPricing,
-      eco_price: vendor.eco_price ?? '', eco_total: vendor.eco_total ?? '', fast_price: vendor.fast_price ?? '', fast_total: vendor.fast_total ?? '',
-      express_price: vendor.express_price ?? '', express_total: vendor.express_total ?? '', overnight_price: vendor.overnight_price ?? '', overnight_total: vendor.overnight_total ?? ''
+      size: vendor.size || '', optional: vendor.optional || '',
+      overview: vendor.overview || '',
+      avg_time_vendor: vendor.avg_time_vendor || '',
+      avg_time_actual: vendor.avg_time_actual || '',
+      notes: vendor.notes || '',
+      media_url: vendor.media_url || '',
+      pricing1: vendor.pricing1 ?? '',
+      pricing2: vendor.pricing2 ?? '',
+      eco_price: vendor.eco_price ?? '', eco_total: vendor.eco_total ?? '',
+      fast_price: vendor.fast_price ?? '', fast_total: vendor.fast_total ?? '',
+      express_price: vendor.express_price ?? '', express_total: vendor.express_total ?? '',
+      overnight_price: vendor.overnight_price ?? '', overnight_total: vendor.overnight_total ?? ''
     });
     setModalMediaUrls(Array.isArray(vendor.media_urls) ? vendor.media_urls : (vendor.media_url ? [vendor.media_url] : []));
     setEditingVId(vendor.id); setVendorModalMode('edit'); setVendorModalOpen(true);
@@ -473,230 +581,86 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
   return (
     <div>
+      {/* Assign Confirm Modal */}
+      {assignConfirmOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '24px 32px', width: 400, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: 18, color: HC.ink, fontWeight: 900 }}>Xác nhận gán Vendor</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted }}>Bạn có chắc chắn muốn gán <b>{selectedIds.size}</b> vendor đã chọn cho sản phẩm này không?</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button onClick={() => setAssignConfirmOpen(false)} style={{ padding: '10px 24px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Hủy</button>
+              <button onClick={handleAssignVendor} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: HC.success, color: '#fff', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>Gán Vendor</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{ position: 'fixed', top: 24, right: 24, zIndex: 10000, animation: 'slideInRight 0.3s ease-out' }}>
+          <div style={{
+            background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : `linear-gradient(135deg, #dc2626, #b91c1c)`,
+            borderRadius: 12, boxShadow: '0 10px 25px rgba(0,0,0,0.2)', minWidth: 260, maxWidth: 380,
+            padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10, border: '1px solid rgba(255,255,255,0.2)'
+          }}>
+            <span style={{ fontSize: 20 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+            <div style={{ fontSize: 13, color: '#fff', fontWeight: 700, fontFamily: "'Nunito',sans-serif" }}>{toast.msg}</div>
+            <button onClick={() => setToast(null)} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+          </div>
+        </div>
+      )}
       <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
       {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span>⚠️ {apiError}</span><button onClick={loadVendors} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button></div>}
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
-        <TabButton id="all" label="Tất cả Vendor" />
+        <TabButton id="all" label="Tất cả Vendor" icon="📚" />
+        <TabButton id="new_products" label="Sản phẩm mới" icon="🆕" />
         <TabButton id="bestseller" label="Best Seller" icon="⭐" />
       </div>
 
-      {filterProductType && (
-        <div style={{ marginBottom: 14, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,${HC.orangeLight},${HC.orangeMid})`, border: `1.5px solid ${HC.orange}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 18 }}>🔍</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 900, fontSize: 13, color: HC.ink }}>Đang tìm vendor cho: <span style={{ color: HC.orangeDark }}>"{filterProductType}"</span></div>
-            <div style={{ fontSize: 11, color: HC.brown, marginTop: 2 }}>Tích chọn vendor phù hợp rồi nhấn <b>Gán Vendor</b></div>
-          </div>
-          <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid ${HC.orangeDark}`, background: 'rgba(255,255,255,0.6)', color: HC.brown, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ fontWeight: 900, fontSize: 15, color: activeTab === 'bestseller' ? HC.gold : HC.ink, fontFamily: "'Nunito',sans-serif" }}>
-            {activeTab === 'bestseller' ? '⭐ Best Seller' : 'Tất Cả Vendor'}
-            <span style={{ marginLeft: 10, padding: '2px 10px', borderRadius: 999, background: activeTab === 'bestseller' ? HC.goldLight : HC.orangeLight, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.orangeMid}`, color: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
-              {new Set(filteredVendors.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size}
-              {!filterProductType && vendorList.length !== filteredVendors.length ? ` / ${new Set(vendorList.map(v => ((v.name || v.vendor_type || '—') || '').toString().trim())).size}` : ''}
-            </span>
-          </div>
-
-          {!filterProductType && (
-            <div style={{ position: 'relative' }}>
-              <SearchOutlined style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 13, pointerEvents: 'none' }} />
-              <input
-                type="text"
-                placeholder="Lọc product type..."
-                value={searchFilter}
-                onChange={e => { setSearchFilter(e.target.value); setVPage(1); }}
-                style={{ ...inp3, width: 170, paddingLeft: 30 }}
-                onFocus={e => e.target.style.borderColor = HC.orange}
-                onBlur={e => e.target.style.borderColor = HC.border}
-              />
+      {/* ── Thư Viện File tab (now Tất cả Vendor và Sản phẩm mới) ───────────────────────── */}
+      {activeTab === 'new_products' && <VendorLibraryViewer mode="new_products" />}
+      {activeTab === 'all' && (
+        <>
+          {filterProductType && (
+            <div style={{ marginBottom: 14, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,#e0f2fe,#bae6fd)`, border: `1.5px solid #38bdf8`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🔍</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900, fontSize: 13, color: '#0369a1' }}>Đang tìm vendor cho: <span style={{ color: '#0c4a6e' }}>"{filterProductType}"</span></div>
+                <div style={{ fontSize: 11, color: '#075985', marginTop: 2 }}>Tích chọn dòng trong file Excel rồi nhấn <b>Gán Vendor</b></div>
+              </div>
+              {selectedIds.size > 0 && filterProductId && (
+                <button onClick={openAssignConfirm} style={{ padding: '8px 16px', borderRadius: 8, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+                  ✅ Gán {selectedIds.size} Vendor
+                </button>
+              )}
+              <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #0284c7`, background: '#fff', color: '#0284c7', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
             </div>
           )}
-          {searchFilter && !filterProductType && <button onClick={() => { setSearchFilter(''); setVPage(1); }} style={{ padding: '5px 10px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕</button>}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {selectedIds.size > 0 && filterProductId && (
-            <button onClick={handleAssignVendor} style={{ padding: '9px 20px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span>✅</span> Gán {uniqueSelectedCount} Vendor
-            </button>
-          )}
-          <button onClick={openCreateVendorModal} style={{ padding: '9px 16px', borderRadius: 10, background: HC.cream, border: `1.5px solid ${HC.border}`, color: HC.brown, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-            {activeTab === 'bestseller' ? '⭐ Tạo Best Seller' : '＋ Thêm thủ công'}
-          </button>
-          <button onClick={() => importFileRef.current?.click()} style={{ padding: '9px 20px', borderRadius: 10, background: activeTab === 'bestseller' ? `linear-gradient(135deg,#FFD700,#FFA500)` : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: activeTab === 'bestseller' ? '#7A5C00' : '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-            Import
-          </button>
-          <button onClick={handleExportSample} style={{ padding: '9px 20px', borderRadius: 10, background: `linear-gradient(135deg,${HC.brown},${HC.brownLight})`, color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-            Export
-          </button>
-        </div>
-      </div>
-
-      {selectedIds.size > 0 && (
-        <div style={{ marginBottom: 12, padding: '10px 16px', borderRadius: 12, background: '#ecfdf5', border: '1.5px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: HC.success }}>✓ Đã chọn {uniqueSelectedCount} vendor</span>
-          <button onClick={() => setSelectedIds(new Set())} style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid ${HC.success}`, background: 'transparent', color: HC.success, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Bỏ chọn tất cả</button>
-          {!filterProductId && <span style={{ fontSize: 11, color: '#92400e' }}>⚠️ Để gán vendor, vào Products → nhấn "Tìm Vendor".</span>}
-        </div>
+          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onLibraryLoaded={setExcelVendors} />
+        </>
       )}
 
-      {loading ? <Spinner /> : filteredVendors.length === 0 && !vendorModalOpen ? (
-        <EmptyState msg={activeTab === 'bestseller' ? <span>Chưa có Best Seller vendor nào. Nhấn <b style={{ color: HC.gold }}>⭐ Tạo Best Seller</b> để bắt đầu.</span> : <span>Chưa có vendor. Nhấn <b style={{ color: HC.orange }}>Import</b> để bắt đầu.</span>} />
-      ) : filteredVendors.length > 0 && (
-        <div style={{ borderRadius: 16, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.border}`, boxShadow: activeTab === 'bestseller' ? '0 8px 32px rgba(212,160,23,0.15)' : HC.shadow, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
-              <thead>
-                <tr>
-                  <th rowSpan={2} style={{ ...TH2({ minWidth: 44, width: 44 }), cursor: 'pointer', textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }} onClick={toggleAll}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                      <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${pageAllSelected ? '#fff' : 'rgba(255,255,255,0.5)'}`, background: pageAllSelected ? '#fff' : pageSomeSelected ? 'rgba(255,255,255,0.4)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}>
-                        {pageAllSelected && <span style={{ color: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
-                        {!pageAllSelected && pageSomeSelected && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900, lineHeight: 1 }}>–</span>}
-                      </div>
-                    </div>
-                  </th>
-                  <th rowSpan={2} style={{ ...TH2(), minWidth: 36 }}>ID</th>
-                  <th rowSpan={2} style={{ ...TH2(), minWidth: 72 }}>Hình ảnh</th>
-                  <th rowSpan={2} style={{ ...TH2(), minWidth: 140 }}>Vendor Name</th>
-                  <th rowSpan={2} style={{ ...TH2({ minWidth: 180 }) }}>Thông tin tổng quan</th>
-                  <th rowSpan={2} style={{ ...TH2(), minWidth: 120 }}>Product Type</th>
-                  <th rowSpan={2} style={{ ...TH2({ minWidth: 90, background: activeTab === 'bestseller' ? '#C8A000' : HC.orange }), color: '#fff' }}>💰 Pricing</th>
-                  <th colSpan={2} style={TH2()}>Detail</th>
-                  <th colSpan={2} style={{ ...TH2(), background: activeTab === 'bestseller' ? '#C8A000' : HC.orange }}>Economy</th>
-                  <th colSpan={2} style={{ ...TH2(), background: activeTab === 'bestseller' ? HC.gold : HC.orangeDark }}>Fast</th>
-                  <th colSpan={2} style={{ ...TH2(), background: activeTab === 'bestseller' ? '#C8A000' : HC.orange }}>Express</th>
-                  <th colSpan={2} style={{ ...TH2(), background: activeTab === 'bestseller' ? HC.gold : HC.orangeDark }}>Overnight</th>
-                  <th rowSpan={2} style={{ ...TH2(), background: activeTab === 'bestseller' ? '#8B6914' : HC.orangeDeep, minWidth: 90 }}>Thao tác</th>
-                </tr>
-                <tr>
-                  <th style={TH2({ minWidth: 80 })}>Size</th>
-                  <th style={TH2({ minWidth: 90 })}>Optional</th>
-                  {['Economy', 'Fast', 'Express', 'Overnight'].map(s => [
-                    <th key={`${s}-p`} style={TH2({ minWidth: 85, background: (s === 'Fast' || s === 'Overnight') ? (activeTab === 'bestseller' ? HC.gold : HC.orangeDark) : (activeTab === 'bestseller' ? '#C8A000' : HC.orange) })}>Price Ship</th>,
-                    <th key={`${s}-t`} style={TH2({ minWidth: 100, background: (s === 'Fast' || s === 'Overnight') ? (activeTab === 'bestseller' ? HC.gold : HC.orangeDark) : (activeTab === 'bestseller' ? '#C8A000' : HC.orange) })}>Total</th>,
-                  ]).flat()}
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  const groupIndices = [];
-                  let currentGrp = 1;
-                  for (let k = 0; k < filteredVendors.length; k++) {
-                    const vName = ((filteredVendors[k].name || filteredVendors[k].vendor_type || '—') || '').toString().trim();
-                    if (k > 0) {
-                      const pName = ((filteredVendors[k-1].name || filteredVendors[k-1].vendor_type || '—') || '').toString().trim();
-                      if (vName !== pName) currentGrp++;
-                    }
-                    groupIndices.push(currentGrp);
-                  }
-
-                  const rows = [];
-                  for (let i = 0; i < pagedVendors.length; i++) {
-                    const v = pagedVendors[i];
-                    const absIdx = (vPage - 1) * VENDOR_PAGE_SIZE + i;
-                    const vendorGroupIndex = groupIndices[absIdx];
-                    const C = absIdx % 2 === 0 ? TD : TDalt;
-                    const isSelected = selectedIds.has(v.id);
-                    const totalPricing = (v.pricing1 || 0) + (v.pricing2 || 0);
-                    const vendorName = ((v.name || v.vendor_type || '—') || '').toString().trim();
-                    const prevVendorName = i > 0 ? (((pagedVendors[i - 1].name || pagedVendors[i - 1].vendor_type || '—') || '').toString().trim()) : null;
-                    const isSameAsPrev = i > 0 && vendorName === prevVendorName;
-
-                    let rowSpan = 1;
-                    if (!isSameAsPrev && vendorName) {
-                      for (let j = i + 1; j < pagedVendors.length; j++) {
-                        const nextName = (((pagedVendors[j].name || pagedVendors[j].vendor_type || '—') || '').toString().trim());
-                        if (nextName !== vendorName) break;
-                        rowSpan++;
-                      }
-                    }
-
-                    rows.push(
-                      <tr key={v.id || absIdx} style={{ background: isSelected ? (activeTab === 'bestseller' ? '#FFFDE7' : `${HC.orange}12`) : undefined }} onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.97)'} onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
-                        {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), cursor: 'pointer', width: 44, textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }} onClick={() => {
-                            const groupIds = [];
-                            for (let j = i; j < i + rowSpan; j++) {
-                              if (pagedVendors[j] && pagedVendors[j].id) groupIds.push(pagedVendors[j].id);
-                            }
-                            const allSelected = groupIds.length > 0 && groupIds.every(gid => selectedIds.has(gid));
-                            setSelectedIds(prev => {
-                              const n = new Set(prev);
-                              if (allSelected) {
-                                groupIds.forEach(gid => n.delete(gid));
-                              } else {
-                                groupIds.forEach(gid => n.add(gid));
-                              }
-                              return n;
-                            });
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-                              <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${isSelected ? (activeTab === 'bestseller' ? HC.gold : HC.orange) : HC.muted2}`, background: isSelected ? (activeTab === 'bestseller' ? HC.gold : HC.orange) : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}>
-                                {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
-                              </div>
-                            </div>
-                          </td>
-                        )}
-                        {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), color: HC.muted, fontWeight: 700, verticalAlign: 'middle' }}>{vendorGroupIndex}</td>
-                        )}
-                        {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', padding: '6px' }}>
-                            {v.media_url ? (
-                              <img src={v.media_url} alt="Vendor" style={{ width: 60, height: 60, borderRadius: 8, objectFit: 'cover', border: `1.5px solid ${HC.border}`, display: 'block' }} />
-                            ) : (
-                              <div style={{ width: 60, height: 60, borderRadius: 8, background: HC.orangeLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: HC.muted, border: `1px dashed ${HC.border}` }}>N/A</div>
-                            )}
-                          </td>
-                        )}
-                        {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), fontWeight: 800, color: HC.ink2, verticalAlign: 'middle' }}>
-                            {vendorName}
-                          </td>
-                        )}
-                        {!isSameAsPrev && (
-                          <td rowSpan={rowSpan} style={{ ...C(), verticalAlign: 'middle', maxWidth: 200 }}>
-                            {v.overview ? (
-                              <span style={{ fontSize: 11, color: HC.ink2, whiteSpace: 'normal', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }} title={v.overview}>
-                                {v.overview}
-                              </span>
-                            ) : <span style={{ color: HC.muted2, fontStyle: 'italic' }}>—</span>}
-                          </td>
-                        )}
-                        <td style={{ ...C(), fontWeight: 800, color: activeTab === 'bestseller' ? HC.gold : HC.orange }}>{v.product_type || '—'}</td>
-                        <td style={{ ...C(), fontWeight: 800, color: HC.success, fontSize: 13 }}>${totalPricing.toFixed(2)}</td>
-                        <td style={C()}>{v.size || '—'}</td>
-                        <td style={C()}>{v.optional || '—'}</td>
-                        <td style={{ ...C(), borderLeft: `2px solid ${HC.border}` }}>{fmt(v.eco_price)}</td>
-                        <td style={{ ...C(), color: HC.success, fontWeight: 700 }}>{fmt(v.eco_total)}</td>
-                        <td style={C()}>{fmt(v.fast_price)}</td>
-                        <td style={{ ...C(), color: HC.success, fontWeight: 700 }}>{fmt(v.fast_total)}</td>
-                        <td style={C()}>{fmt(v.express_price)}</td>
-                        <td style={{ ...C(), color: HC.success, fontWeight: 700 }}>{fmt(v.express_total)}</td>
-                        <td style={C()}>{fmt(v.overnight_price)}</td>
-                        <td style={{ ...C(), color: HC.success, fontWeight: 700 }}>{fmt(v.overnight_total)}</td>
-                        <td style={C()}>
-                          <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                            <button onClick={() => openEditVendorModal(v)} style={{ padding: '4px 10px', borderRadius: 7, border: `1.5px solid ${activeTab === 'bestseller' ? '#D4A017' : HC.orangeMid}`, background: activeTab === 'bestseller' ? HC.goldLight : HC.orangeLight, color: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Sửa</button>
-                            <button onClick={() => handleVDelete(v)} style={{ padding: '4px 10px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Xóa</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }
-                  return rows;
-                })()}
-              </tbody>
-            </table>
-          </div>
-          <MiniPager page={vPage} total={totalVPages} onChange={setVPage} label={`Hiển thị ${(vPage - 1) * VENDOR_PAGE_SIZE + 1}–${Math.min(vPage * VENDOR_PAGE_SIZE, filteredVendors.length)} / ${filteredVendors.length} vendor`} />
-        </div>
+      {activeTab === 'bestseller' && (
+        <>
+          {filterProductType && (
+            <div style={{ marginBottom: 14, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,#fef08a,#fde047)`, border: `1.5px solid #eab308`, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>⭐</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 900, fontSize: 13, color: '#854d0e' }}>Đang tìm vendor cho: <span style={{ color: '#713f12' }}>"{filterProductType}"</span></div>
+                <div style={{ fontSize: 11, color: '#a16207', marginTop: 2 }}>Tích chọn dòng trong danh sách Best Seller rồi nhấn <b>Gán Vendor</b></div>
+              </div>
+              {selectedIds.size > 0 && filterProductId && (
+                <button onClick={openAssignConfirm} style={{ padding: '8px 16px', borderRadius: 8, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+                  ✅ Gán {selectedIds.size} Vendor
+                </button>
+              )}
+              <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #eab308`, background: '#fff', color: '#ca8a04', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
+            </div>
+          )}
+          <VendorLibraryViewer mode="bestseller" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onLibraryLoaded={setExcelVendors} />
+        </>
       )}
 
       <ImportConfirmModal />
@@ -833,17 +797,37 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               </div>
 
               <div>
-                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Product Overview (Chất liệu, mô tả)</label>
-                <input type="text" value={vForm.overview} onChange={vf('overview')} placeholder="Mô tả chất liệu, kiểu dáng..." style={inp3} />
+                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>🧵 Chất liệu (Overview)</label>
+                <input type="text" value={vForm.overview} onChange={vf('overview')} placeholder="VD: Vải polyester, lưới thoáng khí..." style={inp3} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 4 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>⏱ AVG thời gian sx+ship (Vendor)</label>
+                  <input type="text" value={vForm.avg_time_vendor} onChange={vf('avg_time_vendor')} placeholder="VD: Sx 2-4 bds, Ship 4-7 bds" style={inp3} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>⏱ AVG thời gian sx+ship (Thực tế)</label>
+                  <input type="text" value={vForm.avg_time_actual} onChange={vf('avg_time_actual')} placeholder="VD: Update sau 5 tuần chạy phối" style={inp3} />
+                </div>
+              </div>
+              <div style={{ marginBottom: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>📝 Notes</label>
+                <input type="text" value={vForm.notes} onChange={vf('notes')} placeholder="Ghi chú thêm về vendor..." style={inp3} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Optional</label>
                   <input type="text" value={vForm.optional} onChange={vf('optional')} placeholder="Tùy chọn..." style={inp3} />
                 </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Pricing <span style={{ color: HC.danger }}>*</span></label>
-                  <input type="number" step="0.01" min="0" value={vForm.pricing} onChange={vf('pricing')} placeholder="0.00" style={inp3} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Pricing 1 <span style={{ color: HC.danger }}>*</span></label>
+                    <input type="number" step="0.01" min="0" value={vForm.pricing1} onChange={vf('pricing1')} placeholder="0.00" style={inp3} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>Pricing 2</label>
+                    <input type="number" step="0.01" min="0" value={vForm.pricing2} onChange={vf('pricing2')} placeholder="0.00" style={inp3} />
+                  </div>
                 </div>
               </div>
               <div style={{ marginBottom: 16 }}>
@@ -897,6 +881,39 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                 <button onClick={() => { setDeleteModalOpen(false); setVendorToDelete(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e8d4a8', background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
                 <button onClick={() => confirmDelete()} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#dc2626', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Xóa</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingMediaFor && (
+        <div onClick={() => setViewingMediaFor(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 3000, backdropFilter: 'blur(5px)', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 800, background: HC.surface, borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+            <div style={{ padding: '16px 24px', background: HC.ink, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 900, color: '#fff', fontSize: 16 }}>Ảnh Vendor: {viewingMediaFor.name || viewingMediaFor.vendor_type}</div>
+              <button onClick={() => setViewingMediaFor(null)} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ padding: 24, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+              {(() => {
+                const urls = Array.isArray(viewingMediaFor.media_urls) && viewingMediaFor.media_urls.length > 0 
+                  ? viewingMediaFor.media_urls 
+                  : (viewingMediaFor.media_url ? [viewingMediaFor.media_url] : []);
+                
+                if (urls.length === 0) return <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: HC.muted }}>Không có hình ảnh nào.</div>;
+                
+                return urls.map((url, idx) => {
+                  const isVideo = /\.(mp4|webm)$/i.test(url);
+                  return (
+                    <div key={idx} style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${HC.border}`, aspectRatio: '1', background: '#000' }}>
+                      {isVideo ? (
+                        <video src={url} controls style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <img src={url} alt={`Media ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      )}
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>

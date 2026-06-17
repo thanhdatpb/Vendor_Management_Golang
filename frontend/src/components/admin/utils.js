@@ -22,23 +22,20 @@ export const normalizeList = resp => {
 
 export const getMediaUrls = (product) => {
   if (!product) return [];
+  let urls = [];
 
   if (product.media_urls && Array.isArray(product.media_urls) && product.media_urls.length) {
-    return product.media_urls.map(url => {
+    urls = urls.concat(product.media_urls.map(url => {
       if (url.startsWith('http')) return url;
       if (url.startsWith('/storage')) return `${API_BASE_URL}${url}`;
       return `${API_BASE_URL}/storage/${url}`;
-    });
-  }
-
-  if (product.media_url) {
+    }));
+  } else if (product.media_url) {
     const url = product.media_url;
-    if (url.startsWith('http')) return [url];
-    if (url.startsWith('/storage')) return [`${API_BASE_URL}${url}`];
-    return [`${API_BASE_URL}/storage/${url}`];
-  }
-
-  if (product.media_path) {
+    if (url.startsWith('http')) urls.push(url);
+    else if (url.startsWith('/storage')) urls.push(`${API_BASE_URL}${url}`);
+    else urls.push(`${API_BASE_URL}/storage/${url}`);
+  } else if (product.media_path) {
     let path = product.media_path;
     if (path.startsWith('storage/')) {
       path = path.replace('storage/', '');
@@ -46,11 +43,23 @@ export const getMediaUrls = (product) => {
     if (path.startsWith('/storage/')) {
       path = path.replace('/storage/', '');
     }
-    if (path.startsWith('http')) return [path];
-    return [`${API_BASE_URL}/storage/${path}`];
+    if (path.startsWith('http')) urls.push(path);
+    else urls.push(`${API_BASE_URL}/storage/${path}`);
   }
 
-  return [];
+  if (product.product_type_links && Array.isArray(product.product_type_links)) {
+    urls = urls.concat(product.product_type_links);
+  } else if (product.product_type_link) {
+    urls.push(product.product_type_link);
+  } else if (typeof product.product_type_links === 'string') {
+    try {
+      urls = urls.concat(JSON.parse(product.product_type_links));
+    } catch {
+      urls.push(product.product_type_links);
+    }
+  }
+
+  return [...new Set(urls)].filter(url => typeof url === 'string' && url.trim() !== '');
 };
 
 export const normalizeProduct = (p) => {

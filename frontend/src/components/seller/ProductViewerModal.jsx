@@ -27,6 +27,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   });
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const mediaUrls = getMediaUrls(product);
 
   useEffect(() => {
@@ -220,6 +221,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
     { label: 'Bad Review', value: product.bad_review, color: HC.danger },
     { label: 'Packing', value: product.packaging_links },
     { label: 'Other Packing', value: product.other_packaging },
+    { label: 'Target Price', value: product.total_cost != null ? `$${product.total_cost}` : '—', color: HC.success, bold: true },
+    { label: 'Target Prod Time', value: product.production_time, color: HC.brown },
+    { label: 'Target Ship Time', value: product.shipping_time, color: HC.brown },
     {
       label: 'Link',
       value: (() => {
@@ -312,55 +316,89 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
             <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>✕</button>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-            {/* LEFT COLUMN: Media & Product Info */}
-            <div style={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: `1.5px solid ${HC.border}`, overflow: 'hidden', background: HC.surface }}>
-              <div style={{ height: 220, flexShrink: 0, background: '#2a1a00', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}
-                onClick={() => { if (mediaUrls.length) { setLightboxIndex(0); setLightboxOpen(true); } }}>
-                {mediaUrls.length > 0 ? (
-                  isVideo(mediaUrls[0]) ? (
-                    <video src={mediaUrls[0]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+            {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
+            <div style={{ display: 'flex', flexShrink: 0, height: 320, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
+              {/* Media */}
+              <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}>
+                  {mediaUrls.length > 0 ? (
+                    isVideo(mediaUrls[currentMediaIndex]) ? (
+                      <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                    )
                   ) : (
-                    <img src={mediaUrls[0]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
-                  )
-                ) : (
-                  <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
-                )}
+                    <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
+                  )}
+                  {mediaUrls.length > 1 && (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p > 0 ? p - 1 : mediaUrls.length - 1); }} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                        <LeftOutlined />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p < mediaUrls.length - 1 ? p + 1 : 0); }} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                        <RightOutlined />
+                      </button>
+                      <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>
+                        {currentMediaIndex + 1} / {mediaUrls.length}
+                      </div>
+                    </>
+                  )}
+                </div>
                 {mediaUrls.length > 1 && (
-                  <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>
-                    {mediaUrls.length} media
+                  <div style={{ display: 'flex', gap: 6, padding: '8px', overflowX: 'auto', background: '#1f1400', borderTop: `1px solid ${HC.border}`, height: 60, flexShrink: 0 }}>
+                    {mediaUrls.map((url, idx) => (
+                      <div key={idx} onClick={() => { setCurrentMediaIndex(idx); }} style={{ width: 44, height: 44, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === currentMediaIndex ? HC.orange : 'transparent'}`, flexShrink: 0, opacity: idx === currentMediaIndex ? 1 : 0.6 }}>
+                        {isVideo(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-              {mediaUrls.length > 1 && (
-                <div style={{ display: 'flex', gap: 6, padding: '8px', overflowX: 'auto', background: '#1f1400', borderTop: `1px solid ${HC.border}` }}>
-                  {mediaUrls.map((url, idx) => (
-                    <div key={idx} onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }} style={{ width: 50, height: 50, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === lightboxIndex ? HC.orange : 'transparent'}`, flexShrink: 0 }}>
-                      {isVideo(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                  ))}
+
+              {/* Product Info (Horizontal Sheet) */}
+              <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: 20, background: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <span style={{ fontSize: 18 }}>📋</span>
+                  <div style={{ fontWeight: 900, fontSize: 14, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Thông tin sản phẩm (Chi tiết)</div>
                 </div>
-              )}
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <div style={{ padding: '10px 14px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span>📦</span>
-                  <div style={{ fontWeight: 900, fontSize: 10, color: '#fff' }}>Thông tin sản phẩm</div>
+
+                <div style={{ border: `1.5px solid ${HC.border}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 1200 }}>
+                    <thead>
+                      <tr style={{ background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
+                        {productRows.map((r) => (
+                          <th key={r.label} style={{ padding: '12px 16px', fontWeight: 800, fontSize: 11, color: HC.brown, textTransform: 'uppercase', letterSpacing: '0.04em', borderRight: `1px solid ${HC.border}`, whiteSpace: 'nowrap' }}>
+                            {r.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr style={{ background: '#fff' }}>
+                        {productRows.map((r) => (
+                          <td key={r.label} style={{ padding: '14px 16px', borderRight: `1px solid ${HC.border}`, verticalAlign: 'top', minWidth: ['Good Review', 'Bad Review', 'Đặc tính KT', 'Link'].includes(r.label) ? 260 : 140 }}>
+                            <div className="custom-scrollbar" style={{ fontSize: 13, color: r.color || HC.ink, fontWeight: r.bold ? 700 : 500, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 160, overflowY: 'auto', paddingRight: 4 }}>
+                              {r.value === '' || r.value === null ? '—' : r.value}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-                {productRows.map((r, idx) => (<InfoRow key={r.label} label={r.label} value={r.value} valueColor={r.color} valueBold={r.bold} idx={idx} isLast={idx === productRows.length - 1} />))}
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Vendors List */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-              <div style={{ padding: '12px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* BOTTOM SECTION: Vendors List */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#faf9f8' }}>
+              <div style={{ padding: '12px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>🏪</span>
                   <div>
                     <div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
                     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>✓ Chọn nhà cung cấp → Nhập phản hồi → Gửi quyết định</div>
                   </div>
-                </div>
               </div>
 
               <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
@@ -431,36 +469,73 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
                           {/* Pricing Table (Grouped) */}
                           <div style={{ padding: '0', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, overflowX: 'auto' }}>
-                            <table style={{ width: '100%', minWidth: 600, borderCollapse: 'collapse', fontSize: 11, textAlign: 'center' }}>
-                              <thead>
-                                <tr style={{ background: HC.cream, borderBottom: `1px solid ${HC.border}`, color: HC.muted }}>
-                                  <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 800 }}>Variant (Size / Opt)</th>
-                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Base Cost</th>
-                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Economy (Ship/Total)</th>
-                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Fast (Ship/Total)</th>
-                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Express (Ship/Total)</th>
-                                  <th style={{ padding: '10px 12px', fontWeight: 800 }}>Overnight (Ship/Total)</th>
+                            <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 11, textAlign: 'center' }}>
+                              <thead style={{ color: HC.muted }}>
+                                <tr>
+                                  <th rowSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream }}>Ảnh</th>
+                                  <th rowSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream }}>Tổng quan</th>
+                                  <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream, textTransform: 'uppercase' }}>Chi tiết size</th>
+                                  <th rowSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream }}>BASE COST</th>
+                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#15803d', color: '#fff' }}>ECONOMY</th>
+                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.orangeDark, color: '#fff' }}>FAST</th>
+                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.orangeDeep, color: '#fff' }}>EXPRESS</th>
+                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderBottom: `1px solid ${HC.border}`, background: '#8B6914', color: '#fff' }}>OVERNIGHT</th>
+                                </tr>
+                                <tr>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#16a34a', color: '#fff' }}>PRICE SHIP</th>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#16a34a', color: '#fff' }}>TOTAL (FULFILL)</th>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#f97316', color: '#fff' }}>PRICE SHIP</th>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#f97316', color: '#fff' }}>TOTAL (FULFILL)</th>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#ea580c', color: '#fff' }}>PRICE SHIP</th>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#ea580c', color: '#fff' }}>TOTAL (FULFILL)</th>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#a16207', color: '#fff' }}>PRICE SHIP</th>
+                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderBottom: `1px solid ${HC.border}`, background: '#a16207', color: '#fff' }}>TOTAL (FULFILL)</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {group.items.map((vi, idx) => (
                                   <tr key={idx} style={{ borderBottom: idx === group.items.length - 1 ? 'none' : `1px solid ${HC.border}`, background: HC.surface }}>
-                                    <td style={{ padding: '10px 12px', textAlign: 'left' }}>
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ padding: '10px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, textAlign: 'center' }}>
+                                        {v.media_url ? <img src={v.media_url} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} /> : <span style={{color: HC.muted2, fontSize: 10}}>—</span>}
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'top', textAlign: 'left', borderRight: `1px solid ${HC.border}`, maxWidth: 220 }}>
+                                        {v.overview && <div style={{ fontSize: 11, marginBottom: 6, lineHeight: 1.4 }}><b style={{color: HC.brown}}>Chất liệu:</b> {v.overview}</div>}
+                                        {v.avg_time_vendor && <div style={{ fontSize: 10, color: HC.muted, marginBottom: 2 }}><b style={{color: HC.orangeDark}}>SX + Ship (Vendor):</b> {v.avg_time_vendor}</div>}
+                                        {v.avg_time_actual && <div style={{ fontSize: 10, color: HC.muted }}><b style={{color: HC.success}}>SX + Ship (Thực tế):</b> {v.avg_time_actual}</div>}
+                                        {!v.overview && !v.avg_time_vendor && !v.avg_time_actual && <span style={{color: HC.muted2}}>—</span>}
+                                      </td>
+                                    )}
+                                    <td style={{ padding: '10px 12px', textAlign: 'left', borderRight: `1px solid ${HC.border}` }}>
                                       <div style={{ fontWeight: 800, color: HC.ink }}>{vi.size || '—'}</div>
                                       {vi.optional && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{vi.optional}</div>}
                                     </td>
-                                    <td style={{ padding: '10px 12px', fontWeight: 800, color: HC.orange }}>${((vi.pricing1 || 0) + (vi.pricing2 || 0)).toFixed(2)}</td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.eco_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.eco_total)}</span>
+                                    <td style={{ padding: '10px 12px', fontWeight: 800, color: HC.orange, borderRight: `1px solid ${HC.border}` }}>${((vi.pricing1 || 0) + (vi.pricing2 || 0)).toFixed(2)}</td>
+                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.eco_price)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
+                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.eco_total)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.fast_price)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
+                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.fast_total)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.express_price)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
+                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.express_total)}</span>
+                                    </td>
+                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
+                                      <span style={{ color: HC.muted }}>{fmt(vi.overnight_price)}</span>
                                     </td>
                                     <td style={{ padding: '10px 12px' }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.fast_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.fast_total)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.express_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.express_total)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.overnight_price)}</span> <span style={{ color: HC.border, margin: '0 4px' }}>|</span> <span style={{ color: HC.success, fontWeight: 800 }}>{fmt(vi.overnight_total)}</span>
+                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.overnight_total)}</span>
                                     </td>
                                   </tr>
                                 ))}

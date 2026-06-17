@@ -12,13 +12,16 @@ class Vendor extends Model
 
     protected $table = 'vendors';
 
-      protected $fillable = [
-        'name',  // ← PHẢI CÓ DÒNG NÀY
+    protected $fillable = [
+        'name',
         'vendor_type',
         'product_type',
         'size',
         'optional',
         'overview',
+        'avg_time_vendor',
+        'avg_time_actual',
+        'notes',
         'media_url',
         'media_urls',
         'pricing1',
