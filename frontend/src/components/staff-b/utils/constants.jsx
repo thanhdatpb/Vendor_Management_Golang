@@ -26,13 +26,13 @@ export const HC = {
 export const MENU = [
   { id: 'products', icon: <AppstoreOutlined />, label: 'Quản Lý Form Duyệt' },
   { id: 'library', icon: <ShopOutlined />, label: 'Thư Viện Vendor' },
-  { id: 'news', icon: <NotificationOutlined />, label: 'Tạo thông báo' },
+  { id: 'news', icon: <NotificationOutlined />, label: 'Quản Lý Thông Báo' },
 ];
 
 export const PAGE_TITLES = {
   products: 'Quản Lý Form Duyệt',
   library: 'Thư Viện Vendor',
-  news: 'Tạo Thông Báo',
+  news: 'Quản Lý Thông Báo',
 };
 
 export const EMPTY_FORM = {
