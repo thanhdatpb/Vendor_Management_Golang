@@ -8,19 +8,40 @@ use Illuminate\Support\Facades\Storage;
 
 class VendorLibraryController extends Controller
 {
-    private $filePath = 'vendor_library.json';
+    private function migrateNewProducts()
+    {
+        $pathAll = storage_path('app/vendor_library.json');
+        $pathNew = storage_path('app/vendor_library_new.json');
+        
+        if (file_exists($pathNew)) {
+            $dataAll = file_exists($pathAll) ? json_decode(file_get_contents($pathAll), true) : [];
+            $dataNew = json_decode(file_get_contents($pathNew), true);
+            
+            if (is_array($dataNew)) {
+                foreach ($dataNew as &$item) {
+                    $item['sourceTab'] = 'new_products';
+                }
+                
+                $unique = [];
+                if (is_array($dataAll)) {
+                    foreach ($dataAll as $item) {
+                        $unique[$item['id']] = $item;
+                    }
+                }
+                foreach ($dataNew as $item) {
+                    $unique[$item['id']] = $item;
+                }
+                
+                file_put_contents($pathAll, json_encode(array_values($unique)));
+            }
+            unlink($pathNew);
+        }
+    }
 
     public function getLibrary(Request $request)
     {
-        $mode = $request->query('mode', 'all');
-        if ($mode === 'new_products') {
-            $fileName = 'vendor_library_new.json';
-        } elseif ($mode === 'best_seller') {
-            $fileName = 'vendor_library_best.json';
-        } else {
-            $fileName = 'vendor_library.json';
-        }
-        $path = storage_path('app/' . $fileName);
+        $this->migrateNewProducts();
+        $path = storage_path('app/vendor_library.json');
 
         if (!file_exists($path)) {
             return response()->json([]);
@@ -32,16 +53,7 @@ class VendorLibraryController extends Controller
 
     public function saveLibrary(Request $request)
     {
-        $mode = $request->query('mode', 'all');
-        if ($mode === 'new_products') {
-            $fileName = 'vendor_library_new.json';
-        } elseif ($mode === 'best_seller') {
-            $fileName = 'vendor_library_best.json';
-        } else {
-            $fileName = 'vendor_library.json';
-        }
-        $path = storage_path('app/' . $fileName);
-
+        $path = storage_path('app/vendor_library.json');
         $data = $request->getContent();
         file_put_contents($path, $data);
 
