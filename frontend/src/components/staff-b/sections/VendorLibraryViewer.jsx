@@ -403,6 +403,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           title: result.title,
           generalInfo: result.generalInfo,
           pricing: result.pricing,
+          sourceTab: mode === 'new_products' ? 'new_products' : 'all',
         });
       } catch (err) {
         errors.push(`${file.name}: ${err.message}`);
@@ -541,6 +542,8 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
               if (!file.generalInfo) return file;
               return { ...file, generalInfo: file.generalInfo.filter(r => bestSellerIds.has(r.id)) };
             }).filter(file => file.generalInfo && file.generalInfo.length > 0);
+          } else if (mode === 'new_products') {
+            displayFiles = displayFiles.filter(file => file.sourceTab === 'new_products');
           }
           
           if (loading) {
