@@ -581,7 +581,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
           style={{ flex: '0 0 180px', padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2, fontWeight: 600, color: HC.ink2, cursor: 'pointer' }}
         >
           <option value="">Tất cả trạng thái</option>
-          <option value="draft">Draft</option>
           <option value="pending">Pending — Chờ duyệt</option>
           <option value="approved">Approved — Đã duyệt</option>
           <option value="reject">Rejected — Từ chối</option>
@@ -732,7 +731,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                               style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
                               onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#bbf7d0'; }}
                               onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#d1fae5' : '#ecfdf5'; }}
-                            >{processingId === p.id ? '⟳ Đang gửi...' : '📤 Gửi Admin'}</button>
+                            >{processingId === p.id ? 'Đang gửi...' : 'Gửi Admin'}</button>
                           )}
 
                           {(isDraft || isRejected) && (
@@ -741,7 +740,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                               style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.orangeDark, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
                               onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
                               onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                            >✏️ Sửa</button>
+                            >Sửa</button>
                           )}
 
                           {(isDraft || isRejected) && (
@@ -751,7 +750,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                               style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fff5f5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: HC.danger, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
                               onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#fee2e2'; }}
                               onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#fee2e2' : '#fff5f5'; }}
-                            >{processingId === p.id ? '⟳ Xóa...' : '🗑 Xóa'}</button>
+                            >{processingId === p.id ? 'Đang xóa...' : 'Xóa'}</button>
                           )}
                         </div>
                       </td>
