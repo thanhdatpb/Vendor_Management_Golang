@@ -27,6 +27,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   });
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const mediaUrls = getMediaUrls(product);
 
   useEffect(() => {
@@ -220,6 +221,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
     { label: 'Bad Review', value: product.bad_review, color: HC.danger },
     { label: 'Packing', value: product.packaging_links },
     { label: 'Other Packing', value: product.other_packaging },
+    { label: 'Target Price', value: product.total_cost != null ? `$${product.total_cost}` : '—', color: HC.success, bold: true },
+    { label: 'Target Prod Time', value: product.production_time, color: HC.brown },
+    { label: 'Target Ship Time', value: product.shipping_time, color: HC.brown },
     {
       label: 'Link',
       value: (() => {
@@ -318,27 +322,34 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
             <div style={{ display: 'flex', flexShrink: 0, height: 320, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
               {/* Media */}
               <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}
-                  onClick={() => { if (mediaUrls.length) { setLightboxIndex(0); setLightboxOpen(true); } }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}>
                   {mediaUrls.length > 0 ? (
-                    isVideo(mediaUrls[0]) ? (
-                      <video src={mediaUrls[0]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+                    isVideo(mediaUrls[currentMediaIndex]) ? (
+                      <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <img src={mediaUrls[0]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                      <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     )
                   ) : (
                     <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
                   )}
                   {mediaUrls.length > 1 && (
-                    <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>
-                      {mediaUrls.length} media
-                    </div>
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p > 0 ? p - 1 : mediaUrls.length - 1); }} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                        <LeftOutlined />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p < mediaUrls.length - 1 ? p + 1 : 0); }} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                        <RightOutlined />
+                      </button>
+                      <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>
+                        {currentMediaIndex + 1} / {mediaUrls.length}
+                      </div>
+                    </>
                   )}
                 </div>
                 {mediaUrls.length > 1 && (
                   <div style={{ display: 'flex', gap: 6, padding: '8px', overflowX: 'auto', background: '#1f1400', borderTop: `1px solid ${HC.border}`, height: 60, flexShrink: 0 }}>
                     {mediaUrls.map((url, idx) => (
-                      <div key={idx} onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }} style={{ width: 44, height: 44, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === lightboxIndex ? HC.orange : 'transparent'}`, flexShrink: 0 }}>
+                      <div key={idx} onClick={() => { setCurrentMediaIndex(idx); }} style={{ width: 44, height: 44, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === currentMediaIndex ? HC.orange : 'transparent'}`, flexShrink: 0, opacity: idx === currentMediaIndex ? 1 : 0.6 }}>
                         {isVideo(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                       </div>
                     ))}
