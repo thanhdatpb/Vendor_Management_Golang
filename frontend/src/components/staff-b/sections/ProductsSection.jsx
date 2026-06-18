@@ -184,7 +184,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
   if (loading) return <Spinner />;
 
-  const TH = s => ({ padding: '11px 13px', fontWeight: 900, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: HC.brown, borderBottom: `1.5px solid ${HC.border}`, background: HC.cream, fontFamily: "'Nunito',sans-serif", textAlign: 'left', whiteSpace: 'nowrap', ...s });
+  const TH = s => ({ padding: '11px 13px', fontWeight: 900, fontSize: 11, color: HC.brown, borderBottom: `1.5px solid ${HC.border}`, background: HC.cream, fontFamily: "'Nunito',sans-serif", textAlign: 'left', whiteSpace: 'nowrap', ...s });
 
   return (
     <div>
@@ -220,9 +220,9 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   <th style={TH()}>Hình ảnh</th>
                   <th style={TH()}>Date Request</th>
                   <th style={TH()}>Deadline Date</th>
-                  <th style={TH()}>Trạng thái</th>
-                  <th style={TH()}>Nhà cung cấp</th>
-                  <th style={TH()}>Thao tác</th>
+                  <th style={TH()}>Status</th>
+                  <th style={TH()}>Supplier</th>
+                  <th style={TH()}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -237,7 +237,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   const availableCount = libraryVendorCounts[pTypeLower] || 0;
 
                   return (
-                    <tr key={p.id || i} style={{ borderBottom: `1px solid ${HC.border}` }} onMouseEnter={e => e.currentTarget.style.background = HC.orangePale} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <tr key={p.id || i} style={{ borderBottom: `1px solid ${HC.border}`, cursor: 'pointer' }} onClick={() => setViewVendorProduct(p)} onMouseEnter={e => e.currentTarget.style.background = HC.orangePale} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <td style={{ padding: '12px 13px', color: HC.muted, fontWeight: 700 }}>
                         {(currentPage - 1) * ITEMS_PER_PAGE + i + 1}
                       </td>
@@ -284,14 +284,11 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
                       <td style={{ padding: '12px 13px' }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={() => setViewVendorProduct(p)} style={{ padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.border}`, background: HC.cream, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: HC.brown }}>
-                            👁 Xem
-                          </button>
-                          <button onClick={() => onGotoVendors(p.product_type, p.id)} style={{ padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orange}`, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: '#fff' }}>
+                          <button onClick={(e) => { e.stopPropagation(); onGotoVendors(p.product_type, p.id); }} style={{ padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orange}`, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: '#fff' }}>
                             Tìm Vendor
                           </button>
                           <button
-                            onClick={() => handleOpenDeadlineModal(p)}
+                            onClick={(e) => { e.stopPropagation(); handleOpenDeadlineModal(p); }}
                             style={{
                               padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.orangeMid}`,
                               background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 800,
@@ -302,7 +299,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                           </button>
                           {availableCount > 0 && !hasVendors && (
                             <button
-                              onClick={() => handleQuickAssign(p)}
+                              onClick={(e) => { e.stopPropagation(); handleQuickAssign(p); }}
                               style={{
                                 padding: '5px 10px', borderRadius: 7, border: `1.5px solid ${HC.success}`,
                                 background: '#ecfdf5', cursor: 'pointer', fontSize: 11, fontWeight: 800,
