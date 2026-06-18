@@ -32,6 +32,8 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   const startEdit = (idx, row) => {
     setEditIdx(idx);
     setEditForm({
+      vendorName: row.vendorName || '',
+      kyHieu: row.kyHieu || '',
       linkFolder: row.linkFolder || '',
       img0: row.images?.[0] || '',
       img1: row.images?.[1] || '',
@@ -43,7 +45,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   const saveEdit = (idx) => {
     const newRows = [...rows];
     const images = [editForm.img0, editForm.img1, editForm.img2, editForm.img3].filter(Boolean);
-    newRows[idx] = { ...newRows[idx], linkFolder: editForm.linkFolder, images };
+    newRows[idx] = { ...newRows[idx], vendorName: editForm.vendorName, kyHieu: editForm.kyHieu, linkFolder: editForm.linkFolder, images };
     setEditIdx(-1);
     setEditForm(null);
     onSave(newRows);
@@ -56,6 +58,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
           <tr>
             {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: 44, textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
             {selectable && <th style={{ ...TH(), width: 36, textAlign: 'center' }}>✓</th>}
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Vendor Name</th>
             <th style={{ ...TH(), width: 44 }}>Product Type</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
@@ -83,7 +86,20 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                     <input type="checkbox" checked={selectedIds?.has(r.id)} onChange={() => onSelectRow(r.id)} style={{ cursor: 'pointer' }} />
                   </td>
                 )}
-                <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
+                <td style={{ ...TD(i) }}>
+                  {isEditing ? (
+                    <input type="text" placeholder="Vendor Name..." value={editForm.vendorName} onChange={e => setEditForm(p => ({ ...p, vendorName: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                  ) : (
+                    r.vendorName ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.vendorName}</span> : <span style={{ color: HC.muted2, fontStyle: 'italic', fontSize: 11 }}>—</span>
+                  )}
+                </td>
+                <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>
+                  {isEditing ? (
+                    <input type="text" placeholder="A, B, C..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
+                  ) : (
+                    r.kyHieu || '—'
+                  )}
+                </td>
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
