@@ -217,8 +217,8 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   <th style={TH()}>ID</th>
                   <th style={TH({ color: HC.orange })}>Project</th>
                   <th style={TH()}>Product Type</th>
-                  <th style={TH()}>Hình ảnh</th>
-                  <th style={TH()}>Date Request</th>
+                  <th style={TH()}>Image</th>
+                  <th style={TH()}>Request Date</th>
                   <th style={TH()}>Deadline Date</th>
                   <th style={TH()}>Status</th>
                   <th style={TH()}>Supplier</th>
