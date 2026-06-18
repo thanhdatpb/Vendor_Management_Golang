@@ -16,3 +16,4 @@ output.json
 fix_db.js
 fix_db.cjs
 claude.md
+.idea/
