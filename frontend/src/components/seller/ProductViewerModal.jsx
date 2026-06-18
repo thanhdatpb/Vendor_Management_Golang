@@ -458,7 +458,6 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   <span style={{ fontSize: 20 }}>🏪</span>
                   <div>
                     <div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>✓ Chọn nhà cung cấp → Nhập phản hồi → Gửi quyết định</div>
                   </div>
               </div>
 
@@ -470,245 +469,79 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Bộ phận Vận hành sẽ gán nhà cung cấp sau khi xem xét sản phẩm này.</div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    {groupedVendors.map((group, i) => {
-                      const v = group.firstVendor;
-                      const key = group.key;
-                      const sel = selections[key];
-                      const isChecked = !!sel?.checked;
-                      const feedback = sel?.feedback || '';
-                      const bFeedback = bFeedbacks[key];
-                      const aResponse = aResponses[key];
-                      const sampleDecision = sampleDecisions[key];
-                      const hasSubmitted = !!aResponse || !!sampleDecision;
-
-                      return (
-                        <div key={key} style={{
-                          background: isChecked ? '#ecfdf5' : HC.surface,
-                          borderRadius: 16,
-                          border: `1.5px solid ${isChecked ? '#bbf7d0' : HC.border}`,
-                          overflow: 'hidden',
-                          transition: 'all 0.2s ease',
-                          boxShadow: isChecked ? '0 4px 12px rgba(22,163,74,0.1)' : '0 1px 3px rgba(0,0,0,0.05)'
-                        }}>
-                          {/* Vendor Header */}
-                          <div style={{
-                            padding: '14px 20px',
-                            background: isChecked ? '#ecfdf5' : HC.cream,
-                            borderBottom: `1px solid ${isChecked ? '#bbf7d0' : HC.border}`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: 12
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <button
-                                  onClick={() => !hasSubmitted && toggleCheck(key)}
-                                  style={{
-                                    width: 28, height: 28, borderRadius: 8,
-                                    background: isChecked ? HC.success : 'transparent',
-                                    border: `2px solid ${isChecked ? HC.success : HC.muted2}`,
-                                    cursor: !hasSubmitted ? 'pointer' : 'not-allowed',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    transition: 'all 0.15s', opacity: hasSubmitted ? 0.5 : 1
-                                  }}
-                                >
-                                  {isChecked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>✓</span>}
-                                </button>
-                                <span style={{ fontWeight: 800, fontSize: 13, color: HC.muted }}>#{i + 1}</span>
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: 900, fontSize: 16, color: HC.orangeDark }}>{group.vendorName}</div>
-                                <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 11, color: HC.muted2 }}>
-                                  <span>📏 {group.items.length} phân loại (sizes/options)</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Pricing Table (Simplified 7-Column) */}
-                          <div style={{ padding: '0', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, overflowX: 'auto' }}>
-                            <table style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', fontSize: 12, textAlign: 'center' }}>
-                              <thead style={{ color: HC.muted, background: HC.cream }}>
-                                <tr>
-                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Ảnh</th>
-                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Chất liệu</th>
-                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian SX</th>
-                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian Ship</th>
-                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Size</th>
-                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Link Folder</th>
-                                  <th style={{ padding: '12px', fontWeight: 800, borderBottom: `1px solid ${HC.border}` }}>Total Price</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {group.items.map((vi, idx) => (
-                                  <tr key={idx} style={{ borderBottom: idx === group.items.length - 1 ? 'none' : `1px solid ${HC.border}`, background: HC.surface }}>
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ padding: '10px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, textAlign: 'center', width: 80 }}>
-                                        {v.media_url ? <img src={v.media_url} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} /> : <span style={{color: HC.muted2, fontSize: 10}}>—</span>}
-                                      </td>
-                                    )}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
-                                        <div style={{ fontWeight: 600, color: HC.ink, lineHeight: 1.4 }}>{v.overview || product.material || '—'}</div>
-                                      </td>
-                                    )}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
-                                        <div style={{ fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
-                                      </td>
-                                    )}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
-                                        <div style={{ fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
-                                      </td>
-                                    )}
-                                    <td style={{ padding: '10px 12px', textAlign: 'center', borderRight: `1px solid ${HC.border}` }}>
-                                      <div style={{ fontWeight: 800, color: HC.ink }}>{vi.size || '—'}</div>
-                                      {vi.optional && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>{vi.optional}</div>}
-                                    </td>
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
-                                        {(() => {
-                                          let links = [];
-                                          if (product.product_type_links) {
-                                            if (Array.isArray(product.product_type_links)) links = product.product_type_links;
-                                            else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
-                                          } else if (product.product_type_link) links = [product.product_type_link];
-                                          return links.length > 0 ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 80, overflowY: 'auto' }} className="custom-scrollbar">
-                                              {links.map((link, i) => (
-                                                <a key={i} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                                  style={{ color: HC.orange, fontSize: 11, textDecoration: 'none', fontWeight: 700, display: 'inline-block', padding: '4px 8px', background: HC.orangePale, borderRadius: 4 }}>
-                                                  🔗 Link {i + 1}
-                                                </a>
-                                              ))}
-                                            </div>
-                                          ) : <span style={{ color: HC.muted2, fontSize: 11 }}>—</span>;
-                                        })()}
-                                      </td>
-                                    )}
-                                    <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
-                                      <span style={{ color: '#059669', fontWeight: 900, fontSize: 14 }}>{fmt(vi.eco_total)}</span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-
-                          {/* Feedback Section - 2 cột */}
-                          <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, borderBottom: `1px solid ${HC.border}` }}>
-                            {/* Staff B Feedback */}
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                                <span style={{ fontSize: 14 }}>💬</span>
-                                <span style={{ fontWeight: 800, fontSize: 11, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi từ Staff B</span>
-                              </div>
-                              {bFeedback ? (
-                                <div style={{
-                                  background: '#ecfdf5', borderRadius: 12, padding: '12px',
-                                  border: `1px solid #bbf7d0`
-                                }}>
-                                  <div style={{ fontSize: 12, color: '#065f46', lineHeight: 1.5 }}>{bFeedback.feedback}</div>
-                                  <div style={{ marginTop: 6, fontSize: 9, color: '#059669' }}>{new Date(bFeedback.submittedAt).toLocaleString('vi-VN')}</div>
-                                </div>
-                              ) : (
-                                <div style={{
-                                  padding: '20px', textAlign: 'center', background: HC.orangePale,
-                                  borderRadius: 12, border: `1px dashed ${HC.border}`, color: HC.muted2, fontSize: 11
-                                }}>⏳ Chưa có phản hồi</div>
-                              )}
-                            </div>
-
-                            {/* Seller Feedback */}
-                            {/* Seller Feedback - NEW with radio buttons */}
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                                <span style={{ fontSize: 14 }}>✏️</span>
-                                <span style={{ fontWeight: 800, fontSize: 11, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi của bạn</span>
-                              </div>
-
-                              {hasSubmitted ? (
-                                <div style={{
-                                  background: sampleDecision?.decision === 'dat' || aResponse?.decision === 'dat' ? '#ecfdf5' : '#fef2f2',
-                                  borderRadius: 12, padding: '12px',
-                                  border: `1px solid ${sampleDecision?.decision === 'dat' || aResponse?.decision === 'dat' ? '#bbf7d0' : '#fecaca'}`
-                                }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                    {sampleDecision?.decision === 'dat' || aResponse?.decision === 'dat' ? (
-                                      <><span style={{ fontSize: 18 }}>✅</span><span style={{ fontWeight: 800, color: '#065f46' }}>Đã gửi phản hồi</span></>
-                                    ) : (
-                                      <><span style={{ fontSize: 18 }}>❌</span><span style={{ fontWeight: 800, color: '#991b1b' }}>Đã gửi phản hồi</span></>
-                                    )}
-                                  </div>
-                                  <div style={{ fontSize: 12, color: HC.ink2, marginTop: 4, whiteSpace: 'pre-wrap' }}>
-                                    {aResponse?.sellerFeedback || sampleDecision?.sellerFeedback}
-                                  </div>
-                                  <div style={{ marginTop: 6, fontSize: 9, color: '#059669', textAlign: 'right' }}>
-                                    {new Date(aResponse?.respondedAt || sampleDecision?.time).toLocaleString('vi-VN')}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                  {/* Textarea feedback */}
-                                  <textarea
-                                    placeholder="Nhập phản hồi của bạn về vendor này..."
-                                    value={feedback}
-                                    onChange={e => setFeedback(key, e.target.value)}
-                                    rows={3}
-                                    style={{
-                                      padding: '8px 12px', borderRadius: 10,
-                                      border: `1.5px solid ${feedback ? HC.orange : HC.border}`,
-                                      fontSize: 12, width: '100%', resize: 'vertical',
-                                      fontFamily: "'Nunito Sans',sans-serif", outline: 'none'
-                                    }}
-                                  />
-
-
-
-                                  {!isChecked && (
-                                    <div style={{ fontSize: 10, color: HC.warning, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                      <span>⚠️</span>
-                                      <span>Vui lòng tích chọn vendor trước khi gửi</span>
-                                    </div>
-                                  )}
-
-                                  <button
-                                    onClick={() => {
-                                      if (!isChecked) {
-                                        showToastMessage('Vui lòng tích chọn vendor trước khi gửi', 'warning');
-                                        return;
-                                      }
-                                      if (!feedback.trim()) {
-                                        showToastMessage('Vui lòng nhập nội dung phản hồi', 'warning');
-                                        return;
-                                      }
-                                      // Gửi trực tiếp, mặc định duyệt (dat)
-                                      submitFeedbackWithDecision(key, v, 'dat', '');
-                                    }}
-                                    disabled={sendingKey === key}
-                                    style={{
-                                      padding: '10px 16px', borderRadius: 10, border: 'none',
-                                      background: (!isChecked || !feedback.trim()) ? HC.muted2 :
-                                        (sendingKey === key ? HC.success : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`),
-                                      color: '#fff', fontSize: 12, fontWeight: 700,
-                                      cursor: (!isChecked || !feedback.trim()) ? 'not-allowed' : 'pointer',
-                                      opacity: (!isChecked || !feedback.trim()) ? 0.5 : 1,
-                                      transition: 'all 0.2s ease'
-                                    }}
-                                  >
-                                    {sendingKey === key ? '✓ Đã gửi' : '📤 Gửi cho Staff B'}
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div style={{ background: HC.surface, borderRadius: 16, border: `1px solid ${HC.border}`, overflow: 'hidden' }}>
+                    <div style={{ padding: '0', background: HC.surface2, overflowX: 'auto' }}>
+                      <table style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', fontSize: 12, textAlign: 'center' }}>
+                        <thead style={{ color: HC.muted, background: HC.cream }}>
+                          <tr>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Ảnh</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Chất liệu</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian SX</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian Ship</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Size</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Link Folder</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderBottom: `1px solid ${HC.border}` }}>Total Price</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupedVendors.map((group, gIdx) => {
+                            const v = group.firstVendor;
+                            return group.items.map((vi, idx) => (
+                              <tr key={`${gIdx}-${idx}`} style={{ borderBottom: `1px solid ${HC.border}`, background: HC.surface }}>
+                                {idx === 0 && (
+                                  <td rowSpan={group.items.length} style={{ padding: '10px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, textAlign: 'center', width: 80 }}>
+                                    {v.media_url ? <img src={v.media_url} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} /> : <span style={{color: HC.muted2, fontSize: 10}}>—</span>}
+                                  </td>
+                                )}
+                                {idx === 0 && (
+                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
+                                    <div style={{ fontWeight: 600, color: HC.ink, lineHeight: 1.4 }}>{v.overview || product.material || '—'}</div>
+                                  </td>
+                                )}
+                                {idx === 0 && (
+                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
+                                    <div style={{ fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
+                                  </td>
+                                )}
+                                {idx === 0 && (
+                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
+                                    <div style={{ fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
+                                  </td>
+                                )}
+                                <td style={{ padding: '10px 12px', textAlign: 'center', borderRight: `1px solid ${HC.border}` }}>
+                                  <div style={{ fontWeight: 800, color: HC.ink }}>{vi.size || '—'}</div>
+                                  {vi.optional && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>{vi.optional}</div>}
+                                </td>
+                                {idx === 0 && (
+                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
+                                    {(() => {
+                                      let links = [];
+                                      if (product.product_type_links) {
+                                        if (Array.isArray(product.product_type_links)) links = product.product_type_links;
+                                        else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
+                                      } else if (product.product_type_link) links = [product.product_type_link];
+                                      return links.length > 0 ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 80, overflowY: 'auto' }} className="custom-scrollbar">
+                                          {links.map((link, i) => (
+                                            <a key={i} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                              style={{ color: HC.orange, fontSize: 11, textDecoration: 'none', fontWeight: 700, display: 'inline-block', padding: '4px 8px', background: HC.orangePale, borderRadius: 4 }}>
+                                              🔗 Link {i + 1}
+                                            </a>
+                                          ))}
+                                        </div>
+                                      ) : <span style={{ color: HC.muted2, fontSize: 11 }}>—</span>;
+                                    })()}
+                                  </td>
+                                )}
+                                <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
+                                  <span style={{ color: '#059669', fontWeight: 900, fontSize: 14 }}>{fmt(vi.eco_total)}</span>
+                                </td>
+                              </tr>
+                            ));
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
