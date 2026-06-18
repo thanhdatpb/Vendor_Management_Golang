@@ -528,75 +528,70 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                             </div>
                           </div>
 
-                          {/* Pricing Table (Grouped) */}
+                          {/* Pricing Table (Simplified 7-Column) */}
                           <div style={{ padding: '0', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, overflowX: 'auto' }}>
-                            <table style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 11, textAlign: 'center' }}>
-                              <thead style={{ color: HC.muted }}>
+                            <table style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', fontSize: 12, textAlign: 'center' }}>
+                              <thead style={{ color: HC.muted, background: HC.cream }}>
                                 <tr>
-                                  <th rowSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream }}>Ảnh</th>
-                                  <th rowSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream }}>Tổng quan</th>
-                                  <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream, textTransform: 'uppercase' }}>Chi tiết size</th>
-                                  <th rowSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.cream }}>BASE COST</th>
-                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#15803d', color: '#fff' }}>ECONOMY</th>
-                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.orangeDark, color: '#fff' }}>FAST</th>
-                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: HC.orangeDeep, color: '#fff' }}>EXPRESS</th>
-                                  <th colSpan={2} style={{ padding: '10px 12px', fontWeight: 800, borderBottom: `1px solid ${HC.border}`, background: '#8B6914', color: '#fff' }}>OVERNIGHT</th>
-                                </tr>
-                                <tr>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#16a34a', color: '#fff' }}>PRICE SHIP</th>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#16a34a', color: '#fff' }}>TOTAL (FULFILL)</th>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#f97316', color: '#fff' }}>PRICE SHIP</th>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#f97316', color: '#fff' }}>TOTAL (FULFILL)</th>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#ea580c', color: '#fff' }}>PRICE SHIP</th>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#ea580c', color: '#fff' }}>TOTAL (FULFILL)</th>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, background: '#a16207', color: '#fff' }}>PRICE SHIP</th>
-                                  <th style={{ padding: '8px 10px', fontWeight: 800, borderBottom: `1px solid ${HC.border}`, background: '#a16207', color: '#fff' }}>TOTAL (FULFILL)</th>
+                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Ảnh</th>
+                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Chất liệu</th>
+                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian SX</th>
+                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian Ship</th>
+                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Size</th>
+                                  <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Link Folder</th>
+                                  <th style={{ padding: '12px', fontWeight: 800, borderBottom: `1px solid ${HC.border}` }}>Total Price</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {group.items.map((vi, idx) => (
                                   <tr key={idx} style={{ borderBottom: idx === group.items.length - 1 ? 'none' : `1px solid ${HC.border}`, background: HC.surface }}>
                                     {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ padding: '10px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, textAlign: 'center' }}>
+                                      <td rowSpan={group.items.length} style={{ padding: '10px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, textAlign: 'center', width: 80 }}>
                                         {v.media_url ? <img src={v.media_url} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} /> : <span style={{color: HC.muted2, fontSize: 10}}>—</span>}
                                       </td>
                                     )}
                                     {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'top', textAlign: 'left', borderRight: `1px solid ${HC.border}`, maxWidth: 220 }}>
-                                        {v.overview && <div style={{ fontSize: 11, marginBottom: 6, lineHeight: 1.4 }}><b style={{color: HC.brown}}>Chất liệu:</b> {v.overview}</div>}
-                                        {v.avg_time_vendor && <div style={{ fontSize: 10, color: HC.muted, marginBottom: 2 }}><b style={{color: HC.orangeDark}}>SX + Ship (Vendor):</b> {v.avg_time_vendor}</div>}
-                                        {v.avg_time_actual && <div style={{ fontSize: 10, color: HC.muted }}><b style={{color: HC.success}}>SX + Ship (Thực tế):</b> {v.avg_time_actual}</div>}
-                                        {!v.overview && !v.avg_time_vendor && !v.avg_time_actual && <span style={{color: HC.muted2}}>—</span>}
+                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
+                                        <div style={{ fontWeight: 600, color: HC.ink, lineHeight: 1.4 }}>{v.overview || product.material || '—'}</div>
                                       </td>
                                     )}
-                                    <td style={{ padding: '10px 12px', textAlign: 'left', borderRight: `1px solid ${HC.border}` }}>
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
+                                        <div style={{ fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
+                                        <div style={{ fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
+                                      </td>
+                                    )}
+                                    <td style={{ padding: '10px 12px', textAlign: 'center', borderRight: `1px solid ${HC.border}` }}>
                                       <div style={{ fontWeight: 800, color: HC.ink }}>{vi.size || '—'}</div>
-                                      {vi.optional && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{vi.optional}</div>}
+                                      {vi.optional && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>{vi.optional}</div>}
                                     </td>
-                                    <td style={{ padding: '10px 12px', fontWeight: 800, color: HC.orange, borderRight: `1px solid ${HC.border}` }}>${((vi.pricing1 || 0) + (vi.pricing2 || 0)).toFixed(2)}</td>
-                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.eco_price)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
-                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.eco_total)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.fast_price)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
-                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.fast_total)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.express_price)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
-                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.express_total)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px', borderRight: `1px solid ${HC.border}` }}>
-                                      <span style={{ color: HC.muted }}>{fmt(vi.overnight_price)}</span>
-                                    </td>
-                                    <td style={{ padding: '10px 12px' }}>
-                                      <span style={{ color: '#059669', fontWeight: 800 }}>{fmt(vi.overnight_total)}</span>
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
+                                        {(() => {
+                                          let links = [];
+                                          if (product.product_type_links) {
+                                            if (Array.isArray(product.product_type_links)) links = product.product_type_links;
+                                            else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
+                                          } else if (product.product_type_link) links = [product.product_type_link];
+                                          return links.length > 0 ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 80, overflowY: 'auto' }} className="custom-scrollbar">
+                                              {links.map((link, i) => (
+                                                <a key={i} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                                  style={{ color: HC.orange, fontSize: 11, textDecoration: 'none', fontWeight: 700, display: 'inline-block', padding: '4px 8px', background: HC.orangePale, borderRadius: 4 }}>
+                                                  🔗 Link {i + 1}
+                                                </a>
+                                              ))}
+                                            </div>
+                                          ) : <span style={{ color: HC.muted2, fontSize: 11 }}>—</span>;
+                                        })()}
+                                      </td>
+                                    )}
+                                    <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
+                                      <span style={{ color: '#059669', fontWeight: 900, fontSize: 14 }}>{fmt(vi.eco_total)}</span>
                                     </td>
                                   </tr>
                                 ))}
