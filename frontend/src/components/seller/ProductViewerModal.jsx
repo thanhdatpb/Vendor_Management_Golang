@@ -319,10 +319,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
             {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
-            <div style={{ display: 'flex', flexShrink: 0, height: 320, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
+            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
               {/* Media */}
-              <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}>
+              <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00', minHeight: 320 }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default', minHeight: 260 }}>
                   {mediaUrls.length > 0 ? (
                     isVideo(mediaUrls[currentMediaIndex]) ? (
                       <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
@@ -357,39 +357,124 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 )}
               </div>
 
-              {/* Product Info (Horizontal Sheet) */}
-              <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: 20, background: '#fff' }}>
+              {/* Product Info — Full Form Fields */}
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 20px', background: '#fff' }}>
+                {/* Header row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <span style={{ fontSize: 18 }}>📋</span>
-                  <div style={{ fontWeight: 900, fontSize: 14, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Thông tin sản phẩm (Chi tiết)</div>
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <div style={{ fontWeight: 900, fontSize: 13, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Thông tin request sản phẩm</div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+                    <span style={{ padding: '2px 10px', borderRadius: 99, background: HC.cream, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 700, color: HC.muted }}>
+                      Ngày gửi: {fmtDate(product.created_at) || '—'}
+                    </span>
+                    {product.deadline_date && (
+                      <span style={{ padding: '2px 10px', borderRadius: 99, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 10, fontWeight: 700, color: HC.danger }}>
+                        Deadline: {fmtDate(product.deadline_date)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div style={{ border: `1.5px solid ${HC.border}`, borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: 1200 }}>
-                    <thead>
-                      <tr style={{ background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
-                        {productRows.map((r) => (
-                          <th key={r.label} style={{ padding: '12px 16px', fontWeight: 800, fontSize: 11, color: HC.brown, textTransform: 'uppercase', letterSpacing: '0.04em', borderRight: `1px solid ${HC.border}`, whiteSpace: 'nowrap' }}>
-                            {r.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={{ background: '#fff' }}>
-                        {productRows.map((r) => (
-                          <td key={r.label} style={{ padding: '14px 16px', borderRight: `1px solid ${HC.border}`, verticalAlign: 'top', minWidth: ['Good Review', 'Bad Review', 'Đặc tính KT', 'Link'].includes(r.label) ? 260 : 140 }}>
-                            <div className="custom-scrollbar" style={{ fontSize: 13, color: r.color || HC.ink, fontWeight: r.bold ? 700 : 500, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 160, overflowY: 'auto', paddingRight: 4 }}>
-                              {r.value === '' || r.value === null ? '—' : r.value}
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    </tbody>
-                  </table>
+                {/* Section 1 */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontWeight: 800, fontSize: 11, color: HC.orange, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: HC.orange, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900 }}>1</span>
+                    Product Type — Happy Request
+                  </div>
+                  <div style={{ background: HC.orangePale, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1. Product Type</div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: HC.orangeDark }}>{product.product_type || '—'}</div>
+                  </div>
+                  <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 4 }}>1.1 Link hình ảnh và video</div>
+                    {(() => {
+                      let links = [];
+                      if (product.product_type_links) {
+                        if (Array.isArray(product.product_type_links)) links = product.product_type_links;
+                        else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
+                      } else if (product.product_type_link) links = [product.product_type_link];
+                      return links.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {links.map((link, idx) => (
+                            <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                              style={{ color: HC.orange, fontSize: 11, textDecoration: 'none', wordBreak: 'break-all' }}
+                              onMouseEnter={e => { e.currentTarget.style.textDecoration = 'underline'; }}
+                              onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}>
+                              🔗 {link.length > 80 ? link.substring(0, 80) + '...' : link}
+                            </a>
+                          ))}
+                        </div>
+                      ) : <span style={{ color: HC.muted2, fontSize: 11 }}>—</span>;
+                    })()}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1.2 Thời gian SX mong muốn</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1.3 Thời gian ship mong muốn</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
+                    </div>
+                    <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1.4 Total Cost (Base + Shipping)</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2 */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontWeight: 800, fontSize: 11, color: HC.brown, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: HC.brown, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900 }}>2</span>
+                    Đặc tính kỹ thuật (Mô tả về Product Type)
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.1 Chất liệu</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.material || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.2 Vùng In/Thiết kế</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.print_area || '—'}</div>
+                    </div>
+                  </div>
+                  <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.3 Other đặc tính kỹ thuật</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink, whiteSpace: 'pre-wrap' }}>{product.other_specs || '—'}</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.4 Good Review</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#065f46', whiteSpace: 'pre-wrap' }}>{product.good_review || '—'}</div>
+                    </div>
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.5 Bad Review</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.danger, whiteSpace: 'pre-wrap' }}>{product.bad_review || '—'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3 */}
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 11, color: '#6b7280', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#6b7280', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900 }}>3</span>
+                    Packaging & đóng gói
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>3.1 Packaging</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.packaging_links || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>3.2 Other Packaging</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.other_packaging || '—'}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
 
             {/* BOTTOM SECTION: Vendors List */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#faf9f8' }}>
