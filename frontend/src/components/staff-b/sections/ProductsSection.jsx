@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
-import { lsGet, fmtDate } from '../utils/helpers';
+import { lsGet, fmtDate, getMediaUrls } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/StaffBUI';
 import VendorViewerModal from '../components/VendorViewerModal';
 import { productApi } from '../../../services/api';
@@ -227,20 +227,8 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
               </thead>
               <tbody>
                 {pagedProducts.map((p, i) => {
-                  const mediaSrc = (() => {
-                    if (p.media_path) {
-                      const cleanPath = p.media_path.replace(/^\/?storage\//, '');
-                      return `${API_BASE_URL}/storage/${cleanPath}`;
-                    }
-                    if (p.image_url) {
-                      return p.image_url.startsWith('http') ? p.image_url : `${API_BASE_URL}/${p.image_url}`;
-                    }
-                    if (p.media_urls && Array.isArray(p.media_urls) && p.media_urls.length) {
-                      const firstUrl = p.media_urls[0];
-                      return firstUrl.startsWith('http') ? firstUrl : `${API_BASE_URL}/${firstUrl}`;
-                    }
-                    return null;
-                  })();
+                  const allUrls = getMediaUrls(p);
+                  const mediaSrc = allUrls.length > 0 ? allUrls[0] : null;
                   const assignedVendors = productVendors[p.id] || [];
                   const hasVendors = assignedVendors.length > 0;
                   const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
