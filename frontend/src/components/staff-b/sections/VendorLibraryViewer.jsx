@@ -233,6 +233,9 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selected
             {entry.filename}
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            {mode === 'all' && entry.sourceTab === 'new_products' && (
+              <span style={{ padding: '2px 8px', borderRadius: 6, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mới</span>
+            )}
             <span style={{ padding: '2px 10px', borderRadius: 99, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.05em' }}>
               {entry.title}
             </span>
@@ -357,7 +360,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mode, readOnly, onLibraryLoaded]);
 
   useEffect(() => {
     fetchLibrary();
