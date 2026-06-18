@@ -33,6 +33,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
     setEditIdx(idx);
     setEditForm({
       vendorName: row.vendorName || '',
+      productType: row.productType || '',
       kyHieu: row.kyHieu || '',
       linkFolder: row.linkFolder || '',
       img0: row.images?.[0] || '',
@@ -45,7 +46,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   const saveEdit = (idx) => {
     const newRows = [...rows];
     const images = [editForm.img0, editForm.img1, editForm.img2, editForm.img3].filter(Boolean);
-    newRows[idx] = { ...newRows[idx], vendorName: editForm.vendorName, kyHieu: editForm.kyHieu, linkFolder: editForm.linkFolder, images };
+    newRows[idx] = { ...newRows[idx], vendorName: editForm.vendorName, productType: editForm.productType, kyHieu: editForm.kyHieu, linkFolder: editForm.linkFolder, images };
     setEditIdx(-1);
     setEditForm(null);
     onSave(newRows);
@@ -59,7 +60,8 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
             {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: 44, textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
             {selectable && <th style={{ ...TH(), width: 36, textAlign: 'center' }}>✓</th>}
             <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Vendor Name</th>
-            <th style={{ ...TH(), width: 44 }}>Product Type</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Product Type</th>
+            <th style={{ ...TH(), width: 54 }}>Ký hiệu</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
             <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Chi tiết Size</th>
@@ -90,14 +92,27 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                   {isEditing ? (
                     <input type="text" placeholder="Vendor Name..." value={editForm.vendorName} onChange={e => setEditForm(p => ({ ...p, vendorName: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
                   ) : (
-                    r.vendorName ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.vendorName}</span> : <span style={{ color: HC.muted2, fontStyle: 'italic', fontSize: 11 }}>—</span>
+                    r.vendorName
+                      ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.vendorName}</span>
+                      : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
                   )}
                 </td>
-                <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>
+                <td style={{ ...TD(i) }}>
                   {isEditing ? (
-                    <input type="text" placeholder="A, B, C..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
+                    <input type="text" placeholder="Product Type..." value={editForm.productType} onChange={e => setEditForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
                   ) : (
-                    r.kyHieu || '—'
+                    r.productType
+                      ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.productType}</span>
+                      : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
+                  )}
+                </td>
+                <td style={{ ...TD(i), textAlign: 'center' }}>
+                  {isEditing ? (
+                    <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
+                  ) : (
+                    r.kyHieu
+                      ? <span style={{ fontWeight: 900, color: HC.orangeDark }}>{r.kyHieu}</span>
+                      : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
                   )}
                 </td>
                 <td style={{ ...TD(i) }}>
@@ -159,8 +174,24 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
 }
 
 // ── Section 2 Table ──────────────────────────────────────────────────────────
-function PricingTable({ rows }) {
+function PricingTable({ rows, onSave, readOnly }) {
+  const [editIdx, setEditIdx] = useState(-1);
+  const [editForm, setEditForm] = useState(null);
+
   if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>;
+
+  const startEdit = (idx, row) => {
+    setEditIdx(idx);
+    setEditForm({ kyHieu: row.kyHieu || '', productType: row.productType || '' });
+  };
+
+  const saveEdit = (idx) => {
+    const newRows = [...rows];
+    newRows[idx] = { ...newRows[idx], kyHieu: editForm.kyHieu, productType: editForm.productType };
+    setEditIdx(-1);
+    setEditForm(null);
+    if (onSave) onSave(newRows);
+  };
 
   const shipMethods = [
     { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total' },
@@ -171,19 +202,21 @@ function PricingTable({ rows }) {
   ];
 
   const shipBg = ['#1d6b3a', HC.orangeDark, '#1e4fa0', '#7c3aed', '#b91c1c'];
+  const naStyle = { background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' };
 
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1100 }}>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ ...TH(), width: 44 }}>Ký hiệu</th>
+            <th rowSpan={2} style={{ ...TH(), width: 54 }}>Ký hiệu</th>
             <th rowSpan={2} style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Product Type</th>
             <th colSpan={2} style={{ ...TH() }}>Detail</th>
             <th colSpan={2} style={{ ...TH() }}>Pricing</th>
             {shipMethods.map((m, si) => (
               <th key={m.label} colSpan={2} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
             ))}
+            {!readOnly && <th rowSpan={2} style={{ ...TH(), width: 60 }}>Thao tác</th>}
           </tr>
           <tr>
             <th style={{ ...TH(), minWidth: 80 }}>Size</th>
@@ -197,20 +230,47 @@ function PricingTable({ rows }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => (
-            <tr key={i}>
-              <td style={{ ...TD(i), fontWeight: 900, color: HC.orangeDark, textAlign: 'center' }}>{r.kyHieu || '—'}</td>
-              <td style={{ ...TD(i), fontWeight: 700 }}>{r.productType || '—'}</td>
-              <td style={{ ...TD(i), textAlign: 'center' }}>{fmtNA(r.size)}</td>
-              <td style={{ ...TD(i), textAlign: 'center' }}>{fmtNA(r.optional)}</td>
-              <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt$(r.pricing1)}</td>
-              <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt$(r.pricing2)}</td>
-              {shipMethods.map((m) => [
-                <td key={`${m.label}-price`} style={{ ...TD(i), textAlign: 'right', color: HC.muted }}>{fmt$(r[m.priceKey])}</td>,
-                <td key={`${m.label}-total`} style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>{fmt$(r[m.totalKey])}</td>,
-              ])}
-            </tr>
-          ))}
+          {rows.map((r, i) => {
+            const isEditing = editIdx === i;
+            return (
+              <tr key={i}>
+                <td style={{ ...TD(i), textAlign: 'center' }}>
+                  {isEditing ? (
+                    <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
+                  ) : (
+                    r.kyHieu ? <span style={{ fontWeight: 900, color: HC.orangeDark }}>{r.kyHieu}</span> : <span style={naStyle}>N/A</span>
+                  )}
+                </td>
+                <td style={{ ...TD(i) }}>
+                  {isEditing ? (
+                    <input type="text" placeholder="Product Type..." value={editForm.productType} onChange={e => setEditForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                  ) : (
+                    r.productType ? <span style={{ fontWeight: 700 }}>{r.productType}</span> : <span style={naStyle}>N/A</span>
+                  )}
+                </td>
+                <td style={{ ...TD(i), textAlign: 'center' }}>{fmtNA(r.size)}</td>
+                <td style={{ ...TD(i), textAlign: 'center' }}>{fmtNA(r.optional)}</td>
+                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt$(r.pricing1)}</td>
+                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt$(r.pricing2)}</td>
+                {shipMethods.map((m) => [
+                  <td key={`${m.label}-price`} style={{ ...TD(i), textAlign: 'right', color: HC.muted }}>{fmt$(r[m.priceKey])}</td>,
+                  <td key={`${m.label}-total`} style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>{fmt$(r[m.totalKey])}</td>,
+                ])}
+                {!readOnly && (
+                  <td style={{ ...TD(i), textAlign: 'center' }}>
+                    {isEditing ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <button onClick={() => saveEdit(i)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
+                        <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
+                    )}
+                  </td>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -301,7 +361,7 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selected
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
             {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
-            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} />}
+            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
           </div>
         </div>
       )}
