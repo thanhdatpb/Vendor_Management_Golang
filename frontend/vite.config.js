@@ -28,6 +28,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
+        entryFileNames: `assets/[name]-[hash]-v5.js`,
+        chunkFileNames: `assets/[name]-[hash]-v5.js`,
+        assetFileNames: `assets/[name]-[hash]-v5.[ext]`,
         manualChunks: {
           // React core — load đầu tiên, cache lâu dài
           'vendor-react': ['react', 'react-dom'],
