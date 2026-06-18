@@ -319,13 +319,13 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
             {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
-            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
+            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface, height: 320 }}>
               {/* Media */}
-              <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00', minHeight: 320 }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default', minHeight: 260 }}>
+              <div style={{ width: 320, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}>
                   {mediaUrls.length > 0 ? (
                     isVideo(mediaUrls[currentMediaIndex]) ? (
-                      <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+                      <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     ) : (
                       <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     )
@@ -346,15 +346,6 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     </>
                   )}
                 </div>
-                {mediaUrls.length > 1 && (
-                  <div style={{ display: 'flex', gap: 6, padding: '8px', overflowX: 'auto', background: '#1f1400', borderTop: `1px solid ${HC.border}`, height: 60, flexShrink: 0 }}>
-                    {mediaUrls.map((url, idx) => (
-                      <div key={idx} onClick={() => { setCurrentMediaIndex(idx); }} style={{ width: 44, height: 44, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === currentMediaIndex ? HC.orange : 'transparent'}`, flexShrink: 0, opacity: idx === currentMediaIndex ? 1 : 0.6 }}>
-                        {isVideo(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Product Info — Full Form Fields */}
