@@ -614,9 +614,9 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span>⚠️ {apiError}</span><button onClick={loadVendors} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button></div>}
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
-        <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" icon="📚" />
-        <TabButton id="new_products" label="Sản phẩm mới" icon="🆕" />
-        <TabButton id="bestseller" label="Best Seller" icon="⭐" />
+        <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" />
+        <TabButton id="new_products" label="Sản phẩm mới" />
+        <TabButton id="bestseller" label="Best Seller" />
       </div>
 
       {/* ── Thư Viện File tab (now Tất cả Vendor và Sản phẩm mới) ───────────────────────── */}

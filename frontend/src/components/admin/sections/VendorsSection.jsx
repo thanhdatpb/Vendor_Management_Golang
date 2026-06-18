@@ -24,9 +24,9 @@ export default function VendorsSection() {
   return (
     <div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
-        <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" icon="📚" />
-        <TabButton id="new_products" label="Sản phẩm mới" icon="🆕" />
-        <TabButton id="best_seller" label="Best Seller" icon="⭐" />
+        <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" />
+        <TabButton id="new_products" label="Sản phẩm mới" />
+        <TabButton id="best_seller" label="Best Seller" />
       </div>
 
       <VendorLibraryViewer readOnly={true} mode={activeTab} />
