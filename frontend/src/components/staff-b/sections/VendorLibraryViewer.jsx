@@ -484,7 +484,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>
-            {mode === 'bestseller' ? '⭐ Danh sách Vendor Best Seller' : mode === 'new_products' ? '🆕 Sản phẩm mới' : '📚 Tổng quan Vendor & Sản phẩm'}
+            {(mode === 'bestseller' || mode === 'best_seller') ? '⭐ Danh sách Vendor Best Seller' : mode === 'new_products' ? '🆕 Sản phẩm mới' : '📚 Tổng quan Vendor & Sản phẩm'}
           </div>
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
             {libraryFiles.length} file
@@ -523,7 +523,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
       )}
 
-      {mode === 'bestseller' && (
+      {(mode === 'bestseller' || mode === 'best_seller') && (
         <div style={{ marginBottom: 16, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,${HC.goldLight},#FFF8DC)`, border: `1.5px solid ${HC.gold}`, display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18 }}>⭐</span>
           <div>
@@ -537,7 +537,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {(() => {
           let displayFiles = libraryFiles;
-          if (mode === 'bestseller') {
+          if (mode === 'bestseller' || mode === 'best_seller') {
             displayFiles = displayFiles.map(file => {
               if (!file.generalInfo) return file;
               return { ...file, generalInfo: file.generalInfo.filter(r => bestSellerIds.has(r.id)) };
@@ -553,9 +553,9 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           if (displayFiles.length === 0) {
             return (
               <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
-                <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{mode === 'bestseller' ? '⭐' : '📂'}</div>
-                <div style={{ fontWeight: 800, color: HC.muted, fontSize: 14 }}>{mode === 'bestseller' ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor nào'}</div>
-                {mode === 'bestseller' && <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Hãy vào "Tổng quan Vendor & Sản phẩm" và click biểu tượng ⭐ trên sản phẩm để đánh dấu.</div>}
+                <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{(mode === 'bestseller' || mode === 'best_seller') ? '⭐' : '📂'}</div>
+                <div style={{ fontWeight: 800, color: HC.muted, fontSize: 14 }}>{(mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor nào'}</div>
+                {(mode === 'bestseller' || mode === 'best_seller') && <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Hãy vào "Tổng quan Vendor & Sản phẩm" và click biểu tượng ⭐ trên sản phẩm để đánh dấu.</div>}
               </div>
             );
           }
