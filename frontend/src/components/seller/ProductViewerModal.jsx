@@ -375,17 +375,54 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   </div>
                 </div>
 
-                {/* Section 1 */}
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontWeight: 800, fontSize: 11, color: HC.orange, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: HC.orange, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900 }}>1</span>
-                    Product Type — Happy Request
+                {/* Form Fields Compact Layout */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* Row 1: Short fields from Section 1 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 8 }}>
+                    <div style={{ background: HC.orangePale, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1. Product Type</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: HC.orangeDark, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.product_type || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1.2 T.gian SX</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1.3 T.gian Ship</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
+                    </div>
+                    <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1.4 Total Cost</div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
+                    </div>
                   </div>
-                  <div style={{ background: HC.orangePale, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1. Product Type</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: HC.orangeDark }}>{product.product_type || '—'}</div>
+
+                  {/* Row 2: Short fields from Section 2 & 3 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr', gap: 8 }}>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>2.1 Chất liệu</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.material || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>2.2 Vùng In</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.print_area || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>2.3 Other Specs</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.other_specs || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>3.1 Packaging</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.packaging_links || '—'}</div>
+                    </div>
+                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>3.2 Other Pkg</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.other_packaging || '—'}</div>
+                    </div>
                   </div>
-                  <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+
+                  {/* Row 3: Links (Long content) */}
+                  <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
                     <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 4 }}>1.1 Link hình ảnh và video</div>
                     {(() => {
                       let links = [];
@@ -394,81 +431,29 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                         else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
                       } else if (product.product_type_link) links = [product.product_type_link];
                       return links.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 60, overflowY: 'auto' }} className="custom-scrollbar">
                           {links.map((link, idx) => (
                             <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                               style={{ color: HC.orange, fontSize: 11, textDecoration: 'none', wordBreak: 'break-all' }}
                               onMouseEnter={e => { e.currentTarget.style.textDecoration = 'underline'; }}
                               onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}>
-                              🔗 {link.length > 80 ? link.substring(0, 80) + '...' : link}
+                              🔗 {link}
                             </a>
                           ))}
                         </div>
                       ) : <span style={{ color: HC.muted2, fontSize: 11 }}>—</span>;
                     })()}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1.2 Thời gian SX mong muốn</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1.3 Thời gian ship mong muốn</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
-                    </div>
-                    <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>1.4 Total Cost (Base + Shipping)</div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Section 2 */}
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontWeight: 800, fontSize: 11, color: HC.brown, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: HC.brown, color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900 }}>2</span>
-                    Đặc tính kỹ thuật (Mô tả về Product Type)
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.1 Chất liệu</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.material || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.2 Vùng In/Thiết kế</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.print_area || '—'}</div>
-                    </div>
-                  </div>
-                  <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.3 Other đặc tính kỹ thuật</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink, whiteSpace: 'pre-wrap' }}>{product.other_specs || '—'}</div>
-                  </div>
+                  {/* Row 4: Reviews (Long content) */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.4 Good Review</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#065f46', whiteSpace: 'pre-wrap' }}>{product.good_review || '—'}</div>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 4 }}>2.4 Good Review</div>
+                      <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#065f46', whiteSpace: 'pre-wrap', maxHeight: 60, overflowY: 'auto' }}>{product.good_review || '—'}</div>
                     </div>
                     <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>2.5 Bad Review</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.danger, whiteSpace: 'pre-wrap' }}>{product.bad_review || '—'}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3 */}
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 11, color: '#6b7280', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: '#6b7280', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900 }}>3</span>
-                    Packaging & đóng gói
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>3.1 Packaging</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.packaging_links || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 3 }}>3.2 Other Packaging</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink }}>{product.other_packaging || '—'}</div>
+                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 4 }}>2.5 Bad Review</div>
+                      <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: HC.danger, whiteSpace: 'pre-wrap', maxHeight: 60, overflowY: 'auto' }}>{product.bad_review || '—'}</div>
                     </div>
                   </div>
                 </div>
