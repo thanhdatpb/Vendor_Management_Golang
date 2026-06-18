@@ -523,15 +523,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
       )}
 
-      {(mode === 'bestseller' || mode === 'best_seller') && (
-        <div style={{ marginBottom: 16, padding: '12px 18px', borderRadius: 12, background: `linear-gradient(135deg,${HC.goldLight},#FFF8DC)`, border: `1.5px solid ${HC.gold}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 18 }}>⭐</span>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 13, color: '#8B6914' }}>Danh sách Vendor Best Seller</div>
-            <div style={{ fontSize: 11, color: '#B8860B', marginTop: 2 }}>Chỉ hiển thị các sản phẩm được đánh dấu ⭐ từ Tổng quan Vendor & Sản phẩm.</div>
-          </div>
-        </div>
-      )}
+
 
       {/* Library list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
