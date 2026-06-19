@@ -9,15 +9,15 @@ import { vendorLibraryApi } from '../../../services/api';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
-  padding: '9px 10px', fontWeight: 800, fontSize: 10, textTransform: 'uppercase',
-  letterSpacing: '0.06em', color: '#fff', background: HC.orangeDark,
+  padding: '7px 8px', fontWeight: 800, fontSize: 9.5, textTransform: 'uppercase',
+  letterSpacing: '0.05em', color: '#fff', background: HC.orangeDark,
   border: `1px solid ${HC.orange}`, fontFamily: "'Nunito',sans-serif",
   verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', ...extra,
 });
 const TD = (idx, extra = {}) => ({
-  padding: '9px 10px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`,
+  padding: '7px 8px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`,
   background: idx % 2 === 0 ? HC.surface : HC.surface2,
-  fontFamily: "'Nunito Sans',sans-serif", verticalAlign: 'top', ...extra,
+  fontFamily: "'Nunito Sans',sans-serif", verticalAlign: 'top', wordBreak: 'break-word', overflowWrap: 'break-word', ...extra,
 });
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
@@ -54,22 +54,22 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1000 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr>
-            {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: 44, textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
-            {selectable && <th style={{ ...TH(), width: 36, textAlign: 'center' }}>✓</th>}
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Vendor Name</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Product Type</th>
-            <th style={{ ...TH(), width: 54 }}>Ký hiệu</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 260 }}>Hình ảnh</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 180 }}>Chất liệu</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 130 }}>Chi tiết Size</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 200 }}>AVG Thời gian (Vendor)</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>AVG Thời gian (Thực tế)</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 240 }}>Notes</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Link Folder</th>
-            {!readOnly && <th style={{ ...TH(), width: 60 }}>Thao tác</th>}
+            {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: 32, textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
+            {selectable && <th style={{ ...TH(), width: 28, textAlign: 'center' }}>✓</th>}
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 80 }}>Vendor Name</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 90 }}>Product Type</th>
+            <th style={{ ...TH(), width: 40 }}>Ký hiệu</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 100 }}>Hình ảnh</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 90 }}>Chất liệu</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 70 }}>Chi tiết Size</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 105, whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 85, whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 120 }}>Notes</th>
+            <th style={{ ...TH(), textAlign: 'left', minWidth: 70 }}>Link Folder</th>
+            {!readOnly && <th style={{ ...TH(), width: 50 }}>Thao tác</th>}
           </tr>
         </thead>
         <tbody>
@@ -124,10 +124,10 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                       <input type="text" placeholder="URL Hình 4" value={editForm.img3} onChange={e => setEditForm(p => ({ ...p, img3: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
                         <a key={idx} href={img} target="_blank" rel="noreferrer">
-                          <img src={img} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} />
+                          <img src={img} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 5, border: `1px solid ${HC.border}` }} />
                         </a>
                       )) : <span style={{ color: HC.muted, fontSize: 11, fontStyle: 'italic' }}>Không có ảnh</span>}
                     </div>
@@ -149,7 +149,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                   {isEditing ? (
                     <input type="text" placeholder="Link Folder..." value={editForm.linkFolder} onChange={e => setEditForm(p => ({ ...p, linkFolder: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
                   ) : (
-                    r.linkFolder ? <a href={r.linkFolder} target="_blank" rel="noreferrer" style={{ color: HC.orangeDark, textDecoration: 'underline', wordBreak: 'break-all' }}>{r.linkFolder}</a> : <span style={{ color: HC.muted2 }}>—</span>
+                    r.linkFolder ? <a href={r.linkFolder} target="_blank" rel="noreferrer" title={r.linkFolder} style={{ color: HC.orangeDark, textDecoration: 'underline', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🔗 Folder</a> : <span style={{ color: HC.muted2 }}>—</span>
                   )}
                 </td>
                 {!readOnly && (
