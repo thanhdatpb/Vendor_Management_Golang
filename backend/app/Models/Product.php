@@ -16,6 +16,7 @@ class Product extends Model
 
 protected $fillable = [
     'vendor_id',
+    'assigned_vendors',
     'media_path',
     'media_url',
     'media_kind',
@@ -41,13 +42,14 @@ protected $fillable = [
     'other_specs',
     'good_review',
     'bad_review',
-    'packaging_links',    // ← THÊM
-    'other_packaging',    // ← THÊM
+    'packaging_links',
+    'other_packaging',
 ];
 
 protected $casts = [
     'media_urls' => 'array',
     'product_type_links' => 'array',
+    'assigned_vendors' => 'array',
     'created_at' => 'datetime',
     'updated_at' => 'datetime',
 ];

@@ -151,6 +151,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Staff B gửi feedback về sản phẩm
     Route::post('/products/{id}/feedback', [ProductController::class, 'sendFeedback']);
     Route::put('/products/{id}/deadline', [ProductController::class, 'updateDeadline']);
+    // Staff B gán vendor list cho sản phẩm
+    Route::post('/products/{id}/assign-vendors', [ProductController::class, 'assignVendors']);
 
 
     // =========================
@@ -185,6 +187,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/vendor-library', [VendorLibraryController::class, 'getLibrary']);
     Route::post('/vendor-library', [VendorLibraryController::class, 'saveLibrary']);
+    Route::post('/vendor-library/restore-backup', [VendorLibraryController::class, 'restoreBackup']);
 
     Route::get('/vendors',             [VendorController::class, 'index']);
     Route::post('/vendors',            [VendorController::class, 'store']);

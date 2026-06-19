@@ -230,7 +230,9 @@ export const productApi = {
     (id, data) => api.post(`/admin/products/${id}/select-vendor`, data),
     () => ({ data: { message: "Success" } })
   ),
-  
+
+  assignVendors: (id, vendors) => api.post(`/products/${id}/assign-vendors`, { vendors }),
+
   updateDeadline: withMock(
     (id, data) => api.put(`/products/${id}/deadline`, data),
     (id, data) => {
@@ -338,6 +340,7 @@ export const vendorApi = {
 export const vendorLibraryApi = {
   get: (mode = 'all') => api.get(`/vendor-library?mode=${mode}`),
   save: (data, mode = 'all') => api.post(`/vendor-library?mode=${mode}`, data),
+  restoreBackup: () => api.post('/vendor-library/restore-backup'),
 };
 
 

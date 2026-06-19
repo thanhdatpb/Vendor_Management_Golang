@@ -556,4 +556,32 @@ public function approvedProducts()
             'product' => $product
         ]);
     }
+
+    // Staff B gán danh sách vendor cho sản phẩm
+    public function assignVendors(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $vendors = $request->input('vendors', []);
+        $product->assigned_vendors = is_array($vendors) ? $vendors : [];
+        $product->save();
+
+        Cache::flush();
+
+        // Gửi thông báo cho Seller (người tạo sản phẩm)
+        if ($product->created_by) {
+            $count = count($product->assigned_vendors);
+            NotificationService::send(
+                $product->created_by,
+                'vendor_assigned',
+                '🏪 Vendor đã được gán',
+                "Sản phẩm \"{$product->product_type}\" đã được gán {$count} vendor để tham khảo."
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'assigned_vendors' => $product->assigned_vendors,
+        ]);
+    }
 }

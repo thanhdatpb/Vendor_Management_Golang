@@ -412,6 +412,8 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onLibraryLoaded }) {
   const [libraryFiles, setLibraryFiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState([]);
   const [toast, setToast] = useState(null);
@@ -436,6 +438,8 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   }, []);
 
   const fetchLibrary = useCallback(async () => {
+    setFetchError(null);
+    setDataLoaded(false);
     try {
       const res = await vendorLibraryApi.get(mode);
       let data = Array.isArray(res.data) ? res.data : [];
@@ -443,7 +447,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       if (readOnly && mode === 'all') {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         const MOCK_PRODUCTS = JSON.parse(localStorage.getItem('MOCK_PRODUCTS') || '[]');
-        
+
         const myProductIds = new Set();
         MOCK_PRODUCTS.forEach(p => {
           if (user.role === 'admin' || p.seller_name === user.sellerName || p.project === user.project) {
@@ -454,7 +458,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
         const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
         const assignedIds = new Set();
-        
+
         Object.entries(assigned).forEach(([pId, list]) => {
           if (myProductIds.has(String(pId))) {
             list.forEach(v => {
@@ -470,9 +474,11 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       }
 
       setLibraryFiles(data);
+      setDataLoaded(true);
       if (onLibraryLoaded) onLibraryLoaded(data);
     } catch (err) {
       console.error('Error fetching vendor library:', err);
+      setFetchError(err?.response?.data?.message || err?.message || 'Không thể kết nối server. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -482,7 +488,16 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     fetchLibrary();
   }, [fetchLibrary]);
 
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const saveLibrary = async (newData) => {
+    if (!dataLoaded) {
+      showToast('error', '❌ Dữ liệu chưa được tải xong, không thể lưu. Vui lòng thử lại.');
+      return;
+    }
     try {
       await vendorLibraryApi.save(newData, mode);
       setLibraryFiles(newData);
@@ -493,15 +508,15 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     }
   };
 
-  const showToast = (type, msg) => {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
-  };
-
   const handleImport = useCallback(async (e) => {
     const files = Array.from(e.target.files || []);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (!files.length) return;
+
+    if (!dataLoaded) {
+      showToast('error', '❌ Dữ liệu thư viện chưa tải xong. Vui lòng đợi rồi thử lại.');
+      return;
+    }
 
     setImporting(true);
     setImportErrors([]);
@@ -543,7 +558,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
 
     setImportErrors(errors);
     setImporting(false);
-  }, [libraryFiles]);
+  }, [libraryFiles, dataLoaded]);
 
   const handleDelete = (id) => {
     setDeleteConfirm({ type: 'single', id });
@@ -649,6 +664,17 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           </div>
         )}
       </div>
+
+      {/* API fetch error banner */}
+      {fetchError && (
+        <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 13, color: '#b91c1c', marginBottom: 3 }}>⚠️ Không thể tải dữ liệu thư viện</div>
+            <div style={{ fontSize: 11, color: '#991b1b' }}>{fetchError}</div>
+          </div>
+          <button onClick={fetchLibrary} style={{ padding: '6px 14px', borderRadius: 8, background: '#dc2626', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>↺ Thử lại</button>
+        </div>
+      )}
 
       {/* Import hint */}
       <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 10, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, fontSize: 12, color: HC.brown }}>

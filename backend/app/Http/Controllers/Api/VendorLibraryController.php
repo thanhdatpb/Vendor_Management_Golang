@@ -54,9 +54,30 @@ class VendorLibraryController extends Controller
     public function saveLibrary(Request $request)
     {
         $path = storage_path('app/vendor_library.json');
+        $backupPath = storage_path('app/vendor_library_backup.json');
+
+        // Backup current data before overwriting (only if existing file has content)
+        if (file_exists($path) && filesize($path) > 4) {
+            copy($path, $backupPath);
+        }
+
         $data = $request->getContent();
         file_put_contents($path, $data);
 
         return response()->json(['message' => 'Library saved successfully']);
+    }
+
+    public function restoreBackup()
+    {
+        $path = storage_path('app/vendor_library.json');
+        $backupPath = storage_path('app/vendor_library_backup.json');
+
+        if (!file_exists($backupPath)) {
+            return response()->json(['error' => 'Không có bản backup nào.'], 404);
+        }
+
+        copy($backupPath, $path);
+        $data = file_get_contents($path);
+        return response($data)->header('Content-Type', 'application/json');
     }
 }
