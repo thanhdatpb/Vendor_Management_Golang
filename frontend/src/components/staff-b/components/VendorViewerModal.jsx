@@ -125,6 +125,15 @@ export default function VendorViewerModal({ product, onClose }) {
   const mediaSrc = mediaUrls.length > 0 ? mediaUrls[0] : null;
   const isVideo = (url) => url && (url.match(/\.(mp4|webm|mov)$/i) || url.includes('video'));
 
+  const parsedLinks = (() => {
+    if (product.product_type_links) {
+      if (Array.isArray(product.product_type_links)) return product.product_type_links;
+      try { return JSON.parse(product.product_type_links); } catch { return [product.product_type_links]; }
+    }
+    if (product.product_type_link) return [product.product_type_link];
+    return [];
+  })();
+
   const productRows = [
     { label: 'Date Request', value: fmtDate(product.created_at), color: HC.ink2 },
     { label: 'Deadline', value: fmtDate(product.deadline_date), color: HC.danger, bold: true },
@@ -136,14 +145,28 @@ export default function VendorViewerModal({ product, onClose }) {
     { label: 'Bad Review', value: product.bad_review, color: HC.danger },
     { label: 'Packing', value: product.packaging_links, color: HC.ink2 },
     { label: 'Other Packing', value: product.other_packaging, color: HC.ink2 },
-    { label: 'Link', value: product.product_type_link, color: HC.orange },
+    { label: 'Links', value: parsedLinks, isLinks: true },
     { label: 'Status', value: product.status || 'draft', color: HC.brown, bold: true },
   ];
 
-  const InfoRow = ({ label, value, valueColor, valueBold, idx, isLast }) => (
+  const InfoRow = ({ label, value, valueColor, valueBold, idx, isLast, isLinks }) => (
     <div style={{ display: 'flex', gap: 8, padding: '7px 12px', borderBottom: isLast ? 'none' : `1px solid ${HC.border}`, background: idx % 2 === 0 ? HC.surface : HC.surface2, minHeight: 34 }}>
       <span style={{ minWidth: 108, flexShrink: 0, fontWeight: 800, color: HC.muted, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 2, fontFamily: "'Nunito',sans-serif", lineHeight: 1.4 }}>{label}</span>
-      <span style={{ color: valueColor || HC.ink2, fontWeight: valueBold ? 700 : 400, flex: 1, wordBreak: 'break-word', fontFamily: "'Nunito Sans',sans-serif", fontSize: 12, lineHeight: 1.4 }}>{value || '—'}</span>
+      {isLinks ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {value && value.length > 0 ? value.map((link, i) => (
+            <a key={i} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: HC.orange, fontSize: 11, fontWeight: 700, textDecoration: 'none', padding: '3px 8px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, wordBreak: 'break-all', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; e.currentTarget.style.textDecoration = 'underline'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.textDecoration = 'none'; }}
+            >
+              🔗 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{link}</span>
+            </a>
+          )) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
+        </div>
+      ) : (
+        <span style={{ color: valueColor || HC.ink2, fontWeight: valueBold ? 700 : 400, flex: 1, wordBreak: 'break-word', fontFamily: "'Nunito Sans',sans-serif", fontSize: 12, lineHeight: 1.4 }}>{value || '—'}</span>
+      )}
     </div>
   );
 
@@ -192,7 +215,7 @@ export default function VendorViewerModal({ product, onClose }) {
                   <span style={{ fontSize: 14 }}>📦</span>
                   <div style={{ fontWeight: 900, fontSize: 10, color: '#fff', fontFamily: "'Nunito',sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em' }}>Thông单 sản phẩm</div>
                 </div>
-                {productRows.map((r, idx) => <InfoRow key={r.label} label={r.label} value={r.value} valueColor={r.color} valueBold={r.bold} idx={idx} isLast={idx === productRows.length - 1} />)}
+                {productRows.map((r, idx) => <InfoRow key={r.label} label={r.label} value={r.value} valueColor={r.color} valueBold={r.bold} isLinks={r.isLinks} idx={idx} isLast={idx === productRows.length - 1} />)}
               </div>
             </div>
 
@@ -234,26 +257,67 @@ export default function VendorViewerModal({ product, onClose }) {
                           <div key={key} style={{ background: bChecked ? '#ecfdf5' : HC.surface, borderRadius: 16, border: `1.5px solid ${bChecked ? '#bbf7d0' : HC.border}`, overflow: 'hidden', transition: 'all 0.2s ease', boxShadow: bChecked ? '0 4px 12px rgba(22,163,74,0.1)' : '0 1px 3px rgba(0,0,0,0.05)' }}>
                             {/* Vendor Header */}
                             <div style={{ padding: '14px 20px', background: bChecked ? '#ecfdf5' : HC.cream, borderBottom: `1px solid ${bChecked ? '#bbf7d0' : HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                                {/* Checkbox + số thứ tự */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                   <button onClick={() => toggleBCheck(key)} style={{ width: 28, height: 28, borderRadius: 8, background: bChecked ? HC.success : 'transparent', border: `2px solid ${bChecked ? HC.success : HC.muted2}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
                                     {bChecked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>✓</span>}
                                   </button>
                                   <span style={{ fontWeight: 800, fontSize: 13, color: HC.muted }}>#{i + 1}</span>
                                 </div>
-                                <div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                    {v.name && v.name !== v.vendor_type && <span style={{ fontWeight: 700, fontSize: 14, color: HC.ink }}>{v.name}</span>}
-                                    <span style={{ fontWeight: 900, fontSize: 16, color: HC.orangeDark }}>{v.vendor_type || '—'}</span>
-                                    {v.vendor_type === 'Best Seller' && <BestSellerBadge />}
+
+                                {/* Product Type + Vendor Name */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                  {/* Product Type */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontSize: 9, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: 76 }}>Product Type</span>
+                                    <span style={{ fontWeight: 900, fontSize: 13, color: HC.orangeDark, padding: '2px 10px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}` }}>
+                                      {product.product_type || '—'}
+                                    </span>
                                   </div>
-                                  <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 11, color: HC.muted2 }}>
-                                    {v.size && <span>📏 Size: {v.size}</span>}
-                                    {v.optional && <span>🎨 Optional: {v.optional}</span>}
+                                  {/* Vendor Name */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontSize: 9, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: 76 }}>Vendor Name</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <span style={{ fontWeight: 800, fontSize: 13, color: HC.ink }}>
+                                        {v.name || v.vendor_type || '—'}
+                                      </span>
+                                      {v.name && v.vendor_type && v.name !== v.vendor_type && (
+                                        <span style={{ fontSize: 11, color: HC.muted2, fontWeight: 600 }}>({v.vendor_type})</span>
+                                      )}
+                                      {v.vendor_type === 'Best Seller' && <BestSellerBadge />}
+                                    </div>
                                   </div>
+                                  {/* Size + Optional */}
+                                  {(v.size || v.optional) && (
+                                    <div style={{ display: 'flex', gap: 12, fontSize: 11, color: HC.muted2 }}>
+                                      {v.size && <span>📏 {v.size}</span>}
+                                      {v.optional && <span>🎨 {v.optional}</span>}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                              <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: HC.muted }}>Base Cost</div><div style={{ fontWeight: 800, fontSize: 15, color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</div></div>
+
+                              {/* Base Cost + Link folder */}
+                              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                                <div>
+                                  <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700 }}>Base Cost</div>
+                                  <div style={{ fontWeight: 800, fontSize: 15, color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</div>
+                                </div>
+                                {v.link_folder && (
+                                  <a
+                                    href={v.link_folder}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={e => e.stopPropagation()}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 10px', borderRadius: 7, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                                  >
+                                    📁 Link Folder
+                                  </a>
+                                )}
+                              </div>
                             </div>
 
                             {/* Pricing Grid */}
