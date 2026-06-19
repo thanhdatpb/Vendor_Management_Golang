@@ -454,117 +454,187 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
             {/* BOTTOM SECTION: Vendors List */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#faf9f8' }}>
-              <div style={{ padding: '12px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 20 }}>🏪</span>
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
-                  </div>
+              <div style={{ padding: '10px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>🏪</span>
+                <div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
+                {vendors.length > 0 && (
+                  <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: 10, fontWeight: 700 }}>
+                    {vendors.length} vendor
+                  </span>
+                )}
               </div>
 
-              <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+              <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px' }}>
                 {vendors.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: 60, background: HC.surface, borderRadius: 16, border: `1.5px dashed ${HC.border}` }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>🏪</div>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>🏪</div>
                     <div style={{ fontWeight: 700, fontSize: 14, color: HC.brown }}>Chưa có nhà phân phối nào được gán</div>
                     <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Bộ phận Vận hành sẽ gán nhà cung cấp sau khi xem xét sản phẩm này.</div>
                   </div>
-                ) : (
-                  <div style={{ background: HC.surface, borderRadius: 16, border: `1px solid ${HC.border}`, overflow: 'hidden' }}>
-                    <div style={{ padding: '0', background: HC.surface2, overflowX: 'auto' }}>
-                      <table style={{ width: '100%', minWidth: 1000, borderCollapse: 'collapse', fontSize: 12, textAlign: 'center' }}>
-                        <thead style={{ color: HC.muted, background: HC.cream }}>
-                          <tr>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Ảnh</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, color: HC.ink }}>Vendor Name</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, color: HC.orangeDark }}>Product Type</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Chất liệu</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian SX</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian Ship</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Size</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Link Folder</th>
-                            <th style={{ padding: '12px', fontWeight: 800, borderBottom: `1px solid ${HC.border}` }}>Total Price</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {groupedVendors.map((group, gIdx) => {
-                            const v = group.firstVendor;
-                            return group.items.map((vi, idx) => (
-                              <tr key={`${gIdx}-${idx}`} style={{ borderBottom: `1px solid ${HC.border}`, background: HC.surface }}>
-                                {idx === 0 && (
-                                  <td rowSpan={group.items.length} style={{ padding: '10px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, textAlign: 'center', width: 80 }}>
-                                    {v.media_url ? <img src={v.media_url} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} /> : <span style={{color: HC.muted2, fontSize: 10}}>—</span>}
-                                  </td>
-                                )}
-                                {/* Vendor Name */}
-                                {idx === 0 && (
-                                  <td rowSpan={group.items.length} style={{ padding: '10px 14px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, minWidth: 120, textAlign: 'left' }}>
-                                    <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type || '—'}</div>
-                                    {v.name && v.vendor_type && v.name !== v.vendor_type && (
-                                      <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{v.vendor_type}</div>
-                                    )}
-                                  </td>
-                                )}
-                                {/* Product Type (vendor_type badge) */}
-                                {idx === 0 && (
-                                  <td rowSpan={group.items.length} style={{ padding: '10px 14px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, minWidth: 110 }}>
-                                    {v.vendor_type ? (
-                                      <span style={{ fontWeight: 900, fontSize: 11, color: HC.orangeDark, padding: '3px 10px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, whiteSpace: 'nowrap' }}>
-                                        {v.vendor_type}
-                                      </span>
-                                    ) : <span style={{ color: HC.muted2 }}>—</span>}
-                                  </td>
-                                )}
-                                {idx === 0 && (
-                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
-                                    <div style={{ fontWeight: 600, color: HC.ink, lineHeight: 1.4 }}>{v.overview || product.material || '—'}</div>
-                                  </td>
-                                )}
-                                {idx === 0 && (
-                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
-                                    <div style={{ fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
-                                  </td>
-                                )}
-                                {idx === 0 && (
-                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}` }}>
-                                    <div style={{ fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
-                                  </td>
-                                )}
-                                <td style={{ padding: '10px 12px', textAlign: 'center', borderRight: `1px solid ${HC.border}` }}>
-                                  <div style={{ fontWeight: 800, color: HC.ink }}>{vi.size || '—'}</div>
-                                  {vi.optional && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>{vi.optional}</div>}
-                                </td>
-                                {idx === 0 && (
-                                  <td rowSpan={group.items.length} style={{ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, maxWidth: 150 }}>
-                                    {(() => {
-                                      let links = [];
-                                      if (product.product_type_links) {
-                                        if (Array.isArray(product.product_type_links)) links = product.product_type_links;
-                                        else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
-                                      } else if (product.product_type_link) links = [product.product_type_link];
-                                      return links.length > 0 ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 80, overflowY: 'auto' }} className="custom-scrollbar">
-                                          {links.map((link, i) => (
-                                            <a key={i} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                              style={{ color: HC.orange, fontSize: 11, textDecoration: 'none', fontWeight: 700, display: 'inline-block', padding: '4px 8px', background: HC.orangePale, borderRadius: 4 }}>
-                                              🔗 Link {i + 1}
-                                            </a>
-                                          ))}
-                                        </div>
-                                      ) : <span style={{ color: HC.muted2, fontSize: 11 }}>—</span>;
-                                    })()}
-                                  </td>
-                                )}
-                                <td style={{ padding: '10px 12px', verticalAlign: 'middle' }}>
-                                  <span style={{ color: '#059669', fontWeight: 900, fontSize: 14 }}>{fmt(vi.eco_total)}</span>
-                                </td>
+                ) : (() => {
+                  const Na = ({ pending } = {}) => (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#94a3b8', padding: '2px 7px', borderRadius: 4, background: '#f8fafc', border: '1px dashed #cbd5e1', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                      N/A{pending && <span style={{ fontSize: 8, opacity: 0.7 }}> · chờ cập nhật</span>}
+                    </span>
+                  );
+                  const thStyle = (color, align = 'center') => ({
+                    padding: '9px 12px', fontWeight: 800, fontSize: 10, color: color || HC.muted,
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    borderRight: `1px solid ${HC.border}`, borderBottom: `1.5px solid ${HC.border}`,
+                    textAlign: align, background: HC.cream, whiteSpace: 'nowrap',
+                  });
+                  const tdBase = (extra = {}) => ({
+                    padding: '10px 12px', verticalAlign: 'middle',
+                    borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`,
+                    ...extra,
+                  });
+
+                  return (
+                    <>
+                      <div style={{ borderRadius: 12, border: `1px solid ${HC.border}`, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', minWidth: 960, borderCollapse: 'collapse', fontSize: 12 }}>
+                            <thead>
+                              <tr>
+                                <th style={{ ...thStyle(), width: 72 }}>Ảnh</th>
+                                <th style={{ ...thStyle(HC.ink, 'left'), minWidth: 130 }}>Vendor Name</th>
+                                <th style={{ ...thStyle(HC.orangeDark) }}>Product Type</th>
+                                <th style={{ ...thStyle(null, 'left'), minWidth: 140 }}>Chất liệu</th>
+                                <th style={{ ...thStyle() }}>T.gian SX</th>
+                                <th style={{ ...thStyle() }}>T.gian Ship</th>
+                                <th style={{ ...thStyle() }}>Size</th>
+                                <th style={{ ...thStyle() }}>Link Folder</th>
+                                <th style={{ ...thStyle('#059669'), borderRight: 'none' }}>Total Price</th>
                               </tr>
-                            ));
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                            </thead>
+                            <tbody>
+                              {groupedVendors.map((group, gIdx) => {
+                                const v = group.firstVendor;
+                                const rowBg = gIdx % 2 === 0 ? '#ffffff' : HC.orangePale;
+                                const rawMaterial = v.overview || '';
+                                const materialText = rawMaterial.length > 70 ? rawMaterial.slice(0, 70) + '…' : rawMaterial || null;
+                                const vendorLink = v.link_folder || null;
+
+                                return group.items.map((vi, idx) => (
+                                  <tr key={`${gIdx}-${idx}`}
+                                    style={{ background: rowBg, transition: 'background 0.12s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#fff8f0'}
+                                    onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                                  >
+                                    {/* Ảnh */}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center', width: 72 }) }}>
+                                        {v.media_url
+                                          ? <img src={v.media_url} style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} />
+                                          : <div style={{ width: 52, height: 52, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, margin: '0 auto', color: HC.muted2 }}>📷</div>
+                                        }
+                                      </td>
+                                    )}
+
+                                    {/* Vendor Name */}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'left' }) }}>
+                                        {v.name || v.vendor_type
+                                          ? <>
+                                              <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type}</div>
+                                              {v.name && v.vendor_type && v.name !== v.vendor_type && (
+                                                <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{v.vendor_type}</div>
+                                              )}
+                                            </>
+                                          : <Na pending />
+                                        }
+                                      </td>
+                                    )}
+
+                                    {/* Product Type */}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                        {v.vendor_type
+                                          ? <span style={{ fontWeight: 800, fontSize: 10, color: HC.orangeDark, padding: '3px 10px', borderRadius: 20, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, display: 'inline-block', whiteSpace: 'nowrap' }}>
+                                              {v.vendor_type}
+                                            </span>
+                                          : <Na pending />
+                                        }
+                                      </td>
+                                    )}
+
+                                    {/* Chất liệu */}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'left' }) }}>
+                                        {materialText
+                                          ? <span style={{ color: HC.ink2, fontSize: 11, lineHeight: 1.5 }} title={rawMaterial}>{materialText}</span>
+                                          : <Na pending />
+                                        }
+                                      </td>
+                                    )}
+
+                                    {/* T.gian SX */}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                        {product.production_time
+                                          ? <span style={{ fontWeight: 700, color: HC.brown }}>{product.production_time}</span>
+                                          : <Na />
+                                        }
+                                      </td>
+                                    )}
+
+                                    {/* T.gian Ship */}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                        {product.shipping_time
+                                          ? <span style={{ fontWeight: 700, color: HC.brown }}>{product.shipping_time}</span>
+                                          : <Na />
+                                        }
+                                      </td>
+                                    )}
+
+                                    {/* Size (per item) */}
+                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                      {vi.size
+                                        ? <>
+                                            <div style={{ fontWeight: 700, color: HC.ink }}>{vi.size}</div>
+                                            {vi.optional && <div style={{ fontSize: 9, color: HC.muted2, marginTop: 2 }}>{vi.optional}</div>}
+                                          </>
+                                        : <Na />
+                                      }
+                                    </td>
+
+                                    {/* Link Folder (vendor-specific, per group) */}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                        {vendorLink
+                                          ? <a href={vendorLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '5px 10px', borderRadius: 7, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
+                                              onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                              onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                                            >📁 Xem folder</a>
+                                          : <Na pending />
+                                        }
+                                      </td>
+                                    )}
+
+                                    {/* Total Price (per item) */}
+                                    <td style={{ ...tdBase({ textAlign: 'center', borderRight: 'none' }) }}>
+                                      {vi.eco_total != null && vi.eco_total !== '' && vi.eco_total !== 0
+                                        ? <span style={{ fontWeight: 900, fontSize: 14, color: '#059669' }}>${Number(vi.eco_total).toFixed(2)}</span>
+                                        : <Na pending />
+                                      }
+                                    </td>
+                                  </tr>
+                                ));
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 10, padding: '8px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#92400e' }}>
+                        <span>ℹ️</span>
+                        <span>Các ô hiển thị <strong>N/A</strong> đang chờ bộ phận Vận hành (Staff B) cập nhật thông tin vendor.</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
