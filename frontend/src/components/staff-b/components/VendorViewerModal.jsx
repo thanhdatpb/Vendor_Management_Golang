@@ -442,10 +442,6 @@ export default function VendorViewerModal({ product, onClose }) {
                       {vendors.map((v, i) => {
                         const key = vendorKey(v, i);
                         const bChecked = !!bSelections[key]?.checked;
-                        const bSubmitted = bSubmittedFeedbacks[key];
-                        const aResponse = aResponseFeedbacks[key];
-                        const currentFeedback = feedbackTexts[key] || '';
-
                         return (
                           <div key={key} style={{ background: bChecked ? '#ecfdf5' : HC.surface, borderRadius: 14, border: `1.5px solid ${bChecked ? '#bbf7d0' : HC.border}`, overflow: 'hidden' }}>
                             <div style={{ padding: '10px 16px', background: bChecked ? '#d1fae5' : HC.cream, borderBottom: `1px solid ${bChecked ? '#bbf7d0' : HC.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -453,7 +449,7 @@ export default function VendorViewerModal({ product, onClose }) {
                               {bChecked && <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', padding: '1px 8px', borderRadius: 20, background: '#d1fae5', border: '1px solid #86efac' }}>✓ Đã chọn</span>}
                               <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: HC.muted }}>Base Cost: <span style={{ color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</span></span>
                             </div>
-                            <div style={{ padding: '12px 16px', background: HC.surface2, borderBottom: `1px solid ${HC.border}` }}>
+                            <div style={{ padding: '12px 16px', background: HC.surface2 }}>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                                 {[
                                   { label: '🚚 ECONOMY', price: v.eco_price, total: v.eco_total },
@@ -467,41 +463,6 @@ export default function VendorViewerModal({ product, onClose }) {
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}><span style={{ fontSize: 10, color: HC.muted2 }}>Total:</span><span style={{ fontWeight: 800, fontSize: 12, color: HC.success }}>{fmt(item.total)}</span></div>
                                   </div>
                                 ))}
-                              </div>
-                            </div>
-                            <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><span style={{ fontSize: 13 }}>💬</span><span style={{ fontWeight: 800, fontSize: 10, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi của Staff B</span></div>
-                                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                                  <textarea
-                                    placeholder="Nhập phản hồi về vendor này..."
-                                    value={currentFeedback}
-                                    onChange={e => setFeedbackTexts(prev => ({ ...prev, [key]: e.target.value }))}
-                                    rows={2}
-                                    style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${currentFeedback ? HC.orange : HC.border}`, fontSize: 11, color: HC.ink2, background: HC.surface, resize: 'vertical', fontFamily: "'Nunito Sans',sans-serif", outline: 'none' }}
-                                    onFocus={e => e.target.style.borderColor = HC.orange}
-                                    onBlur={e => e.target.style.borderColor = currentFeedback ? HC.orange : HC.border}
-                                  />
-                                  <button onClick={() => submitBFeedback(key, currentFeedback)} disabled={!currentFeedback || bSubmitted}
-                                    style={{ padding: '8px 14px', borderRadius: 8, background: bSubmitted ? HC.success : (!currentFeedback ? HC.muted2 : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`), color: '#fff', border: 'none', fontSize: 11, fontWeight: 700, cursor: (!currentFeedback || bSubmitted) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: (!currentFeedback || bSubmitted) ? 0.5 : 1 }}>
-                                    {bSubmitted ? '✓ Đã gửi' : '📨 Gửi'}
-                                  </button>
-                                </div>
-                              </div>
-                              <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><span style={{ fontSize: 13 }}>📝</span><span style={{ fontWeight: 800, fontSize: 10, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi của Seller</span></div>
-                                {aResponse ? (
-                                  <div style={{ background: aResponse.decision === 'dat' ? '#ecfdf5' : '#fef2f2', borderRadius: 10, padding: '10px', border: `1px solid ${aResponse.decision === 'dat' ? '#bbf7d0' : '#fecaca'}` }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                                      {aResponse.decision === 'dat' ? <><span style={{ fontSize: 14 }}>✅</span><span style={{ fontWeight: 800, fontSize: 11, color: '#065f46' }}>ĐẶT SAMPLE</span></> : <><span style={{ fontSize: 14 }}>❌</span><span style={{ fontWeight: 800, fontSize: 11, color: '#991b1b' }}>TỪ CHỐI</span></>}
-                                    </div>
-                                    {aResponse.sampleDetails && <div style={{ fontSize: 10, lineHeight: 1.5, whiteSpace: 'pre-wrap', marginTop: 4 }}>{aResponse.sampleDetails}</div>}
-                                    {aResponse.sellerFeedback && <div style={{ marginTop: 4, fontSize: 10, color: HC.brown, padding: '4px 8px', background: HC.orangeLight, borderRadius: 5 }}>💬 {aResponse.sellerFeedback}</div>}
-                                    <div style={{ marginTop: 4, fontSize: 9, color: '#059669', textAlign: 'right' }}>{new Date(aResponse.respondedAt).toLocaleString('vi-VN')}</div>
-                                  </div>
-                                ) : (
-                                  <div style={{ padding: '16px', textAlign: 'center', background: HC.orangePale, borderRadius: 10, border: `1px dashed ${HC.border}`, color: HC.muted2, fontSize: 11 }}>⏳ Chưa có phản hồi từ Seller</div>
-                                )}
                               </div>
                             </div>
                           </div>
