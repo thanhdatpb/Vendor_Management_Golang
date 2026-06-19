@@ -21,6 +21,7 @@ export default function VendorViewerModal({ product, onClose }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [showMatrix, setShowMatrix] = useState(false);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const isMountedRef = useRef(true);
 
   // Local state cho từng feedback text (không auto‑save)
@@ -192,39 +193,108 @@ export default function VendorViewerModal({ product, onClose }) {
             <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>✕</button>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-            {/* LEFT COLUMN: Image & Product Info */}
-            <div style={{ width: 320, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: `1.5px solid ${HC.border}`, overflow: 'hidden', background: HC.surface }}>
-              <div style={{ height: 220, background: '#2a1a00', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length > 0 ? 'pointer' : 'default' }} onClick={() => { if (mediaUrls.length > 0) { setLightboxIndex(0); setLightboxOpen(true); } }}>
-                {mediaSrc ? (isVideo(mediaSrc) ? <video src={mediaSrc} style={{ height: '100%', width: '100%', objectFit: 'cover' }} /> : <img src={mediaSrc} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />) : (
-                  <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div style={{ fontSize: 12, fontWeight: 700, fontFamily: "'Nunito',sans-serif" }}>Không có ảnh</div></div>
-                )}
-                {mediaUrls.length > 1 && <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.7)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff', fontWeight: 700 }}>{mediaUrls.length} ảnh</div>}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+            {/* TOP SECTION: Image + Product Info (layout giống Seller) */}
+            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface, height: 320 }}>
+
+              {/* Image panel */}
+              <div style={{ width: 320, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}>
+                  {mediaUrls.length > 0 ? (
+                    isVideo(mediaUrls[currentMediaIndex])
+                      ? <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                      : <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div style={{ fontSize: 12 }}>Không có ảnh</div></div>
+                  )}
+                  {mediaUrls.length > 1 && (
+                    <>
+                      <button onClick={e => { e.stopPropagation(); setCurrentMediaIndex(p => p > 0 ? p - 1 : mediaUrls.length - 1); }} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+                      <button onClick={e => { e.stopPropagation(); setCurrentMediaIndex(p => p < mediaUrls.length - 1 ? p + 1 : 0); }} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                      <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>{currentMediaIndex + 1} / {mediaUrls.length}</div>
+                    </>
+                  )}
+                </div>
               </div>
-              {mediaUrls.length > 1 && (
-                <div style={{ display: 'flex', gap: 8, padding: '10px', overflowX: 'auto', background: '#1f1400', borderTop: `1px solid ${HC.border}` }}>
-                  {mediaUrls.map((url, idx) => (
-                    <div key={idx} onClick={() => { setLightboxIndex(idx); setLightboxOpen(true); }} style={{ width: 55, height: 55, borderRadius: 8, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${idx === lightboxIndex ? HC.orange : 'transparent'}`, flexShrink: 0, transition: 'all 0.2s' }}>
-                      {isVideo(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+
+              {/* Product info grid */}
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 20px', background: '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <div style={{ fontWeight: 900, fontSize: 13, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Thông tin request sản phẩm</div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+                    <span style={{ padding: '2px 10px', borderRadius: 99, background: HC.cream, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 700, color: HC.muted }}>
+                      Ngày gửi: {fmtDate(product.created_at) || '—'}
+                    </span>
+                    {product.deadline_date && (
+                      <span style={{ padding: '2px 10px', borderRadius: 99, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 10, fontWeight: 700, color: HC.danger }}>
+                        Deadline: {fmtDate(product.deadline_date)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {(() => {
+                  const F = ({ label, value, bg, bdr, valueColor, bold }) => (
+                    <div style={{ background: bg || HC.cream, border: `1px solid ${bdr || HC.border}`, borderRadius: 7, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                      <div style={{ fontSize: 11, fontWeight: bold ? 800 : 600, color: valueColor || HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
                     </div>
-                  ))}
-                </div>
-              )}
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <div style={{ padding: '10px 14px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, display: 'flex', alignItems: 'center', gap: 7, position: 'sticky', top: 0, zIndex: 1 }}>
-                  <span style={{ fontSize: 14 }}>📦</span>
-                  <div style={{ fontWeight: 900, fontSize: 10, color: '#fff', fontFamily: "'Nunito',sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em' }}>Thông单 sản phẩm</div>
-                </div>
-                {productRows.map((r, idx) => <InfoRow key={r.label} label={r.label} value={r.value} valueColor={r.color} valueBold={r.bold} isLinks={r.isLinks} idx={idx} isLast={idx === productRows.length - 1} />)}
+                  );
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1.2fr', gap: 8 }}>
+                        <F label="Product Type" value={product.product_type} bg={HC.orangePale} valueColor={HC.orangeDark} bold />
+                        <F label="⏱ Sản xuất" value={product.production_time} valueColor={HC.brown} bold />
+                        <F label="🚢 Giao hàng" value={product.shipping_time} valueColor={HC.brown} bold />
+                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 7, padding: '7px 11px' }}>
+                          <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>💰 Target Cost</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr', gap: 8 }}>
+                        <F label="Chất liệu" value={product.material} />
+                        <F label="Vùng In" value={product.print_area} />
+                        <F label="Đặc tính KT" value={product.other_specs} />
+                        <F label="Packaging" value={product.packaging_links} />
+                        <F label="Other Pkg" value={product.other_packaging} />
+                      </div>
+                      <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>🔗 Links tham khảo</span>
+                        {parsedLinks.length > 0
+                          ? parsedLinks.map((link, idx) => (
+                              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 12px', borderRadius: 20, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                              >🔗 Link {idx + 1}</a>
+                            ))
+                          : <span style={{ color: HC.muted2, fontSize: 11 }}>Chưa có link</span>
+                        }
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
+                          <div style={{ fontSize: 9, color: '#065f46', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>👍 Good Review</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#065f46', whiteSpace: 'pre-wrap', maxHeight: 52, overflowY: 'auto' }}>{product.good_review || '—'}</div>
+                        </div>
+                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px' }}>
+                          <div style={{ fontSize: 9, color: HC.danger, fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>👎 Bad Review</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: HC.danger, whiteSpace: 'pre-wrap', maxHeight: 52, overflowY: 'auto' }}>{product.bad_review || '—'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
-            {/* RIGHT COLUMN: VENDORS LIST */}
+            {/* BOTTOM SECTION: Vendors */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-              <div style={{ padding: '12px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0 }}>
+              <div style={{ padding: '10px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 20 }}>🏪</span>
-                  <div><div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div><div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>Chọn nhà cung cấp và gửi phản hồi đến bộ phận Kinh doanh</div></div>
+                  <span style={{ fontSize: 18 }}>🏪</span>
+                  <div><div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div><div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>Chọn nhà cung cấp và gửi phản hồi đến bộ phận Kinh doanh</div></div>
+                  {vendors.length > 0 && <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: 10, fontWeight: 700 }}>{vendors.length} vendor</span>}
                 </div>
               </div>
               <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>

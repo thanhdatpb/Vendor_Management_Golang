@@ -1,4 +1,4 @@
-# HappC Hub Vendor Manager
+# Happy Creative Hub Vendor Manager
 
 Dự án phần mềm quản lý nhà cung cấp (Vendors) và người bán (Sellers) cho hệ thống Vendor Management (Vendor Hub).
 
@@ -84,15 +84,12 @@ Bạn có thể chạy dự án nhanh chóng bằng cách sử dụng script có
 cd backend
 php artisan serve
 ```
-*(Backend API sẽ chạy tại: http://127.0.0.1:8000)*
 
 2. **Frontend:**
 ```bash
 cd frontend
 npm run dev
 ```
-*(Frontend sẽ chạy tại: http://localhost:5173 - Cấu hình Vite đã proxy tự động các request `/api` và `/storage` qua cổng 8000 của backend).*
-
 | Quyền hạn | User đăng nhập |
 |---|---|
 | **Admin** | `happyc.admin` |
