@@ -471,10 +471,12 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 ) : (
                   <div style={{ background: HC.surface, borderRadius: 16, border: `1px solid ${HC.border}`, overflow: 'hidden' }}>
                     <div style={{ padding: '0', background: HC.surface2, overflowX: 'auto' }}>
-                      <table style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', fontSize: 12, textAlign: 'center' }}>
+                      <table style={{ width: '100%', minWidth: 1000, borderCollapse: 'collapse', fontSize: 12, textAlign: 'center' }}>
                         <thead style={{ color: HC.muted, background: HC.cream }}>
                           <tr>
                             <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Ảnh</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, color: HC.ink }}>Vendor Name</th>
+                            <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, color: HC.orangeDark }}>Product Type</th>
                             <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Chất liệu</th>
                             <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian SX</th>
                             <th style={{ padding: '12px', fontWeight: 800, borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}` }}>Thời gian Ship</th>
@@ -491,6 +493,25 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 {idx === 0 && (
                                   <td rowSpan={group.items.length} style={{ padding: '10px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, textAlign: 'center', width: 80 }}>
                                     {v.media_url ? <img src={v.media_url} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${HC.border}` }} /> : <span style={{color: HC.muted2, fontSize: 10}}>—</span>}
+                                  </td>
+                                )}
+                                {/* Vendor Name */}
+                                {idx === 0 && (
+                                  <td rowSpan={group.items.length} style={{ padding: '10px 14px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, minWidth: 120, textAlign: 'left' }}>
+                                    <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type || '—'}</div>
+                                    {v.name && v.vendor_type && v.name !== v.vendor_type && (
+                                      <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{v.vendor_type}</div>
+                                    )}
+                                  </td>
+                                )}
+                                {/* Product Type (vendor_type badge) */}
+                                {idx === 0 && (
+                                  <td rowSpan={group.items.length} style={{ padding: '10px 14px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, minWidth: 110 }}>
+                                    {v.vendor_type ? (
+                                      <span style={{ fontWeight: 900, fontSize: 11, color: HC.orangeDark, padding: '3px 10px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, whiteSpace: 'nowrap' }}>
+                                        {v.vendor_type}
+                                      </span>
+                                    ) : <span style={{ color: HC.muted2 }}>—</span>}
                                   </td>
                                 )}
                                 {idx === 0 && (
