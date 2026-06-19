@@ -276,10 +276,14 @@ function PricingTable({ rows, onSave, readOnly }) {
   );
 }
 
+// ── Card colour palette (cycles per index) ───────────────────────────────────
+const CARD_PAL = { grad: `linear-gradient(135deg, ${HC.orange} 0%, ${HC.orangeDeep} 100%)`, icon: 'rgba(255,255,255,0.18)', accent: '#fff', border: HC.orangeDark, badge: 'rgba(255,255,255,0.15)' };
+
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, bestSellerIds, toggleBestSeller, mode }) {
+function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, bestSellerIds, toggleBestSeller, mode }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
+  const pal = CARD_PAL;
 
   const importDate = new Date(entry.importedAt).toLocaleString('vi-VN', {
     day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -287,35 +291,60 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selected
 
   return (
     <div style={{
-      borderRadius: 16, border: `1.5px solid ${HC.border}`,
-      boxShadow: HC.shadow, overflow: 'hidden', marginBottom: 20,
-      transition: 'box-shadow 0.2s',
+      borderRadius: 16,
+      border: `1.5px solid ${pal.border}`,
+      boxShadow: `0 4px 20px ${pal.badge}`,
+      overflow: 'hidden', marginBottom: 20,
+      transition: 'box-shadow 0.2s, transform 0.15s',
     }}>
       {/* Card Header */}
       <div style={{
         padding: '14px 20px',
-        background: `linear-gradient(135deg, ${HC.ink}, #2d1a00)`,
+        background: pal.grad,
         display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+        position: 'relative',
       }} onClick={() => setExpanded(p => !p)}>
+
+        {/* Colored icon block */}
         <div style={{
-          width: 40, height: 40, borderRadius: 10,
-          background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0,
+          width: 44, height: 44, borderRadius: 12,
+          background: pal.icon,
+          border: `1.5px solid ${pal.accent}30`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 20, flexShrink: 0,
+          boxShadow: `0 2px 10px ${pal.badge}`,
         }}>📄</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito',sans-serif", marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {/* Filename */}
+          <div style={{
+            fontWeight: 900, fontSize: 14, color: '#fff',
+            fontFamily: "'Nunito',sans-serif", marginBottom: 5,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            textShadow: '0 1px 3px rgba(0,0,0,0.3)',
+          }}>
             {entry.filename}
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+
+          {/* Meta row */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {mode === 'all' && entry.sourceTab === 'new_products' && (
               <span style={{ padding: '2px 8px', borderRadius: 6, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mới</span>
             )}
-            <span style={{ padding: '2px 10px', borderRadius: 99, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.05em' }}>
+            {/* Product-type badge — accent color */}
+            <span style={{
+              padding: '3px 10px', borderRadius: 99,
+              background: pal.badge, border: `1px solid ${pal.accent}60`,
+              color: pal.accent, fontSize: 10, fontWeight: 900, letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}>
               {entry.title}
             </span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>📅 {importDate}</span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>📅 {importDate}</span>
+            <span style={{
+              fontSize: 11, color: 'rgba(255,255,255,0.45)',
+              background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 20,
+            }}>
               {entry.generalInfo?.length || 0} sản phẩm · {entry.pricing?.length || 0} dòng giá
             </span>
           </div>
@@ -325,11 +354,16 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selected
           {!readOnly && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
-              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.4)', background: 'rgba(220,38,38,0.15)', color: '#fca5a5', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.45)', background: 'rgba(220,38,38,0.18)', color: '#fca5a5', fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s' }}
               title="Xóa file này"
             >🗑 Xóa</button>
           )}
-          <span style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', transition: 'transform 0.2s', transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▾</span>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', transition: 'transform 0.2s', transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▾</span>
+          </div>
         </div>
       </div>
 
@@ -342,15 +376,21 @@ function LibraryCard({ entry, onDelete, onUpdate, readOnly, selectable, selected
               { id: 'pricing', label: '💰 Về giá', count: entry.pricing?.length },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveSection(tab.id)} style={{
-                padding: '11px 20px', border: 'none', borderBottom: activeSection === tab.id ? `2.5px solid ${HC.orange}` : '2.5px solid transparent',
+                padding: '11px 20px', border: 'none',
+                borderBottom: activeSection === tab.id ? `2.5px solid ${pal.border}` : '2.5px solid transparent',
                 background: activeSection === tab.id ? HC.surface : 'transparent',
-                color: activeSection === tab.id ? HC.orangeDark : HC.muted,
+                color: activeSection === tab.id ? pal.border : HC.muted,
                 fontSize: 12, fontWeight: activeSection === tab.id ? 900 : 700,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
                 fontFamily: "'Nunito',sans-serif", transition: 'all 0.15s',
               }}>
                 {tab.label}
-                <span style={{ padding: '1px 8px', borderRadius: 99, background: activeSection === tab.id ? HC.orangeLight : HC.border, color: activeSection === tab.id ? HC.orangeDark : HC.muted, fontSize: 10, fontWeight: 800 }}>
+                <span style={{
+                  padding: '1px 8px', borderRadius: 99,
+                  background: activeSection === tab.id ? pal.badge : HC.border,
+                  color: activeSection === tab.id ? pal.border : HC.muted,
+                  fontSize: 10, fontWeight: 800,
+                }}>
                   {tab.count ?? 0}
                 </span>
               </button>
@@ -376,6 +416,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [importErrors, setImportErrors] = useState([]);
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef(null);
 
   const [bestSellerIds, setBestSellerIds] = useState(() => {
@@ -560,13 +601,36 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
 
       {/* Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>
             {(mode === 'bestseller' || mode === 'best_seller') ? 'Danh sách Vendor Best Seller' : mode === 'new_products' ? 'Sản phẩm mới' : 'Tổng quan Vendor & Sản phẩm'}
           </div>
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
             {libraryFiles.length} file
           </span>
+          {/* Search */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{ position: 'absolute', left: 10, fontSize: 13, color: HC.muted, pointerEvents: 'none' }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Tìm theo tên file hoặc loại sản phẩm..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                paddingLeft: 32, paddingRight: searchQuery ? 30 : 12, paddingTop: 7, paddingBottom: 7,
+                borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`,
+                background: HC.surface, color: HC.ink, fontSize: 12,
+                fontFamily: "'Nunito Sans',sans-serif", outline: 'none',
+                width: 280, transition: 'border-color 0.15s, box-shadow 0.15s',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              }}
+              onFocus={e => { e.target.style.borderColor = HC.orangeDark; e.target.style.boxShadow = `0 0 0 3px ${HC.orangeGlow}`; }}
+              onBlur={e => { e.target.style.borderColor = HC.borderStrong; e.target.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: HC.muted, fontSize: 14, lineHeight: 1, padding: 2 }}>✕</button>
+            )}
+          </div>
         </div>
         {!readOnly && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -615,25 +679,39 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           } else if (mode === 'new_products') {
             displayFiles = displayFiles.filter(file => file.sourceTab === 'new_products');
           }
+          if (searchQuery.trim()) {
+            const q = searchQuery.trim().toLowerCase();
+            displayFiles = displayFiles.filter(file =>
+              file.filename?.toLowerCase().includes(q) ||
+              file.title?.toLowerCase().includes(q)
+            );
+          }
           
           if (loading) {
              return <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>;
           }
 
           if (displayFiles.length === 0) {
+            const isSearch = !!searchQuery.trim();
             return (
               <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
-                <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{(mode === 'bestseller' || mode === 'best_seller') ? '⭐' : '📂'}</div>
-                <div style={{ fontWeight: 800, color: HC.muted, fontSize: 14 }}>{(mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor nào'}</div>
-                {(mode === 'bestseller' || mode === 'best_seller') && <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Hãy vào "Tổng quan Vendor & Sản phẩm" và click biểu tượng ⭐ trên sản phẩm để đánh dấu.</div>}
+                <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{isSearch ? '🔍' : (mode === 'bestseller' || mode === 'best_seller') ? '⭐' : '📂'}</div>
+                <div style={{ fontWeight: 800, color: HC.muted, fontSize: 14 }}>
+                  {isSearch ? `Không tìm thấy file nào khớp với "${searchQuery}"` : (mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor nào'}
+                </div>
+                {isSearch
+                  ? <button onClick={() => setSearchQuery('')} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 20, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>Xóa tìm kiếm</button>
+                  : (mode === 'bestseller' || mode === 'best_seller') && <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Hãy vào "Tổng quan Vendor & Sản phẩm" và click biểu tượng ⭐ trên sản phẩm để đánh dấu.</div>
+                }
               </div>
             );
           }
 
-          return displayFiles.map(entry => (
+          return displayFiles.map((entry, idx) => (
             <LibraryCard
               key={entry.id}
               entry={entry}
+              idx={idx}
               onDelete={handleDelete}
               onUpdate={handleUpdateEntry}
               readOnly={readOnly}
