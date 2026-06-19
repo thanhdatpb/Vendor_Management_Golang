@@ -305,15 +305,15 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
         <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 1400, height: '92vh', background: HC.orangePale, borderRadius: 20, boxShadow: '0 32px 80px rgba(26,15,0,0.25)', border: `1.5px solid ${HC.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
           {/* Header */}
-          <div style={{ padding: '13px 20px', background: HC.ink, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <div style={{ width: 4, height: 22, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})`, flexShrink: 0 }} />
+          <div style={{ padding: '13px 20px', background: 'linear-gradient(135deg,#f59e0b 0%,#d97706 100%)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <div style={{ width: 4, height: 22, borderRadius: 99, background: 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Chi tiết sản phẩm</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>
             </div>
             <Badge status={getStatus(product)} />
             {selectedCount > 0 && <span style={{ padding: '3px 12px', borderRadius: 999, background: 'rgba(22,163,74,0.25)', border: '1px solid rgba(22,163,74,0.5)', color: '#4ade80', fontSize: 11, fontWeight: 800 }}>✓ Đã chọn {selectedCount} nhà cung cấp</span>}
-            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>✕</button>
+            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.15)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, transition: 'background 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}>✕</button>
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -369,8 +369,8 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 {/* Form Fields Compact Layout */}
                 {(() => {
                   const F = ({ label, value, bg, border, valueColor, bold }) => (
-                    <div style={{ background: bg || HC.cream, border: `1px solid ${border || HC.border}`, borderRadius: 7, padding: '7px 11px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                    <div style={{ background: bg || '#f9fafb', border: `1px solid ${border || '#e5e7eb'}`, borderRadius: 10, padding: '10px 13px' }}>
+                      <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
                       <div style={{ fontSize: 11, fontWeight: bold ? 800 : 600, color: valueColor || HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
                     </div>
                   );
@@ -421,13 +421,13 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
                       {/* Row 4: Reviews */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
-                          <div style={{ fontSize: 9, color: '#065f46', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>👍 Good Review</div>
-                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#065f46', whiteSpace: 'pre-wrap', maxHeight: 52, overflowY: 'auto' }}>{product.good_review || '—'}</div>
+                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ fontSize: 9, color: '#166534', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>👍 Good Review</div>
+                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#166534', whiteSpace: 'pre-wrap', maxHeight: 56, overflowY: 'auto', lineHeight: 1.5 }}>{product.good_review || '—'}</div>
                         </div>
-                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px' }}>
-                          <div style={{ fontSize: 9, color: HC.danger, fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>👎 Bad Review</div>
-                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: HC.danger, whiteSpace: 'pre-wrap', maxHeight: 52, overflowY: 'auto' }}>{product.bad_review || '—'}</div>
+                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ fontSize: 9, color: '#991b1b', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>👎 Bad Review</div>
+                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#991b1b', whiteSpace: 'pre-wrap', maxHeight: 56, overflowY: 'auto', lineHeight: 1.5 }}>{product.bad_review || '—'}</div>
                         </div>
                       </div>
                     </div>
@@ -439,11 +439,11 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
             {/* BOTTOM SECTION: Vendors List */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#faf9f8' }}>
-              <div style={{ padding: '10px 20px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ padding: '10px 20px', background: '#fef3c7', borderBottom: '1.5px solid #fde68a', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 18 }}>🏪</span>
-                <div style={{ fontWeight: 900, fontSize: 12, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
+                <div style={{ fontWeight: 800, fontSize: 12, color: '#78350f', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
                 {vendors.length > 0 && (
-                  <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: 10, fontWeight: 700 }}>
+                  <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 20, background: 'rgba(120,53,15,0.1)', color: '#78350f', fontSize: 10, fontWeight: 700 }}>
                     {vendors.length} vendor
                   </span>
                 )}
