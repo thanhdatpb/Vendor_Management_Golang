@@ -582,8 +582,7 @@ export default function SetupPriceSection() {
           const staffAApproved = productResponses[key]?.staff_a_approved === true ||
             productDecisions[key]?.staff_a_approved === true;
 
-          // Tạm thời cho phép hiển thị tất cả các vendor đã gán để test UI tính giá
-          const isFullyApproved = true; // Bỏ qua điều kiện staffBApproved && staffAApproved
+          const isFullyApproved = staffBApproved && staffAApproved;
 
           if (isFullyApproved) {
             vendors.push({
@@ -830,33 +829,7 @@ export default function SetupPriceSection() {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink }}>📊 Setup Giá bán</div>
-      </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20, padding: '12px 16px', background: HC.surface, borderRadius: 12, border: `1px solid ${HC.border}` }}>
-        <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
-          <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
-          <input
-            type="text"
-            placeholder="Tìm product type..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ ...inp, paddingLeft: 36 }}
-            onFocus={e => e.target.style.borderColor = HC.orange}
-            onBlur={e => e.target.style.borderColor = HC.border}
-          />
-        </div>
-        {productTypes.length > 0 && (
-          <select value={filterProductType} onChange={e => setFilterProductType(e.target.value)} style={{ padding: '9px 12px', borderRadius: 8, border: `1px solid ${HC.border}`, fontSize: 12, background: HC.surface2, minWidth: 130 }}>
-            <option value="">Tất cả loại</option>
-            {productTypes.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
-          </select>
-        )}
-        {(search || filterProductType) && (
-          <button onClick={() => { setSearch(''); setFilterProductType(''); }} style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✕ Xóa lọc</button>
-        )}
-      </div>
 
       {/* Bảng Vendor từ Uyên Hồ gán */}
       <div>
