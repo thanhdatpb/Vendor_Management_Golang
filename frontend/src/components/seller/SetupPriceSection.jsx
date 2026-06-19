@@ -868,6 +868,7 @@ export default function SetupPriceSection() {
 
       {/* Modal Setup Giá */}
 
+
       {showSetupModal && selectedVendor && (
         <div onClick={() => setShowSetupModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 700, maxWidth: '90%', maxHeight: '85vh', overflowY: 'auto', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong }}>
