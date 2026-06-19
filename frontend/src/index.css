@@ -20,6 +20,14 @@
   --hc-danger:       #dc2626;
   --hc-warning:      #f59e0b;
 
+  /* === DARK SURFACE (sidebar & dark panels) === */
+  --hc-dark-bg:          #1e293b;
+  --hc-dark-bg-hover:    rgba(255, 255, 255, 0.05);
+  --hc-dark-text:        #f1f5f9;
+  --hc-dark-text-muted:  #94a3b8;
+  --hc-dark-border:      rgba(255, 255, 255, 0.07);
+  --hc-dark-active:      rgba(249, 115, 22, 0.12);
+
   --radius-sm:  8px;
   --radius-md:  12px;
   --radius-lg:  16px;

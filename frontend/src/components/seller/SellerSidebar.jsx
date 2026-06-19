@@ -1,5 +1,5 @@
 // ════════════════════════════════════════════════════════
-//  SELLER SIDEBAR — Upgraded UI
+//  SELLER SIDEBAR — Dark Slate Theme
 // ════════════════════════════════════════════════════════
 import { useState, useEffect } from 'react';
 import {
@@ -9,7 +9,19 @@ import {
 import { HC } from '../../constants/sellerTheme';
 import { HCLogo, MENU } from './SellerUI';
 
-// ── Tooltip-wrapped nav item ──────────────────────────────────
+const DARK = {
+  bg:            'var(--hc-dark-bg)',
+  bgHover:       'var(--hc-dark-bg-hover)',
+  bgActive:      'var(--hc-dark-active)',
+  border:        'var(--hc-dark-border)',
+  borderActive:  'rgba(249,115,22,0.4)',
+  text:          'var(--hc-dark-text)',
+  textMuted:     'var(--hc-dark-text-muted)',
+  textActive:    '#fff',
+  accent:        HC.orange,
+  cardBg:        'var(--hc-dark-bg-hover)',
+};
+
 function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
   const [hovered, setHovered] = useState(false);
 
@@ -23,16 +35,13 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        padding: isCollapsed ? '12px' : '12px 16px',
-        marginBottom: 6,
-        borderRadius: 12,
-        background: isActive
-          ? `linear-gradient(135deg, ${HC.orangeLight}, ${HC.cream})`
-          : hovered ? `${HC.orange}08` : 'transparent',
-        border: `1px solid ${isActive ? HC.orangeMid : 'transparent'}`,
+        padding: isCollapsed ? '11px' : '11px 16px',
+        marginBottom: 4,
+        borderRadius: 10,
+        background: isActive ? DARK.bgActive : hovered ? DARK.bgHover : 'transparent',
+        border: `1px solid ${isActive ? DARK.borderActive : 'transparent'}`,
         cursor: 'pointer',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: hovered && !isActive ? 'translateX(4px)' : 'none',
+        transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'visible',
         justifyContent: isCollapsed ? 'center' : 'flex-start',
       }}
@@ -44,25 +53,23 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
           top: '50%',
           transform: 'translateY(-50%)',
           width: 3,
-          height: 32,
-          background: `linear-gradient(180deg, ${HC.orange}, ${HC.orangeDark})`,
-          borderRadius: '0 4px 4px 0',
+          height: 28,
+          background: DARK.accent,
+          borderRadius: '0 3px 3px 0',
+          boxShadow: `0 0 8px ${DARK.accent}80`,
         }} />
       )}
 
       <div style={{
-        width: 32,
-        height: 32,
-        borderRadius: 10,
-        background: isActive
-          ? `linear-gradient(135deg, ${HC.orange}25, ${HC.orange}10)`
-          : hovered ? `${HC.orange}10` : 'transparent',
+        width: 30,
+        height: 30,
+        borderRadius: 8,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 17,
-        color: isActive ? HC.orange : hovered ? HC.orangeDark : HC.muted,
-        transition: 'all 0.2s ease',
+        fontSize: 16,
+        color: isActive ? DARK.accent : hovered ? DARK.text : DARK.textMuted,
+        transition: 'color 0.18s ease',
         flexShrink: 0,
       }}>
         {item.icon}
@@ -71,11 +78,12 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
       {!isCollapsed && (
         <div style={{ flex: 1 }}>
           <div style={{
-            fontSize: 14,
-            fontWeight: isActive ? 800 : 600,
-            color: isActive ? HC.orangeDark : HC.brown,
+            fontSize: 13.5,
+            fontWeight: isActive ? 700 : 500,
+            color: isActive ? DARK.textActive : hovered ? DARK.text : DARK.textMuted,
             fontFamily: "'Nunito',sans-serif",
-            transition: 'color 0.2s ease',
+            transition: 'color 0.18s ease',
+            letterSpacing: '0.01em',
           }}>
             {item.label}
           </div>
@@ -84,40 +92,41 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
 
       {!isCollapsed && isActive && (
         <div style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: HC.orange,
-          boxShadow: `0 0 0 3px ${HC.orange}30`,
+          width: 5, height: 5, borderRadius: '50%',
+          background: DARK.accent,
+          boxShadow: `0 0 0 3px ${DARK.accent}30`,
+          flexShrink: 0,
         }} />
       )}
 
-      {/* Tooltip khi collapsed */}
       {isCollapsed && hovered && (
         <div style={{
           position: 'absolute',
           left: 'calc(100% + 12px)',
           top: '50%',
           transform: 'translateY(-50%)',
-          background: 'rgba(26,15,0,0.90)',
-          color: '#fff',
+          background: '#0f172a',
+          color: '#f1f5f9',
           fontSize: 12,
-          fontWeight: 700,
+          fontWeight: 600,
           fontFamily: "'Nunito',sans-serif",
           padding: '6px 12px',
           borderRadius: 8,
           whiteSpace: 'nowrap',
           pointerEvents: 'none',
           zIndex: 9999,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          border: '1px solid rgba(255,255,255,0.08)',
           animation: 'seller-slide-in 0.15s ease',
         }}>
-          <div style={{ marginBottom: 1 }}>{item.label}</div>
+          {item.label}
           <div style={{
             position: 'absolute',
             right: '100%',
             top: '50%',
             transform: 'translateY(-50%)',
             border: '5px solid transparent',
-            borderRightColor: 'rgba(26,15,0,0.90)',
+            borderRightColor: '#0f172a',
           }} />
         </div>
       )}
@@ -154,33 +163,22 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
 
   return (
     <div style={{
-      width: sidebarOpen ? 280 : 72,
-      background: '#FFFFFF',
+      width: sidebarOpen ? 260 : 68,
+      background: DARK.bg,
       display: 'flex',
       flexDirection: 'column',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       overflow: 'visible',
       position: 'relative',
-      boxShadow: '4px 0 20px rgba(0, 0, 0, 0.04)',
-      borderRight: `1px solid ${HC.border}`,
+      boxShadow: '4px 0 24px rgba(0,0,0,0.25)',
+      borderRight: `1px solid ${DARK.border}`,
       zIndex: 100,
       flexShrink: 0,
     }}>
-      {/* Dot pattern */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: `radial-gradient(circle at 20% 40%, ${HC.orange}06 1px, transparent 1px)`,
-        backgroundSize: '24px 24px',
-        pointerEvents: 'none',
-        opacity: 0.5,
-        overflow: 'hidden',
-      }} />
-
       {/* Logo */}
       <div style={{
-        padding: sidebarOpen ? '24px 20px' : '24px 14px',
-        borderBottom: `1px solid ${HC.border}`,
+        padding: sidebarOpen ? '22px 18px' : '22px 12px',
+        borderBottom: `1px solid ${DARK.border}`,
         display: 'flex',
         alignItems: 'center',
         gap: 12,
@@ -188,21 +186,34 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
         flexShrink: 0,
       }}>
         <div style={{
-          width: 42, height: 42, borderRadius: 13,
-          background: `linear-gradient(135deg, ${HC.orange}15, ${HC.orange}05)`,
+          width: 40, height: 40, borderRadius: 11,
+          background: 'rgba(249,115,22,0.15)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: `1.5px solid ${HC.orange}20`,
-          boxShadow: `0 2px 8px ${HC.orange}12`,
+          border: '1px solid rgba(249,115,22,0.25)',
           flexShrink: 0,
         }}>
-          <HCLogo size={26} color={HC.orange} />
+          <HCLogo size={24} color={HC.orange} />
         </div>
         {sidebarOpen && (
-          <div style={{ animation: 'seller-fade-in 0.3s ease' }}>
-            <div style={{ color: HC.ink, fontWeight: 900, fontSize: 15, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.02em' }}>
+          <div style={{ animation: 'seller-fade-in 0.25s ease' }}>
+            <div style={{
+              color: '#f1f5f9',
+              fontWeight: 800,
+              fontSize: 14.5,
+              fontFamily: "'Nunito',sans-serif",
+              letterSpacing: '-0.01em',
+            }}>
               Happy Creative LLC
             </div>
-            <div style={{ color: HC.orange, fontSize: 9.5, letterSpacing: '0.22em', fontWeight: 800, textTransform: 'uppercase', marginTop: 3 }}>
+            <div style={{
+              color: HC.orange,
+              fontSize: 9,
+              letterSpacing: '0.2em',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              marginTop: 3,
+              opacity: 0.85,
+            }}>
               Vendor Management
             </div>
           </div>
@@ -212,54 +223,65 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
       {/* User card */}
       {sidebarOpen && (
         <div style={{
-          margin: '16px 14px', padding: '14px', borderRadius: 14,
-          background: `linear-gradient(135deg, ${HC.orangeLight}, ${HC.cream})`,
-          border: `1px solid ${HC.orangeMid}`,
-          animation: 'seller-fade-in 0.3s ease',
+          margin: '14px 12px',
+          padding: '12px 14px',
+          borderRadius: 12,
+          background: DARK.cardBg,
+          border: `1px solid ${DARK.border}`,
+          animation: 'seller-fade-in 0.25s ease',
           flexShrink: 0,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 11,
+              width: 36, height: 36, borderRadius: 10,
               background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 16, color: '#fff',
-              boxShadow: `0 3px 10px ${HC.orange}40`,
               flexShrink: 0,
             }}>
               <UserOutlined />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: HC.ink, fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{
+                fontSize: 13, fontWeight: 700, color: '#f1f5f9',
+                fontFamily: "'Nunito',sans-serif",
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
                 {user?.sellerName || user?.seller_name || user?.name || 'Seller'}
               </div>
-              <div style={{ fontSize: 10, color: HC.brown, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <div style={{
+                fontSize: 10, color: DARK.textMuted,
+                display: 'flex', alignItems: 'center', gap: 4, marginTop: 2,
+              }}>
                 <UserOutlined style={{ fontSize: 9, color: HC.orange }} />
                 <span>Seller Account</span>
               </div>
             </div>
           </div>
           <div style={{
-            fontSize: 10, color: HC.success,
-            paddingTop: 8, borderTop: `1px solid ${HC.orangeMid}`,
+            fontSize: 10, color: '#4ade80',
+            marginTop: 10, paddingTop: 10,
+            borderTop: `1px solid ${DARK.border}`,
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             <div style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: HC.success,
+              width: 6, height: 6, borderRadius: '50%',
+              background: '#4ade80',
               animation: 'seller-pulse 2.5s ease-in-out infinite',
+              flexShrink: 0,
             }} />
-            <span style={{ fontWeight: 700 }}>Online · {formatLastActive(lastActiveTime)}</span>
+            <span style={{ fontWeight: 600 }}>Online · {formatLastActive(lastActiveTime)}</span>
           </div>
         </div>
       )}
 
       {/* Navigation */}
       <nav style={{
-        flex: 1, padding: sidebarOpen ? '6px 14px' : '6px 10px',
+        flex: 1, padding: sidebarOpen ? '4px 10px' : '4px 8px',
         overflowY: 'auto', overflowX: 'visible',
         scrollbarWidth: 'none',
       }}>
+        <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
         {MENU.map(item => (
           <NavTooltipItem
             key={item.id}
@@ -272,43 +294,28 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
       </nav>
 
       {/* Footer */}
-      <div style={{ padding: sidebarOpen ? '12px 14px 20px' : '12px 10px 20px', flexShrink: 0 }}>
-        <button
+      <div style={{ padding: sidebarOpen ? '10px 10px 18px' : '10px 8px 18px', flexShrink: 0 }}>
+        <GhostButton
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{
-            width: '100%', padding: '9px', borderRadius: 11,
-            background: HC.cream, border: `1px solid ${HC.border}`,
-            color: HC.brown, cursor: 'pointer', fontSize: 13,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: 7, transition: 'all 0.2s ease', fontFamily: "'Nunito',sans-serif", fontWeight: 700,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.borderColor = HC.orangeMid; e.currentTarget.style.color = HC.orangeDark; }}
-          onMouseLeave={e => { e.currentTarget.style.background = HC.cream; e.currentTarget.style.borderColor = HC.border; e.currentTarget.style.color = HC.brown; }}
-        >
-          {sidebarOpen ? <><MenuFoldOutlined /><span>Thu gọn</span></> : <MenuUnfoldOutlined />}
-        </button>
+          fullWidth
+          icon={sidebarOpen ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+          label={sidebarOpen ? 'Thu gọn' : null}
+        />
 
-        <button
+        <GhostButton
           onClick={logout}
-          style={{
-            width: '100%', marginTop: 8, padding: '9px', borderRadius: 11,
-            background: '#fff5f5', border: '1px solid #fecaca',
-            color: HC.danger, cursor: 'pointer', fontSize: 13,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: 7, transition: 'all 0.2s ease', fontFamily: "'Nunito',sans-serif", fontWeight: 700,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#f87171'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#fff5f5'; e.currentTarget.style.borderColor = '#fecaca'; }}
-        >
-          <LogoutOutlined />
-          {sidebarOpen && <span>Đăng xuất</span>}
-        </button>
+          fullWidth
+          icon={<LogoutOutlined />}
+          label={sidebarOpen ? 'Đăng xuất' : null}
+          danger
+          style={{ marginTop: 6 }}
+        />
 
         {sidebarOpen && (
           <div style={{
-            marginTop: 16, textAlign: 'center', fontSize: 9,
-            fontWeight: 800, color: HC.muted2, letterSpacing: '0.22em',
-            fontFamily: "'Nunito',sans-serif",
+            marginTop: 14, textAlign: 'center', fontSize: 9,
+            fontWeight: 700, color: 'rgba(148,163,184,0.4)',
+            letterSpacing: '0.2em', fontFamily: "'Nunito',sans-serif",
           }}>
             #IT'S ALWAYS DAY 1
           </div>
@@ -317,7 +324,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
 
       <style>{`
         @keyframes seller-fade-in {
-          from { opacity: 0; transform: translateX(-8px); }
+          from { opacity: 0; transform: translateX(-6px); }
           to   { opacity: 1; transform: translateX(0); }
         }
         @keyframes seller-slide-in {
@@ -325,11 +332,52 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
           to   { opacity: 1; transform: translateY(-50%) translateX(0); }
         }
         @keyframes seller-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.5); }
-          50%       { box-shadow: 0 0 0 4px rgba(22,163,74,0); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
+          50%       { box-shadow: 0 0 0 4px rgba(74,222,128,0); }
         }
         nav::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
+  );
+}
+
+function GhostButton({ onClick, icon, label, danger = false, fullWidth = false, style = {} }) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: fullWidth ? '100%' : 'auto',
+        padding: '8px',
+        borderRadius: 9,
+        background: hovered
+          ? danger ? 'rgba(248,113,113,0.08)' : DARK.bgHover
+          : 'transparent',
+        border: `1px solid ${
+          hovered
+            ? danger ? 'rgba(248,113,113,0.35)' : 'rgba(255,255,255,0.18)'
+            : DARK.border
+        }`,
+        color: danger
+          ? hovered ? '#f87171' : DARK.textMuted
+          : hovered ? DARK.text : DARK.textMuted,
+        cursor: 'pointer',
+        fontSize: 13,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+        transition: 'all 0.18s ease',
+        fontFamily: "'Nunito',sans-serif",
+        fontWeight: 600,
+        ...style,
+      }}
+    >
+      {icon}
+      {label && <span>{label}</span>}
+    </button>
   );
 }
