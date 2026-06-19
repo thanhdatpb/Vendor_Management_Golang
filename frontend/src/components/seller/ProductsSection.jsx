@@ -32,6 +32,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const [previewUrls, setPreviewUrls] = useState([]);
   const [formErrors, setFormErrors] = useState({});
   const [exporting, setExporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showExportModal, setShowExportModal] = useState(false);
   const processedProductIdRef = useRef(null);
   const importFileRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
@@ -479,16 +481,39 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     } finally { setProcessingId(null); }
   };
 
-  const handleExport = async () => {
+  const toggleSelect = (id, e) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const openExportModal = () => {
     if (submittedProducts.length === 0) {
       showToast('error', '⚠️ Không có dữ liệu', 'Chưa có sản phẩm nào để xuất');
       return;
     }
+    if (selectedIds.size === 0) {
+      setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+    }
+    setShowExportModal(true);
+  };
+
+  const confirmExport = async () => {
+    const toExport = filteredProducts.filter(p => selectedIds.has(p.id));
+    if (toExport.length === 0) {
+      showToast('error', '⚠️ Chưa chọn sản phẩm', 'Vui lòng chọn ít nhất 1 sản phẩm để xuất');
+      return;
+    }
+    setShowExportModal(false);
     setExporting(true);
     try {
       const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
-      await exportProductsToExcel(submittedProducts, productVendors, `seller-products-${today}.xlsx`);
-      showToast('success', '✅ Xuất Excel thành công!', `Đã xuất ${submittedProducts.length} sản phẩm`);
+      await exportProductsToExcel(toExport, productVendors, `seller-products-${today}.xlsx`);
+      showToast('success', '✅ Xuất Excel thành công!', `Đã xuất ${toExport.length} sản phẩm`);
+      setSelectedIds(new Set());
     } catch (err) {
       showToast('error', '❌ Lỗi xuất Excel', err.message || 'Không thể xuất file');
     } finally {
@@ -507,6 +532,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const hasFilter = search || filterStatus;
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const pagedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const allFiltered = filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.has(p.id));
+  const someFiltered = !allFiltered && filteredProducts.some(p => selectedIds.has(p.id));
+
+  const toggleSelectAll = () => {
+    if (allFiltered) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+    }
+  };
 
   const renderVendorBadge = (p) => {
     const vendors = productVendors[p.id] || [];
@@ -553,7 +588,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button
-            onClick={handleExport}
+            onClick={openExportModal}
             disabled={exporting || submittedProducts.length === 0}
             style={{
               padding: '10px 20px', borderRadius: 12,
@@ -569,7 +604,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(22,163,74,0.3)'; }}
           >
             <span style={{ fontSize: 15 }}>{exporting ? '⟳' : '↓'}</span>
-            {exporting ? 'Đang xuất...' : 'Export Excel'}
+            {exporting ? 'Đang xuất...' : selectedIds.size > 0 ? `Export Excel (${selectedIds.size})` : 'Export Excel'}
           </button>
           <button
             onClick={openCreateModal}
@@ -642,6 +677,22 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff' }}>
               <thead>
                 <tr style={{ background: `linear-gradient(135deg, ${HC.cream}, #fff8ed)` }}>
+                  {/* Checkbox chọn tất cả */}
+                  <th style={{ padding: '13px 16px', borderBottom: `2px solid ${HC.border}`, width: 44, textAlign: 'center' }}>
+                    <div
+                      onClick={toggleSelectAll}
+                      style={{
+                        width: 18, height: 18, borderRadius: 5, cursor: 'pointer',
+                        border: `2px solid ${allFiltered ? '#16a34a' : someFiltered ? '#16a34a' : HC.border}`,
+                        background: allFiltered ? '#16a34a' : someFiltered ? 'rgba(22,163,74,0.15)' : '#fff',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {allFiltered && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1, fontWeight: 900 }}>✓</span>}
+                      {someFiltered && !allFiltered && <span style={{ color: '#16a34a', fontSize: 11, lineHeight: 1, fontWeight: 900 }}>—</span>}
+                    </div>
+                  </th>
                   {[
                     { label: 'No',              w: 48 },
                     { label: 'Product Type',  w: 180 },
@@ -680,10 +731,25 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     <tr
                       key={p.id || i}
                       onClick={() => setViewProduct(p)}
-                      style={{ background: rowBg, transition: 'background 0.15s', cursor: 'pointer' }}
+                      style={{ background: selectedIds.has(p.id) ? 'linear-gradient(90deg,#f0fdf4 0%,#fff 60%)' : rowBg, transition: 'background 0.15s', cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.background = isRejected ? '#fee2e2' : '#fff8ed'}
-                      onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                      onMouseLeave={e => e.currentTarget.style.background = selectedIds.has(p.id) ? 'linear-gradient(90deg,#f0fdf4 0%,#fff 60%)' : rowBg}
                     >
+                      {/* Checkbox */}
+                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, textAlign: 'center' }}>
+                        <div
+                          onClick={e => toggleSelect(p.id, e)}
+                          style={{
+                            width: 18, height: 18, borderRadius: 5, cursor: 'pointer',
+                            border: `2px solid ${selectedIds.has(p.id) ? '#16a34a' : HC.border}`,
+                            background: selectedIds.has(p.id) ? '#16a34a' : '#fff',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s', flexShrink: 0,
+                          }}
+                        >
+                          {selectedIds.has(p.id) && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1, fontWeight: 900 }}>✓</span>}
+                        </div>
+                      </td>
                       {/* # */}
                       <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: HC.orangeLight, color: HC.brown, fontWeight: 800, fontSize: 11 }}>
@@ -1034,6 +1100,134 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       )}
 
       {viewProduct && <ProductViewerModal product={viewProduct} productVendors={productVendors} onClose={() => setViewProduct(null)} getStatus={getStatus} />}
+
+      {/* ── Export Confirm Modal ── */}
+      {showExportModal && (() => {
+        const toExport = filteredProducts.filter(p => selectedIds.has(p.id));
+        const exportStatusMeta = {
+          draft:    { label: 'Draft',    bg: '#f3f4f6', color: '#6b7280' },
+          pending:  { label: 'Pending',  bg: '#fffbeb', color: '#92400e' },
+          approved: { label: 'Approved', bg: '#ecfdf5', color: '#065f46' },
+          reject:   { label: 'Rejected', bg: '#fef2f2', color: '#991b1b' },
+        };
+        return (
+          <div
+            onClick={() => setShowExportModal(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, backdropFilter: 'blur(3px)', padding: 16 }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 560, background: '#fff', borderRadius: 20, boxShadow: '0 32px 80px rgba(0,0,0,0.22)', border: `1.5px solid ${HC.border}`, overflow: 'hidden', animation: 'fadeIn 0.2s ease' }}
+            >
+              {/* Header */}
+              <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>↓</div>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Xác nhận xuất Excel</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 3 }}>
+                    {toExport.length} sản phẩm sẽ được xuất ra file Excel
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', fontSize: 16, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >✕</button>
+              </div>
+
+              {/* Summary bar */}
+              <div style={{ padding: '12px 24px', background: '#f0fdf4', borderBottom: `1px solid #bbf7d0`, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#065f46' }}>
+                    Đã chọn <strong>{toExport.length}</strong> / {filteredProducts.length} sản phẩm
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedIds(new Set(filteredProducts.map(p => p.id)))}
+                  style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'transparent', border: '1px solid #bbf7d0', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
+                >Chọn tất cả</button>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  style={{ fontSize: 11, fontWeight: 700, color: HC.danger, background: 'transparent', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
+                >Bỏ chọn</button>
+              </div>
+
+              {/* Product list */}
+              <div style={{ maxHeight: 320, overflowY: 'auto', padding: '12px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filteredProducts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 32, color: HC.muted, fontSize: 13 }}>Không có sản phẩm nào</div>
+                ) : filteredProducts.map((p, idx) => {
+                  const st = getStatus(p);
+                  const sm = exportStatusMeta[st] || exportStatusMeta.draft;
+                  const isChecked = selectedIds.has(p.id);
+                  return (
+                    <div
+                      key={p.id || idx}
+                      onClick={() => setSelectedIds(prev => {
+                        const next = new Set(prev);
+                        next.has(p.id) ? next.delete(p.id) : next.add(p.id);
+                        return next;
+                      })}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                        borderRadius: 10, cursor: 'pointer', transition: 'background 0.12s',
+                        background: isChecked ? '#f0fdf4' : '#fafafa',
+                        border: `1.5px solid ${isChecked ? '#bbf7d0' : HC.border}`,
+                      }}
+                      onMouseEnter={e => { if (!isChecked) e.currentTarget.style.background = '#f9fafb'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = isChecked ? '#f0fdf4' : '#fafafa'; }}
+                    >
+                      {/* Checkbox */}
+                      <div style={{
+                        width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                        border: `2px solid ${isChecked ? '#16a34a' : HC.border}`,
+                        background: isChecked ? '#16a34a' : '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.15s',
+                      }}>
+                        {isChecked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900 }}>✓</span>}
+                      </div>
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {p.product_type || `Sản phẩm #${idx + 1}`}
+                        </div>
+                        {p.material && <div style={{ fontSize: 11, color: HC.muted, marginTop: 1 }}>📦 {p.material}</div>}
+                      </div>
+                      {/* Status */}
+                      <span style={{ padding: '3px 10px', borderRadius: 999, background: sm.bg, color: sm.color, fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {sm.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '16px 24px', borderTop: `1.5px solid ${HC.border}`, display: 'flex', gap: 12, justifyContent: 'flex-end', background: HC.surface2 }}>
+                <button
+                  onClick={() => setShowExportModal(false)}
+                  style={{ padding: '10px 22px', borderRadius: 10, background: HC.cream, border: `1.5px solid ${HC.border}`, color: HC.brown, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >Huỷ</button>
+                <button
+                  onClick={confirmExport}
+                  disabled={toExport.length === 0}
+                  style={{
+                    padding: '10px 28px', borderRadius: 10,
+                    background: toExport.length === 0 ? HC.muted2 : 'linear-gradient(135deg,#16a34a,#15803d)',
+                    color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
+                    cursor: toExport.length === 0 ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    boxShadow: toExport.length > 0 ? '0 4px 14px rgba(22,163,74,0.35)' : 'none',
+                    opacity: toExport.length === 0 ? 0.6 : 1,
+                  }}
+                >
+                  <span>↓</span> Xuất {toExport.length} sản phẩm
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <style>{`
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
