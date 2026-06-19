@@ -313,140 +313,194 @@ export default function VendorViewerModal({ product, onClose }) {
                       <div style={{ fontWeight: 700, fontSize: 14, color: HC.brown }}>Chưa có nhà cung cấp nào được gán</div>
                       <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Vào Products → nhấn "Tìm Vendor" để gán vendor cho sản phẩm này</div>
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  ) : (() => {
+                    const groupedV = [];
+                    const gMap = new Map();
+                    vendors.forEach((v, idx) => {
+                      const vName = ((v.name || v.vendor_type || '—') || '').toString().trim();
+                      if (!gMap.has(vName)) {
+                        gMap.set(vName, { vendorName: vName, items: [], firstVendor: v, key: vendorKey(v, idx) });
+                        groupedV.push(gMap.get(vName));
+                      }
+                      gMap.get(vName).items.push(v);
+                    });
+                    const Na = ({ pending } = {}) => (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#94a3b8', padding: '2px 7px', borderRadius: 4, background: '#f8fafc', border: '1px dashed #cbd5e1', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                        N/A{pending && <span style={{ fontSize: 8, opacity: 0.7 }}> · chờ cập nhật</span>}
+                      </span>
+                    );
+                    const thS = (color, align = 'center') => ({ padding: '9px 12px', fontWeight: 800, fontSize: 10, color: color || HC.muted, textTransform: 'uppercase', letterSpacing: '0.05em', borderRight: `1px solid ${HC.border}`, borderBottom: `1.5px solid ${HC.border}`, textAlign: align, background: HC.cream, whiteSpace: 'nowrap' });
+                    const tdS = (extra = {}) => ({ padding: '10px 12px', verticalAlign: 'middle', borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`, ...extra });
+                    return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {/* Vendor Table */}
+                      <div style={{ borderRadius: 12, border: `1px solid ${HC.border}`, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', minWidth: 1000, borderCollapse: 'collapse', fontSize: 12 }}>
+                            <thead>
+                              <tr>
+                                <th style={{ ...thS(), width: 40 }}>☑</th>
+                                <th style={{ ...thS(), width: 72 }}>Ảnh</th>
+                                <th style={{ ...thS(HC.ink, 'left'), minWidth: 130 }}>Vendor Name</th>
+                                <th style={{ ...thS(HC.orangeDark) }}>Product Type</th>
+                                <th style={{ ...thS(null, 'left'), minWidth: 140 }}>Chất liệu</th>
+                                <th style={{ ...thS() }}>T.gian SX</th>
+                                <th style={{ ...thS() }}>T.gian Ship</th>
+                                <th style={{ ...thS() }}>Size</th>
+                                <th style={{ ...thS() }}>Link Folder</th>
+                                <th style={{ ...thS('#059669'), borderRight: 'none' }}>Total Price</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {groupedV.map((group, gIdx) => {
+                                const v = group.firstVendor;
+                                const gKey = group.key;
+                                const bChecked = !!bSelections[gKey]?.checked;
+                                const rowBg = bChecked ? '#ecfdf5' : (gIdx % 2 === 0 ? '#ffffff' : HC.orangePale);
+                                const rawMat = v.overview || '';
+                                const matText = rawMat.length > 70 ? rawMat.slice(0, 70) + '…' : rawMat || null;
+                                const vLink = v.link_folder || null;
+                                return group.items.map((vi, idx) => (
+                                  <tr key={`${gIdx}-${idx}`} style={{ background: rowBg, transition: 'background 0.12s' }}
+                                    onMouseEnter={e => { if (!bChecked) e.currentTarget.style.background = '#fff8f0'; }}
+                                    onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                                  >
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'center', width: 40 }) }}>
+                                        <button onClick={() => toggleBCheck(gKey)} style={{ width: 24, height: 24, borderRadius: 6, background: bChecked ? HC.success : 'transparent', border: `2px solid ${bChecked ? HC.success : HC.muted2}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                                          {bChecked && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>✓</span>}
+                                        </button>
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'center', width: 72 }) }}>
+                                        {v.media_url
+                                          ? <img src={v.media_url} style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} />
+                                          : <div style={{ width: 52, height: 52, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, margin: '0 auto', color: HC.muted2 }}>📷</div>}
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'left' }) }}>
+                                        {v.name || v.vendor_type
+                                          ? <><div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type}</div>{v.name && v.vendor_type && v.name !== v.vendor_type && <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{v.vendor_type}</div>}</>
+                                          : <Na pending />}
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'center' }) }}>
+                                        {v.vendor_type
+                                          ? <span style={{ fontWeight: 800, fontSize: 10, color: HC.orangeDark, padding: '3px 10px', borderRadius: 20, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, display: 'inline-block', whiteSpace: 'nowrap' }}>{v.vendor_type}</span>
+                                          : <Na pending />}
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'left' }) }}>
+                                        {matText ? <span style={{ color: HC.ink2, fontSize: 11, lineHeight: 1.5 }} title={rawMat}>{matText}</span> : <Na pending />}
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'center' }) }}>
+                                        {product.production_time ? <span style={{ fontWeight: 700, color: HC.brown }}>{product.production_time}</span> : <Na />}
+                                      </td>
+                                    )}
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'center' }) }}>
+                                        {product.shipping_time ? <span style={{ fontWeight: 700, color: HC.brown }}>{product.shipping_time}</span> : <Na />}
+                                      </td>
+                                    )}
+                                    <td style={{ ...tdS({ textAlign: 'center' }) }}>
+                                      {vi.size ? <><div style={{ fontWeight: 700, color: HC.ink }}>{vi.size}</div>{vi.optional && <div style={{ fontSize: 9, color: HC.muted2, marginTop: 2 }}>{vi.optional}</div>}</> : <Na />}
+                                    </td>
+                                    {idx === 0 && (
+                                      <td rowSpan={group.items.length} style={{ ...tdS({ textAlign: 'center' }) }}>
+                                        {vLink
+                                          ? <a href={vLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '5px 10px', borderRadius: 7, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
+                                              onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                              onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                                            >📁 Xem folder</a>
+                                          : <Na pending />}
+                                      </td>
+                                    )}
+                                    <td style={{ ...tdS({ textAlign: 'center', borderRight: 'none' }) }}>
+                                      {vi.eco_total != null && vi.eco_total !== '' && vi.eco_total !== 0
+                                        ? <span style={{ fontWeight: 900, fontSize: 14, color: '#059669' }}>${Number(vi.eco_total).toFixed(2)}</span>
+                                        : <Na pending />}
+                                    </td>
+                                  </tr>
+                                ));
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div style={{ padding: '8px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#92400e' }}>
+                        <span>ℹ️</span>
+                        <span>Các ô hiển thị <strong>N/A</strong> đang chờ cập nhật thông tin vendor.</span>
+                      </div>
+                      {/* Pricing + Feedback per vendor */}
                       {vendors.map((v, i) => {
                         const key = vendorKey(v, i);
-                        const bSel = bSelections[key];
-                        const bChecked = !!bSel?.checked;
+                        const bChecked = !!bSelections[key]?.checked;
                         const bSubmitted = bSubmittedFeedbacks[key];
                         const aResponse = aResponseFeedbacks[key];
                         const currentFeedback = feedbackTexts[key] || '';
 
                         return (
-                          <div key={key} style={{ background: bChecked ? '#ecfdf5' : HC.surface, borderRadius: 16, border: `1.5px solid ${bChecked ? '#bbf7d0' : HC.border}`, overflow: 'hidden', transition: 'all 0.2s ease', boxShadow: bChecked ? '0 4px 12px rgba(22,163,74,0.1)' : '0 1px 3px rgba(0,0,0,0.05)' }}>
-                            {/* Vendor Header */}
-                            <div style={{ padding: '14px 20px', background: bChecked ? '#ecfdf5' : HC.cream, borderBottom: `1px solid ${bChecked ? '#bbf7d0' : HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                                {/* Checkbox + số thứ tự */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                  <button onClick={() => toggleBCheck(key)} style={{ width: 28, height: 28, borderRadius: 8, background: bChecked ? HC.success : 'transparent', border: `2px solid ${bChecked ? HC.success : HC.muted2}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
-                                    {bChecked && <span style={{ color: '#fff', fontSize: 14, fontWeight: 900 }}>✓</span>}
-                                  </button>
-                                  <span style={{ fontWeight: 800, fontSize: 13, color: HC.muted }}>#{i + 1}</span>
-                                </div>
-
-                                {/* Product Type + Vendor Name */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                  {/* Product Type */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ fontSize: 9, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: 76 }}>Product Type</span>
-                                    <span style={{ fontWeight: 900, fontSize: 13, color: HC.orangeDark, padding: '2px 10px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}` }}>
-                                      {product.product_type || '—'}
-                                    </span>
-                                  </div>
-                                  {/* Vendor Name */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ fontSize: 9, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: 76 }}>Vendor Name</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                      <span style={{ fontWeight: 800, fontSize: 13, color: HC.ink }}>
-                                        {v.name || v.vendor_type || '—'}
-                                      </span>
-                                      {v.name && v.vendor_type && v.name !== v.vendor_type && (
-                                        <span style={{ fontSize: 11, color: HC.muted2, fontWeight: 600 }}>({v.vendor_type})</span>
-                                      )}
-                                      {v.vendor_type === 'Best Seller' && <BestSellerBadge />}
-                                    </div>
-                                  </div>
-                                  {/* Size + Optional */}
-                                  {(v.size || v.optional) && (
-                                    <div style={{ display: 'flex', gap: 12, fontSize: 11, color: HC.muted2 }}>
-                                      {v.size && <span>📏 {v.size}</span>}
-                                      {v.optional && <span>🎨 {v.optional}</span>}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Base Cost + Link folder */}
-                              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                                <div>
-                                  <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700 }}>Base Cost</div>
-                                  <div style={{ fontWeight: 800, fontSize: 15, color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</div>
-                                </div>
-                                {v.link_folder && (
-                                  <a
-                                    href={v.link_folder}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={e => e.stopPropagation()}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 10px', borderRadius: 7, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                                  >
-                                    📁 Link Folder
-                                  </a>
-                                )}
-                              </div>
+                          <div key={key} style={{ background: bChecked ? '#ecfdf5' : HC.surface, borderRadius: 14, border: `1.5px solid ${bChecked ? '#bbf7d0' : HC.border}`, overflow: 'hidden' }}>
+                            <div style={{ padding: '10px 16px', background: bChecked ? '#d1fae5' : HC.cream, borderBottom: `1px solid ${bChecked ? '#bbf7d0' : HC.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <span style={{ fontWeight: 900, fontSize: 12, color: HC.ink }}>#{i + 1} {v.name || v.vendor_type || '—'}</span>
+                              {bChecked && <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', padding: '1px 8px', borderRadius: 20, background: '#d1fae5', border: '1px solid #86efac' }}>✓ Đã chọn</span>}
+                              <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: HC.muted }}>Base Cost: <span style={{ color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</span></span>
                             </div>
-
-                            {/* Pricing Grid */}
-                            <div style={{ padding: '16px 20px', background: HC.surface2, borderBottom: `1px solid ${HC.border}` }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                            <div style={{ padding: '12px 16px', background: HC.surface2, borderBottom: `1px solid ${HC.border}` }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                                 {[
                                   { label: '🚚 ECONOMY', price: v.eco_price, total: v.eco_total },
                                   { label: '⚡ FAST', price: v.fast_price, total: v.fast_total },
                                   { label: '✈️ EXPRESS', price: v.express_price, total: v.express_total },
                                   { label: '🌙 OVERNIGHT', price: v.overnight_price, total: v.overnight_total }
-                                ].map((item, idx) => (
-                                  <div key={idx} style={{ background: HC.surface, borderRadius: 12, padding: '10px 12px', border: `1px solid ${HC.border}` }}>
-                                    <div style={{ fontWeight: 800, fontSize: 10, color: HC.muted, marginBottom: 6 }}>{item.label}</div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span style={{ fontSize: 11, color: HC.muted2 }}>Ship:</span><span style={{ fontWeight: 700, fontSize: 12 }}>{fmt(item.price)}</span></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}><span style={{ fontSize: 11, color: HC.muted2 }}>Total:</span><span style={{ fontWeight: 800, fontSize: 13, color: HC.success }}>{fmt(item.total)}</span></div>
+                                ].map((item, pIdx) => (
+                                  <div key={pIdx} style={{ background: HC.surface, borderRadius: 10, padding: '8px 10px', border: `1px solid ${HC.border}` }}>
+                                    <div style={{ fontWeight: 800, fontSize: 9, color: HC.muted, marginBottom: 5 }}>{item.label}</div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 10, color: HC.muted2 }}>Ship:</span><span style={{ fontWeight: 700, fontSize: 11 }}>{fmt(item.price)}</span></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}><span style={{ fontSize: 10, color: HC.muted2 }}>Total:</span><span style={{ fontWeight: 800, fontSize: 12, color: HC.success }}>{fmt(item.total)}</span></div>
                                   </div>
                                 ))}
                               </div>
                             </div>
-
-                            {/* Feedback Section */}
-                            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                              {/* Staff B Feedback */}
+                            <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                               <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}><span style={{ fontSize: 14 }}>💬</span><span style={{ fontWeight: 800, fontSize: 11, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi của Staff B</span></div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><span style={{ fontSize: 13 }}>💬</span><span style={{ fontWeight: 800, fontSize: 10, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi của Staff B</span></div>
                                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                                   <textarea
                                     placeholder="Nhập phản hồi về vendor này..."
                                     value={currentFeedback}
                                     onChange={e => setFeedbackTexts(prev => ({ ...prev, [key]: e.target.value }))}
                                     rows={2}
-                                    style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: `1.5px solid ${currentFeedback ? HC.orange : HC.border}`, fontSize: 12, color: HC.ink2, background: HC.surface, resize: 'vertical', fontFamily: "'Nunito Sans',sans-serif", outline: 'none' }}
+                                    style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${currentFeedback ? HC.orange : HC.border}`, fontSize: 11, color: HC.ink2, background: HC.surface, resize: 'vertical', fontFamily: "'Nunito Sans',sans-serif", outline: 'none' }}
                                     onFocus={e => e.target.style.borderColor = HC.orange}
                                     onBlur={e => e.target.style.borderColor = currentFeedback ? HC.orange : HC.border}
                                   />
-                                  <button
-                                    onClick={() => submitBFeedback(key, currentFeedback)}
-                                    disabled={!currentFeedback || bSubmitted}
-                                    style={{ padding: '8px 16px', borderRadius: 10, background: bSubmitted ? HC.success : (!currentFeedback ? HC.muted2 : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`), color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: (!currentFeedback || bSubmitted) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: (!currentFeedback || bSubmitted) ? 0.5 : 1 }}
-                                  >
+                                  <button onClick={() => submitBFeedback(key, currentFeedback)} disabled={!currentFeedback || bSubmitted}
+                                    style={{ padding: '8px 14px', borderRadius: 8, background: bSubmitted ? HC.success : (!currentFeedback ? HC.muted2 : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`), color: '#fff', border: 'none', fontSize: 11, fontWeight: 700, cursor: (!currentFeedback || bSubmitted) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', opacity: (!currentFeedback || bSubmitted) ? 0.5 : 1 }}>
                                     {bSubmitted ? '✓ Đã gửi' : '📨 Gửi'}
                                   </button>
                                 </div>
                               </div>
-
-                              {/* Seller Response (chỉ hiển thị) */}
                               <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}><span style={{ fontSize: 14 }}>📝</span><span style={{ fontWeight: 800, fontSize: 11, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi của Seller</span></div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}><span style={{ fontSize: 13 }}>📝</span><span style={{ fontWeight: 800, fontSize: 10, color: HC.muted, textTransform: 'uppercase' }}>Phản hồi của Seller</span></div>
                                 {aResponse ? (
-                                  <div style={{ background: aResponse.decision === 'dat' ? '#ecfdf5' : '#fef2f2', borderRadius: 12, padding: '12px', border: `1px solid ${aResponse.decision === 'dat' ? '#bbf7d0' : '#fecaca'}` }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                                      {aResponse.decision === 'dat' ? <><span style={{ fontSize: 18 }}>✅</span><span style={{ fontWeight: 800, fontSize: 12, color: '#065f46' }}>QUYẾT ĐỊNH: ĐẶT SAMPLE</span></> : <><span style={{ fontSize: 18 }}>❌</span><span style={{ fontWeight: 800, fontSize: 12, color: '#991b1b' }}>QUYẾT ĐỊNH: TỪ CHỐI</span></>}
+                                  <div style={{ background: aResponse.decision === 'dat' ? '#ecfdf5' : '#fef2f2', borderRadius: 10, padding: '10px', border: `1px solid ${aResponse.decision === 'dat' ? '#bbf7d0' : '#fecaca'}` }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                                      {aResponse.decision === 'dat' ? <><span style={{ fontSize: 14 }}>✅</span><span style={{ fontWeight: 800, fontSize: 11, color: '#065f46' }}>ĐẶT SAMPLE</span></> : <><span style={{ fontSize: 14 }}>❌</span><span style={{ fontWeight: 800, fontSize: 11, color: '#991b1b' }}>TỪ CHỐI</span></>}
                                     </div>
-                                    {aResponse.sampleDetails && <div style={{ marginTop: 8, padding: '8px 10px', background: '#fff', borderRadius: 8, border: `1px solid ${HC.border}` }}><div style={{ fontWeight: 700, fontSize: 10, color: HC.orange, marginBottom: 4 }}>📦 CHI TIẾT SAMPLE:</div><div style={{ fontSize: 11, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{aResponse.sampleDetails}</div></div>}
-                                    {aResponse.sellerFeedback && <div style={{ marginTop: 6, fontSize: 10, color: HC.brown, padding: '6px 8px', background: HC.orangeLight, borderRadius: 6 }}>💬 Phản hồi gốc: {aResponse.sellerFeedback}</div>}
-                                    <div style={{ marginTop: 6, fontSize: 9, color: '#059669', textAlign: 'right' }}>{new Date(aResponse.respondedAt).toLocaleString('vi-VN')}</div>
+                                    {aResponse.sampleDetails && <div style={{ fontSize: 10, lineHeight: 1.5, whiteSpace: 'pre-wrap', marginTop: 4 }}>{aResponse.sampleDetails}</div>}
+                                    {aResponse.sellerFeedback && <div style={{ marginTop: 4, fontSize: 10, color: HC.brown, padding: '4px 8px', background: HC.orangeLight, borderRadius: 5 }}>💬 {aResponse.sellerFeedback}</div>}
+                                    <div style={{ marginTop: 4, fontSize: 9, color: '#059669', textAlign: 'right' }}>{new Date(aResponse.respondedAt).toLocaleString('vi-VN')}</div>
                                   </div>
                                 ) : (
-                                  <div style={{ padding: '20px', textAlign: 'center', background: HC.orangePale, borderRadius: 12, border: `1px dashed ${HC.border}`, color: HC.muted2, fontSize: 11 }}>⏳ Chưa có phản hồi từ Seller</div>
+                                  <div style={{ padding: '16px', textAlign: 'center', background: HC.orangePale, borderRadius: 10, border: `1px dashed ${HC.border}`, color: HC.muted2, fontSize: 11 }}>⏳ Chưa có phản hồi từ Seller</div>
                                 )}
                               </div>
                             </div>
@@ -454,7 +508,8 @@ export default function VendorViewerModal({ product, onClose }) {
                         );
                       })}
                     </div>
-                  ))}
+                    );
+                  })())}
               </div>
             </div>
           </div>
