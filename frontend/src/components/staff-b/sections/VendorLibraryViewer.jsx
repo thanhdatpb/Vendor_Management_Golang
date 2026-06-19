@@ -53,123 +53,122 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   };
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-        <thead>
-          <tr>
-            {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: 32, textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
-            {selectable && <th style={{ ...TH(), width: 28, textAlign: 'center' }}>✓</th>}
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 80 }}>Vendor Name</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 90 }}>Product Type</th>
-            <th style={{ ...TH(), width: 40 }}>Ký hiệu</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 100 }}>Hình ảnh</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 90 }}>Chất liệu</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 70 }}>Chi tiết Size</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 105, whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 85, whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 120 }}>Notes</th>
-            <th style={{ ...TH(), textAlign: 'left', minWidth: 70 }}>Link Folder</th>
-            {!readOnly && <th style={{ ...TH(), width: 50 }}>Thao tác</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => {
-            const isEditing = editIdx === i;
-            const isBestSeller = bestSellerIds?.has(r.id);
-            return (
-              <tr key={i} style={{ background: isBestSeller ? 'rgba(255,215,0,0.07)' : undefined }}>
-                {!readOnly && (
-                  <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer', background: isBestSeller ? 'rgba(255,215,0,0.15)' : undefined, transition: 'background 0.2s' }} onClick={() => toggleBestSeller && toggleBestSeller(r.id)} title={isBestSeller ? 'Bỏ đánh dấu Best Seller' : 'Đánh dấu Best Seller'}>
-                    <div style={{ fontSize: 16, transition: 'all 0.25s ease', transform: isBestSeller ? 'scale(1.25)' : 'scale(1)', opacity: isBestSeller ? 1 : 0.15, filter: isBestSeller ? 'drop-shadow(0 0 5px rgba(255,200,0,0.9))' : 'none' }}>⭐</div>
-                  </td>
-                )}
-                {selectable && (
-                  <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer' }} onClick={() => onSelectRow(r.id)}>
-                    <input type="checkbox" checked={selectedIds?.has(r.id)} onChange={() => onSelectRow(r.id)} style={{ cursor: 'pointer' }} />
-                  </td>
-                )}
-                <td style={{ ...TD(i) }}>
-                  {isEditing ? (
-                    <input type="text" placeholder="Vendor Name..." value={editForm.vendorName} onChange={e => setEditForm(p => ({ ...p, vendorName: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                  ) : (
-                    r.vendorName
-                      ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.vendorName}</span>
-                      : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
-                  )}
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+      <thead>
+        <tr>
+          {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: '3%', textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
+          {selectable && <th style={{ ...TH(), width: '3%', textAlign: 'center' }}>✓</th>}
+          <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Vendor Name</th>
+          <th style={{ ...TH(), width: '10%', textAlign: 'left' }}>Product Type</th>
+          <th style={{ ...TH(), width: '4%' }}>Ký hiệu</th>
+          <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Hình ảnh</th>
+          <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Chất liệu</th>
+          <th style={{ ...TH(), width: '7%', textAlign: 'left' }}>Chi tiết Size</th>
+          <th style={{ ...TH(), width: '10%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
+          <th style={{ ...TH(), width: '8%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
+          <th style={{ ...TH(), width: '16%', textAlign: 'left' }}>Notes</th>
+          <th style={{ ...TH(), width: '8%', textAlign: 'left' }}>Link Folder</th>
+          {!readOnly && <th style={{ ...TH(), width: '5%' }}>Thao tác</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => {
+          const isEditing = editIdx === i;
+          const isBestSeller = bestSellerIds?.has(r.id);
+          return (
+            <tr key={i} style={{ background: isBestSeller ? 'rgba(255,215,0,0.07)' : undefined }}>
+              {!readOnly && (
+                <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer', background: isBestSeller ? 'rgba(255,215,0,0.15)' : undefined, transition: 'background 0.2s' }} onClick={() => toggleBestSeller && toggleBestSeller(r.id)} title={isBestSeller ? 'Bỏ đánh dấu Best Seller' : 'Đánh dấu Best Seller'}>
+                  <div style={{ fontSize: 16, transition: 'all 0.25s ease', transform: isBestSeller ? 'scale(1.25)' : 'scale(1)', opacity: isBestSeller ? 1 : 0.15, filter: isBestSeller ? 'drop-shadow(0 0 5px rgba(255,200,0,0.9))' : 'none' }}>⭐</div>
                 </td>
-                <td style={{ ...TD(i) }}>
-                  {isEditing ? (
-                    <input type="text" placeholder="Product Type..." value={editForm.productType} onChange={e => setEditForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                  ) : (
-                    r.productType
-                      ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.productType}</span>
-                      : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
-                  )}
+              )}
+              {selectable && (
+                <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer' }} onClick={() => onSelectRow(r.id)}>
+                  <input type="checkbox" checked={selectedIds?.has(r.id)} onChange={() => onSelectRow(r.id)} style={{ cursor: 'pointer' }} />
                 </td>
+              )}
+              <td style={{ ...TD(i) }}>
+                {isEditing ? (
+                  <input type="text" placeholder="Vendor Name..." value={editForm.vendorName} onChange={e => setEditForm(p => ({ ...p, vendorName: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                ) : (
+                  r.vendorName
+                    ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.vendorName}</span>
+                    : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
+                )}
+              </td>
+              <td style={{ ...TD(i) }}>
+                {isEditing ? (
+                  <input type="text" placeholder="Product Type..." value={editForm.productType} onChange={e => setEditForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                ) : (
+                  r.productType
+                    ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.productType}</span>
+                    : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
+                )}
+              </td>
+              <td style={{ ...TD(i), textAlign: 'center' }}>
+                {isEditing ? (
+                  <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark, boxSizing: 'border-box' }} />
+                ) : (
+                  r.kyHieu
+                    ? <span style={{ fontWeight: 900, color: HC.orangeDark }}>{r.kyHieu}</span>
+                    : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
+                )}
+              </td>
+              <td style={{ ...TD(i) }}>
+                {isEditing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {['img0','img1','img2','img3'].map((k, n) => (
+                      <input key={k} type="text" placeholder={`URL Hình ${n+1}`} value={editForm[k]} onChange={e => setEditForm(p => ({ ...p, [k]: e.target.value }))} style={{ width: '100%', padding: 3, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
+                      <a key={idx} href={img} target="_blank" rel="noreferrer">
+                        <img src={img} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                      </a>
+                    )) : <span style={{ color: HC.muted, fontSize: 10, fontStyle: 'italic' }}>Không có ảnh</span>}
+                  </div>
+                )}
+              </td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{fmtNA(r.chatLieu)}</td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                {r.chiTietSizeImage && (
+                  <a href={r.chiTietSizeImage} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: r.chiTietSize ? 6 : 0 }}>
+                    <img src={r.chiTietSizeImage} alt="Size Guide" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
+                  </a>
+                )}
+                {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
+              </td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{fmtNA(r.notes)}</td>
+              <td style={{ ...TD(i) }}>
+                {isEditing ? (
+                  <input type="text" placeholder="Link Folder..." value={editForm.linkFolder} onChange={e => setEditForm(p => ({ ...p, linkFolder: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                ) : (
+                  r.linkFolder
+                    ? <a href={r.linkFolder} target="_blank" rel="noreferrer" title={r.linkFolder} style={{ color: HC.orangeDark, textDecoration: 'underline', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🔗 Folder</a>
+                    : <span style={{ color: HC.muted2 }}>—</span>
+                )}
+              </td>
+              {!readOnly && (
                 <td style={{ ...TD(i), textAlign: 'center' }}>
                   {isEditing ? (
-                    <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
-                  ) : (
-                    r.kyHieu
-                      ? <span style={{ fontWeight: 900, color: HC.orangeDark }}>{r.kyHieu}</span>
-                      : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
-                  )}
-                </td>
-                <td style={{ ...TD(i) }}>
-                  {isEditing ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <input type="text" placeholder="URL Hình 1" value={editForm.img0} onChange={e => setEditForm(p => ({ ...p, img0: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                      <input type="text" placeholder="URL Hình 2" value={editForm.img1} onChange={e => setEditForm(p => ({ ...p, img1: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                      <input type="text" placeholder="URL Hình 3" value={editForm.img2} onChange={e => setEditForm(p => ({ ...p, img2: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                      <input type="text" placeholder="URL Hình 4" value={editForm.img3} onChange={e => setEditForm(p => ({ ...p, img3: e.target.value }))} style={{ padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <button onClick={() => saveEdit(i)} style={{ padding: '4px 6px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
+                      <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 6px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
-                        <a key={idx} href={img} target="_blank" rel="noreferrer">
-                          <img src={img} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 5, border: `1px solid ${HC.border}` }} />
-                        </a>
-                      )) : <span style={{ color: HC.muted, fontSize: 11, fontStyle: 'italic' }}>Không có ảnh</span>}
-                    </div>
+                    <button onClick={() => startEdit(i, r)} style={{ padding: '4px 6px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>✏️ Sửa</button>
                   )}
                 </td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.chatLieu)}</td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                  {r.chiTietSizeImage && (
-                    <a href={r.chiTietSizeImage} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: r.chiTietSize ? 8 : 0 }}>
-                      <img src={r.chiTietSizeImage} alt="Size Guide" style={{ width: '100%', maxWidth: 160, borderRadius: 6, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
-                    </a>
-                  )}
-                  {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
-                </td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{fmtNA(r.notes)}</td>
-                <td style={{ ...TD(i) }}>
-                  {isEditing ? (
-                    <input type="text" placeholder="Link Folder..." value={editForm.linkFolder} onChange={e => setEditForm(p => ({ ...p, linkFolder: e.target.value }))} style={{ width: '100%', padding: 6, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                  ) : (
-                    r.linkFolder ? <a href={r.linkFolder} target="_blank" rel="noreferrer" title={r.linkFolder} style={{ color: HC.orangeDark, textDecoration: 'underline', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🔗 Folder</a> : <span style={{ color: HC.muted2 }}>—</span>
-                  )}
-                </td>
-                {!readOnly && (
-                  <td style={{ ...TD(i), textAlign: 'center' }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <button onClick={() => saveEdit(i)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
-                        <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+              )}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
