@@ -17,3 +17,5 @@ fix_db.js
 fix_db.cjs
 claude.md
 .idea/
+ds-bundle/
+.ds-sync/
