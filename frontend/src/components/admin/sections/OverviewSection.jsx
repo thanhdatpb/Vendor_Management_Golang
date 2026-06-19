@@ -52,9 +52,12 @@ function StatCard({ label, value, icon, color, onClick, subLabel }) {
       style={{
         background: '#fff',
         borderRadius: 16,
-        border: `1.5px solid ${hovered ? color : '#F0E4CC'}`,
-        boxShadow: hovered ? `0 8px 24px ${color}15` : '0 2px 8px rgba(0,0,0,0.02)',
-        padding: '20px',
+        borderTop: `1.5px solid ${hovered ? color : '#F0E4CC'}`,
+        borderRight: `1.5px solid ${hovered ? color : '#F0E4CC'}`,
+        borderBottom: `1.5px solid ${hovered ? color : '#F0E4CC'}`,
+        borderLeft: `4px solid ${color}`,
+        boxShadow: hovered ? `0 8px 24px ${color}22` : '0 2px 10px rgba(0,0,0,0.06)',
+        padding: '20px 20px 20px 18px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         transform: hovered ? 'translateY(-2px)' : 'none',
@@ -62,11 +65,11 @@ function StatCard({ label, value, icon, color, onClick, subLabel }) {
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#9C7A50', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8, fontFamily: "'Nunito',sans-serif" }}>{label}</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", lineHeight: 1 }}>{value}</div>
-          {subLabel && <div style={{ fontSize: 11, color: '#B8956A', marginTop: 8, fontWeight: 600 }}>{subLabel}</div>}
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#9C7A50', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, fontFamily: "'Nunito',sans-serif" }}>{label}</div>
+          <div style={{ fontSize: 30, fontWeight: 900, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", lineHeight: 1 }}>{value}</div>
+          {subLabel && <div style={{ fontSize: 11, color: '#B8956A', marginTop: 10, fontWeight: 600 }}>{subLabel}</div>}
         </div>
-        <div style={{ width: 42, height: 42, borderRadius: 12, background: color + '15', color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{icon}</div>
+        <div style={{ width: 48, height: 48, borderRadius: 14, background: color + '18', color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
       </div>
     </div>
   );
@@ -114,11 +117,12 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
       }}
     >
       <div onClick={onClick} style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.2s', cursor: 'pointer' }}>
+        <div style={{ width: 34, height: 34, borderRadius: 9, background: meta.color + '15', color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{meta.icon}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 14, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
-          <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>{stats.total} form tổng cộng</div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
+          <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>{stats.total} form · {approvalRate}% duyệt</div>
         </div>
-        <RingProgress percent={approvalRate} color={meta.color} size={46} />
+        <RingProgress percent={approvalRate} color={approvalRate >= 50 ? '#10B981' : '#F59E0B'} size={48} />
       </div>
       <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div 
@@ -597,7 +601,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const overallRate = formStats.total > 0 ? Math.round((formStats.approved / formStats.total) * 100) : 0;
 
   return (
-    <div style={{ fontFamily: "'Nunito Sans',sans-serif" }}>
+    <div style={{ fontFamily: "'Nunito Sans',sans-serif", maxWidth: 1440, margin: '0 auto' }}>
       <style>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(12px); }
@@ -621,7 +625,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       </div>
 
       {/* ── Stat Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32, animation: 'fadeUp 0.45s ease' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20, marginBottom: 36, animation: 'fadeUp 0.45s ease' }}>
         <StatCard label="Tổng Form Request" value={formStats.total} icon={<FolderOpenOutlined />} color="#F5A623" subLabel="Tất cả trạng thái" onClick={() => handleCardClick('status', 'all', 'Tất cả Form Request')} />
         <StatCard label="Chờ Duyệt" value={formStats.pending} icon={<HourglassOutlined />} color="#F59E0B" subLabel={formStats.pending > 0 ? 'Cần xử lý ngay' : 'Không có form chờ'} onClick={() => handleCardClick('status', 'pending', 'Form Chờ Duyệt')} />
         <StatCard label="Đã Duyệt" value={formStats.approved} icon={<CheckCircleOutlined />} color="#10B981" subLabel={`${overallRate}% tỷ lệ duyệt`} onClick={() => handleCardClick('status', 'approved', 'Form Đã Duyệt')} />
@@ -647,7 +651,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       </div>
 
       {/* ── Project Cards grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16, animation: 'fadeUp 0.55s ease', marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, animation: 'fadeUp 0.55s ease', marginBottom: 36 }}>
         {filteredProjects.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: '#B8956A', fontSize: 13, fontWeight: 600, background: '#FFFBF4', borderRadius: 16, border: '1.5px dashed #F0E4CC' }}>
             Không có project nào phù hợp với bộ lọc này
@@ -689,23 +693,31 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
         {pendingProducts.length === 0 ? (
           <div style={{
-            padding: '11px 18px',
-            borderRadius: 10,
+            padding: '52px 32px',
+            borderRadius: 16,
             background: `linear-gradient(135deg, #f0fdf4, #ecfdf5)`,
-            border: `1.5px solid #bbf7d0`,
+            border: `1.5px dashed #86efac`,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: 10,
+            gap: 14,
+            textAlign: 'center',
           }}>
-            <span style={{ fontSize: 15, color: '#166534', display: 'flex' }}><CheckCircleFilled /></span>
-            <span style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: '#166534',
-              fontFamily: "'Nunito Sans',sans-serif",
+            <div style={{
+              width: 68, height: 68, borderRadius: '50%',
+              background: '#dcfce7', border: '2px solid #bbf7d0',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              Tất cả form đã được xử lý — Không có form nào đang chờ duyệt
-            </span>
+              <CheckCircleFilled style={{ fontSize: 32, color: '#16a34a' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#15803d', fontFamily: "'Nunito',sans-serif", marginBottom: 6 }}>
+                Không có form nào đang chờ duyệt
+              </div>
+              <div style={{ fontSize: 12, color: '#4d7c5f', fontWeight: 600, fontFamily: "'Nunito Sans',sans-serif" }}>
+                Tất cả form đã được xử lý. Hệ thống tự động cập nhật mỗi 15 giây khi có form mới.
+              </div>
+            </div>
           </div>
         ) : (
           <>

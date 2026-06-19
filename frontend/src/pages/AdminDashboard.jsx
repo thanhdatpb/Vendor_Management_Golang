@@ -329,7 +329,7 @@ export default function AdminDashboard() {
           <div style={{
             flex: 1,
             overflowY: 'auto',
-            padding: 32,
+            padding: '32px 40px',
           }}>
             {renderSection()}
           </div>
