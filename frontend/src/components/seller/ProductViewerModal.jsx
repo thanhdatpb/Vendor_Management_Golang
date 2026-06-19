@@ -367,87 +367,72 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 </div>
 
                 {/* Form Fields Compact Layout */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {/* Row 1: Short fields from Section 1 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 8 }}>
-                    <div style={{ background: HC.orangePale, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1. Product Type</div>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: HC.orangeDark, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.product_type || '—'}</div>
+                {(() => {
+                  const F = ({ label, value, bg, border, valueColor, bold }) => (
+                    <div style={{ background: bg || HC.cream, border: `1px solid ${border || HC.border}`, borderRadius: 7, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</div>
+                      <div style={{ fontSize: 11, fontWeight: bold ? 800 : 600, color: valueColor || HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
                     </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1.2 T.gian SX</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: HC.brown }}>{product.production_time || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1.3 T.gian Ship</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: HC.brown }}>{product.shipping_time || '—'}</div>
-                    </div>
-                    <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>1.4 Total Cost</div>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
-                    </div>
-                  </div>
+                  );
+                  let links = [];
+                  if (product.product_type_links) {
+                    if (Array.isArray(product.product_type_links)) links = product.product_type_links;
+                    else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
+                  } else if (product.product_type_link) links = [product.product_type_link];
 
-                  {/* Row 2: Short fields from Section 2 & 3 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr', gap: 8 }}>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>2.1 Chất liệu</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.material || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>2.2 Vùng In</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.print_area || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>2.3 Other Specs</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.other_specs || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>3.1 Packaging</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.packaging_links || '—'}</div>
-                    </div>
-                    <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 6, padding: '6px 10px' }}>
-                      <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 2 }}>3.2 Other Pkg</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.other_packaging || '—'}</div>
-                    </div>
-                  </div>
-
-                  {/* Row 3: Links (Long content) */}
-                  <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                    <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 4 }}>1.1 Link hình ảnh và video</div>
-                    {(() => {
-                      let links = [];
-                      if (product.product_type_links) {
-                        if (Array.isArray(product.product_type_links)) links = product.product_type_links;
-                        else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
-                      } else if (product.product_type_link) links = [product.product_type_link];
-                      return links.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 60, overflowY: 'auto' }} className="custom-scrollbar">
-                          {links.map((link, idx) => (
-                            <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                              style={{ color: HC.orange, fontSize: 11, textDecoration: 'none', wordBreak: 'break-all' }}
-                              onMouseEnter={e => { e.currentTarget.style.textDecoration = 'underline'; }}
-                              onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}>
-                              🔗 {link}
-                            </a>
-                          ))}
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {/* Row 1: Key metrics */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1.2fr', gap: 8 }}>
+                        <F label="Product Type" value={product.product_type} bg={HC.orangePale} valueColor={HC.orangeDark} bold />
+                        <F label="⏱ Sản xuất" value={product.production_time} valueColor={HC.brown} bold />
+                        <F label="🚢 Giao hàng" value={product.shipping_time} valueColor={HC.brown} bold />
+                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 7, padding: '7px 11px' }}>
+                          <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>💰 Target Cost</div>
+                          <div style={{ fontSize: 13, fontWeight: 900, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
                         </div>
-                      ) : <span style={{ color: HC.muted2, fontSize: 11 }}>—</span>;
-                    })()}
-                  </div>
+                      </div>
 
-                  {/* Row 4: Reviews (Long content) */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 4 }}>2.4 Good Review</div>
-                      <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#065f46', whiteSpace: 'pre-wrap', maxHeight: 60, overflowY: 'auto' }}>{product.good_review || '—'}</div>
+                      {/* Row 2: Spec fields */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr', gap: 8 }}>
+                        <F label="Chất liệu" value={product.material} />
+                        <F label="Vùng In" value={product.print_area} />
+                        <F label="Đặc tính KT" value={product.other_specs} />
+                        <F label="Packaging" value={product.packaging_links} />
+                        <F label="Other Pkg" value={product.other_packaging} />
+                      </div>
+
+                      {/* Row 3: Links as pill buttons */}
+                      <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>🔗 Links tham khảo</span>
+                        {links.length > 0
+                          ? links.map((link, idx) => (
+                              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 12px', borderRadius: 20, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                              >
+                                🔗 Link {idx + 1}
+                              </a>
+                            ))
+                          : <span style={{ color: HC.muted2, fontSize: 11 }}>Chưa có link</span>
+                        }
+                      </div>
+
+                      {/* Row 4: Reviews */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px' }}>
+                          <div style={{ fontSize: 9, color: '#065f46', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>👍 Good Review</div>
+                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#065f46', whiteSpace: 'pre-wrap', maxHeight: 52, overflowY: 'auto' }}>{product.good_review || '—'}</div>
+                        </div>
+                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px' }}>
+                          <div style={{ fontSize: 9, color: HC.danger, fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>👎 Bad Review</div>
+                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: HC.danger, whiteSpace: 'pre-wrap', maxHeight: 52, overflowY: 'auto' }}>{product.bad_review || '—'}</div>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px' }}>
-                      <div style={{ fontSize: 10, color: HC.muted, fontWeight: 700, marginBottom: 4 }}>2.5 Bad Review</div>
-                      <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: HC.danger, whiteSpace: 'pre-wrap', maxHeight: 60, overflowY: 'auto' }}>{product.bad_review || '—'}</div>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             </div>
 

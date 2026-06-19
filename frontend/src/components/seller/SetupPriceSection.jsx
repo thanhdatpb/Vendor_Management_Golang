@@ -215,15 +215,35 @@ export default function SetupPriceSection() {
     setShowSetupModal(true);
   };
 
-  // Hàm xóa setup giá
+  // Hàm xóa vendor khỏi danh sách giá
   const handleDeletePriceSetup = (vendor) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa cấu hình giá của "${vendor.vendor_name || vendor.vendor_type}" - "${vendor.product_type}"?`)) {
+    const label = vendor.vendor_name || vendor.vendor_type || 'Vendor';
+    if (window.confirm(`Xóa "${label}" (${vendor.product_type || '—'}) khỏi danh sách giá?`)) {
+      // Xóa khỏi VENDOR_PRICE_SETUPS
       const savedSetups = JSON.parse(localStorage.getItem('VENDOR_PRICE_SETUPS') || '[]');
-      const newSetups = savedSetups.filter(s => !(s.vendor_id === vendor.id && s.product_type === vendor.product_type));
-      localStorage.setItem('VENDOR_PRICE_SETUPS', JSON.stringify(newSetups));
+      localStorage.setItem('VENDOR_PRICE_SETUPS', JSON.stringify(
+        savedSetups.filter(s => !(s.vendor_id === vendor.vendor_id && s.product_type === vendor.product_type))
+      ));
 
-      loadApprovedVendors();
-      showToastMsg('success', '🗑 Đã xóa', `Đã xóa cấu hình giá của "${vendor.vendor_name || vendor.vendor_type}"`);
+      // Xóa khỏi LS_PRODUCT_VENDORS để không bị tái tạo lại
+      if (vendor.productId && vendor.vendorKey !== undefined) {
+        const allPV = lsGet(LS_PRODUCT_VENDORS, {});
+        if (Array.isArray(allPV[vendor.productId])) {
+          allPV[vendor.productId] = allPV[vendor.productId].filter((v, i) => {
+            const k = v.id ? String(v.id) : `idx_${i}`;
+            return k !== String(vendor.vendorKey);
+          });
+          lsSet(LS_PRODUCT_VENDORS, allPV);
+          window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
+        }
+      }
+
+      // Cập nhật state trực tiếp
+      setAssignedPriceList(prev => prev.filter(p =>
+        !(p.vendor_id === vendor.vendor_id && p.product_type === vendor.product_type)
+      ));
+
+      showToastMsg('success', '🗑 Đã xóa', `Đã xóa "${label}" khỏi danh sách giá`);
     }
   };
 
