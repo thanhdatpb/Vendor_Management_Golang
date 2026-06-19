@@ -31,6 +31,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [formErrors, setFormErrors] = useState({});
+  const [exporting, setExporting] = useState(false);
   const processedProductIdRef = useRef(null);
   const importFileRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
@@ -478,7 +479,22 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     } finally { setProcessingId(null); }
   };
 
-  // Removed handleExport and handleImportProductsFile as requested
+  const handleExport = async () => {
+    if (submittedProducts.length === 0) {
+      showToast('error', '⚠️ Không có dữ liệu', 'Chưa có sản phẩm nào để xuất');
+      return;
+    }
+    setExporting(true);
+    try {
+      const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+      await exportProductsToExcel(submittedProducts, productVendors, `seller-products-${today}.xlsx`);
+      showToast('success', '✅ Xuất Excel thành công!', `Đã xuất ${submittedProducts.length} sản phẩm`);
+    } catch (err) {
+      showToast('error', '❌ Lỗi xuất Excel', err.message || 'Không thể xuất file');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const filteredProducts = submittedProducts.filter(p => {
     if (user?.project && p.project !== user.project && p.project) return false; // Lọc theo project (nếu có)
@@ -535,21 +551,42 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         <div>
           <p style={{ fontSize: 13, color: HC.ink2, margin: 0, fontWeight: 700 }}>Tổng cộng: {submittedProducts.length} sản phẩm đã tạo</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          style={{
-            padding: '10px 20px', borderRadius: 12,
-            background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
-            color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-            boxShadow: '0 4px 14px rgba(245,166,35,0.4)',
-            transition: 'transform 0.15s,box-shadow 0.15s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(245,166,35,0.4)'; }}
-        >
-          <span style={{ fontSize: 16 }}>＋</span> Request sản phẩm mới
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={handleExport}
+            disabled={exporting || submittedProducts.length === 0}
+            style={{
+              padding: '10px 20px', borderRadius: 12,
+              background: exporting ? HC.muted2 : 'linear-gradient(135deg,#16a34a,#15803d)',
+              color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
+              cursor: exporting || submittedProducts.length === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 4px 14px rgba(22,163,74,0.3)',
+              opacity: submittedProducts.length === 0 ? 0.55 : 1,
+              transition: 'transform 0.15s,box-shadow 0.15s',
+            }}
+            onMouseEnter={e => { if (!exporting && submittedProducts.length > 0) { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(22,163,74,0.4)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(22,163,74,0.3)'; }}
+          >
+            <span style={{ fontSize: 15 }}>{exporting ? '⟳' : '↓'}</span>
+            {exporting ? 'Đang xuất...' : 'Export Excel'}
+          </button>
+          <button
+            onClick={openCreateModal}
+            style={{
+              padding: '10px 20px', borderRadius: 12,
+              background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+              color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 4px 14px rgba(245,166,35,0.4)',
+              transition: 'transform 0.15s,box-shadow 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(245,166,35,0.4)'; }}
+          >
+            <span style={{ fontSize: 16 }}>＋</span> Request sản phẩm mới
+          </button>
+        </div>
       </div>
 
       {/* ── Error Banner ── */}
@@ -612,7 +649,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     { label: 'Date Request',  w: 120 },
                     { label: 'Deadline',      w: 100 },
                     { label: 'Status',        w: 110 },
-                    { label: 'Approve the request', w: 160 },
+                    { label: 'Ghi chú', w: 160 },
                     { label: 'Distributor',   w: 140 },
                     { label: 'Actions',       w: 160 },
                   ].map(h => (
