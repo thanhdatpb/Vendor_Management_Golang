@@ -760,7 +760,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       {/* Product Type */}
                       <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, maxWidth: 200 }}>
                         <div style={{ fontWeight: 800, color: HC.ink, fontSize: 13, lineHeight: 1.4 }}>{p.product_type || '—'}</div>
-                        {p.material && <div style={{ fontSize: 11, color: HC.muted, marginTop: 3, fontWeight: 600 }}>📦 {p.material}</div>}
                       </td>
 
                       {/* Hình ảnh */}
@@ -1191,7 +1190,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                         <div style={{ fontWeight: 700, fontSize: 13, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {p.product_type || `Sản phẩm #${idx + 1}`}
                         </div>
-                        {p.material && <div style={{ fontSize: 11, color: HC.muted, marginTop: 1 }}>📦 {p.material}</div>}
                       </div>
                       {/* Status */}
                       <span style={{ padding: '3px 10px', borderRadius: 999, background: sm.bg, color: sm.color, fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0 }}>
