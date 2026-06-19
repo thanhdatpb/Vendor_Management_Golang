@@ -65,7 +65,12 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       lsSet(LS_PRODUCT_VENDORS, allAssigned);
       setProductVendors(allAssigned);
       window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
-      
+
+      // Đồng bộ lên API để các thiết bị khác nhận được
+      productApi.assignVendors(product.id, matchingVendors).catch(err => {
+        console.error('Lỗi đồng bộ vendor lên API:', err);
+      });
+
       alert(`✅ Đã gán nhanh ${matchingVendors.length} vendor từ thư viện cho sản phẩm này!`);
     } catch (err) {
       console.error(err);

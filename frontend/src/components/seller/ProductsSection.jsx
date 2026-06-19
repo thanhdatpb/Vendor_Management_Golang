@@ -16,7 +16,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const [viewProduct, setViewProduct] = useState(null);
   const [submittedProducts, setSubmittedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showFormModal, setShowFormModal] = useState(false);  // Đổi thành showFormModal
+  const [showFormModal, setShowFormModal] = useState(false);
   const [apiError, setApiError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState('');
@@ -37,6 +37,25 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const processedProductIdRef = useRef(null);
   const importFileRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
+
+  // Xóa localStorage cũ khi API đã là source of truth
+  useEffect(() => {
+    localStorage.removeItem('STAFF_PRODUCT_VENDORS_V1');
+    localStorage.removeItem('STAFF_B_NOTIFICATIONS');
+    localStorage.removeItem('STAFF_A_NOTIFICATIONS');
+    localStorage.removeItem('SELLER_NOTIFICATIONS');
+  }, []);
+
+  // Mở modal xem sản phẩm — fetch fresh từ API để lấy assigned_vendors mới nhất
+  const handleViewProduct = useCallback(async (product) => {
+    try {
+      const res = await productApi.getById(product.id);
+      const fresh = res.data?.data || product;
+      setViewProduct(fresh);
+    } catch {
+      setViewProduct(product);
+    }
+  }, []);
 
   // Thêm link mới
   const addLink = () => {
@@ -140,8 +159,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     const openProductModal = () => {
       const product = submittedProducts.find(p => String(p.id) === String(productId));
       if (product) {
-        console.log('✅ Found product:', product);
-        setViewProduct(product);
+        handleViewProduct(product);
         if (onHighlightCleared) onHighlightCleared();
         return true;
       }
@@ -159,14 +177,12 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     const maxRetries = 10;
     const interval = setInterval(() => {
       retryCount++;
-      console.log(`🔄 Retry ${retryCount}/${maxRetries} to find product...`);
 
       if (submittedProducts.length > 0) {
         const product = submittedProducts.find(p => String(p.id) === String(productId));
         if (product) {
           clearInterval(interval);
-          console.log('✅ Found product after retry:', product);
-          setViewProduct(product);
+          handleViewProduct(product);
           if (onHighlightCleared) onHighlightCleared();
         } else if (retryCount >= maxRetries) {
           clearInterval(interval);
@@ -726,7 +742,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   return (
                     <tr
                       key={p.id || i}
-                      onClick={() => setViewProduct(p)}
+                      onClick={() => handleViewProduct(p)}
                       style={{ background: rowBg, transition: 'background 0.12s', cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = rowBg}

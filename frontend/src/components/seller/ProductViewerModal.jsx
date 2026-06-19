@@ -8,7 +8,8 @@ import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl } from '../../utils/se
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 
 export default function ProductViewerModal({ product, productVendors, onClose, getStatus }) {
-  const [vendors, setVendors] = useState(() => productVendors[product?.id] || []);
+  // Ưu tiên dùng assigned_vendors từ API, fallback về localStorage
+  const [vendors, setVendors] = useState(() => product?.assigned_vendors || productVendors[product?.id] || []);
   const [selections, setSelections] = useState(() => lsGet(LS_A_SELECTIONS, {})[product?.id] || {});
   const [bFeedbacks, setBFeedbacks] = useState(() => lsGet('STAFF_B_SUBMITTED_FEEDBACK_V1', {})[product?.id] || {});
   const [aResponses, setAResponses] = useState(() => lsGet(LS_A_FEEDBACK_RESPONSE, {})[product?.id] || {});
@@ -31,8 +32,8 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   const mediaUrls = getMediaUrls(product);
 
   useEffect(() => {
-    setVendors(productVendors[product?.id] || []);
-  }, [product?.id, productVendors]);
+    setVendors(product?.assigned_vendors || productVendors[product?.id] || []);
+  }, [product?.id, product?.assigned_vendors, productVendors]);
 
   useEffect(() => {
     const sync = () => {

@@ -7,10 +7,17 @@ import "./index.css";
 import "antd/dist/reset.css";
 
 import { AuthProvider } from "./context/AuthContext";
-import { initSyncService } from "./utils/SyncService";
 
-// Bật đồng bộ ngầm với json-server
-initSyncService();
+// Xóa dữ liệu localStorage cũ từ hệ thống mock/local để API là source of truth
+const OLD_LS_KEYS = [
+  'STAFF_PRODUCT_VENDORS_V1',
+  'STAFF_B_NOTIFICATIONS',
+  'STAFF_A_NOTIFICATIONS',
+  'SELLER_NOTIFICATIONS',
+  'STAFF_B_NEWS_V1',
+  'MOCK_PRODUCTS',
+];
+OLD_LS_KEYS.forEach(key => localStorage.removeItem(key));
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

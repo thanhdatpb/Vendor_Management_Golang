@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { vendorApi } from '../../../services/api';
+import { vendorApi, productApi } from '../../../services/api';
 import { HC, LS_PRODUCT_VENDORS, VENDOR_TYPES, VENDOR_PAGE_SIZE } from '../utils/constants';
 import { lsGet, lsSet, parseVendorExcel, buildVendorPayload, VENDOR_TYPE_LIST, normalizeVendorType } from '../utils/helpers';
 import { Spinner, EmptyState, BestSellerBadge } from '../ui/StaffBUI';
@@ -181,8 +181,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
     const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = selected; lsSet(LS_PRODUCT_VENDORS, all);
     window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
+
+    // Đồng bộ lên API để các thiết bị khác nhận được
+    productApi.assignVendors(productId, selected).catch(err => {
+      console.error('Lỗi đồng bộ vendor lên API:', err);
+    });
+
     setToast({ type: 'success', msg: `✅ Đã gán ${selected.length} vendor cho sản phẩm!` });
-    setSelectedIds(new Set()); 
+    setSelectedIds(new Set());
     setAssignConfirmOpen(false);
     onAssignComplete();
   };
