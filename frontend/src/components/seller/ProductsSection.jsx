@@ -359,15 +359,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     try {
       const res = await productApi.create(data);
       const createdData = res?.data?.data || res?.data;
-      if (createdData?.id) {
-        try {
-          await productApi.sendToAdmin(createdData.id);
-        } catch (e) {
-          console.error('Auto send to admin failed:', e);
-        }
-      }
 
-      // Optimistic update: thêm sản phẩm mới vào đầu danh sách ngay lập tức
+      // Optimistic update: thêm sản phẩm mới vào đầu danh sách ngay lập tức ở trạng thái draft
       const baseProduct = createdData || {
         id: Date.now(),
         created_at: new Date().toISOString(),
@@ -387,11 +380,11 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         project: user?.project,
         media_urls: previewUrls,
       };
-      
-      const newProduct = normalizeLinks({ ...baseProduct, status: 'pending' });
+
+      const newProduct = normalizeLinks({ ...baseProduct, status: 'draft' });
       setSubmittedProducts(prev => [newProduct, ...prev]);
       closeModal();
-      showToast('success', '✅ Tạo mới thành công!', `Sản phẩm được tạo bởi: ${user?.sellerName || user?.seller_name || user?.email}`);
+      showToast('success', '✅ Đã lưu sản phẩm!', 'Sản phẩm đã được thêm vào danh sách. Nhấn Submit để gửi cho Admin.');
     } catch (err) {
       showToast('error', '❌ Lỗi tạo sản phẩm!', err.response?.data?.message || err.message || 'Không thể tạo sản phẩm');
     } finally {
@@ -1112,7 +1105,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     cursor: submitting ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {submitting ? '⟳ Đang xử lý...' : isEditing ? '✓ Submit' : 'Submit'}
+                  {submitting ? '⟳ Đang xử lý...' : isEditing ? '✓ Confirm' : 'Confirm'}
                 </button>
               </div>
             </form>
