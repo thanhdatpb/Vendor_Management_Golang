@@ -2,7 +2,7 @@
 //  PRODUCTS SECTION (Seller)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SearchOutlined, SendOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
 import { lsGet, fmtDate, fmtDateTime, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
@@ -554,10 +554,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   if (loading) return <Spinner />;
 
   const statusMeta = {
-    draft:    { label: 'Draft',    bg: 'linear-gradient(135deg,#f3f4f6,#e5e7eb)', color: '#6b7280', dot: '#9ca3af', icon: '○' },
-    pending:  { label: 'Pending',  bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', color: '#92400e', dot: '#f59e0b', icon: '◌' },
-    approved: { label: 'Approved', bg: 'linear-gradient(135deg,#ecfdf5,#d1fae5)', color: '#065f46', dot: '#16a34a', icon: '●' },
-    reject:   { label: 'Rejected', bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', color: '#991b1b', dot: '#dc2626', icon: '✕' },
+    draft:    { label: 'Draft',    bg: '#f1f5f9', color: '#475569', dot: '#94a3b8', border: '#e2e8f0' },
+    pending:  { label: 'Pending',  bg: '#fefce8', color: '#854d0e', dot: '#eab308', border: '#fde68a' },
+    approved: { label: 'Approved', bg: '#f0fdf4', color: '#166534', dot: '#16a34a', border: '#bbf7d0' },
+    reject:   { label: 'Rejected', bg: '#fef2f2', color: '#991b1b', dot: '#dc2626', border: '#fecaca' },
   };
 
   return (
@@ -619,7 +619,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
             onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(245,166,35,0.4)'; }}
           >
-            <span style={{ fontSize: 16 }}>＋</span> Request sản phẩm mới
+            <PlusOutlined style={{ fontSize: 14 }} /> Request sản phẩm mới
           </button>
         </div>
       </div>
@@ -641,9 +641,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             placeholder="Tìm loại sản phẩm..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ ...inp, paddingLeft: 38, borderRadius: 10 }}
-            onFocus={e => e.target.style.borderColor = HC.orange}
-            onBlur={e => e.target.style.borderColor = HC.border}
+            style={{ ...inp, paddingLeft: 38, borderRadius: 10, border: `1.5px solid ${HC.border}`, transition: 'border-color 0.15s, box-shadow 0.15s' }}
+            onFocus={e => { e.target.style.borderColor = HC.orange; e.target.style.boxShadow = `0 0 0 3px ${HC.orange}22`; }}
+            onBlur={e => { e.target.style.borderColor = HC.border; e.target.style.boxShadow = 'none'; }}
           />
         </div>
         <select
@@ -676,14 +676,14 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
           <div style={{ overflowX: 'auto', borderRadius: 18, border: `1.5px solid ${HC.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff' }}>
               <thead>
-                <tr style={{ background: `linear-gradient(135deg, ${HC.cream}, #fff8ed)` }}>
+                <tr style={{ background: '#f8fafc' }}>
                   {/* Checkbox chọn tất cả */}
-                  <th style={{ padding: '13px 16px', borderBottom: `2px solid ${HC.border}`, width: 44, textAlign: 'center' }}>
+                  <th style={{ padding: '14px 16px', borderBottom: `2px solid #e2e8f0`, width: 44, textAlign: 'center' }}>
                     <div
                       onClick={toggleSelectAll}
                       style={{
                         width: 18, height: 18, borderRadius: 5, cursor: 'pointer',
-                        border: `2px solid ${allFiltered ? '#16a34a' : someFiltered ? '#16a34a' : HC.border}`,
+                        border: `2px solid ${allFiltered ? '#16a34a' : someFiltered ? '#16a34a' : '#cbd5e1'}`,
                         background: allFiltered ? '#16a34a' : someFiltered ? 'rgba(22,163,74,0.15)' : '#fff',
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 0.15s',
@@ -694,22 +694,24 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     </div>
                   </th>
                   {[
-                    { label: 'No',              w: 48 },
+                    { label: 'No',            w: 48 },
                     { label: 'Product Type',  w: 180 },
                     { label: 'Image',         w: 80 },
                     { label: 'Date Request',  w: 120 },
                     { label: 'Deadline',      w: 100 },
                     { label: 'Status',        w: 110 },
-                    { label: 'Ghi chú', w: 160 },
+                    { label: 'Note',          w: 160 },
                     { label: 'Distributor',   w: 140 },
                     { label: 'Actions',       w: 160 },
                   ].map(h => (
                     <th key={h.label} style={{
-                      textAlign: 'left', padding: '13px 16px',
-                      color: HC.brown, fontWeight: 800,
-                      borderBottom: `2px solid ${HC.border}`,
+                      textAlign: 'left', padding: '14px 18px',
+                      color: '#475569', fontWeight: 700,
+                      borderBottom: `2px solid #e2e8f0`,
                       fontSize: 11,
-                      letterSpacing: '0.06em', whiteSpace: 'nowrap',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
                       width: h.w,
                     }}>{h.label}</th>
                   ))}
@@ -724,24 +726,25 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   const isApproved = status === 'approved';
                   const sMeta = statusMeta[status] || statusMeta.draft;
                   const dt = fmtDateTime(p.created_at);
-                  const rowBg = isRejected ? 'linear-gradient(90deg,#fef2f2 0%,#fff 40%)'
-                    : isApproved ? 'linear-gradient(90deg,#f0fdf4 0%,#fff 40%)'
-                    : i % 2 === 0 ? '#fff' : '#fffcf8';
+                  const rowBg = selectedIds.has(p.id) ? '#f0fdf4'
+                    : isRejected ? '#fff8f8'
+                    : isApproved ? '#f9fffe'
+                    : '#fff';
                   return (
                     <tr
                       key={p.id || i}
                       onClick={() => setViewProduct(p)}
-                      style={{ background: selectedIds.has(p.id) ? 'linear-gradient(90deg,#f0fdf4 0%,#fff 60%)' : rowBg, transition: 'background 0.15s', cursor: 'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background = isRejected ? '#fee2e2' : '#fff8ed'}
-                      onMouseLeave={e => e.currentTarget.style.background = selectedIds.has(p.id) ? 'linear-gradient(90deg,#f0fdf4 0%,#fff 60%)' : rowBg}
+                      style={{ background: rowBg, transition: 'background 0.12s', cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = rowBg}
                     >
                       {/* Checkbox */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, textAlign: 'center' }}>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0', textAlign: 'center' }}>
                         <div
                           onClick={e => toggleSelect(p.id, e)}
                           style={{
                             width: 18, height: 18, borderRadius: 5, cursor: 'pointer',
-                            border: `2px solid ${selectedIds.has(p.id) ? '#16a34a' : HC.border}`,
+                            border: `2px solid ${selectedIds.has(p.id) ? '#16a34a' : '#cbd5e1'}`,
                             background: selectedIds.has(p.id) ? '#16a34a' : '#fff',
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                             transition: 'all 0.15s', flexShrink: 0,
@@ -751,24 +754,32 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                         </div>
                       </td>
                       {/* # */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: HC.orangeLight, color: HC.brown, fontWeight: 800, fontSize: 11 }}>
+                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: '#f1f5f9', color: '#64748b', fontWeight: 700, fontSize: 11 }}>
                           {(currentPage - 1) * ITEMS_PER_PAGE + i + 1}
                         </span>
                       </td>
 
                       {/* Product Type */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, maxWidth: 200 }}>
-                        <div style={{ fontWeight: 800, color: HC.ink, fontSize: 13, lineHeight: 1.4 }}>{p.product_type || '—'}</div>
+                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', maxWidth: 200 }}>
+                        <div style={{ fontWeight: 700, color: HC.ink, fontSize: 13, lineHeight: 1.4 }}>{p.product_type || '—'}</div>
                       </td>
 
-                      {/* Hình ảnh */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
-                        <MediaGallery mediaUrls={mediaUrls} />
+                      {/* Thumbnail */}
+                      <td style={{ padding: '10px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                        {mediaUrls[0] ? (
+                          <img
+                            src={mediaUrls[0]}
+                            alt=""
+                            style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1.5px solid #e2e8f0', display: 'block' }}
+                          />
+                        ) : (
+                          <div style={{ width: 48, height: 48, borderRadius: 10, background: '#f1f5f9', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#cbd5e1' }}>□</div>
+                        )}
                       </td>
 
-                      {/* Date Request — date + time */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                      {/* Date Request */}
+                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
                         {dt ? (
                           <div>
                             <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 12 }}>{dt.date}</div>
@@ -776,76 +787,87 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                               <span>🕐</span>{dt.time}
                             </div>
                           </div>
-                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
+                        ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
 
                       {/* Deadline */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
                         {p.deadline_date ? (
                           <div style={{ fontSize: 12, fontWeight: 700, color: HC.ink2 }}>{fmtDate(p.deadline_date)}</div>
-                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
+                        ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
 
                       {/* Status Badge */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
                         <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '5px 12px', borderRadius: 999,
-                          background: sMeta.bg, color: sMeta.color,
-                          fontWeight: 800, fontSize: 11, letterSpacing: '0.02em',
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '4px 11px', borderRadius: 999,
+                          background: sMeta.bg,
+                          border: `1px solid ${sMeta.border}`,
+                          color: sMeta.color,
+                          fontWeight: 700, fontSize: 11, letterSpacing: '0.02em',
                           whiteSpace: 'nowrap',
                         }}>
-                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: sMeta.dot, display: 'inline-block', flexShrink: 0 }} />
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: sMeta.dot, display: 'inline-block', flexShrink: 0 }} />
                           {sMeta.label}
                         </span>
                       </td>
 
-                      {/* Rejection reason */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, maxWidth: 180 }}>
+                      {/* Note / Rejection reason */}
+                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', maxWidth: 180 }}>
                         {isRejected && (p.rejection_reason || p.reason) ? (
                           <div style={{ fontSize: 12, color: HC.danger, fontWeight: 600, lineHeight: 1.4 }}>
                             {(p.rejection_reason || p.reason).length > 60
                               ? (p.rejection_reason || p.reason).slice(0, 60) + '…'
                               : (p.rejection_reason || p.reason)}
                           </div>
-                        ) : <span style={{ color: HC.muted2, fontSize: 12 }}>—</span>}
+                        ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
 
                       {/* Vendor badge */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
+                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
                         {renderVendorBadge(p)}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}` }}>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <td style={{ padding: '12px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
                           {(isDraft || isRejected) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleSendToAdmin(p.id); }}
                               disabled={processingId === p.id}
-                              style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
-                              onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#bbf7d0'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#d1fae5' : '#ecfdf5'; }}
-                            >{processingId === p.id ? (isRejected ? 'Submitting...' : 'Đang gửi...') : (isRejected ? 'Submit' : 'Gửi Admin')}</button>
+                              style={{ padding: '6px 13px', borderRadius: 8, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: '#065f46', display: 'inline-flex', alignItems: 'center', gap: 5, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                              onMouseEnter={e => { if (processingId !== p.id) { e.currentTarget.style.background = '#d1fae5'; e.currentTarget.style.borderColor = '#6ee7b7'; } }}
+                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#d1fae5' : '#ecfdf5'; e.currentTarget.style.borderColor = '#bbf7d0'; }}
+                            >
+                              <SendOutlined style={{ fontSize: 11 }} />
+                              {processingId === p.id ? 'Sending...' : 'Submit'}
+                            </button>
                           )}
 
                           {(isDraft || isRejected) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); openEditModal(p); }}
-                              style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.orangeDark, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
+                              style={{ padding: '6px 13px', borderRadius: 8, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: HC.orangeDark, display: 'inline-flex', alignItems: 'center', gap: 5, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
                               onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
                               onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                            >{isRejected ? 'Edit' : 'Sửa'}</button>
+                            >
+                              <EditOutlined style={{ fontSize: 11 }} />
+                              Edit
+                            </button>
                           )}
 
                           {(isDraft || isRejected) && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
                               disabled={processingId === p.id}
-                              style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fff5f5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: HC.danger, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.15s' }}
-                              onMouseEnter={e => { if (processingId !== p.id) e.currentTarget.style.background = '#fee2e2'; }}
-                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#fee2e2' : '#fff5f5'; }}
-                            >{processingId === p.id ? (isRejected ? 'Deleting...' : 'Đang xóa...') : (isRejected ? 'Delete' : 'Xóa')}</button>
+                              style={{ padding: '6px 13px', borderRadius: 8, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fff5f5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 700, color: HC.danger, display: 'inline-flex', alignItems: 'center', gap: 5, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                              onMouseEnter={e => { if (processingId !== p.id) { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#f87171'; } }}
+                              onMouseLeave={e => { e.currentTarget.style.background = processingId === p.id ? '#fee2e2' : '#fff5f5'; e.currentTarget.style.borderColor = '#fecaca'; }}
+                            >
+                              <DeleteOutlined style={{ fontSize: 11 }} />
+                              {processingId === p.id ? 'Deleting...' : 'Delete'}
+                            </button>
                           )}
                         </div>
                       </td>
