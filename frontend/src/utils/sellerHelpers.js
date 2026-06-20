@@ -68,6 +68,42 @@ export const getMediaUrl = (product) => {
   return urls.length ? urls[0] : null;
 };
 
+// Chỉ trả về ảnh/video upload (media_urls / media_url / media_path) — không gộp product_type_links
+export const getProductImages = (product) => {
+  if (!product) return [];
+  let urls = [];
+  if (product.media_urls && Array.isArray(product.media_urls) && product.media_urls.length) {
+    urls = product.media_urls.map(url =>
+      url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
+    );
+  } else if (product.media_url) {
+    const full = product.media_url.startsWith('http')
+      ? product.media_url
+      : `${API_BASE_URL}${product.media_url.startsWith('/') ? '' : '/'}${product.media_url}`;
+    urls.push(full);
+  } else if (product.media_path) {
+    let cleanPath = product.media_path;
+    if (cleanPath.startsWith('storage/')) cleanPath = cleanPath.replace('storage/', '');
+    if (cleanPath.startsWith('/storage/')) cleanPath = cleanPath.replace('/storage/', '');
+    urls.push(`${API_BASE_URL}/storage/${cleanPath}`);
+  }
+  return [...new Set(urls)].filter(u => typeof u === 'string' && u.trim() !== '');
+};
+
+// Chỉ trả về product_type_links (link tham khảo) — không gộp ảnh upload
+export const getProductLinks = (product) => {
+  if (!product) return [];
+  let links = [];
+  if (product.product_type_links && Array.isArray(product.product_type_links)) {
+    links = product.product_type_links;
+  } else if (typeof product.product_type_links === 'string') {
+    try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; }
+  } else if (product.product_type_link) {
+    links = [product.product_type_link];
+  }
+  return links.filter(u => typeof u === 'string' && u.trim() !== '');
+};
+
 // ─── Excel Export (async — xlsx ~500KB chỉ load khi cần) ──
 export async function exportProductsToExcel(products, productVendors, filename) {
   // Dynamic import: chỉ tải xlsx khi user click nút Export

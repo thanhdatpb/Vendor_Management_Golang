@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { LeftOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_A_SELECTIONS, LS_B_SELECTIONS, LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE, LS_B_SUBMITTED_FEEDBACK } from '../../constants/sellerTheme';
-import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl } from '../../utils/sellerHelpers';
+import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, getProductLinks } from '../../utils/sellerHelpers';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 
 export default function ProductViewerModal({ product, productVendors, onClose, getStatus, onViewVendorLibrary }) {
@@ -29,7 +29,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-  const mediaUrls = getMediaUrls(product);
+  // Tách riêng: ảnh/video upload vs link tham khảo
+  const mediaUrls = getProductImages(product);
+  const referenceLinks = getProductLinks(product);
 
   useEffect(() => {
     setVendors(product?.assigned_vendors || productVendors[product?.id] || []);
@@ -375,12 +377,6 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                       <div style={{ fontSize: 11, fontWeight: bold ? 800 : 600, color: valueColor || HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
                     </div>
                   );
-                  let links = [];
-                  if (product.product_type_links) {
-                    if (Array.isArray(product.product_type_links)) links = product.product_type_links;
-                    else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
-                  } else if (product.product_type_link) links = [product.product_type_link];
-
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {/* Row 1: Key metrics */}
@@ -403,17 +399,38 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                         <F label="Other Pkg" value={product.other_packaging} />
                       </div>
 
-                      {/* Row 3: Links as pill buttons */}
+                      {/* Row 3a: Ảnh sản phẩm (preview thumbnails) */}
+                      {mediaUrls.length > 1 && (
+                        <div style={{ background: '#1a1a2e', border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Ảnh / Video sản phẩm</div>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {mediaUrls.map((url, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => { setCurrentMediaIndex(idx); setLightboxIndex(idx); setLightboxOpen(true); }}
+                                style={{ width: 48, height: 48, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${currentMediaIndex === idx ? HC.orange : 'rgba(255,255,255,0.15)'}`, flexShrink: 0, transition: 'border-color 0.15s' }}
+                              >
+                                {/\.(mp4|mov|webm)$/i.test(url)
+                                  ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                                  : <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                }
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Row 3b: Links tham khảo */}
                       <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>🔗 Links tham khảo</span>
-                        {links.length > 0
-                          ? links.map((link, idx) => (
+                        <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Links tham khảo</span>
+                        {referenceLinks.length > 0
+                          ? referenceLinks.map((link, idx) => (
                               <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 12px', borderRadius: 20, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
                                 onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
                               >
-                                🔗 Link {idx + 1}
+                                Link {idx + 1}
                               </a>
                             ))
                           : <span style={{ color: HC.muted2, fontSize: 11 }}>Chưa có link</span>
@@ -490,12 +507,17 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 <th style={{ ...thStyle() }}>T.gian Ship</th>
                                 <th style={{ ...thStyle() }}>Size</th>
                                 <th style={{ ...thStyle() }}>Link Folder</th>
-                                <th style={{ ...thStyle('#059669'), borderRight: 'none' }}>Total Price</th>
+                                <th style={{ ...thStyle('#059669') }}>Economy</th>
+                                <th style={{ ...thStyle('#0284c7') }}>Fast</th>
+                                <th style={{ ...thStyle('#7c3aed') }}>Express</th>
+                                <th style={{ ...thStyle('#b45309'), borderRight: 'none' }}>Overnight</th>
                               </tr>
                             </thead>
                             <tbody>
                               {groupedVendors.map((group, gIdx) => {
                                 const v = group.firstVendor;
+                                // Fallback ảnh: media_url → images[0] (field từ Excel parser)
+                                const vendorImg = v.media_url || (Array.isArray(v.images) && v.images[0]) || null;
                                 const rowBg = gIdx % 2 === 0 ? '#ffffff' : HC.orangePale;
                                 const rawMaterial = v.overview || '';
                                 const materialText = rawMaterial.length > 70 ? rawMaterial.slice(0, 70) + '…' : rawMaterial || null;
@@ -510,10 +532,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                     {/* Ảnh */}
                                     {idx === 0 && (
                                       <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center', width: 72 }) }}>
-                                        {v.media_url
-                                          ? <img src={v.media_url} loading="lazy" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} />
-                                          : <div style={{ width: 52, height: 52, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, margin: '0 auto', color: HC.muted2 }}>📷</div>
-                                        }
+                                        {vendorImg
+                                          ? <img src={vendorImg} loading="lazy" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} />
+                                          : null}
+                                        <div style={{ width: 52, height: 52, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, alignItems: 'center', justifyContent: 'center', fontSize: 18, margin: '0 auto', color: HC.muted2, display: vendorImg ? 'none' : 'flex' }}>📷</div>
                                       </td>
                                     )}
 
@@ -609,12 +631,26 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                       </td>
                                     )}
 
-                                    {/* Total Price (per item) */}
+                                    {/* Total Price — 4 line ship */}
+                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                      {vi.eco_total != null && vi.eco_total !== '' && Number(vi.eco_total) !== 0
+                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#059669' }}>${Number(vi.eco_total).toFixed(2)}</span>
+                                        : <Na />}
+                                    </td>
+                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                      {vi.fast_total != null && vi.fast_total !== '' && Number(vi.fast_total) !== 0
+                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#0284c7' }}>${Number(vi.fast_total).toFixed(2)}</span>
+                                        : <Na />}
+                                    </td>
+                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
+                                      {vi.express_total != null && vi.express_total !== '' && Number(vi.express_total) !== 0
+                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#7c3aed' }}>${Number(vi.express_total).toFixed(2)}</span>
+                                        : <Na />}
+                                    </td>
                                     <td style={{ ...tdBase({ textAlign: 'center', borderRight: 'none' }) }}>
-                                      {vi.eco_total != null && vi.eco_total !== '' && vi.eco_total !== 0
-                                        ? <span style={{ fontWeight: 900, fontSize: 14, color: '#059669' }}>${Number(vi.eco_total).toFixed(2)}</span>
-                                        : <Na pending />
-                                      }
+                                      {vi.overnight_total != null && vi.overnight_total !== '' && Number(vi.overnight_total) !== 0
+                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#b45309' }}>${Number(vi.overnight_total).toFixed(2)}</span>
+                                        : <Na />}
                                     </td>
                                   </tr>
                                 ));

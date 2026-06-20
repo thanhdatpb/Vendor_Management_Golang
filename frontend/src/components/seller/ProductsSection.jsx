@@ -584,11 +584,21 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   };
 
   const renderVendorBadge = (p) => {
-    const vendors = productVendors[p.id] || [];
+    // Ưu tiên assigned_vendors từ API, fallback về localStorage
+    const vendors = (p.assigned_vendors?.length ? p.assigned_vendors : null) || productVendors[p.id] || [];
+    const count = vendors.length;
     const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
     const selectedCount = Object.values(aSelections).filter(s => s?.checked).length;
-    if (vendors.length === 0) return <span style={{ color: HC.muted2, fontSize: 11, fontStyle: 'italic' }}>Chưa gán</span>;
-    return (<div><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 999, background: '#ecfdf5', border: '1px solid #bbf7d0', fontSize: 11, fontWeight: 800, color: '#065f46' }}>Assigned · {vendors.length} vendor</span>{selectedCount > 0 && <span style={{ fontSize: 10, color: HC.success, marginLeft: 8 }}>✓ Đã chọn {selectedCount}</span>}</div>);
+    if (count === 0) return <span style={{ color: HC.muted2, fontSize: 11, fontStyle: 'italic' }}>Chưa gán</span>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 22, height: 22, borderRadius: 999, background: HC.orange, color: '#fff', fontSize: 11, fontWeight: 900, padding: '0 7px' }}>{count}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: HC.ink2 }}>vendor đã gán</span>
+        </div>
+        {selectedCount > 0 && <span style={{ fontSize: 10, color: HC.success, fontWeight: 700 }}>✓ Đã chọn {selectedCount}</span>}
+      </div>
+    );
   };
 
   if (loading) return <Spinner />;

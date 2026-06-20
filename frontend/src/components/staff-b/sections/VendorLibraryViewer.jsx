@@ -476,8 +476,9 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId }) {
-  const [libraryFiles, setLibraryFiles] = useState([]);
+export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared }) {
+  // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
+  const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -486,8 +487,58 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // Filter theo product trong chế độ readOnly
+  const [selectedProductId, setSelectedProductId] = useState('');
   const fileInputRef = useRef(null);
   const highlightRef = useRef(null);
+
+  // Danh sách product có vendor được gán (dùng cho dropdown filter)
+  const productOptions = useMemo(() => {
+    if (!readOnly) return [];
+    try {
+      const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
+      const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
+      const products = JSON.parse(localStorage.getItem('MOCK_PRODUCTS') || '[]');
+      return Object.keys(assigned)
+        .filter(pid => (assigned[pid] || []).some(v => v.is_excel))
+        .map(pid => {
+          const p = products.find(pr => String(pr.id) === String(pid));
+          return { id: pid, label: p?.product_type ? `${p.product_type} (#${pid})` : `Sản phẩm #${pid}` };
+        });
+    } catch { return []; }
+  }, [readOnly, dataLoaded]);
+
+  // libraryFiles = rawFiles đã filter theo product (chỉ trong readOnly + mode all)
+  const libraryFiles = useMemo(() => {
+    if (!readOnly || mode !== 'all') return rawFiles;
+    try {
+      const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
+      const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
+      const assignedIds = new Set();
+
+      // Nếu chọn 1 product cụ thể, chỉ lấy vendor của product đó
+      const sourceEntries = selectedProductId
+        ? (assigned[selectedProductId] ? { [selectedProductId]: assigned[selectedProductId] } : {})
+        : assigned;
+
+      Object.values(sourceEntries).forEach(list => {
+        (list || []).forEach(v => {
+          if (v.is_excel) assignedIds.add(v.excel_row_id || v.id);
+        });
+      });
+
+      if (assignedIds.size === 0) return [];
+
+      return rawFiles.map(file => {
+        if (!file.generalInfo) return file;
+        const filteredGeneral = file.generalInfo.filter(r => assignedIds.has(r.id));
+        if (filteredGeneral.length === 0) return null;
+        const assignedKyHieus = new Set(filteredGeneral.map(r => r.kyHieu).filter(Boolean));
+        const filteredPricing = (file.pricing || []).filter(p => assignedKyHieus.has(p.kyHieu));
+        return { ...file, generalInfo: filteredGeneral, pricing: filteredPricing };
+      }).filter(Boolean);
+    } catch { return rawFiles; }
+  }, [rawFiles, readOnly, mode, selectedProductId, dataLoaded]);
 
   useEffect(() => {
     if (highlightFileId && highlightRef.current) {
@@ -537,39 +588,10 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     setDataLoaded(false);
     try {
       const res = await vendorLibraryApi.get(mode);
-      let data = Array.isArray(res.data) ? res.data : [];
+      const data = Array.isArray(res.data) ? res.data : [];
 
-      if (readOnly && mode === 'all') {
-        const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
-        const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
-        const assignedIds = new Set();
-
-        // Thu thập tất cả excel_row_id (hoặc id) từ mọi product được assign
-        // ProductsSection (seller) đồng bộ API → STAFF_PRODUCT_VENDORS_V1 sau mỗi lần load
-        Object.values(assigned).forEach(list => {
-          (list || []).forEach(v => {
-            if (v.is_excel) {
-              assignedIds.add(v.excel_row_id || v.id);
-            }
-          });
-        });
-
-        if (assignedIds.size > 0) {
-          data = data.map(file => {
-            if (!file.generalInfo) return file;
-            const filteredGeneral = file.generalInfo.filter(r => assignedIds.has(r.id));
-            if (filteredGeneral.length === 0) return { ...file, generalInfo: [], pricing: [] };
-            // Chỉ giữ pricing rows có kyHieu khớp với vendor được gán
-            const assignedKyHieus = new Set(filteredGeneral.map(r => r.kyHieu).filter(Boolean));
-            const filteredPricing = (file.pricing || []).filter(p => assignedKyHieus.has(p.kyHieu));
-            return { ...file, generalInfo: filteredGeneral, pricing: filteredPricing };
-          }).filter(file => file.generalInfo && file.generalInfo.length > 0);
-        } else {
-          data = [];
-        }
-      }
-
-      setLibraryFiles(data);
+      // Lưu raw data — filter theo product được thực hiện trong useMemo (libraryFiles)
+      setRawFiles(data);
       setDataLoaded(true);
       if (onLibraryLoaded) onLibraryLoaded(data);
     } catch (err) {
@@ -596,7 +618,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     }
     try {
       await vendorLibraryApi.save(newData, mode);
-      setLibraryFiles(newData);
+      setRawFiles(newData);
       if (onLibraryLoaded) onLibraryLoaded(newData);
       return true;
     } catch (err) {
@@ -708,6 +730,17 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
             {displayFiles.length} file
           </span>
+          {/* Product filter — chỉ hiện trong readOnly mode */}
+          {readOnly && productOptions.length > 1 && (
+            <select
+              value={selectedProductId}
+              onChange={e => setSelectedProductId(e.target.value)}
+              style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`, fontSize: 12, background: HC.surface, color: selectedProductId ? HC.orangeDark : HC.muted, outline: 'none', cursor: 'pointer', fontWeight: selectedProductId ? 700 : 400 }}
+            >
+              <option value="">Tất cả sản phẩm</option>
+              {productOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          )}
           {/* Search */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input
@@ -733,7 +766,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
         {!readOnly && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            {libraryFiles.length > 0 && (
+            {rawFiles.length > 0 && (
               <button onClick={handleClearAll} style={{ padding: '9px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#dc2626', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
                 Xóa tất cả
               </button>
@@ -829,7 +862,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
             <h3 style={{ margin: '0 0 16px 0', fontSize: 18, color: '#dc2626', fontFamily: "'Nunito',sans-serif" }}>Xác nhận xóa</h3>
             <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted, lineHeight: 1.5 }}>
               {deleteConfirm.type === 'all' 
-                ? `Bạn có chắc chắn muốn xóa toàn bộ ${libraryFiles.length} file thư viện? Hành động này không thể hoàn tác.`
+                ? `Bạn có chắc chắn muốn xóa toàn bộ ${rawFiles.length} file thư viện? Hành động này không thể hoàn tác.`
                 : 'Bạn có chắc chắn muốn xóa file thư viện này? Hành động này không thể hoàn tác.'}
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>

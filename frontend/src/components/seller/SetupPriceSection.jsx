@@ -29,10 +29,10 @@ export default function SetupPriceSection() {
   // State so sánh
   const [comparisonList, setComparisonList] = useState([]);
 
-  // State cho nhiều giá trị
-  const [displayPrices, setDisplayPrices] = useState([0]);
-  const [customizePrices, setCustomizePrices] = useState([{ name: '', price: 0 }]);
-  const [shipPrices, setShipPrices] = useState([{ name: '', price: 0 }]);
+  // State cho nhiều giá trị — lưu raw string để không mất dấu thập phân khi gõ
+  const [displayPrices, setDisplayPrices] = useState(['0']);
+  const [customizePrices, setCustomizePrices] = useState([{ name: '', price: '0' }]);
+  const [shipPrices, setShipPrices] = useState([{ name: '', price: '0' }]);
 
   const [setupForm, setSetupForm] = useState({
     shipping_method: 'economy',
@@ -56,13 +56,13 @@ export default function SetupPriceSection() {
   const addPriceField = (type) => {
     switch (type) {
       case 'display':
-        setDisplayPrices([...displayPrices, 0]);
+        setDisplayPrices([...displayPrices, '0']);
         break;
       case 'customize':
-        setCustomizePrices([...customizePrices, { name: '', price: 0 }]);
+        setCustomizePrices([...customizePrices, { name: '', price: '0' }]);
         break;
       case 'ship':
-        setShipPrices([...shipPrices, { name: '', price: 0 }]);
+        setShipPrices([...shipPrices, { name: '', price: '0' }]);
         break;
       default:
         break;
@@ -98,24 +98,26 @@ export default function SetupPriceSection() {
     }
   };
 
-  // Hàm cập nhật giá trị
+  // Hàm cập nhật giá trị — lưu raw string để không mất dấu "." khi đang gõ
   const updatePriceField = (type, index, value) => {
+    const raw = value.replace(/[^0-9.]/g, '').replace(/^(\d*\.?\d*).*$/, '$1');
     switch (type) {
-      case 'display':
-        const newDisplayPrices = [...displayPrices];
-        newDisplayPrices[index] = parseFloat(value) || 0;
-        setDisplayPrices(newDisplayPrices);
+      case 'display': {
+        const next = [...displayPrices];
+        next[index] = raw;
+        setDisplayPrices(next);
         break;
-      case 'customize':
-        const newCustomizePrices = [...customizePrices];
-        newCustomizePrices[index].price = parseFloat(value) || 0;
-        setCustomizePrices(newCustomizePrices);
+      }
+      case 'customize': {
+        const next = customizePrices.map((p, i) => i === index ? { ...p, price: raw } : p);
+        setCustomizePrices(next);
         break;
-      case 'ship':
-        const newShipPrices = [...shipPrices];
-        newShipPrices[index].price = parseFloat(value) || 0;
-        setShipPrices(newShipPrices);
+      }
+      case 'ship': {
+        const next = shipPrices.map((p, i) => i === index ? { ...p, price: raw } : p);
+        setShipPrices(next);
         break;
+      }
       default:
         break;
     }
@@ -134,17 +136,14 @@ export default function SetupPriceSection() {
   };
 
   // Tính tổng các giá trị
-  const getTotalDisplayPrice = () => {
-    return displayPrices.reduce((sum, price) => sum + price, 0);
-  };
+  const getTotalDisplayPrice = () =>
+    displayPrices.reduce((sum, p) => sum + (parseFloat(p) || 0), 0);
 
-  const getTotalCustomizePrice = () => {
-    return customizePrices.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
-  };
+  const getTotalCustomizePrice = () =>
+    customizePrices.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
 
-  const getTotalShipMin = () => {
-    return shipPrices.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
-  };
+  const getTotalShipMin = () =>
+    shipPrices.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
 
   const [sampleDecisions, setSampleDecisions] = useState(() => {
     try {
@@ -192,15 +191,19 @@ export default function SetupPriceSection() {
 
     setSelectedVendor(vendor);
     setShipInfo(defaultShipInfo);
-    setDisplayPrices(vendor.display_prices || [gia_hien_thi]);
-    
-    setCustomizePrices(vendor.customize_prices?.length 
-      ? vendor.customize_prices.map(p => typeof p === 'object' ? p : { name: '', price: p }) 
-      : [{ name: '', price: total_customize_price }]);
-      
-    setShipPrices(vendor.ship_prices?.length 
-      ? vendor.ship_prices.map(p => typeof p === 'object' ? p : { name: getShippingMethodLabel(defaultMethod), price: p }) 
-      : [{ name: '', price: 0 }]);
+    setDisplayPrices(
+      (vendor.display_prices || [gia_hien_thi]).map(p => String(p ?? 0))
+    );
+    setCustomizePrices(
+      vendor.customize_prices?.length
+        ? vendor.customize_prices.map(p => typeof p === 'object' ? { ...p, price: String(p.price ?? 0) } : { name: '', price: String(p ?? 0) })
+        : [{ name: '', price: String(total_customize_price) }]
+    );
+    setShipPrices(
+      vendor.ship_prices?.length
+        ? vendor.ship_prices.map(p => typeof p === 'object' ? { ...p, price: String(p.price ?? 0) } : { name: getShippingMethodLabel(defaultMethod), price: String(p ?? 0) })
+        : [{ name: '', price: '0' }]
+    );
     setSetupForm({
       shipping_method: defaultMethod,
       size: vendor.size || '',
@@ -441,9 +444,9 @@ export default function SetupPriceSection() {
     showToastMsg('success', '✅ Lưu thành công', `Đã lưu cấu hình giá cho ${selectedVendor?.vendor_type || 'vendor'}`);
     setShowSetupModal(false);
     setSelectedVendor(null);
-    setDisplayPrices([0]);
-    setCustomizePrices([0]);
-    setShipPrices([0]);
+    setDisplayPrices(['0']);
+    setCustomizePrices([{ name: '', price: '0' }]);
+    setShipPrices([{ name: '', price: '0' }]);
     selectedIndexRef.current = -1;
   };
 
@@ -520,6 +523,7 @@ export default function SetupPriceSection() {
       return {
         id: Date.now() + idx + Math.random(),
         vendor_id: vendor.id,
+        productId: vendor.productId,
         vendor_name: vendor.name || vendor.vendor_name || vendor.vendor_type || 'Unknown',
         vendor_type: vendor.vendor_type || '',
         product_type: vendor.productType || vendor.product_type || '',
@@ -547,17 +551,17 @@ export default function SetupPriceSection() {
       };
     });
 
+    // Dedup: kết hợp productId + vendor_id + size để tránh bị merge nhầm giữa các sản phẩm khác nhau
     const uniquePriceList = newPriceList.filter((item, index, self) =>
       index === self.findIndex((t) => (
-        t.product_type === item.product_type && 
-        t.vendor_type === item.vendor_type &&
-        t.vendor_name === item.vendor_name &&
+        String(t.productId) === String(item.productId) &&
+        String(t.vendor_id) === String(item.vendor_id) &&
         t.size === item.size
       ))
     );
 
+    setAssignedPriceList(uniquePriceList);
     if (uniquePriceList.length > 0) {
-      setAssignedPriceList(uniquePriceList);
       localStorage.setItem(LS_PRICE_KEY, JSON.stringify(uniquePriceList));
     }
   }, []);
@@ -831,7 +835,7 @@ export default function SetupPriceSection() {
         <span style={{ fontSize: 14 }}>+</span> Thêm {label}
       </button>
       <div style={{ marginTop: 8, fontSize: 11, color: HC.success, fontWeight: 600 }}>
-        Tổng: {unit}{prices.reduce((sum, p) => sum + (isNamed ? parseFloat(p.price || 0) : parseFloat(p || 0)), 0).toFixed(2)}
+        Tổng: {unit}{prices.reduce((sum, p) => sum + (parseFloat(isNamed ? p.price : p) || 0), 0).toFixed(2)}
       </div>
     </div>
   );
@@ -845,10 +849,35 @@ export default function SetupPriceSection() {
 
       {/* Bảng Vendor từ Uyên Hồ gán */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})` }} />
-          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>🏪 Vendor từ Uyên Hồ gán</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
+          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Vendor từ Uyên Hồ gán</div>
           <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filteredAssignedList.length} vendor</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder="Tìm product type..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); setCurrentPageAssigned(1); }}
+              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 180 }}
+            />
+            <select
+              value={filterProductType}
+              onChange={e => { setFilterProductType(e.target.value); setCurrentPageAssigned(1); }}
+              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: filterProductType ? HC.orangeDark : HC.muted, outline: 'none', cursor: 'pointer', fontWeight: filterProductType ? 700 : 400 }}
+            >
+              <option value="">Tất cả Product Type</option>
+              {productTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
+            </select>
+            {(search || filterProductType) && (
+              <button
+                onClick={() => { setSearch(''); setFilterProductType(''); setCurrentPageAssigned(1); }}
+                style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+              >
+                Xóa lọc
+              </button>
+            )}
+          </div>
         </div>
         {filteredAssignedList.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 12, border: `1px solid ${HC.border}` }}>
@@ -896,16 +925,24 @@ export default function SetupPriceSection() {
             </div>
 
             <div style={{ padding: '24px' }}>
-              {/* Size */}
+              {/* Size — hỗ trợ nhiều size cùng lúc, phân cách bằng dấu phẩy */}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 8, display: 'block' }}>📏 Size</label>
+                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 4, display: 'block' }}>Size</label>
+                <div style={{ fontSize: 10, color: HC.muted2, marginBottom: 8 }}>Nhập nhiều size cách nhau bằng dấu phẩy</div>
                 <input
                   type="text"
                   value={setupForm.size}
                   onChange={(e) => setSetupForm(prev => ({ ...prev, size: e.target.value }))}
-                  placeholder="Nhập size (VD: S, M, L, XL...)"
+                  placeholder="VD: S, M, L, XL hoặc 8x10, 11x14, 16x20"
                   style={{ ...inp, padding: '10px 12px' }}
                 />
+                {setupForm.size && (
+                  <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {setupForm.size.split(',').map(s => s.trim()).filter(Boolean).map((s, i) => (
+                      <span key={i} style={{ padding: '3px 10px', borderRadius: 99, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, fontSize: 11, fontWeight: 700, color: HC.orangeDark }}>{s}</span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 3 nhóm input */}
