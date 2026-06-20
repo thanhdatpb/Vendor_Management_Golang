@@ -533,15 +533,17 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const saveLibrary = async (newData) => {
     if (!dataLoaded) {
       showToast('error', '❌ Dữ liệu chưa được tải xong, không thể lưu. Vui lòng thử lại.');
-      return;
+      return false;
     }
     try {
       await vendorLibraryApi.save(newData, mode);
       setLibraryFiles(newData);
       if (onLibraryLoaded) onLibraryLoaded(newData);
+      return true;
     } catch (err) {
       console.error('Error saving vendor library:', err);
-      showToast('error', '❌ Lỗi lưu dữ liệu', err?.response?.data?.message || err.message || 'Không thể kết nối server');
+      showToast('error', `❌ Lỗi lưu dữ liệu: ${err?.response?.data?.message || err.message || 'Không thể kết nối server'}`);
+      return false;
     }
   };
 
@@ -585,8 +587,8 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       const map = Object.fromEntries(libraryFiles.map(e => [e.filename, e]));
       newEntries.forEach(ne => { map[ne.filename] = ne; });
       const updated = Object.values(map);
-      await saveLibrary(updated);
-      showToast('success', `✅ Import ${newEntries.length} file thành công${errors.length ? `, ${errors.length} lỗi` : ''}`);
+      const saved = await saveLibrary(updated);
+      if (saved) showToast('success', `✅ Import ${newEntries.length} file thành công${errors.length ? `, ${errors.length} lỗi` : ''}`);
     }
 
     if (errors.length > 0 && newEntries.length === 0) {
@@ -608,12 +610,12 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const executeDelete = async () => {
     if (!deleteConfirm) return;
     if (deleteConfirm.type === 'all') {
-      await saveLibrary([]);
-      showToast('success', '🗑 Đã xóa toàn bộ thư viện');
+      const saved = await saveLibrary([]);
+      if (saved) showToast('success', '🗑 Đã xóa toàn bộ thư viện');
     } else if (deleteConfirm.type === 'single') {
       const updated = libraryFiles.filter(e => e.id !== deleteConfirm.id);
-      await saveLibrary(updated);
-      showToast('success', '🗑 Đã xóa file thư viện');
+      const saved = await saveLibrary(updated);
+      if (saved) showToast('success', '🗑 Đã xóa file thư viện');
     }
     setDeleteConfirm(null);
   };
