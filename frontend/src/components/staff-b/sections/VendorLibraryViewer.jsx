@@ -295,7 +295,7 @@ function PricingTable({ rows, onSave, readOnly }) {
 // ── Single Library File Card ──────────────────────────────────────────────────
 function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted }) {
   const [activeSection, setActiveSection] = useState('general');
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
 
   const fileRowIds = entry.generalInfo?.map(r => r.id) || [];
