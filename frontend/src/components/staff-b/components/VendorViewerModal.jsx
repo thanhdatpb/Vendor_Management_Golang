@@ -438,36 +438,6 @@ export default function VendorViewerModal({ product, onClose }) {
                         <span>ℹ️</span>
                         <span>Các ô hiển thị <strong>N/A</strong> đang chờ cập nhật thông tin vendor.</span>
                       </div>
-                      {/* Pricing + Feedback per vendor */}
-                      {vendors.map((v, i) => {
-                        const key = vendorKey(v, i);
-                        const bChecked = !!bSelections[key]?.checked;
-                        return (
-                          <div key={key} style={{ background: bChecked ? '#ecfdf5' : HC.surface, borderRadius: 14, border: `1.5px solid ${bChecked ? '#bbf7d0' : HC.border}`, overflow: 'hidden' }}>
-                            <div style={{ padding: '10px 16px', background: bChecked ? '#d1fae5' : HC.cream, borderBottom: `1px solid ${bChecked ? '#bbf7d0' : HC.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <span style={{ fontWeight: 900, fontSize: 12, color: HC.ink }}>#{i + 1} {v.name || v.vendor_type || '—'}</span>
-                              {bChecked && <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', padding: '1px 8px', borderRadius: 20, background: '#d1fae5', border: '1px solid #86efac' }}>✓ Đã chọn</span>}
-                              <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: HC.muted }}>Base Cost: <span style={{ color: HC.orange }}>${((v.pricing1 || 0) + (v.pricing2 || 0)).toFixed(2)}</span></span>
-                            </div>
-                            <div style={{ padding: '12px 16px', background: HC.surface2 }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                                {[
-                                  { label: '🚚 ECONOMY', price: v.eco_price, total: v.eco_total },
-                                  { label: '⚡ FAST', price: v.fast_price, total: v.fast_total },
-                                  { label: '✈️ EXPRESS', price: v.express_price, total: v.express_total },
-                                  { label: '🌙 OVERNIGHT', price: v.overnight_price, total: v.overnight_total }
-                                ].map((item, pIdx) => (
-                                  <div key={pIdx} style={{ background: HC.surface, borderRadius: 10, padding: '8px 10px', border: `1px solid ${HC.border}` }}>
-                                    <div style={{ fontWeight: 800, fontSize: 9, color: HC.muted, marginBottom: 5 }}>{item.label}</div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ fontSize: 10, color: HC.muted2 }}>Ship:</span><span style={{ fontWeight: 700, fontSize: 11 }}>{fmt(item.price)}</span></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}><span style={{ fontSize: 10, color: HC.muted2 }}>Total:</span><span style={{ fontWeight: 800, fontSize: 12, color: HC.success }}>{fmt(item.total)}</span></div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
                     );
                   })())}
