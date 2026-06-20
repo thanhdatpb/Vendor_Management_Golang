@@ -2,6 +2,7 @@
 .agent/
 .claude/
 .codex/
+.design-sync/
 
 # Documents tài liệu liên quan đến hệ thống
 documents/
