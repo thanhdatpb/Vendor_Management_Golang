@@ -371,18 +371,6 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
         ))}
       </nav>
 
-      {/* Footer — tagline only */}
-      {sidebarOpen && (
-        <div style={{ padding: '10px 10px 18px', flexShrink: 0 }}>
-          <div style={{
-            textAlign: 'center', fontSize: 9, fontWeight: 700,
-            color: 'rgba(148,163,184,0.4)', letterSpacing: '0.2em',
-            fontFamily: "'Nunito',sans-serif",
-          }}>
-            #IT'S ALWAYS DAY 1
-          </div>
-        </div>
-      )}
 
       <style>{`
         @keyframes hc-fade-in {
