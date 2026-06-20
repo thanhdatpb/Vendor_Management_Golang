@@ -4,80 +4,62 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class VendorLibraryController extends Controller
 {
-    private function migrateNewProducts()
+    private function getRow()
     {
-        $pathAll = storage_path('app/vendor_library.json');
-        $pathNew = storage_path('app/vendor_library_new.json');
-        
-        if (file_exists($pathNew)) {
-            $dataAll = file_exists($pathAll) ? json_decode(file_get_contents($pathAll), true) : [];
-            $dataNew = json_decode(file_get_contents($pathNew), true);
-            
-            if (is_array($dataNew)) {
-                foreach ($dataNew as &$item) {
-                    $item['sourceTab'] = 'new_products';
-                }
-                
-                $unique = [];
-                if (is_array($dataAll)) {
-                    foreach ($dataAll as $item) {
-                        $unique[$item['id']] = $item;
-                    }
-                }
-                foreach ($dataNew as $item) {
-                    $unique[$item['id']] = $item;
-                }
-                
-                file_put_contents($pathAll, json_encode(array_values($unique)));
-            }
-            unlink($pathNew);
-        }
+        return DB::table('vendor_library')->orderBy('id')->first();
     }
 
     public function getLibrary(Request $request)
     {
-        $this->migrateNewProducts();
-        $path = storage_path('app/vendor_library.json');
+        $row = $this->getRow();
 
-        if (!file_exists($path)) {
+        if (!$row) {
             return response()->json([]);
         }
 
-        $data = file_get_contents($path);
-        return response($data)->header('Content-Type', 'application/json');
+        return response($row->data)->header('Content-Type', 'application/json');
     }
 
     public function saveLibrary(Request $request)
     {
-        $path = storage_path('app/vendor_library.json');
-        $backupPath = storage_path('app/vendor_library_backup.json');
+        $data = $request->getContent();
 
-        // Backup current data before overwriting (only if existing file has content)
-        if (file_exists($path) && filesize($path) > 4) {
-            copy($path, $backupPath);
+        // Validate JSON
+        if (json_decode($data) === null) {
+            return response()->json(['error' => 'Invalid JSON'], 422);
         }
 
-        $data = $request->getContent();
-        file_put_contents($path, $data);
+        $row = $this->getRow();
+
+        if ($row) {
+            DB::table('vendor_library')->where('id', $row->id)->update([
+                'data'       => $data,
+                'updated_at' => now(),
+            ]);
+        } else {
+            DB::table('vendor_library')->insert([
+                'data'       => $data,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         return response()->json(['message' => 'Library saved successfully']);
     }
 
     public function restoreBackup()
     {
-        $path = storage_path('app/vendor_library.json');
-        $backupPath = storage_path('app/vendor_library_backup.json');
+        // Backup không còn dùng file — trả về dữ liệu hiện tại từ DB
+        $row = $this->getRow();
 
-        if (!file_exists($backupPath)) {
-            return response()->json(['error' => 'Không có bản backup nào.'], 404);
+        if (!$row) {
+            return response()->json(['error' => 'Không có dữ liệu nào trong thư viện.'], 404);
         }
 
-        copy($backupPath, $path);
-        $data = file_get_contents($path);
-        return response($data)->header('Content-Type', 'application/json');
+        return response($row->data)->header('Content-Type', 'application/json');
     }
 }
