@@ -50,7 +50,7 @@ export default function NewsManagementSection() {
     return Object.keys(errors).length === 0;
   };
 
-  const sendNewsToDashboards = (news) => {
+  const sendNewsToDashboards = async (news) => {
     const notification = {
       id: `news_${news.id}`,
       type: 'news',
