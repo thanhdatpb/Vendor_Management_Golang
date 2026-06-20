@@ -35,6 +35,9 @@ export default defineConfig({
           // React core — load đầu tiên, cache lâu dài
           'vendor-react': ['react', 'react-dom'],
 
+          // Ant Design UI — ~800KB, tách riêng để cache lâu dài
+          'vendor-antd': ['antd'],
+
           // Ant Design icons — ~300KB, tách riêng để cache
           'vendor-antd-icons': ['@ant-design/icons'],
 

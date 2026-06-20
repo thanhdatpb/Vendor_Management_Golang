@@ -18,6 +18,7 @@ function ThumbnailImg({ src, size = 72 }) {
     <img
       src={src}
       alt=""
+      loading="lazy"
       style={{ width: size, height: size, objectFit: 'cover', borderRadius: 8, border: `1.5px solid ${HC.border}`, display: 'block' }}
       onError={() => setBroken(true)}
     />

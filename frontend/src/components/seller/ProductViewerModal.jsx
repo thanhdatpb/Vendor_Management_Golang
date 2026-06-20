@@ -511,7 +511,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                     {idx === 0 && (
                                       <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center', width: 72 }) }}>
                                         {v.media_url
-                                          ? <img src={v.media_url} style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} />
+                                          ? <img src={v.media_url} loading="lazy" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} />
                                           : <div style={{ width: 52, height: 52, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, margin: '0 auto', color: HC.muted2 }}>📷</div>
                                         }
                                       </td>

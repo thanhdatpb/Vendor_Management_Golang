@@ -22,6 +22,7 @@ function ThumbnailCell({ src }) {
     <img
       src={src}
       alt=""
+      loading="lazy"
       style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1.5px solid #e2e8f0', display: 'block' }}
       onError={() => setBroken(true)}
     />

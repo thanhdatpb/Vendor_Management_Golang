@@ -194,15 +194,11 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    loadRequestNotifications();
-    loadNewsNotifications();
-    loadPendingProducts();
+    Promise.all([loadRequestNotifications(), loadNewsNotifications(), loadPendingProducts()]);
 
     const interval = setInterval(() => {
-      loadPendingProducts();
-      loadRequestNotifications();
-      loadNewsNotifications();
-    }, 15000);
+      Promise.all([loadPendingProducts(), loadRequestNotifications(), loadNewsNotifications()]);
+    }, 30000);
 
     const handleStorageChange = (e) => {
       if (e.key === 'STAFF_A_NOTIFICATIONS') {

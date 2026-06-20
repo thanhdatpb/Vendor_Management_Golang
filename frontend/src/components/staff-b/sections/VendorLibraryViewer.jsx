@@ -141,7 +141,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                   <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                     {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
                       <a key={idx} href={img} target="_blank" rel="noreferrer">
-                        <img src={img} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                        <img src={img} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
                       </a>
                     )) : <span style={{ color: HC.muted, fontSize: 10, fontStyle: 'italic' }}>Không có ảnh</span>}
                   </div>
@@ -151,7 +151,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
               <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
                 {r.chiTietSizeImage && (
                   <a href={r.chiTietSizeImage} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: r.chiTietSize ? 6 : 0 }}>
-                    <img src={r.chiTietSizeImage} alt="Size Guide" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
+                    <img src={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
                   </a>
                 )}
                 {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}

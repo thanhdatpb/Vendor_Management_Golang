@@ -220,7 +220,7 @@ export default function SellerDashboard() {
   useEffect(() => {
     loadRequestNotifications();
     loadNewsNotifications();
-    const interval = setInterval(() => { loadRequestNotifications(); loadNewsNotifications(); }, 10000);
+    const interval = setInterval(() => { loadRequestNotifications(); loadNewsNotifications(); }, 30000);
     const handleStorageChange = (e) => {
       if (['STAFF_B_NOTIFICATIONS', 'STAFF_A_NOTIFICATIONS'].includes(e.key)) loadRequestNotifications();
       if (['STAFF_B_NOTIFICATIONS', 'SELLER_NOTIFICATIONS'].includes(e.key)) loadNewsNotifications();
