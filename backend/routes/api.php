@@ -27,6 +27,14 @@ Route::get('/clear-all-cache-7f3a9b2e1d', function () {
 });
 
 // =========================
+// ONE-TIME MIGRATE (delete after use)
+// =========================
+Route::get('/run-migrate-vendor-library-9a2f1b4e', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    return response()->json(['success' => true, 'output' => \Illuminate\Support\Facades\Artisan::output()]);
+});
+
+// =========================
 // DEMO DATA CLEAR ROUTE
 // =========================
 Route::get('/clear-demo-data', function () {
