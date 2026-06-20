@@ -735,7 +735,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             {libraryFiles.length > 0 && (
               <button onClick={handleClearAll} style={{ padding: '9px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#dc2626', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                🗑 Xóa tất cả
+                Xóa tất cả
               </button>
             )}
             <button
@@ -743,7 +743,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
               disabled={importing}
               style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: importing ? HC.muted2 : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 12, fontWeight: 800, cursor: importing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
             >
-              {importing ? '⟳ Đang import...' : '📥 Import thư viện Excel'}
+              {importing ? 'Đang import...' : 'Import thư viện Excel'}
             </button>
           </div>
         )}
