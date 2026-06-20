@@ -11,6 +11,19 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 const ITEMS_PER_PAGE = 10;
 const LS_A_SELECTIONS = 'STAFF_A_SELECTIONS_V1';
 
+function ThumbnailImg({ src, size = 72 }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      style={{ width: size, height: size, objectFit: 'cover', borderRadius: 8, border: `1.5px solid ${HC.border}`, display: 'block' }}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 export default function ProductsSection({ onGotoVendors, selectedProductId, setSelectedProductId }) {
   const [submittedProducts, setSubmittedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -258,7 +271,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                       <td style={{ padding: '12px 13px' }}>
                         {mediaSrc ? (
                           <div style={{ position: 'relative', display: 'inline-block' }}>
-                            <img src={mediaSrc} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: `1.5px solid ${HC.border}`, display: 'block' }} />
+                            <ThumbnailImg src={mediaSrc} />
                           </div>
                         ) : (
                           hasVendors ? (

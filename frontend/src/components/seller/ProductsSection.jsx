@@ -12,6 +12,22 @@ import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field } from
 import { productApi } from '../../services/api';
 import ProductViewerModal from './ProductViewerModal';
 
+function ThumbnailCell({ src }) {
+  const [broken, setBroken] = useState(false);
+  const placeholder = (
+    <div style={{ width: 48, height: 48, borderRadius: 10, background: '#f1f5f9', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#cbd5e1' }}>□</div>
+  );
+  if (!src || broken) return placeholder;
+  return (
+    <img
+      src={src}
+      alt=""
+      style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1.5px solid #e2e8f0', display: 'block' }}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 export default function ProductsSection({ highlightedProductId, onHighlightCleared }) {
   const { user } = useAuth();
   const [viewProduct, setViewProduct] = useState(null);
@@ -761,15 +777,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
                       {/* Thumbnail */}
                       <td style={{ padding: '10px 18px', borderBottom: '1px solid #e2e8f0' }}>
-                        {mediaUrls[0] ? (
-                          <img
-                            src={mediaUrls[0]}
-                            alt=""
-                            style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1.5px solid #e2e8f0', display: 'block' }}
-                          />
-                        ) : (
-                          <div style={{ width: 48, height: 48, borderRadius: 10, background: '#f1f5f9', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#cbd5e1' }}>□</div>
-                        )}
+                        <ThumbnailCell src={mediaUrls[0]} />
                       </td>
 
                       {/* Date Request */}
