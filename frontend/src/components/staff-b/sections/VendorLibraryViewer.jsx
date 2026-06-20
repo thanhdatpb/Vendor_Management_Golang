@@ -541,7 +541,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       if (onLibraryLoaded) onLibraryLoaded(newData);
     } catch (err) {
       console.error('Error saving vendor library:', err);
-      alert('Có lỗi xảy ra khi lưu dữ liệu!');
+      showToast('error', '❌ Lỗi lưu dữ liệu', err?.response?.data?.message || err.message || 'Không thể kết nối server');
     }
   };
 
