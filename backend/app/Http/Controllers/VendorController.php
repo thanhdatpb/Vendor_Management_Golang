@@ -11,6 +11,15 @@ use Illuminate\Support\Facades\Storage;
 
 class VendorController extends Controller
 {
+    private function vendorCacheVersion(): string
+    {
+        return 'v' . Cache::get('vendors_cache_version', 0);
+    }
+
+    private function clearVendorsCache(): void
+    {
+        Cache::increment('vendors_cache_version');
+    }
 
     // =========================
     // LIST VENDORS
@@ -18,7 +27,7 @@ class VendorController extends Controller
 
     public function index(Request $request)
     {
-        $cacheKey = 'vendors_index_' . md5(json_encode($request->all()));
+        $cacheKey = 'vendors_index_' . $this->vendorCacheVersion() . '_' . md5(json_encode($request->all()));
 
         $vendors = Cache::remember($cacheKey, 3600, function () use ($request) {
             $query = Vendor::latest();
@@ -130,7 +139,7 @@ class VendorController extends Controller
             }
         }
 
-        Cache::flush();
+        $this->clearVendorsCache();
 
         return response()->json([
             'success' => $failed === 0,
@@ -177,7 +186,7 @@ class VendorController extends Controller
 
         $vendor = Vendor::create($validated);
         
-        Cache::flush();
+        $this->clearVendorsCache();
 
         return response()->json([
             'success' => true,
@@ -217,7 +226,7 @@ class VendorController extends Controller
         $vendor->media_url  = $allUrls[0] ?? $vendor->media_url;
         $vendor->save();
 
-        Cache::flush();
+        $this->clearVendorsCache();
 
         return response()->json([
             'success'    => true,
@@ -259,7 +268,7 @@ class VendorController extends Controller
         $vendor->media_url  = $currentUrls[0] ?? null;
         $vendor->save();
 
-        Cache::flush();
+        $this->clearVendorsCache();
 
         return response()->json([
             'success'    => true,
@@ -319,7 +328,7 @@ class VendorController extends Controller
 
         $vendor->update($validated);
         
-        Cache::flush();
+        $this->clearVendorsCache();
 
         return response()->json([
             'success' => true,
@@ -339,7 +348,7 @@ class VendorController extends Controller
         $vendor = Vendor::findOrFail($id);
         $vendor->delete();
         
-        Cache::flush();
+        $this->clearVendorsCache();
 
         return response()->json([
             'success' => true,
@@ -354,7 +363,7 @@ class VendorController extends Controller
     public function truncate()
     {
         Vendor::truncate();
-        Cache::flush();
+        $this->clearVendorsCache();
 
         return response()->json([
             'success' => true,
@@ -429,7 +438,9 @@ class VendorController extends Controller
             );
         }
 
-        Cache::flush();
+        $this->clearVendorsCache();
+        Cache::increment('products_cache_version');
+        Cache::forget('products_approved');
 
         return response()->json([
             'success' => true,

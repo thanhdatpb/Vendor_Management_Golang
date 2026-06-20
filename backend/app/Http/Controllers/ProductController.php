@@ -13,6 +13,18 @@ use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
+    private function productCacheVersion(): string
+    {
+        return 'v' . Cache::get('products_cache_version', 0);
+    }
+
+    private function clearProductsCache(): void
+    {
+        Cache::increment('products_cache_version');
+        Cache::forget('products_pending');
+        Cache::forget('products_approved');
+    }
+
     // Helper: thêm media_url và media_urls vào product
     private function addMediaUrlsToProduct($product)
     {
@@ -41,7 +53,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $user  = $request->user();
-        $cacheKey = 'products_index_' . ($user?->id ?? 'guest') . '_' . md5(json_encode($request->all()));
+        $cacheKey = 'products_index_' . $this->productCacheVersion() . '_' . ($user?->id ?? 'guest') . '_' . md5(json_encode($request->all()));
 
         $products = Cache::remember($cacheKey, 3600, function () use ($request, $user) {
             $query = Product::with('creator:id,name,email,project,seller_name')->latest();
@@ -154,7 +166,7 @@ public function store(Request $request)
     $product = Product::create($data);
     $product = $this->addMediaUrlsToProduct($product);
 
-    Cache::flush();
+    $this->clearProductsCache();
 
     return response()->json($product, 201);
 }
@@ -270,7 +282,7 @@ public function update(Request $request, $id)
     $product->save();
     $product = $this->addMediaUrlsToProduct($product);
 
-    Cache::flush();
+    $this->clearProductsCache();
 
     return response()->json($product);
 }
@@ -326,7 +338,7 @@ public function update(Request $request, $id)
 
         $product->delete();
 
-        Cache::flush();
+        $this->clearProductsCache();
 
         return response()->json(['message' => 'Product deleted successfully']);
     }
@@ -344,7 +356,7 @@ public function update(Request $request, $id)
         $product->submitted_at = now();
         $product->save();
 
-        Cache::flush();
+        $this->clearProductsCache();
 
         NotificationService::sendToRole(
             'admin',
@@ -401,7 +413,7 @@ public function pendingApprovals()
             );
         }
         
-        Cache::flush();
+        $this->clearProductsCache();
         
         return response()->json(['message' => $isApproved ? 'Product approved' : 'Product rejected']);
     }
@@ -425,7 +437,7 @@ public function pendingApprovals()
             );
         }
 
-        Cache::flush();
+        $this->clearProductsCache();
 
         return response()->json(['message' => 'Product rejected']);
     }
@@ -549,7 +561,7 @@ public function approvedProducts()
 
         $product = $this->addMediaUrlsToProduct($product);
 
-        Cache::flush();
+        $this->clearProductsCache();
 
         return response()->json([
             'message' => 'Đã cập nhật deadline thành công',
@@ -566,7 +578,7 @@ public function approvedProducts()
         $product->assigned_vendors = is_array($vendors) ? $vendors : [];
         $product->save();
 
-        Cache::flush();
+        $this->clearProductsCache();
 
         // Gửi thông báo cho Seller (người tạo sản phẩm)
         if ($product->created_by) {
