@@ -113,6 +113,15 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const pagedVendors = filteredVendors.slice((vPage - 1) * VENDOR_PAGE_SIZE, vPage * VENDOR_PAGE_SIZE);
 
   const toggleSelect = (id) => setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAllInFile = useCallback((ids) => {
+    setSelectedIds(prev => {
+      const n = new Set(prev);
+      const allSelected = ids.every(id => n.has(id));
+      if (allSelected) { ids.forEach(id => n.delete(id)); }
+      else { ids.forEach(id => n.add(id)); }
+      return n;
+    });
+  }, []);
   const toggleAll = () => {
     const pageIds = pagedVendors.map(v => v.id);
     const allSel = pageIds.every(id => selectedIds.has(id));
@@ -631,7 +640,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #0284c7`, background: '#fff', color: '#0284c7', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
             </div>
           )}
-          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onLibraryLoaded={setExcelVendors} />
+          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} />
         </>
       )}
 
@@ -652,7 +661,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #eab308`, background: '#fff', color: '#ca8a04', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
             </div>
           )}
-          <VendorLibraryViewer mode="bestseller" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onLibraryLoaded={setExcelVendors} />
+          <VendorLibraryViewer mode="bestseller" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} />
         </>
       )}
 
