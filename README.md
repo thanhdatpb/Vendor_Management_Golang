@@ -1,111 +1,116 @@
-# Happy Creative Hub Vendor Manager
+# HappC-Hub Vendor Manager
 
-Dự án phần mềm quản lý nhà cung cấp (Vendors) và người bán (Sellers) cho hệ thống Vendor Management (Vendor Hub).
+Hệ thống nội bộ quản lý nhà cung cấp (Vendors) và quy trình thẩm định sản phẩm cho **Happy Creative LLC**.
 
-## 🌟 Tính năng chính (Features)
+Production: [vendorhub.viehana.com](https://vendorhub.viehana.com)
 
-- **Phân quyền người dùng**: Quản trị viên (Admin), Người bán (Seller - Staff A), Nhà cung cấp (Vendor - Staff B).
-- **Quản lý sản phẩm**: Đề xuất, kiểm duyệt, so sánh và lựa chọn sản phẩm từ các Vendors.
-- **Quản lý Vendor/Seller**: Quản lý thông tin, thiết lập giá (Pricing), cấu hình giao hàng (Eco, Fast, Express...).
-- **Hệ thống thông báo (Notifications)**: Gửi tin tức, cập nhật theo thời gian thực cho Seller và Vendor.
-- **Báo cáo & Thống kê**: Biểu đồ phân tích (Chart.js), xuất dữ liệu ra file Excel.
+---
 
-## 🛠 Công nghệ sử dụng (Tech Stack)
+## Tính năng chính
+
+- **Phân quyền 3 vai trò**: Admin (CCO), Seller / Staff A (Kinh doanh), Vendor / Staff B (Vận hành).
+- **Quản lý Product Request**: Staff A tạo yêu cầu sản phẩm, Admin duyệt, Staff B tiếp nhận và xử lý.
+- **Thư viện Vendor**: Import danh sách vendor từ file Excel (định dạng Happy Creative), xem thông tin phôi và bảng giá.
+- **Gán Vendor cho sản phẩm**: Staff B gán vendor phù hợp, Seller xem và ra quyết định đặt Sample.
+- **Thiết lập giá**: Cấu hình Target Cost, Economy / Express / Overnight Price theo từng vendor.
+- **Hệ thống thông báo**: Cross-role notifications (Admin → Staff B, Staff B → Staff A, Seller → Staff B).
+- **Xuất dữ liệu**: Export danh sách sản phẩm và vendor ra file Excel.
+
+---
+
+## Tech Stack
 
 ### Frontend
-- **Framework**: React 19 + Vite
-- **Styling / UI**: TailwindCSS, Ant Design, Lucide Icons
-- **Routing**: React Router DOM (v7)
-- **State Management**: Zustand
-- **Khác**: Axios, SheetJS (XLSX), Chart.js
+- **Framework**: React.js + Vite
+- **Styling**: Inline CSS — Design System nội bộ (`HC.orange`, `HC.surface`, gradient, glassmorphism)
+- **Icons**: Ant Design Icons
+- **HTTP**: Axios
+- **Excel**: SheetJS (XLSX)
+- **Routing**: React Router DOM
 
 ### Backend
 - **Framework**: Laravel 11
-- **Authentication**: Laravel Sanctum
+- **Auth**: Laravel Sanctum
 - **Database**: MySQL 8.0
 - **Storage**: Local Disk (Symlink)
 
 ### Infrastructure
-- Docker & Docker Compose (cho MySQL và phpMyAdmin)
-- Vercel (Hỗ trợ cấu hình deploy frontend nhanh qua `vercel.json`)
+- **Hosting**: Hostinger (auto-deploy từ GitHub branch `main`)
+- **Docker**: MySQL + phpMyAdmin (môi trường dev local)
 
-## 📂 Cấu trúc thư mục (Directory Structure)
+---
+
+## Cấu trúc thư mục
 
 ```
 /
-├── backend/                # Mã nguồn API Laravel
-├── frontend/               # Mã nguồn giao diện React (Vite)
-├── docker-compose.yml      # Cấu hình container MySQL & phpMyAdmin
-├── .gitignore              # Cấu hình Git bỏ qua file rác/private
+├── backend/           # Laravel 11 API
+├── frontend/          # React + Vite
+├── docker-compose.yml # MySQL & phpMyAdmin local
+├── BACKEND_SCHEMA.md  # Schema & endpoint spec cho các API cần implement
+└── .gitignore
+```
 
-## 🚀 Hướng dẫn cài đặt (Installation)
+---
 
-### 1. Yêu cầu hệ thống (Prerequisites)
+## Cài đặt (Development)
+
+### Yêu cầu
 - PHP >= 8.2 & Composer
 - Node.js >= 18 & NPM
 - Docker & Docker Compose
 
-### 2. Thiết lập Database (Docker)
-Khởi chạy container cho MySQL và phpMyAdmin:
+### 1. Database (Docker)
 ```bash
 docker-compose up -d
+# MySQL: port 3306 | phpMyAdmin: port 8080
 ```
-*(MySQL sẽ chạy ở port 3306, phpMyAdmin ở port 8080)*
 
-### 3. Cài đặt Backend (Laravel)
+### 2. Backend
 ```bash
 cd backend
 composer install
 cp .env.example .env
 php artisan key:generate
-
-# Tạo symlink để lưu trữ ảnh upload
 php artisan storage:link
-
-# Chạy migration và tạo dữ liệu mẫu
 php artisan migrate --seed
-```
-
-### 4. Cài đặt Frontend (React)
-```bash
-cd frontend
-npm install
-```
-
-## 💻 Chạy dự án (Development)
-
-Bạn có thể chạy dự án nhanh chóng bằng cách sử dụng script có sẵn ở thư mục gốc:
-- Nhấn đúp vào file `start-dev.bat` để chạy đồng thời cả Frontend và Backend.
-
-**Hoặc chạy thủ công qua Terminal:**
-
-1. **Backend:**
-```bash
-cd backend
 php artisan serve
 ```
 
-2. **Frontend:**
+### 3. Frontend
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
-| Quyền hạn | User đăng nhập |
+
+---
+
+## Tài khoản mặc định
+
+| Vai trò | Username |
 |---|---|
-| **Admin** | `happyc.admin` |
-| **Vendor (Staff B)** | `happyc.vendor` |
-| **Seller (Staff A)** | `happyc.seller.happy, happyc.seller.creative, happyc.seller.global, happyc.seller.pilot` |
+| Admin | `happyc.admin` |
+| Vendor / Staff B | `happyc.vendor` |
+| Seller / Staff A | `happyc.seller.happy` · `happyc.seller.creative` · `happyc.seller.global` · `happyc.seller.pilot` |
 
-## 📦 Triển khai (Deployment)
+---
 
-1. **Backend**:
-   - Upload mã nguồn `backend` lên máy chủ.
-   - Document Root của Web Server (Nginx/Apache) cần trỏ vào thư mục `backend/public`.
-   - Chạy `composer install --optimize-autoloader --no-dev`.
-   - Cập nhật file `.env` (APP_ENV=production, APP_DEBUG=false, cấu hình Database).
-   - Chạy `php artisan storage:link` và `php artisan config:cache`.
+## Triển khai (Production)
 
-2. **Frontend**:
-   - Chạy `npm run build` trong thư mục `frontend`.
-   - Thư mục `frontend/dist` chứa các file tĩnh đã được tối ưu hóa.
-   - Có thể copy nội dung trong `dist` bỏ vào `backend/public` (nếu chạy chung domain), hoặc deploy thư mục `dist` lên các nền tảng như Vercel/Netlify.
+**Backend** — trỏ Document Root vào `backend/public`:
+```bash
+composer install --optimize-autoloader --no-dev
+php artisan storage:link
+php artisan config:cache
+php artisan migrate --force
+```
+
+**Frontend** — build và upload thư mục `dist`:
+```bash
+cd frontend
+npm run build
+# Copy nội dung dist/ vào public_html hoặc deploy riêng
+```
+
+Auto-deploy được cấu hình qua Hostinger GIT (branch `main`).
