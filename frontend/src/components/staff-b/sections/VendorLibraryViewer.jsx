@@ -710,14 +710,13 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           </span>
           {/* Search */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <span style={{ position: 'absolute', left: 10, fontSize: 13, color: HC.muted, pointerEvents: 'none' }}>🔍</span>
             <input
               type="text"
               placeholder="Tìm theo tên file hoặc loại sản phẩm..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{
-                paddingLeft: 32, paddingRight: searchQuery ? 30 : 12, paddingTop: 7, paddingBottom: 7,
+                paddingLeft: 12, paddingRight: searchQuery ? 30 : 12, paddingTop: 7, paddingBottom: 7,
                 borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`,
                 background: HC.surface, color: HC.ink, fontSize: 12,
                 fontFamily: "'Nunito Sans',sans-serif", outline: 'none',
