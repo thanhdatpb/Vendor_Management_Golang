@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ProfileOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
+import AppToast from '../../shared/AppToast';
 import { playNotificationSound } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination } from '../ui/StaffBUI';
 import NewsModalComponent from '../components/NewsModalComponent';
@@ -352,25 +353,7 @@ export default function NewsManagementSection() {
 
   return (
     <div>
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: 20, right: 20, zIndex: 2000,
-          animation: 'slideInRight 0.3s ease-out, fadeOut 0.3s ease-out 2.7s forwards',
-        }}>
-          <div style={{
-            background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : `linear-gradient(135deg, ${HC.danger}, #b91c1c)`,
-            borderRadius: 12, padding: '12px 20px', color: '#fff', boxShadow: HC.shadowStrong,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 18 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 13 }}>{toast.title}</div>
-                <div style={{ fontSize: 11, opacity: 0.9 }}>{toast.message}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AppToast toast={toast} onClose={() => setToast(null)} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -428,10 +411,6 @@ export default function NewsManagementSection() {
         </div>
       )}
 
-      <style>{`
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
-      `}</style>
     </div>
   );
 }

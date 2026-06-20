@@ -2,6 +2,7 @@
 //  PRODUCTS SECTION (Seller)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
+import AppToast from '../shared/AppToast';
 import { DeleteOutlined, SearchOutlined, SendOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
@@ -572,23 +573,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   return (
     <div style={{ fontFamily: "'Inter','Nunito',system-ui,sans-serif" }}>
       {/* ── Toast ── */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 400 }}>
-          <div style={{ background: toast.type === 'success' ? 'linear-gradient(135deg,#16a34a,#15803d)' : toast.type === 'error' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#fff', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : '!'}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>{toast.title}</div>
-                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>{toast.message}</div>
-              </div>
-              <button onClick={() => setToast(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', cursor: 'pointer', width: 28, height: 28, borderRadius: 8, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-            </div>
-            <div style={{ height: 3, background: 'rgba(255,255,255,0.4)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} />
-          </div>
-        </div>
-      )}
+      <AppToast toast={toast} onClose={() => setToast(null)} />
 
       {/* ── Page Header ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -1259,9 +1244,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       })()}
 
       <style>{`
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
-        @keyframes progressBar { from { width: 100%; } to { width: 0%; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
     </div>

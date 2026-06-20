@@ -6,6 +6,7 @@ import { lsGet, lsSet, parseVendorExcel, buildVendorPayload, VENDOR_TYPE_LIST, n
 import { Spinner, EmptyState, BestSellerBadge } from '../ui/StaffBUI';
 import { SearchOutlined } from '@ant-design/icons';
 import VendorLibraryViewer from './VendorLibraryViewer';
+import AppToast from '../../shared/AppToast';
 
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
   const [activeTab, setActiveTab] = useState('all'); 
@@ -602,20 +603,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         </div>
       )}
 
-      {/* Toast Notification */}
-      {toast && (
-        <div style={{ position: 'fixed', top: 24, right: 24, zIndex: 10000, animation: 'slideInRight 0.3s ease-out' }}>
-          <div style={{
-            background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : `linear-gradient(135deg, #dc2626, #b91c1c)`,
-            borderRadius: 12, boxShadow: '0 10px 25px rgba(0,0,0,0.2)', minWidth: 260, maxWidth: 380,
-            padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10, border: '1px solid rgba(255,255,255,0.2)'
-          }}>
-            <span style={{ fontSize: 20 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
-            <div style={{ fontSize: 13, color: '#fff', fontWeight: 700, fontFamily: "'Nunito',sans-serif" }}>{toast.msg}</div>
-            <button onClick={() => setToast(null)} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14 }}>✕</button>
-          </div>
-        </div>
-      )}
       <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
       {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span>⚠️ {apiError}</span><button onClick={loadVendors} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button></div>}
 
@@ -925,27 +912,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
         </div>
       )}
 
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1300, animation: 'slideInRight 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards' }}>
-          <div style={{ background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: 12, boxShadow: HC.shadowStrong, minWidth: 280, maxWidth: 380 }}>
-            <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 22 }}>{toast.type === 'success' ? '✅' : '🔔'}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 900, fontSize: 13, fontFamily: "'Nunito',sans-serif", marginBottom: 2, color: '#fff' }}>{toast.title}</div>
-                <div style={{ fontSize: 11, opacity: 0.9, fontFamily: "'Nunito Sans',sans-serif", lineHeight: 1.4, color: '#fff' }}>{toast.message}</div>
-              </div>
-              <button onClick={() => setToast(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16, padding: 4, opacity: 0.7 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.7'}>✕</button>
-            </div>
-            <div style={{ height: 3, background: 'rgba(255,255,255,0.5)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} />
-          </div>
-        </div>
-      )}
+      <AppToast toast={toast} onClose={() => setToast(null)} />
       <style>{`
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes modalSlideUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }
-        @keyframes progressBar { from { width: 100%; } to { width: 0%; } }
       `}</style>
     </div>
   );

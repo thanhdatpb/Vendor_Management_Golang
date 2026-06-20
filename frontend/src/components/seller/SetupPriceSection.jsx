@@ -3,6 +3,7 @@
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { HC } from '../../constants/sellerTheme';
+import AppToast from '../shared/AppToast';
 import { LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE } from '../../constants/sellerTheme';
 import { lsGet } from '../../utils/sellerHelpers';
 import { Pagination } from './SellerUI';
@@ -837,18 +838,7 @@ export default function SetupPriceSection() {
 
   return (
     <div>
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000, animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards', maxWidth: 380 }}>
-          <div style={{ background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : toast.type === 'error' ? `linear-gradient(135deg, ${HC.danger}, #b91c1c)` : `linear-gradient(135deg, ${HC.warning}, #d97706)`, color: '#fff', borderRadius: 12, boxShadow: HC.shadowStrong, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 24 }}>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : '⚠️'}</span>
-              <div><div style={{ fontWeight: 900, fontSize: 13 }}>{toast.title}</div><div style={{ fontSize: 11, opacity: 0.9 }}>{toast.message}</div></div>
-              <button onClick={() => setToast(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16 }}>✕</button>
-            </div>
-            <div style={{ height: 3, background: 'rgba(255,255,255,0.5)', animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`, transformOrigin: 'left' }} />
-          </div>
-        </div>
-      )}
+      <AppToast toast={toast} onClose={() => setToast(null)} />
 
 
 

@@ -13,6 +13,7 @@ import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils
 import { playNotificationBeep } from '../audio';
 import { productApi } from '../../../services/api';
 import { Spinner, Table, Badge, MediaGallery, Pagination } from '../ui';
+import AppToast from '../../shared/AppToast';
 import FormHistoryModal from '../modals/FormHistoryModal';
 import ProductViewerModal from '../modals/ProductViewerModal';
 import RejectModal from '../modals/RejectModal';
@@ -799,82 +800,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         onCancel={() => setRejectModal({ open: false, productId: null, reason: '' })}
       />
 
-      {toast && (
-        <div style={{
-          position: 'fixed',
-          bottom: 20,
-          right: 20,
-          zIndex: 2000,
-          animation: 'slideIn 0.3s ease-out, fadeOut 0.3s ease-out 4.7s forwards',
-          maxWidth: 380,
-        }}>
-          <div style={{
-            background: toast.type === 'success'
-              ? `linear-gradient(135deg, ${HC.success}, #15803d)`
-              : toast.type === 'error'
-                ? `linear-gradient(135deg, ${HC.danger}, #b91c1c)`
-                : toast.type === 'warning'
-                  ? `linear-gradient(135deg, ${HC.warning}, #d97706)`
-                  : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-            color: '#fff',
-            borderRadius: 12,
-            boxShadow: HC.shadowStrong,
-            overflow: 'hidden',
-          }}>
-            <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 24 }}>
-                {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : '📋'}
-              </span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 900, fontSize: 13, fontFamily: "'Nunito',sans-serif", marginBottom: 2 }}>
-                  {toast.title}
-                </div>
-                <div style={{ fontSize: 11, opacity: 0.9, fontFamily: "'Nunito Sans',sans-serif", lineHeight: 1.4 }}>
-                  {toast.message}
-                </div>
-              </div>
-              <button
-                onClick={() => setToast(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: 16,
-                  padding: 4,
-                  opacity: 0.7,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{
-              height: 3,
-              background: 'rgba(255,255,255,0.5)',
-              animation: `progressBar ${(toast.duration || 5000) / 1000}s linear forwards`,
-              transformOrigin: 'left'
-            }} />
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-          to { opacity: 0; transform: translateX(100%); }
-        }
-        @keyframes progressBar {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-        @keyframes spin360 {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <AppToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

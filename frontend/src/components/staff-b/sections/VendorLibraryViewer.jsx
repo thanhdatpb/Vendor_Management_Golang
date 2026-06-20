@@ -6,6 +6,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary } from '../../../utils/vendorExcel';
 import { vendorLibraryApi } from '../../../services/api';
+import AppToast from '../../shared/AppToast';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -23,7 +24,7 @@ const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` 
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
 // ── Section 1 Table ──────────────────────────────────────────────────────────
-function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow, bestSellerIds, toggleBestSeller, mode }) {
+function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
 
@@ -57,7 +58,20 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
       <thead>
         <tr>
           {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: '3%', textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
-          {selectable && <th style={{ ...TH(), width: '3%', textAlign: 'center' }}>✓</th>}
+          {selectable && (() => {
+            const allChecked = rows.length > 0 && rows.every(r => selectedIds?.has(r.id));
+            const someChecked = !allChecked && rows.some(r => selectedIds?.has(r.id));
+            return (
+              <th style={{ ...TH(), width: '3%', textAlign: 'center', cursor: 'pointer' }} onClick={onSelectAll} title={allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả trong file này'}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                  <div style={{ width: 16, height: 16, borderRadius: 4, border: `2px solid ${allChecked ? '#fff' : 'rgba(255,255,255,0.6)'}`, background: allChecked ? '#fff' : someChecked ? 'rgba(255,255,255,0.3)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                    {allChecked && <span style={{ color: HC.orangeDark, fontSize: 10, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                    {someChecked && <span style={{ color: '#fff', fontSize: 10, fontWeight: 900, lineHeight: 1 }}>−</span>}
+                  </div>
+                </div>
+              </th>
+            );
+          })()}
           <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Vendor Name</th>
           <th style={{ ...TH(), width: '10%', textAlign: 'left' }}>Product Type</th>
           <th style={{ ...TH(), width: '4%' }}>Ký hiệu</th>
@@ -599,20 +613,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         onChange={handleImport}
       />
 
-      {/* Toast */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1500, animation: 'slideInRight 0.3s ease-out' }}>
-          <div style={{
-            background: toast.type === 'success' ? `linear-gradient(135deg, ${HC.success}, #15803d)` : `linear-gradient(135deg, #dc2626, #b91c1c)`,
-            borderRadius: 12, boxShadow: HC.shadowStrong, minWidth: 260, maxWidth: 380,
-            padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10,
-          }}>
-            <span style={{ fontSize: 20 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
-            <div style={{ fontSize: 13, color: '#fff', fontWeight: 700, fontFamily: "'Nunito',sans-serif" }}>{toast.msg}</div>
-            <button onClick={() => setToast(null)} style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14 }}>✕</button>
-          </div>
-        </div>
-      )}
+      <AppToast toast={toast} onClose={() => setToast(null)} />
 
       {/* Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -771,7 +772,6 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       )}
 
       <style>{`
-        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
       `}</style>
     </div>
