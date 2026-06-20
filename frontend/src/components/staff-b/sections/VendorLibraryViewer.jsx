@@ -97,8 +97,10 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                 </td>
               )}
               {selectable && (
-                <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer' }} onClick={() => onSelectRow(r.id)}>
-                  <input type="checkbox" checked={selectedIds?.has(r.id)} onChange={() => onSelectRow(r.id)} style={{ cursor: 'pointer' }} />
+                <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer', userSelect: 'none' }} onClick={() => onSelectRow(r.id)}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${selectedIds?.has(r.id) ? HC.orange : HC.muted2}`, background: selectedIds?.has(r.id) ? HC.orange : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', transition: 'all 0.15s', flexShrink: 0 }}>
+                    {selectedIds?.has(r.id) && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                  </div>
                 </td>
               )}
               <td style={{ ...TD(i) }}>
@@ -294,10 +296,18 @@ function PricingTable({ rows, onSave, readOnly }) {
 const CARD_PAL = { grad: `linear-gradient(135deg, ${HC.orange} 0%, ${HC.orangeDeep} 100%)`, icon: 'rgba(255,255,255,0.18)', accent: '#fff', border: HC.orangeDark, badge: 'rgba(255,255,255,0.15)' };
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, bestSellerIds, toggleBestSeller, mode }) {
+function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
   const pal = CARD_PAL;
+
+  const fileRowIds = entry.generalInfo?.map(r => r.id) || [];
+  const selectedInFile = fileRowIds.filter(id => selectedIds?.has(id)).length;
+  const allInFileSelected = fileRowIds.length > 0 && fileRowIds.every(id => selectedIds?.has(id));
+
+  const handleSelectAllInFile = () => {
+    if (onSelectAll) onSelectAll(fileRowIds);
+  };
 
   const importDate = new Date(entry.importedAt).toLocaleString('vi-VN', {
     day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -365,6 +375,19 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          {selectable && fileRowIds.length > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleSelectAllInFile(); }}
+              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${allInFileSelected ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)'}`, background: allInFileSelected ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
+              title={allInFileSelected ? 'Bỏ chọn tất cả trong file này' : 'Chọn tất cả trong file này'}
+            >
+              <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${allInFileSelected ? '#fff' : 'rgba(255,255,255,0.6)'}`, background: allInFileSelected ? '#fff' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {allInFileSelected && <span style={{ color: HC.orangeDark, fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+              </div>
+              {allInFileSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${fileRowIds.length})`}
+              {selectedInFile > 0 && !allInFileSelected && <span style={{ padding: '1px 7px', borderRadius: 99, background: 'rgba(255,255,255,0.2)', fontSize: 10 }}>{selectedInFile}/{fileRowIds.length}</span>}
+            </button>
+          )}
           {!readOnly && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
@@ -413,7 +436,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
-            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
+            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
             {activeSection === 'pricing' && <PricingTable rows={entry.pricing} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
           </div>
         </div>
@@ -423,7 +446,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onLibraryLoaded }) {
+export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded }) {
   const [libraryFiles, setLibraryFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -745,6 +768,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
               selectable={selectable}
               selectedIds={selectedIds}
               onSelectRow={onSelectRow}
+              onSelectAll={onSelectAll}
               bestSellerIds={bestSellerIds}
               toggleBestSeller={toggleBestSeller}
               mode={mode}
