@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS, LS_B_SELECTIONS } from '../utils/constants';
 import { lsGet, lsSet, getMediaUrls, fmtDate } from '../utils/helpers';
 import { pushNotif } from '../../../utils/notifUtils';
@@ -109,7 +109,7 @@ export default function VendorViewerModal({ product, onClose }) {
       vendorKey: key,
     });
 
-    alert('✅ Đã gửi phản hồi đến Staff A!');
+    alert('Đã gửi phản hồi đến Staff A!');
   }, [product.id, product.product_type, vendors]);
 
   const fmt = n => (n != null && n !== '') ? `$${Number(n).toFixed(2)}` : '—';

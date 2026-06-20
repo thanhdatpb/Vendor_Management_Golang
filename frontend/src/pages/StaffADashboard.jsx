@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 //  STAFF A (SELLER) DASHBOARD — TechStore Hub
 //  Refactored: mỗi component nằm trong file riêng
 // ════════════════════════════════════════════════════════
@@ -53,7 +53,7 @@ export default function SellerDashboard() {
               id: `api_${n.id}`,
               type: n.type,
               source: 'admin',
-              icon: n.type === 'approved' ? '✅' : '❌',
+              icon: n.type === 'approved' ? '' : '',
               title: n.type === 'approved' ? 'Sản phẩm được duyệt' : 'Sản phẩm bị từ chối',
               message: n.type === 'approved'
                 ? `Sản phẩm "${productName}" đã được Admin duyệt`

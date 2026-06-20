@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 //  PRODUCT VIEWER MODAL (Seller)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback } from 'react';
@@ -125,7 +125,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
       sampleDetails: sampleDetails,
       sellerFeedback: feedback,
       respondedAt: new Date().toISOString(),
-      status: decision === 'dat' ? 'approved' : 'rejected'  // ✅ Thêm status
+      status: decision === 'dat' ? 'approved' : 'rejected'  // Thêm status
     };
     lsSet(LS_A_FEEDBACK_RESPONSE, allResponses);
 
@@ -145,7 +145,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
     });
     pushNotif('staff_b', {
       type: 'staff_a_approved_vendor',
-      icon: '✅',
+      icon: '',
       title: 'Kinh doanh đã xác nhận vendor',
       message: `Bộ phận Kinh doanh đã xác nhận vendor "${vendor.vendor_type}" cho sản phẩm "${product.product_type}".`,
       product_id: product.id,
@@ -157,7 +157,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
       staff_a_approved: true,
     });
 
-    // 2. ✅ THÊM MỚI: GỬI THÔNG BÁO CHO STAFF A
+    // 2. THÊM MỚI: GỬI THÔNG BÁO CHO STAFF A
 
   }
   const setFeedback = (key, text) => {

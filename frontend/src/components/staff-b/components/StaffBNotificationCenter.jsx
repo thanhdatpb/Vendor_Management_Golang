@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 
@@ -182,11 +182,11 @@ export default function StaffBNotificationCenter({
                   localRequests.map((notif, idx) => {
                     let icon = '📋';
                     let bgColor = notif.read ? HC.surface : HC.orangeLight;
-                    if (notif.type === 'approved' || notif.type === 'product_approved') { icon = '✅'; bgColor = notif.read ? HC.surface : '#ecfdf5'; }
-                    else if (notif.type === 'sample_approved') { icon = '✅'; bgColor = notif.read ? HC.surface : '#ecfdf5'; }
-                    else if (notif.type === 'sample_rejected') { icon = '❌'; bgColor = notif.read ? HC.surface : '#fef2f2'; }
+                    if (notif.type === 'approved' || notif.type === 'product_approved') { icon = ''; bgColor = notif.read ? HC.surface : '#ecfdf5'; }
+                    else if (notif.type === 'sample_approved') { icon = ''; bgColor = notif.read ? HC.surface : '#ecfdf5'; }
+                    else if (notif.type === 'sample_rejected') { icon = ''; bgColor = notif.read ? HC.surface : '#fef2f2'; }
                     else if (notif.type === 'seller_feedback') { icon = '💬'; bgColor = notif.read ? HC.surface : HC.orangeLight; }
-                    else if (notif.type === 'staff_a_approved_vendor') { icon = '✅'; bgColor = notif.read ? HC.surface : '#ecfdf5'; }
+                    else if (notif.type === 'staff_a_approved_vendor') { icon = ''; bgColor = notif.read ? HC.surface : '#ecfdf5'; }
                     return (
                       <div key={notif.id || idx} onClick={() => handleRequestClick(notif)} style={{ padding: '14px 16px', borderBottom: `1px solid ${HC.border}`, background: bgColor, cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = HC.orangePale} onMouseLeave={e => e.currentTarget.style.background = bgColor}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>

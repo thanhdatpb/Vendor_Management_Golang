@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
 import { lsGet, fmtDate, getMediaUrls } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/StaffBUI';
@@ -85,7 +85,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
         console.error('Lỗi đồng bộ vendor lên API:', err);
       });
 
-      alert(`✅ Đã gán nhanh ${matchingVendors.length} vendor từ thư viện cho sản phẩm này!`);
+      alert(`Đã gán nhanh ${matchingVendors.length} vendor từ thư viện cho sản phẩm này!`);
     } catch (err) {
       console.error(err);
       alert('Có lỗi xảy ra khi gán nhanh!');
@@ -119,7 +119,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       setDeadlineModalOpen(false);
       setDeadlineProduct(null);
       setDeadlineDate('');
-      alert('✅ Đã cập nhật Deadline Date!');
+      alert('Đã cập nhật Deadline Date!');
     } catch (err) {
       alert('Lỗi: ' + (err.response?.data?.message || err.message));
     } finally {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
@@ -66,7 +66,7 @@ export default function StaffDashboard() {
         apiNotifs.forEach(n => {
           if (n.type === 'approved') {
             requests.push({
-              id: `api_${n.id}`, type: 'approved', source: 'admin', icon: '✅',
+              id: `api_${n.id}`, type: 'approved', source: 'admin', icon: '',
               title: 'Form sản phẩm đã được duyệt',
               message: `Form sản phẩm "${n.product_type || ''}" của Seller "${n.seller_name || 'Seller'}" đã được Admin duyệt.`,
               time: new Date(n.created_at).toLocaleString('vi-VN'), read: n.is_read || false,
@@ -82,7 +82,7 @@ export default function StaffDashboard() {
         if (n.type === 'sample_approved' || n.type === 'sample_rejected') {
           const isApproved = n.type === 'sample_approved';
           requests.push({
-            id: `staffa_${n.id}`, type: n.type, source: 'staffA', icon: isApproved ? '✅' : '❌',
+            id: `staffa_${n.id}`, type: n.type, source: 'staffA', icon: isApproved ? '' : '',
             title: isApproved ? 'Seller đồng ý đặt Sample' : 'Seller từ chối đặt Sample',
             message: n.message || '', time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'),
             read: n.read || false, productId: n.productId, productType: n.productType, vendorType: n.vendorType, sellerName: n.sellerName, sampleDetails: n.sampleDetails, timestamp: n.timestamp || Date.now()
@@ -96,7 +96,7 @@ export default function StaffDashboard() {
       staffBNotifs.forEach(n => {
         if (n.type === 'staff_a_approved_vendor') {
           requests.push({
-            id: `staffb_${n.id}`, type: 'staff_a_approved_vendor', source: 'staffA', icon: n.icon || '✅',
+            id: `staffb_${n.id}`, type: 'staff_a_approved_vendor', source: 'staffA', icon: n.icon || '',
             title: n.title || 'Staff A đã xác nhận vendor', message: n.message || '',
             time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'), read: n.is_read || false,
             productId: n.productId, productType: n.productName || n.productType, vendorType: n.vendorType, sellerFeedback: n.sellerFeedback, timestamp: n.timestamp || n.id

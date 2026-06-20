@@ -1,4 +1,4 @@
-// SyncService.js
+﻿// SyncService.js
 // Lớp đồng bộ ngầm localStorage qua json-server cho phép share network local.
 
 const SERVER_URL = `http://${window.location.hostname}:3000/state`;
@@ -95,7 +95,7 @@ export const initSyncService = () => {
           });
           lastSyncString = JSON.stringify(remoteState);
           window.dispatchEvent(new Event('storage'));
-          console.log('✅ Đã nạp dữ liệu lần đầu từ server');
+          console.log('Đã nạp dữ liệu lần đầu từ server');
         } else {
           // Nếu server trống thì push dữ liệu hiện tại lên
           pushToServer();

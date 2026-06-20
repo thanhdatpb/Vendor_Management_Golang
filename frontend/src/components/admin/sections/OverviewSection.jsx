@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   BarChartOutlined, FolderOpenOutlined, HourglassOutlined,
@@ -283,7 +283,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       computeStats(all);
 
     } catch (err) {
-      console.error('❌ Lỗi tải dữ liệu:', err);
+      console.error('Lỗi tải dữ liệu:', err);
       setFormStats({ pending: 0, approved: 0, rejected: 0, total: 0 });
     } finally {
       setLoading(false);
@@ -390,7 +390,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
       pushNotif('staff_b', {
         type: 'product_approved',
-        icon: '✅',
+        icon: '',
         title: 'Sản phẩm đã được duyệt',
         message: `Sản phẩm "${product.product_type}" của Seller "${getSellerName(product)}" đã được Admin duyệt. Hãy vào "Products" để gán Vendor.`,
         product_id: product.id,
@@ -500,7 +500,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       const fullProduct = response.data?.data || response.data;
       setViewProduct(normalizeProduct(fullProduct));
     } catch (err) {
-      console.error('❌ Lỗi tải chi tiết sản phẩm:', err);
+      console.error('Lỗi tải chi tiết sản phẩm:', err);
       setViewProduct(normalizeProduct(product));
     } finally {
       setLoadingProductId(null);

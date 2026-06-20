@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useTransition } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useTransition } from 'react';
 import { HC, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
 import { playNotificationBeep } from '../audio';
@@ -83,7 +83,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
       const fullProduct = response.data?.data || response.data;
       setViewProduct(normalizeProduct(fullProduct));
     } catch (err) {
-      console.error('❌ Lỗi tải chi tiết sản phẩm:', err);
+      console.error('Lỗi tải chi tiết sản phẩm:', err);
       setViewProduct(normalizeProduct(product));
     } finally {
       setLoadingProductId(null);
@@ -203,7 +203,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
       // Gửi thông báo cho Staff B
       pushNotif('staff_b', {
         type: 'product_approved',
-        icon: '✅',
+        icon: '',
         title: 'Sản phẩm đã được duyệt',
         message: `Sản phẩm "${product.product_type}" của Seller "${getSellerName(product)}" đã được Admin duyệt. Hãy vào "Products" để gán Vendor.`,
         product_id: product.id,
@@ -488,10 +488,10 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
             <h3 style={h3S}>Danh Sách Sản Phẩm</h3>
             <div style={{ display: 'flex', gap: 8, marginLeft: 8 }}>
               <span style={{ padding: '2px 10px', borderRadius: 999, background: '#ecfdf5', border: '1.5px solid #bbf7d0', color: '#065f46', fontSize: 11, fontWeight: 800 }}>
-                ✅ Đã duyệt: {allProducts.filter(p => p.status === 'approved').length}
+                Đã duyệt: {allProducts.filter(p => p.status === 'approved').length}
               </span>
               <span style={{ padding: '2px 10px', borderRadius: 999, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#991b1b', fontSize: 11, fontWeight: 800 }}>
-                ❌ Từ chối: {allProducts.filter(p => p.status === 'rejected' || p.status === 'reject').length}
+                Từ chối: {allProducts.filter(p => p.status === 'rejected' || p.status === 'reject').length}
               </span>
             </div>
           </div>

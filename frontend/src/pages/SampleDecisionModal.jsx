@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { sampleDecisionApi } from '../services/api';
 import { pushNotif } from '../utils/notifUtils';
 
@@ -49,7 +49,7 @@ export default function SampleDecisionModal({ product, vendor, onClose }) {
             // Gửi thông báo cho Staff B
             await pushNotif('staff_b', {
                 type: decision === 'dat' ? 'sample_approved' : 'sample_rejected',
-                icon: decision === 'dat' ? '✅' : '❌',
+                icon: decision === 'dat' ? '' : '',
                 title: decision === 'dat' ? 'Seller đồng ý đặt Sample' : 'Seller từ chối đặt Sample',
                 message: `Seller đã ${decision === 'dat' ? 'đồng ý' : 'từ chối'} đặt Sample cho vendor "${vendor.vendor_type}" (sản phẩm: ${product.product_type}).${decision === 'dat' ? ` Chi tiết: ${sampleDetails}` : ''}`,
                 product_id: product.id,
@@ -59,11 +59,11 @@ export default function SampleDecisionModal({ product, vendor, onClose }) {
                 source: 'seller',
             });
 
-            alert('✅ Đã gửi quyết định thành công!');
+            alert('Đã gửi quyết định thành công!');
             onClose();
         } catch (err) {
             console.error(err);
-            alert('❌ Lỗi khi gửi quyết định');
+            alert('Lỗi khi gửi quyết định');
         } finally {
             setSubmitting(false);
         }
@@ -108,7 +108,7 @@ export default function SampleDecisionModal({ product, vendor, onClose }) {
                                 checked={decision === 'dat'}
                                 onChange={() => setDecision('dat')}
                             />
-                            ✅ Đặt sample
+                            Đặt sample
                         </label>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <input
@@ -118,7 +118,7 @@ export default function SampleDecisionModal({ product, vendor, onClose }) {
                                 checked={decision === 'khong'}
                                 onChange={() => setDecision('khong')}
                             />
-                            ❌ Không đặt
+                            Không đặt
                         </label>
                     </div>
 

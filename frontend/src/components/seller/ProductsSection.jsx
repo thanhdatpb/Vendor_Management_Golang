@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 //  PRODUCTS SECTION (Seller)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -204,11 +204,11 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
           if (onHighlightCleared) onHighlightCleared();
         } else if (retryCount >= maxRetries) {
           clearInterval(interval);
-          console.log('❌ Max retries reached, product not found');
+          console.log('Max retries reached, product not found');
         }
       } else if (retryCount >= maxRetries) {
         clearInterval(interval);
-        console.log('❌ Max retries reached, no products loaded');
+        console.log('Max retries reached, no products loaded');
       }
     }, 500);
 
@@ -379,7 +379,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     e.preventDefault();
 
     if (!validateForm()) {
-      showToast('error', '❌ Thiếu thông tin', 'Vui lòng điền đầy đủ tất cả các trường bắt buộc');
+      showToast('error', 'Thiếu thông tin', 'Vui lòng điền đầy đủ tất cả các trường bắt buộc');
       return;
     }
 
@@ -431,9 +431,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       const newProduct = normalizeLinks({ ...baseProduct, status: 'draft' });
       setSubmittedProducts(prev => [newProduct, ...prev]);
       closeModal();
-      showToast('success', '✅ Đã lưu sản phẩm!', 'Sản phẩm đã được thêm vào danh sách. Nhấn Submit để gửi cho Admin.');
+      showToast('success', 'Đã lưu sản phẩm!', 'Sản phẩm đã được thêm vào danh sách. Nhấn Submit để gửi cho Admin.');
     } catch (err) {
-      showToast('error', '❌ Lỗi tạo sản phẩm!', err.response?.data?.message || err.message || 'Không thể tạo sản phẩm');
+      showToast('error', 'Lỗi tạo sản phẩm!', err.response?.data?.message || err.message || 'Không thể tạo sản phẩm');
     } finally {
       setSubmitting(false);
     }
@@ -443,7 +443,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     e.preventDefault();
 
     if (!validateForm()) {
-      showToast('error', '❌ Thiếu thông tin', 'Vui lòng điền đầy đủ tất cả các trường bắt buộc');
+      showToast('error', 'Thiếu thông tin', 'Vui lòng điền đầy đủ tất cả các trường bắt buộc');
       return;
     }
 
@@ -486,9 +486,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         p.id !== savedProductId ? p : { ...p, ...savedFormData, status: 'pending' }
       ));
       closeModal();
-      showToast('success', '✅ Thành công!', 'Sản phẩm đã được lưu và gửi Admin.');
+      showToast('success', 'Thành công!', 'Sản phẩm đã được lưu và gửi Admin.');
     } catch (err) {
-      showToast('error', '❌ Lỗi cập nhật!', err.response?.data?.message || err.message);
+      showToast('error', 'Lỗi cập nhật!', err.response?.data?.message || err.message);
     } finally {
       setSubmitting(false);
     }
@@ -503,7 +503,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       setConfirmDeleteId(null);
       showToast('success', '🗑 Đã xóa!', 'Sản phẩm đã được xóa thành công.');
     } catch (err) {
-      showToast('error', '❌ Lỗi xóa!', err.response?.data?.message || err.message);
+      showToast('error', 'Lỗi xóa!', err.response?.data?.message || err.message);
     } finally { setProcessingId(null); }
   };
 
@@ -517,7 +517,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       ));
       showToast('success', '📤 Đã gửi!', 'Form đã được gửi đến Admin để xét duyệt.');
     } catch (err) {
-      showToast('error', '❌ Lỗi gửi!', err.response?.data?.message || err.message);
+      showToast('error', 'Lỗi gửi!', err.response?.data?.message || err.message);
     } finally { setProcessingId(null); }
   };
 
@@ -552,10 +552,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     try {
       const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
       await exportProductsToExcel(toExport, productVendors, `seller-products-${today}.xlsx`);
-      showToast('success', '✅ Xuất Excel thành công!', `Đã xuất ${toExport.length} sản phẩm`);
+      showToast('success', 'Xuất Excel thành công!', `Đã xuất ${toExport.length} sản phẩm`);
       setSelectedIds(new Set());
     } catch (err) {
-      showToast('error', '❌ Lỗi xuất Excel', err.message || 'Không thể xuất file');
+      showToast('error', 'Lỗi xuất Excel', err.message || 'Không thể xuất file');
     } finally {
       setExporting(false);
     }

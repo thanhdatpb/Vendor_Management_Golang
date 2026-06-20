@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 //  SETUP PRICE SECTION
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -441,7 +441,7 @@ export default function SetupPriceSection() {
       return item;
     }));
 
-    showToastMsg('success', '✅ Lưu thành công', `Đã lưu cấu hình giá cho ${selectedVendor?.vendor_type || 'vendor'}`);
+    showToastMsg('success', 'Lưu thành công', `Đã lưu cấu hình giá cho ${selectedVendor?.vendor_type || 'vendor'}`);
     setShowSetupModal(false);
     setSelectedVendor(null);
     setDisplayPrices(['0']);
@@ -486,7 +486,7 @@ export default function SetupPriceSection() {
         const ed = existingSetup.total_display_price ?? gia_hien_thi;
         const ec = existingSetup.total_customize_price ?? gia_customsize;
         const es = existingSetup.total_ship_min ?? gia_ship;
-        const ep = existingSetup.coupon_percent ?? default_coupon_pct;  // ✅ Lấy % đã lưu
+        const ep = existingSetup.coupon_percent ?? default_coupon_pct;  // Lấy % đã lưu
         const e_coupon_val = ep * (ed + ec) / 100;
         const e_after = (ed + ec + es) - e_coupon_val;
         const e_coupon_fee = existingSetup.coupon_fee ?? (0.025 * (ed + ec + es - es - e_coupon_val));
@@ -509,7 +509,7 @@ export default function SetupPriceSection() {
           gia_hien_thi: existingSetup.total_display_price || gia_hien_thi,
           gia_customsize: existingSetup.total_customize_price || gia_customsize,
           gia_ship: existingSetup.total_ship_min || gia_ship,
-          coupon_percent: ep,  // ✅ Lưu %
+          coupon_percent: ep,  // Lưu %
           coupon_fee: existingSetup.coupon_fee || e_coupon_fee,
           total_price: existingSetup.final_price || (ed + ec + es),
           profit: existingSetup.profit || e_profit,
@@ -534,7 +534,7 @@ export default function SetupPriceSection() {
         gia_hien_thi: gia_hien_thi,
         gia_customsize: gia_customsize,
         gia_ship: gia_ship,
-        coupon_percent: default_coupon_pct,  // ✅ Lưu %
+        coupon_percent: default_coupon_pct,  // Lưu %
         coupon_fee: 0,
         total_price: gia_hien_thi + gia_customsize + gia_ship,
         profit: 0,
@@ -602,7 +602,7 @@ export default function SetupPriceSection() {
 
           const key = vendor.id ? String(vendor.id) : `idx_${idx}`;
 
-          // ✅ ĐIỀU KIỆN MỚI: Cả Staff B và Staff A đều approve
+          // ĐIỀU KIỆN MỚI: Cả Staff B và Staff A đều approve
           const staffBApproved = productBFeedbacks[key]?.staff_b_approved === true;
           const staffAApproved = productResponses[key]?.staff_a_approved === true ||
             productDecisions[key]?.staff_a_approved === true;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { productApi } from '../services/api';
 import { HC, PAGE_TITLES } from '../components/admin/constants';
@@ -29,10 +29,10 @@ window.sendNewsToAdmin = function (newsData) {
     window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS_TO_ADMIN' }));
     window.dispatchEvent(new CustomEvent('newStaffNews', { detail: newNotification }));
 
-    console.log('✅ Đã gửi thông báo đến Admin:', newNotification);
+    console.log('Đã gửi thông báo đến Admin:', newNotification);
     return true;
   } catch (err) {
-    console.error('❌ Lỗi gửi thông báo:', err);
+    console.error('Lỗi gửi thông báo:', err);
     return false;
   }
 };

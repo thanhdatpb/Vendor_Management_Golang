@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom"; // ✅ thêm Navigate
+﻿import { Routes, Route, Navigate } from "react-router-dom"; // thêm Navigate
 
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -12,7 +12,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/login" element={<Navigate to="/" replace />} /> {/* ✅ thêm dòng này */}
+      <Route path="/login" element={<Navigate to="/" replace />} /> {/* thêm dòng này */}
 
       <Route
         path="/admin"

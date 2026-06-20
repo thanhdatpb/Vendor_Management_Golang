@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════
 //  SELLER NOTIFICATION CENTER (2 tabs: Yêu cầu + Tin tức)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useRef } from 'react';
@@ -151,8 +151,8 @@ export default function SellerNotificationCenter({
         let icon = '📋';
         let bgColor = notif.read ? HC.surface : HC.orangeLight;
         let dotColor = HC.orange;
-        if (isAdminApproved)   { icon = '✅'; bgColor = notif.read ? HC.surface : '#ecfdf5'; dotColor = HC.success; }
-        else if (isAdminRejected) { icon = '❌'; bgColor = notif.read ? HC.surface : '#fef2f2'; dotColor = HC.danger; }
+        if (isAdminApproved)   { icon = ''; bgColor = notif.read ? HC.surface : '#ecfdf5'; dotColor = HC.success; }
+        else if (isAdminRejected) { icon = ''; bgColor = notif.read ? HC.surface : '#fef2f2'; dotColor = HC.danger; }
         else if (isVendorAssigned){ icon = '🏪'; bgColor = notif.read ? HC.surface : '#ecfdf5'; dotColor = HC.success; }
         else if (isSellerFeedback){ icon = '💬'; bgColor = notif.read ? HC.surface : HC.orangeLight; dotColor = HC.orange; }
 

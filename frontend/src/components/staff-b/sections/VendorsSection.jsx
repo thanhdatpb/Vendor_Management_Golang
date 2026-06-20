@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { vendorApi, productApi } from '../../../services/api';
 import { HC, LS_PRODUCT_VENDORS, VENDOR_TYPES, VENDOR_PAGE_SIZE } from '../utils/constants';
@@ -217,7 +217,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       console.error('Lỗi đồng bộ vendor lên API:', err);
     });
 
-    setToast({ type: 'success', msg: `✅ Đã gán ${selected.length} vendor cho sản phẩm!` });
+    setToast({ type: 'success', msg: `Đã gán ${selected.length} vendor cho sản phẩm!` });
     setSelectedIds(new Set());
     setAssignConfirmOpen(false);
     onAssignComplete();
@@ -308,7 +308,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     if (!hasSelection) {
       alert('📋 Đã tải file Excel mẫu (template)! Hãy điền dữ liệu và Import lại.');
     } else {
-      alert(`✅ Đã xuất ${selectedVendors.length} vendor đã chọn ra file Excel!`);
+      alert(`Đã xuất ${selectedVendors.length} vendor đã chọn ra file Excel!`);
     }
   };
 
@@ -430,7 +430,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       };
       if (editingVId !== null) {
         await vendorApi.update(editingVId, dataToSend);
-        alert('✅ Cập nhật vendor thành công!');
+        alert('Cập nhật vendor thành công!');
       } else {
         const res = await vendorApi.create(dataToSend);
         const newVendorId = res.data?.data?.id;
@@ -444,7 +444,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
             console.warn('Upload media sau khi tạo vendor thất bại:', uploadErr);
           }
         }
-        alert('✅ Tạo vendor thành công!');
+        alert('Tạo vendor thành công!');
       }
       await loadVendors(); closeVendorModal();
     } catch (err) { alert('Lỗi: ' + getDetailedError(err)); } finally { setSubmitting(false); }
@@ -486,7 +486,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       const stillExists = verifyList.some(v => v.id === deletedId);
       if (stillExists) { setVendorList(verifyList); alert('⚠️ Lỗi: Server báo xóa thành công nhưng dữ liệu vẫn còn trong DB. Kiểm tra lại API.'); return; }
       setVendorList(verifyList); setVPage(1);
-      setToast({ type: 'success', title: '✅ Xóa thành công!', message: `Đã xóa vendor "${deletedType}"`, duration: 3000 });
+      setToast({ type: 'success', title: 'Xóa thành công!', message: `Đã xóa vendor "${deletedType}"`, duration: 3000 });
     } catch (err) { await loadVendors(true); alert(`Lỗi xóa [${err.response?.status}]: ${getDetailedError(err)}`); }
   };
 
@@ -554,7 +554,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
             {hasImportResult && (
               <div style={{ marginBottom: 12, borderRadius: 12, border: `1.5px solid ${importResult.success ? '#bbf7d0' : '#fecaca'}`, background: importResult.success ? '#ecfdf5' : '#fef2f2', padding: '12px 14px' }}>
                 <div style={{ fontSize: 13, fontWeight: 900, color: importResult.success ? '#166534' : '#b91c1c' }}>
-                  {importResult.success ? '✅ Import thành công' : '⚠️ Import hoàn tất có lỗi'}
+                  {importResult.success ? 'Import thành công' : '⚠️ Import hoàn tất có lỗi'}
                 </div>
                 <div style={{ marginTop: 4, fontSize: 12, color: HC.ink2 }}>
                   Tổng: <b>{importResult.summary.total}</b> · Thêm mới: <b>{importResult.summary.created}</b> · Cập nhật: <b>{importResult.summary.updated}</b> · Lỗi: <b>{importResult.summary.failed}</b>
@@ -621,7 +621,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       {assignConfirmOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s' }}>
           <div style={{ background: '#fff', borderRadius: 16, padding: '24px 32px', width: 400, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+            <div style={{ fontSize: 40, marginBottom: 10 }}></div>
             <h3 style={{ margin: '0 0 10px 0', fontSize: 18, color: HC.ink, fontWeight: 900 }}>Xác nhận gán Vendor</h3>
             <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted }}>Bạn có chắc chắn muốn gán <b>{selectedIds.size}</b> vendor đã chọn cho sản phẩm này không?</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
@@ -654,7 +654,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               </div>
               {selectedIds.size > 0 && filterProductId && (
                 <button onClick={openAssignConfirm} style={{ padding: '8px 16px', borderRadius: 8, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-                  ✅ Gán {selectedIds.size} Vendor
+                  Gán {selectedIds.size} Vendor
                 </button>
               )}
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #0284c7`, background: '#fff', color: '#0284c7', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
@@ -675,7 +675,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               </div>
               {selectedIds.size > 0 && filterProductId && (
                 <button onClick={openAssignConfirm} style={{ padding: '8px 16px', borderRadius: 8, background: HC.success, color: '#fff', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
-                  ✅ Gán {selectedIds.size} Vendor
+                  Gán {selectedIds.size} Vendor
                 </button>
               )}
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #eab308`, background: '#fff', color: '#ca8a04', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
@@ -729,7 +729,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
             onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)'; }}
             onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)'; }}
           >
-            ✅ Gán {selectedIds.size} Vendor
+            Gán {selectedIds.size} Vendor
           </button>
           <button
             onClick={onClearFilter}

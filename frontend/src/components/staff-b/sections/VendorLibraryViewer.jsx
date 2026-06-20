@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════════════════════════
 //  VENDOR LIBRARY VIEWER — Thư Viện File (Happy Creative Format)
 //  Mỗi file Excel import → lưu localStorage → hiển thị thành card riêng
 // ════════════════════════════════════════════════════════════════════════════
@@ -613,7 +613,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
 
   const saveLibrary = async (newData) => {
     if (!dataLoaded) {
-      showToast('error', '❌ Dữ liệu chưa được tải xong, không thể lưu. Vui lòng thử lại.');
+      showToast('error', 'Dữ liệu chưa được tải xong, không thể lưu. Vui lòng thử lại.');
       return false;
     }
     try {
@@ -623,7 +623,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       return true;
     } catch (err) {
       console.error('Error saving vendor library:', err);
-      showToast('error', `❌ Lỗi lưu dữ liệu: ${err?.response?.data?.message || err.message || 'Không thể kết nối server'}`);
+      showToast('error', `Lỗi lưu dữ liệu: ${err?.response?.data?.message || err.message || 'Không thể kết nối server'}`);
       return false;
     }
   };
@@ -634,7 +634,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     if (!files.length) return;
 
     if (!dataLoaded) {
-      showToast('error', '❌ Dữ liệu thư viện chưa tải xong. Vui lòng đợi rồi thử lại.');
+      showToast('error', 'Dữ liệu thư viện chưa tải xong. Vui lòng đợi rồi thử lại.');
       return;
     }
 
@@ -669,11 +669,11 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       newEntries.forEach(ne => { map[ne.filename] = ne; });
       const updated = Object.values(map);
       const saved = await saveLibrary(updated);
-      if (saved) showToast('success', `✅ Import ${newEntries.length} file thành công${errors.length ? `, ${errors.length} lỗi` : ''}`);
+      if (saved) showToast('success', `Import ${newEntries.length} file thành công${errors.length ? `, ${errors.length} lỗi` : ''}`);
     }
 
     if (errors.length > 0 && newEntries.length === 0) {
-      showToast('error', `❌ Import thất bại`);
+      showToast('error', `Import thất bại`);
     }
 
     setImportErrors(errors);
