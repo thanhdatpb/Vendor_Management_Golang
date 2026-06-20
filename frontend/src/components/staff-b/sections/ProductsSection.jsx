@@ -221,8 +221,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
             onBlur={e => e.target.style.borderColor = HC.border}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 9, background: '#ecfdf5', border: '1.5px solid #bbf7d0', fontSize: 11, fontWeight: 800, color: '#065f46', whiteSpace: 'nowrap' }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />Chỉ hiển thị: Approved</div>
-        <button onClick={loadProducts} style={{ padding: '6px 14px', borderRadius: 9, border: `1.5px solid ${HC.border}`, background: HC.cream, color: HC.brown, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>↻ Làm mới</button>
         {search && <button onClick={() => setSearch('')} style={{ padding: '6px 12px', borderRadius: 9, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Xóa lọc</button>}
         <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, color: HC.muted, fontWeight: 700, paddingLeft: 4, whiteSpace: 'nowrap' }}>{filteredProducts.length} / {submittedProducts.length} sản phẩm</div>
       </div>
