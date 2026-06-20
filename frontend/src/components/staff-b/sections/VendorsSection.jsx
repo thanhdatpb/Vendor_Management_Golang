@@ -667,6 +667,66 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
       <ImportConfirmModal />
 
+      {/* ── Sticky floating assign bar ─────────────────────────────────────── */}
+      {filterProductId && selectedIds.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 1500, display: 'flex', alignItems: 'center', gap: 12,
+          background: activeTab === 'bestseller'
+            ? 'linear-gradient(135deg,#b45309,#92400e)'
+            : `linear-gradient(135deg,${HC.orangeDark},#b45309)`,
+          borderRadius: 16, padding: '12px 20px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.15)',
+          border: '1.5px solid rgba(255,255,255,0.18)',
+          backdropFilter: 'blur(8px)',
+          animation: 'slideUpBar 0.25s ease-out',
+          pointerEvents: 'auto',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+              {activeTab === 'bestseller' ? '⭐' : '📋'}
+            </div>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 13, color: '#fff', fontFamily: "'Nunito',sans-serif", lineHeight: 1 }}>
+                {selectedIds.size} vendor đã chọn
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+                {filterProductType ? `cho "${filterProductType}"` : 'sẵn sàng gán'}
+              </div>
+            </div>
+          </div>
+          <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.2)' }} />
+          <button
+            onClick={openAssignConfirm}
+            style={{
+              padding: '9px 20px', borderRadius: 10,
+              background: '#fff', color: HC.orangeDark,
+              border: 'none', fontSize: 13, fontWeight: 900,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)', whiteSpace: 'nowrap',
+              transition: 'transform 0.1s, box-shadow 0.1s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)'; }}
+          >
+            ✅ Gán {selectedIds.size} Vendor
+          </button>
+          <button
+            onClick={onClearFilter}
+            style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.3)', color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            Bỏ lọc
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideUpBar {
+          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+          to   { transform: translateX(-50%) translateY(0);   opacity: 1; }
+        }
+      `}</style>
+
       {vendorModalOpen && (
         <div onClick={closeVendorModal} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(4px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 700, maxWidth: '90%', maxHeight: '85vh', overflowY: 'auto', background: HC.surface, borderRadius: 20, boxShadow: '0 32px 80px rgba(26,15,0,0.28)', border: `1.5px solid ${HC.border}` }}>

@@ -393,7 +393,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
               onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
               style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.45)', background: 'rgba(220,38,38,0.18)', color: '#fca5a5', fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s' }}
               title="Xóa file này"
-            >🗑 Xóa</button>
+            >Xóa</button>
           )}
           <div style={{
             width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.1)',
