@@ -193,7 +193,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const [modalFilterType, setModalFilterType] = useState('');
   const [modalFilterValue, setModalFilterValue] = useState('');
   const [modalInitialStatus, setModalInitialStatus] = useState('all');
-  const [activeFilter, setActiveFilter] = useState('all');
   const [formStats, setFormStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
   const [projectStats, setProjectStats] = useState({
     'Happy Project':    { approved: 0, rejected: 0, total: 0 },
@@ -588,16 +587,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
   if (loading) return <Spinner />;
 
-  const displayProjects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
-  const filteredProjects = activeFilter === 'all'
-    ? displayProjects
-    : displayProjects.filter(p => {
-        const s = projectStats[p] || {};
-        if (activeFilter === 'active') return s.total > 0;
-        if (activeFilter === 'pending') return (s.total - s.approved - s.rejected) > 0;
-        if (activeFilter === 'completed') return s.total > 0 && (s.total === s.approved + s.rejected);
-        return true;
-      });
+  const filteredProjects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
 
   const overallRate = formStats.total > 0 ? Math.round((formStats.approved / formStats.total) * 100) : 0;
 
@@ -633,21 +623,11 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         <StatCard label="Từ Chối" value={formStats.rejected} icon={<CloseCircleOutlined />} color="#EF4444" subLabel={formStats.rejected > 0 ? `${Math.round((formStats.rejected / (formStats.total || 1)) * 100)}% tổng form` : 'Không có từ chối'} onClick={() => handleCardClick('status', 'rejected', 'Form Từ Chối')} />
       </div>
 
-      {/* ── Project section header + filter ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, animation: 'fadeUp 0.5s ease', flexWrap: 'wrap', gap: 12 }}>
+      {/* ── Project section header ── */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, animation: 'fadeUp 0.5s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F8F9FA', border: '1.5px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#9C7A50' }}><AimOutlined /></div>
           <span style={{ fontSize: 15, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Theo Project</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {[
-            { id: 'all',       label: 'Tất cả' },
-            { id: 'active',    label: <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><FireOutlined /> Có hoạt động</span> },
-            { id: 'pending',   label: <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><HourglassOutlined /> Còn chờ</span> },
-            { id: 'completed', label: <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckOutlined /> Hoàn tất</span> },
-          ].map(f => (
-            <button key={f.id} onClick={() => setActiveFilter(f.id)} style={{ padding: '6px 16px', borderRadius: 20, border: `1.5px solid ${activeFilter === f.id ? '#F5A623' : '#F0E4CC'}`, background: activeFilter === f.id ? '#FFF8EE' : '#fff', color: activeFilter === f.id ? '#F5A623' : '#9C7A50', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif", transition: 'all 0.2s' }}>{f.label}</button>
-          ))}
         </div>
       </div>
 
