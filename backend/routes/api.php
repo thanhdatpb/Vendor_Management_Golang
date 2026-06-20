@@ -18,19 +18,6 @@ use App\Http\Controllers\UserController;
 */
 
 // =========================
-// ONE-TIME MIGRATION ROUTE (XÓA SAU KHI DÙNG)
-// =========================
-Route::get('/run-migrate-5c58267e34cc4847d4f55c894b150a0d', function () {
-    try {
-        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        $output = \Illuminate\Support\Facades\Artisan::output();
-        return response()->json(['success' => true, 'output' => $output]);
-    } catch (\Exception $e) {
-        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
-    }
-});
-
-// =========================
 // DEMO DATA CLEAR ROUTE
 // =========================
 Route::get('/clear-demo-data', function () {
