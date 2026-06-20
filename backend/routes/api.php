@@ -18,6 +18,15 @@ use App\Http\Controllers\UserController;
 */
 
 // =========================
+// ONE-TIME CACHE CLEAR (delete after use)
+// =========================
+Route::get('/clear-all-cache-7f3a9b2e1d', function () {
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    return response()->json(['success' => true, 'message' => 'Cache + Config cleared!']);
+});
+
+// =========================
 // DEMO DATA CLEAR ROUTE
 // =========================
 Route::get('/clear-demo-data', function () {
