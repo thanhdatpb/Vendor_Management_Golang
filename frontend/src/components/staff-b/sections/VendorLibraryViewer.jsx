@@ -536,7 +536,12 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         if (assignedIds.size > 0) {
           data = data.map(file => {
             if (!file.generalInfo) return file;
-            return { ...file, generalInfo: file.generalInfo.filter(r => assignedIds.has(r.id)) };
+            const filteredGeneral = file.generalInfo.filter(r => assignedIds.has(r.id));
+            if (filteredGeneral.length === 0) return { ...file, generalInfo: [], pricing: [] };
+            // Chỉ giữ pricing rows có kyHieu khớp với vendor được gán
+            const assignedKyHieus = new Set(filteredGeneral.map(r => r.kyHieu).filter(Boolean));
+            const filteredPricing = (file.pricing || []).filter(p => assignedKyHieus.has(p.kyHieu));
+            return { ...file, generalInfo: filteredGeneral, pricing: filteredPricing };
           }).filter(file => file.generalInfo && file.generalInfo.length > 0);
         } else {
           data = [];
