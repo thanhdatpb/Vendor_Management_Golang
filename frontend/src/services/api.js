@@ -232,6 +232,7 @@ export const productApi = {
   ),
 
   assignVendors: (id, vendors) => api.post(`/products/${id}/assign-vendors`, { vendors }),
+  getAssignedVendors: (id) => api.get(`/products/${id}/assigned-vendors`),
 
   updateDeadline: withMock(
     (id, data) => api.put(`/products/${id}/deadline`, data),
@@ -348,9 +349,44 @@ export const vendorLibraryApi = {
 // NOTIFICATION API
 // ===============================
 export const notificationApi = {
-  list: () => api.get("/notifications"),
+  list: (params) => api.get("/notifications", { params }),
+  create: (data) => api.post("/notifications", data),
   readAll: () => api.post("/notifications/read-all"),
   readOne: (id) => api.post(`/notifications/${id}/read`),
+  deleteOne: (id) => api.delete(`/notifications/${id}`),
+};
+
+// ===============================
+// VENDOR FEEDBACK API
+// ===============================
+export const feedbackApi = {
+  get: (productId) => api.get(`/products/${productId}/vendor-feedback`),
+  create: (productId, data) => api.post(`/products/${productId}/vendor-feedback`, data),
+  respond: (productId, vendorKey, data) => api.put(`/products/${productId}/vendor-feedback/${encodeURIComponent(vendorKey)}`, data),
+};
+
+// ===============================
+// SAMPLE DECISION API
+// ===============================
+export const sampleDecisionApi = {
+  get: (productId) => api.get(`/products/${productId}/sample-decisions`),
+  save: (productId, data) => api.post(`/products/${productId}/sample-decisions`, data),
+};
+
+// ===============================
+// VENDOR SELECTION API
+// ===============================
+export const vendorSelectionApi = {
+  get: (productId, role) => api.get(`/products/${productId}/vendor-selections`, { params: { role } }),
+  save: (productId, role, data) => api.post(`/products/${productId}/vendor-selections`, { role, selections: data }),
+};
+
+// ===============================
+// PRICE SETUP API
+// ===============================
+export const priceSetupApi = {
+  list: () => api.get("/vendor-price-setups"),
+  save: (data) => api.post("/vendor-price-setups", data),
 };
 
 

@@ -12,6 +12,7 @@ import { HC, API_BASE_URL, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
 import { playNotificationBeep } from '../audio';
 import { productApi } from '../../../services/api';
+import { pushNotif } from '../../../utils/notifUtils';
 import { Spinner, Table, Badge, MediaGallery, Pagination } from '../ui';
 import AppToast from '../../shared/AppToast';
 import FormHistoryModal from '../modals/FormHistoryModal';
@@ -387,25 +388,15 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         localStorage.setItem(LS_REJECTED_CACHE, JSON.stringify(cache));
       }
 
-      try {
-        const staffBNotifications = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS') || '[]');
-        const newNotif = {
-          id: Date.now(),
-          type: 'product_approved',
-          title: 'Sản phẩm đã được duyệt',
-          message: `Sản phẩm "${product.product_type}" của Seller "${getSellerName(product)}" đã được Admin duyệt. Hãy vào "Products" để gán Vendor.`,
-          productId: product.id,
-          productType: product.product_type,
-          sellerName: getSellerName(product),
-          timestamp: new Date().toISOString(),
-          read: false,
-        };
-        staffBNotifications.unshift(newNotif);
-        localStorage.setItem('STAFF_B_NOTIFICATIONS', JSON.stringify(staffBNotifications.slice(0, 100)));
-        window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS' }));
-      } catch (e) {
-        console.warn('Không thể gửi thông báo cho Staff B', e);
-      }
+      pushNotif('staff_b', {
+        type: 'product_approved',
+        icon: '✅',
+        title: 'Sản phẩm đã được duyệt',
+        message: `Sản phẩm "${product.product_type}" của Seller "${getSellerName(product)}" đã được Admin duyệt. Hãy vào "Products" để gán Vendor.`,
+        product_id: product.id,
+        productType: product.product_type,
+        sellerName: getSellerName(product),
+      });
 
       setPendingProducts(prev => prev.filter(p => p.id !== product.id));
       setAllProducts(prev => {

@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { LeftOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_A_SELECTIONS, LS_B_SELECTIONS, LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE, LS_B_SUBMITTED_FEEDBACK } from '../../constants/sellerTheme';
 import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, getProductLinks } from '../../utils/sellerHelpers';
+import { pushNotif } from '../../utils/notifUtils';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 
 export default function ProductViewerModal({ product, productVendors, onClose, getStatus, onViewVendorLibrary }) {
@@ -130,49 +131,31 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
     setSampleDecisions(prev => ({ ...prev, [key]: newDecision }));
     setAResponses(prev => ({ ...prev, [key]: allResponses[product.id][key] }));
-    try {
-      const staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
-      staffANotifs.unshift({
-        id: Date.now() + 1,  // Dùng ID khác để tránh trùng
-        icon: '📝',
-        title: '📝 Phản hồi mới về Vendor',
-        message: `Bộ phận Kinh doanh đã ${decision === 'dat' ? 'đồng ý đặt sample' : 'từ chối đặt sample'} cho vendor "${vendor.vendor_type}" của sản phẩm "${product.product_type}". ${decision === 'dat' ? `Chi tiết: ${sampleDetails.substring(0, 100)}...` : ''}`,
-        time: new Date().toLocaleString('vi-VN'),
-        is_read: false,
-        productId: product.id,
-        productType: product.product_type,
-        vendorType: vendor.vendor_type,
-        decision: decision,
-        sampleDetails: sampleDetails,
-        sellerFeedback: feedback  // Thêm cả nội dung feedback của seller
-      });
-      localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(staffANotifs.slice(0, 100)));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_A_NOTIFICATIONS' }));
-    } catch (err) {
-      console.error('Lỗi gửi thông báo cho Staff A:', err);
-    }
-    try {
-      const staffBNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS') || '[]');
-      const notification = {
-        id: Date.now(),
-        time: new Date().toLocaleString('vi-VN'),
-        is_read: false,
-        productId: product.id,
-        productName: product.product_type,
-        vendorId: vendor.id,
-        vendorType: vendor.vendor_type,
-        vendorKey: key,
-        sellerFeedback: feedback,
-        staff_a_approved: true,
-        type: 'staff_a_approved_vendor',
-        icon: '✅',
-        title: '✅ Kinh doanh đã xác nhận vendor',
-        message: `Bộ phận Kinh doanh đã xác nhận vendor "${vendor.vendor_type}" cho sản phẩm "${product.product_type}".`
-      };
-      staffBNotifs.unshift(notification);
-      localStorage.setItem('STAFF_B_NOTIFICATIONS', JSON.stringify(staffBNotifs.slice(0, 50)));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS' }));
-    } catch (err) { }
+    pushNotif('staff_a', {
+      type: 'sample_decision',
+      icon: '📝',
+      title: 'Phản hồi mới về Vendor',
+      message: `Bộ phận Kinh doanh đã ${decision === 'dat' ? 'đồng ý đặt sample' : 'từ chối đặt sample'} cho vendor "${vendor.vendor_type}" của sản phẩm "${product.product_type}".`,
+      product_id: product.id,
+      productType: product.product_type,
+      vendorType: vendor.vendor_type,
+      decision,
+      sampleDetails,
+      sellerFeedback: feedback,
+    });
+    pushNotif('staff_b', {
+      type: 'staff_a_approved_vendor',
+      icon: '✅',
+      title: 'Kinh doanh đã xác nhận vendor',
+      message: `Bộ phận Kinh doanh đã xác nhận vendor "${vendor.vendor_type}" cho sản phẩm "${product.product_type}".`,
+      product_id: product.id,
+      productName: product.product_type,
+      vendorId: vendor.id,
+      vendorType: vendor.vendor_type,
+      vendorKey: key,
+      sellerFeedback: feedback,
+      staff_a_approved: true,
+    });
 
     // 2. ✅ THÊM MỚI: GỬI THÔNG BÁO CHO STAFF A
 

@@ -129,7 +129,7 @@ export default function StaffDashboard() {
   const markRequestAsRead = useCallback(async (notificationId) => {
     if (notificationId.startsWith('api_')) {
       const realId = notificationId.replace('api_', '');
-      try { await notificationApi.markAsRead(realId); } catch (err) { }
+      try { await notificationApi.readOne(realId); } catch (err) { }
     } else if (notificationId.startsWith('staffb_')) {
       try {
         const staffBNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS') || '[]');

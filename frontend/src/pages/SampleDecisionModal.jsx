@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { sampleDecisionApi } from '../services/api';
+import { pushNotif } from '../utils/notifUtils';
 
 export default function SampleDecisionModal({ product, vendor, onClose }) {
     const [decision, setDecision] = useState(''); // 'dat' hoặc 'khong'
@@ -29,31 +31,33 @@ export default function SampleDecisionModal({ product, vendor, onClose }) {
                 respondedAt: new Date().toISOString()
             };
 
-            // Lưu vào STAFF_SAMPLE_DECISIONS_V1 (dùng chung với Staff B)
-            const allDecisions = JSON.parse(localStorage.getItem('STAFF_SAMPLE_DECISIONS_V1') || '{}');
-            if (!allDecisions[product.id]) allDecisions[product.id] = {};
-            allDecisions[product.id][vendor.id] = decisionData;
-            localStorage.setItem('STAFF_SAMPLE_DECISIONS_V1', JSON.stringify(allDecisions));
+            // Lưu quyết định qua API (fallback localStorage nếu backend chưa có endpoint)
+            try {
+                await sampleDecisionApi.save(product.id, {
+                    vendor_id: vendor.id,
+                    vendor_type: vendor.vendor_type,
+                    decision: decisionData.decision,
+                    sample_details: decisionData.sampleDetails,
+                });
+            } catch {
+                const allDecisions = JSON.parse(localStorage.getItem('STAFF_SAMPLE_DECISIONS_V1') || '{}');
+                if (!allDecisions[product.id]) allDecisions[product.id] = {};
+                allDecisions[product.id][vendor.id] = decisionData;
+                localStorage.setItem('STAFF_SAMPLE_DECISIONS_V1', JSON.stringify(allDecisions));
+            }
 
-            // 2. Gửi thông báo cho Staff B
-            const staffBNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS') || '[]');
-            staffBNotifs.unshift({
-                id: Date.now(),
+            // Gửi thông báo cho Staff B
+            await pushNotif('staff_b', {
                 type: decision === 'dat' ? 'sample_approved' : 'sample_rejected',
                 icon: decision === 'dat' ? '✅' : '❌',
-                title: decision === 'dat' ? '✅ Seller đồng ý đặt Sample' : '❌ Seller từ chối đặt Sample',
-                message: `Seller đã ${decision === 'dat' ? 'đồng ý' : 'từ chối'} đặt Sample cho vendor "${vendor.vendor_type}" (sản phẩm: ${product.product_type}).${decision === 'dat' ? `\n📦 Chi tiết: ${sampleDetails}` : ''}`,
-                time: new Date().toLocaleString('vi-VN'),
-                read: false,
-                productId: product.id,
+                title: decision === 'dat' ? 'Seller đồng ý đặt Sample' : 'Seller từ chối đặt Sample',
+                message: `Seller đã ${decision === 'dat' ? 'đồng ý' : 'từ chối'} đặt Sample cho vendor "${vendor.vendor_type}" (sản phẩm: ${product.product_type}).${decision === 'dat' ? ` Chi tiết: ${sampleDetails}` : ''}`,
+                product_id: product.id,
                 productType: product.product_type,
                 vendorType: vendor.vendor_type,
                 sampleDetails: decision === 'dat' ? sampleDetails : null,
-                timestamp: Date.now(),
-                source: 'seller'
+                source: 'seller',
             });
-            localStorage.setItem('STAFF_B_NOTIFICATIONS', JSON.stringify(staffBNotifs.slice(0, 100)));
-            window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS' }));
 
             alert('✅ Đã gửi quyết định thành công!');
             onClose();

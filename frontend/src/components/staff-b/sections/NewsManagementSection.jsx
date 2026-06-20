@@ -5,6 +5,7 @@ import AppToast from '../../shared/AppToast';
 import { playNotificationSound } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination } from '../ui/StaffBUI';
 import NewsModalComponent from '../components/NewsModalComponent';
+import { pushNotif, pushNotifMulti } from '../../../utils/notifUtils';
 
 export default function NewsManagementSection() {
   const [newsList, setNewsList] = useState([]);
@@ -62,23 +63,10 @@ export default function NewsManagementSection() {
       source: 'staff_b'
     };
 
-    if (news.target === 'admin' || news.target === 'both') {
-      try {
-        const adminNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
-        adminNotifs.unshift({ ...notification, id: `admin_${news.id}` });
-        localStorage.setItem('STAFF_B_NOTIFICATIONS_TO_ADMIN', JSON.stringify(adminNotifs.slice(0, 100)));
-        window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS_TO_ADMIN' }));
-      } catch (err) { }
-    }
-
-    if (news.target !== 'admin') { // Gửi tới seller, both, hoặc các project cụ thể
-      try {
-        const sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
-        sellerNotifs.unshift({ ...notification, id: `seller_${news.id}`, targetProject: news.target });
-        localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(sellerNotifs.slice(0, 100)));
-        window.dispatchEvent(new StorageEvent('storage', { key: 'SELLER_NOTIFICATIONS' }));
-      } catch (err) { }
-    }
+    const targets = [];
+    if (news.target === 'admin' || news.target === 'both') targets.push('admin');
+    if (news.target !== 'admin') targets.push('seller');
+    await pushNotifMulti(targets, { ...notification, targetProject: news.target });
   };
 
   const updateNewsInDashboards = (news) => {
@@ -93,47 +81,30 @@ export default function NewsManagementSection() {
       source: 'staff_b'
     };
 
-    try {
-      let adminNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
-      const existIdx = adminNotifs.findIndex(n => n.id === `admin_${news.id}`);
-      if (existIdx !== -1) {
-        if (news.target === 'seller' || Array.isArray(news.target)) adminNotifs.splice(existIdx, 1);
-        else adminNotifs[existIdx] = { ...adminNotifs[existIdx], title: news.title, message: news.message };
-      } else if (news.target === 'admin' || news.target === 'both') {
-        adminNotifs.unshift({ ...notification, id: `admin_${news.id}` });
-      }
-      localStorage.setItem('STAFF_B_NOTIFICATIONS_TO_ADMIN', JSON.stringify(adminNotifs.slice(0, 100)));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS_TO_ADMIN' }));
-    } catch (err) {}
-
-    try {
-      let sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
-      const existIdx = sellerNotifs.findIndex(n => n.id === `seller_${news.id}`);
-      if (existIdx !== -1) {
-        if (news.target === 'admin') sellerNotifs.splice(existIdx, 1);
-        else sellerNotifs[existIdx] = { ...sellerNotifs[existIdx], title: news.title, message: news.message, targetProject: news.target };
-      } else if (news.target !== 'admin') {
-        sellerNotifs.unshift({ ...notification, id: `seller_${news.id}`, targetProject: news.target });
-      }
-      localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(sellerNotifs.slice(0, 100)));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'SELLER_NOTIFICATIONS' }));
-    } catch (err) {}
+    // Khi backend có PATCH /notifications/{id}, thay bằng API call
+    // Tạm thời cập nhật lại localStorage fallback
+    ['STAFF_B_NOTIFICATIONS_TO_ADMIN', 'SELLER_NOTIFICATIONS'].forEach(key => {
+      try {
+        const notifs = JSON.parse(localStorage.getItem(key) || '[]');
+        const idx = notifs.findIndex(n => n.id === `admin_${news.id}` || n.id === `seller_${news.id}`);
+        if (idx !== -1) notifs[idx] = { ...notifs[idx], title: news.title, message: news.message };
+        localStorage.setItem(key, JSON.stringify(notifs));
+        window.dispatchEvent(new StorageEvent('storage', { key }));
+      } catch {}
+    });
   };
 
   const removeNewsFromDashboards = (newsId) => {
-    try {
-      let adminNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
-      adminNotifs = adminNotifs.filter(n => n.id !== `admin_${newsId}`);
-      localStorage.setItem('STAFF_B_NOTIFICATIONS_TO_ADMIN', JSON.stringify(adminNotifs));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS_TO_ADMIN' }));
-    } catch (err) {}
-
-    try {
-      let sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
-      sellerNotifs = sellerNotifs.filter(n => n.id !== `seller_${newsId}`);
-      localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(sellerNotifs));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'SELLER_NOTIFICATIONS' }));
-    } catch (err) {}
+    // Khi backend có DELETE /notifications/{id}, thay bằng notificationApi.deleteOne()
+    ['STAFF_B_NOTIFICATIONS_TO_ADMIN', 'SELLER_NOTIFICATIONS'].forEach(key => {
+      try {
+        const notifs = JSON.parse(localStorage.getItem(key) || '[]').filter(
+          n => n.id !== `admin_${newsId}` && n.id !== `seller_${newsId}`
+        );
+        localStorage.setItem(key, JSON.stringify(notifs));
+        window.dispatchEvent(new StorageEvent('storage', { key }));
+      } catch {}
+    });
   };
 
   const handleCreateNews = async () => {

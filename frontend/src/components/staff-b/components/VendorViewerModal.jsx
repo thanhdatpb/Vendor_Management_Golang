@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS, LS_B_SELECTIONS } from '../utils/constants';
 import { lsGet, lsSet, getMediaUrls, fmtDate } from '../utils/helpers';
+import { pushNotif } from '../../../utils/notifUtils';
 import PriceComparisonMatrix from './PriceComparisonMatrix';
 import Lightbox from './Lightbox';
 import { BestSellerBadge } from '../ui/StaffBUI';
@@ -98,23 +99,15 @@ export default function VendorViewerModal({ product, onClose }) {
     lsSet('STAFF_B_FEEDBACKS_V1', allFeedbacks);
     setBFeedbacks(prev => ({ ...prev, [key]: { feedback: feedbackText } }));
     // Gửi thông báo cho Staff A
-    try {
-      const v = vendors.find((v, i) => vendorKey(v, i) === key);
-      const staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
-      staffANotifs.unshift({
-        id: Date.now(),
-        type: 'feedback_from_b',
-        icon: '💬',
-        title: '💬 Phản hồi mới về Vendor',
-        message: `Bộ phận Vận hành đã gửi phản hồi về vendor "${v?.vendor_type || '—'}" cho sản phẩm "${product.product_type}".`,
-        time: new Date().toLocaleString('vi-VN'),
-        is_read: false,
-        productId: product.id,
-        vendorKey: key
-      });
-      localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(staffANotifs.slice(0, 100)));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_A_NOTIFICATIONS' }));
-    } catch (err) { console.error('Lỗi gửi thông báo A:', err); }
+    const v = vendors.find((v, i) => vendorKey(v, i) === key);
+    pushNotif('staff_a', {
+      type: 'feedback_from_b',
+      icon: '💬',
+      title: 'Phản hồi mới về Vendor',
+      message: `Bộ phận Vận hành đã gửi phản hồi về vendor "${v?.vendor_type || '—'}" cho sản phẩm "${product.product_type}".`,
+      product_id: product.id,
+      vendorKey: key,
+    });
 
     alert('✅ Đã gửi phản hồi đến Staff A!');
   }, [product.id, product.product_type, vendors]);

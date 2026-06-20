@@ -176,7 +176,7 @@ export default function SellerDashboard() {
   // ─── Mark as read ───────────────────────────────────────
   const markRequestAsRead = useCallback((notificationId) => {
     if (notificationId.startsWith('api_')) {
-      notificationApi.markAsRead(notificationId.replace('api_', '')).catch(err => console.error(err));
+      notificationApi.readOne(notificationId.replace('api_', '')).catch(err => console.error(err));
     }
     if (notificationId.startsWith('staffb_')) {
       try {

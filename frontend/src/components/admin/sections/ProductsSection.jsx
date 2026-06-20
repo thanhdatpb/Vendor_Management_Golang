@@ -3,6 +3,7 @@ import { HC, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
 import { playNotificationBeep } from '../audio';
 import { productApi } from '../../../services/api';
+import { pushNotif } from '../../../utils/notifUtils';
 import { EmptyState, Table, Badge, MediaGallery, Pagination, Spinner } from '../ui';
 import ProductViewerModal from '../modals/ProductViewerModal';
 import AppToast from '../../shared/AppToast';
@@ -199,26 +200,16 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
         localStorage.setItem(LS_REJECTED_CACHE, JSON.stringify(cache));
       }
 
-      // 🆕 Gửi thông báo cho Staff B
-      try {
-        const staffBNotifications = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS') || '[]');
-        const newNotif = {
-          id: Date.now(),
-          type: 'product_approved',
-          title: 'Sản phẩm đã được duyệt',
-          message: `Sản phẩm "${product.product_type}" của Seller "${getSellerName(product)}" đã được Admin duyệt. Hãy vào "Products" để gán Vendor.`,
-          productId: product.id,
-          productType: product.product_type,
-          sellerName: getSellerName(product),
-          timestamp: new Date().toISOString(),
-          read: false,
-        };
-        staffBNotifications.unshift(newNotif);
-        localStorage.setItem('STAFF_B_NOTIFICATIONS', JSON.stringify(staffBNotifications.slice(0, 100)));
-        window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_B_NOTIFICATIONS' }));
-      } catch (e) {
-        console.warn('Không thể gửi thông báo cho Staff B', e);
-      }
+      // Gửi thông báo cho Staff B
+      pushNotif('staff_b', {
+        type: 'product_approved',
+        icon: '✅',
+        title: 'Sản phẩm đã được duyệt',
+        message: `Sản phẩm "${product.product_type}" của Seller "${getSellerName(product)}" đã được Admin duyệt. Hãy vào "Products" để gán Vendor.`,
+        product_id: product.id,
+        productType: product.product_type,
+        sellerName: getSellerName(product),
+      });
 
       // Cập nhật UI
       setPendingProducts(prev => prev.filter(p => p.id !== product.id));
