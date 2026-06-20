@@ -292,14 +292,11 @@ function PricingTable({ rows, onSave, readOnly }) {
   );
 }
 
-// ── Card colour palette (cycles per index) ───────────────────────────────────
-const CARD_PAL = { grad: `linear-gradient(135deg, ${HC.orange} 0%, ${HC.orangeDeep} 100%)`, icon: 'rgba(255,255,255,0.18)', accent: '#fff', border: HC.orangeDark, badge: 'rgba(255,255,255,0.15)' };
-
 // ── Single Library File Card ──────────────────────────────────────────────────
 function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
-  const pal = CARD_PAL;
+  const [hovered, setHovered] = useState(false);
 
   const fileRowIds = entry.generalInfo?.map(r => r.id) || [];
   const selectedInFile = fileRowIds.filter(id => selectedIds?.has(id)).length;
@@ -314,92 +311,125 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
   });
 
   return (
-    <div style={{
-      borderRadius: 16,
-      border: `1.5px solid ${pal.border}`,
-      boxShadow: `0 4px 20px ${pal.badge}`,
-      overflow: 'hidden', marginBottom: 20,
-      transition: 'box-shadow 0.2s, transform 0.15s',
-    }}>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderRadius: 12,
+        border: `1.5px solid ${hovered ? HC.orangeMid : HC.border}`,
+        boxShadow: hovered ? '0 6px 20px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.06)',
+        overflow: 'hidden', marginBottom: 14,
+        transition: 'box-shadow 0.2s, border-color 0.2s, transform 0.18s',
+        transform: hovered ? 'translateY(-1px)' : 'none',
+        background: '#fff',
+      }}
+    >
       {/* Card Header */}
-      <div style={{
-        padding: '14px 20px',
-        background: pal.grad,
-        display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
-        position: 'relative',
-      }} onClick={() => setExpanded(p => !p)}>
-
-        {/* Colored icon block */}
+      <div
+        onClick={() => setExpanded(p => !p)}
+        style={{
+          padding: '10px 14px',
+          background: hovered ? HC.orangeLight : '#fff',
+          borderLeft: `3px solid ${HC.orange}`,
+          display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+          transition: 'background 0.18s',
+        }}
+      >
+        {/* File icon */}
         <div style={{
-          width: 44, height: 44, borderRadius: 12,
-          background: pal.icon,
-          border: `1.5px solid ${pal.accent}30`,
+          width: 32, height: 32, borderRadius: 8,
+          background: HC.orangeLight,
+          border: `1px solid ${HC.orangeMid}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 20, flexShrink: 0,
-          boxShadow: `0 2px 10px ${pal.badge}`,
+          fontSize: 15, flexShrink: 0,
         }}>📄</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Filename */}
           <div style={{
-            fontWeight: 900, fontSize: 14, color: '#fff',
-            fontFamily: "'Nunito',sans-serif", marginBottom: 5,
+            fontWeight: 800, fontSize: 12.5, color: HC.ink,
+            fontFamily: "'Nunito',sans-serif", marginBottom: 3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            textShadow: '0 1px 3px rgba(0,0,0,0.3)',
           }}>
             {entry.filename}
           </div>
 
           {/* Meta row */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             {mode === 'all' && entry.sourceTab === 'new_products' && (
-              <span style={{ padding: '2px 8px', borderRadius: 6, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mới</span>
+              <span style={{ padding: '1px 6px', borderRadius: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mới</span>
             )}
-            {/* Product-type badge — accent color */}
             <span style={{
-              padding: '3px 10px', borderRadius: 99,
-              background: pal.badge, border: `1px solid ${pal.accent}60`,
-              color: pal.accent, fontSize: 10, fontWeight: 900, letterSpacing: '0.06em',
-              textTransform: 'uppercase',
+              padding: '2px 8px', borderRadius: 99,
+              background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
+              color: HC.orangeDark, fontSize: 9.5, fontWeight: 800,
+              letterSpacing: '0.05em', textTransform: 'uppercase',
             }}>
               {entry.title}
             </span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>📅 {importDate}</span>
-            <span style={{
-              fontSize: 11, color: 'rgba(255,255,255,0.45)',
-              background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 20,
-            }}>
+            <span style={{ fontSize: 10.5, color: HC.muted }}>
+              {importDate}
+            </span>
+            <span style={{ fontSize: 10.5, color: HC.muted2 }}>
               {entry.generalInfo?.length || 0} sản phẩm · {entry.pricing?.length || 0} dòng giá
             </span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
           {selectable && fileRowIds.length > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); handleSelectAllInFile(); }}
-              style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${allInFileSelected ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.3)'}`, background: allInFileSelected ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6 }}
               title={allInFileSelected ? 'Bỏ chọn tất cả trong file này' : 'Chọn tất cả trong file này'}
+              style={{
+                padding: '4px 10px', borderRadius: 6,
+                border: `1px solid ${allInFileSelected ? HC.orange : HC.border}`,
+                background: allInFileSelected ? HC.orangeLight : '#f8fafc',
+                color: allInFileSelected ? HC.orangeDark : HC.muted,
+                fontSize: 10.5, fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 5,
+              }}
             >
-              <div style={{ width: 14, height: 14, borderRadius: 3, border: `2px solid ${allInFileSelected ? '#fff' : 'rgba(255,255,255,0.6)'}`, background: allInFileSelected ? '#fff' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {allInFileSelected && <span style={{ color: HC.orangeDark, fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+              <div style={{
+                width: 12, height: 12, borderRadius: 3,
+                border: `1.5px solid ${allInFileSelected ? HC.orange : HC.muted2}`,
+                background: allInFileSelected ? HC.orange : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                {allInFileSelected && <span style={{ color: '#fff', fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
               </div>
               {allInFileSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${fileRowIds.length})`}
-              {selectedInFile > 0 && !allInFileSelected && <span style={{ padding: '1px 7px', borderRadius: 99, background: 'rgba(255,255,255,0.2)', fontSize: 10 }}>{selectedInFile}/{fileRowIds.length}</span>}
+              {selectedInFile > 0 && !allInFileSelected && (
+                <span style={{ padding: '0 5px', borderRadius: 99, background: HC.orangeLight, color: HC.orangeDark, fontSize: 9.5, fontWeight: 800 }}>
+                  {selectedInFile}/{fileRowIds.length}
+                </span>
+              )}
             </button>
           )}
           {!readOnly && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }}
-              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(220,38,38,0.45)', background: 'rgba(220,38,38,0.18)', color: '#fca5a5', fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'background 0.15s' }}
               title="Xóa file này"
+              style={{
+                padding: '4px 10px', borderRadius: 6,
+                border: '1px solid #fecaca', background: '#fef2f2',
+                color: '#dc2626', fontSize: 10.5, fontWeight: 700,
+                cursor: 'pointer', transition: 'background 0.15s',
+              }}
             >Xóa</button>
           )}
           <div style={{
-            width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 22, height: 22, borderRadius: 6,
+            background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', transition: 'transform 0.2s', transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▾</span>
+            <span style={{
+              fontSize: 11, color: HC.orangeDark,
+              transition: 'transform 0.2s',
+              transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+              display: 'inline-block',
+            }}>▾</span>
           </div>
         </div>
       </div>
@@ -414,9 +444,9 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveSection(tab.id)} style={{
                 padding: '11px 20px', border: 'none',
-                borderBottom: activeSection === tab.id ? `2.5px solid ${pal.border}` : '2.5px solid transparent',
+                borderBottom: activeSection === tab.id ? `2.5px solid ${HC.orange}` : '2.5px solid transparent',
                 background: activeSection === tab.id ? HC.surface : 'transparent',
-                color: activeSection === tab.id ? pal.border : HC.muted,
+                color: activeSection === tab.id ? HC.orangeDark : HC.muted,
                 fontSize: 12, fontWeight: activeSection === tab.id ? 900 : 700,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
                 fontFamily: "'Nunito',sans-serif", transition: 'all 0.15s',
@@ -424,8 +454,8 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
                 {tab.label}
                 <span style={{
                   padding: '1px 8px', borderRadius: 99,
-                  background: activeSection === tab.id ? pal.badge : HC.border,
-                  color: activeSection === tab.id ? pal.border : HC.muted,
+                  background: activeSection === tab.id ? HC.orangeLight : HC.border,
+                  color: activeSection === tab.id ? HC.orangeDark : HC.muted,
                   fontSize: 10, fontWeight: 800,
                 }}>
                   {tab.count ?? 0}
