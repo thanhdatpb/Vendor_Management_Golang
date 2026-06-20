@@ -2,7 +2,7 @@
 //  VENDOR LIBRARY VIEWER — Thư Viện File (Happy Creative Format)
 //  Mỗi file Excel import → lưu localStorage → hiển thị thành card riêng
 // ════════════════════════════════════════════════════════════════════════════
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary } from '../../../utils/vendorExcel';
 import { vendorLibraryApi } from '../../../services/api';
@@ -511,6 +511,27 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     });
   }, []);
 
+  // File đã filter theo mode + search — dùng cho cả badge count lẫn list render
+  const displayFiles = useMemo(() => {
+    let files = libraryFiles;
+    if (mode === 'bestseller' || mode === 'best_seller') {
+      files = files.map(file => {
+        if (!file.generalInfo) return file;
+        return { ...file, generalInfo: file.generalInfo.filter(r => bestSellerIds.has(r.id)) };
+      }).filter(file => file.generalInfo && file.generalInfo.length > 0);
+    } else if (mode === 'new_products') {
+      files = files.filter(file => file.sourceTab === 'new_products');
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      files = files.filter(file =>
+        file.filename?.toLowerCase().includes(q) ||
+        file.title?.toLowerCase().includes(q)
+      );
+    }
+    return files;
+  }, [libraryFiles, mode, bestSellerIds, searchQuery]);
+
   const fetchLibrary = useCallback(async () => {
     setFetchError(null);
     setDataLoaded(false);
@@ -685,7 +706,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
             {(mode === 'bestseller' || mode === 'best_seller') ? 'Danh sách Vendor Best Seller' : mode === 'new_products' ? 'Sản phẩm mới' : 'Tổng quan Vendor & Sản phẩm'}
           </div>
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
-            {libraryFiles.length} file
+            {displayFiles.length} file
           </span>
           {/* Search */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -760,23 +781,6 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       {/* Library list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {(() => {
-          let displayFiles = libraryFiles;
-          if (mode === 'bestseller' || mode === 'best_seller') {
-            displayFiles = displayFiles.map(file => {
-              if (!file.generalInfo) return file;
-              return { ...file, generalInfo: file.generalInfo.filter(r => bestSellerIds.has(r.id)) };
-            }).filter(file => file.generalInfo && file.generalInfo.length > 0);
-          } else if (mode === 'new_products') {
-            displayFiles = displayFiles.filter(file => file.sourceTab === 'new_products');
-          }
-          if (searchQuery.trim()) {
-            const q = searchQuery.trim().toLowerCase();
-            displayFiles = displayFiles.filter(file =>
-              file.filename?.toLowerCase().includes(q) ||
-              file.title?.toLowerCase().includes(q)
-            );
-          }
-          
           if (loading) {
              return <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>;
           }
