@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MenuFoldOutlined, MenuUnfoldOutlined, LogoutOutlined, ShopOutlined } from '@ant-design/icons';
+import { LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
 
@@ -50,6 +50,8 @@ export default function StaffDashboard() {
   };
   const [active, setActive] = useState('products');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showLogout, setShowLogout] = useState(false);
+  const [logoHovered, setLogoHovered] = useState(false);
   const [filterProductType, setFilterProductType] = useState('');
   const [filterProductId, setFilterProductId] = useState('');
   const [selectedProductId, setSelectedProductId] = useState(null);
@@ -162,6 +164,8 @@ export default function StaffDashboard() {
     return () => { clearInterval(interval); window.removeEventListener('storage', handleStorageChange); };
   }, [loadRequestNotifications, loadNewsNotifications]);
 
+  useEffect(() => { if (!sidebarOpen) setShowLogout(false); }, [sidebarOpen]);
+
   const handleGotoVendors = (productType, productId) => {
     setFilterProductType(productType); setFilterProductId(String(productId)); setActive('library');
   };
@@ -236,9 +240,9 @@ export default function StaffDashboard() {
       <div style={{ display: 'flex', height: '100vh', background: HC.orangePale, fontFamily: "'Nunito Sans',sans-serif", color: HC.ink, overflow: 'hidden' }}>
         {/* ── Sidebar ── */}
         <div style={{ width: sidebarOpen ? 260 : 68, background: DARK.bg, display: 'flex', flexDirection: 'column', transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'visible', position: 'relative', boxShadow: '4px 0 24px rgba(0,0,0,0.25)', borderRight: `1px solid ${DARK.border}`, zIndex: 100, flexShrink: 0 }}>
-          {/* Logo */}
-          <div style={{ padding: sidebarOpen ? '22px 18px' : '22px 12px', borderBottom: `1px solid ${DARK.border}`, display: 'flex', alignItems: 'center', gap: 12, justifyContent: sidebarOpen ? 'flex-start' : 'center', flexShrink: 0 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 11, background: 'rgba(249,115,22,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(249,115,22,0.25)', flexShrink: 0 }}>
+          {/* Logo — click to collapse/expand */}
+          <div onClick={() => setSidebarOpen(!sidebarOpen)} onMouseEnter={() => setLogoHovered(true)} onMouseLeave={() => setLogoHovered(false)} style={{ padding: sidebarOpen ? '22px 18px' : '22px 12px', borderBottom: `1px solid ${DARK.border}`, display: 'flex', alignItems: 'center', gap: 12, justifyContent: sidebarOpen ? 'flex-start' : 'center', flexShrink: 0, cursor: 'pointer', background: logoHovered ? DARK.bgHover : 'transparent', transition: 'background 0.18s ease' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 11, background: logoHovered ? 'rgba(249,115,22,0.22)' : 'rgba(249,115,22,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(249,115,22,0.25)', flexShrink: 0, transition: 'background 0.18s ease' }}>
               <HCLogo size={24} color={HC.orange} />
             </div>
             {sidebarOpen && (
@@ -248,9 +252,9 @@ export default function StaffDashboard() {
               </div>
             )}
           </div>
-          {/* User card */}
-          {sidebarOpen && (
-            <div style={{ margin: '14px 12px', padding: '12px 14px', borderRadius: 12, background: DARK.cardBg, border: `1px solid ${DARK.border}`, animation: 'staffb-fadein 0.25s ease', flexShrink: 0 }}>
+          {/* User section */}
+          {sidebarOpen ? (
+            <div onClick={() => setShowLogout(v => !v)} style={{ margin: '14px 12px', padding: '12px 14px', borderRadius: 12, background: DARK.cardBg, border: `1px solid ${showLogout ? 'rgba(249,115,22,0.3)' : DARK.border}`, animation: 'staffb-fadein 0.25s ease', flexShrink: 0, cursor: 'pointer', transition: 'border-color 0.18s ease' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', flexShrink: 0 }}><ShopOutlined /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -262,7 +266,15 @@ export default function StaffDashboard() {
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'staffb-pulse 2.5s ease-in-out infinite', flexShrink: 0 }} />
                 <span style={{ fontWeight: 600 }}>Online · {formatLastActive(lastActiveTime)}</span>
               </div>
+              {showLogout && (
+                <div onClick={(e) => { e.stopPropagation(); logout(); }} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', cursor: 'pointer', animation: 'staffb-fadein 0.15s ease' }}>
+                  <LogoutOutlined style={{ fontSize: 12 }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif" }}>Đăng xuất</span>
+                </div>
+              )}
             </div>
+          ) : (
+            <StaffBCollapsedUser user={user} logout={logout} />
           )}
           {/* Nav */}
           <nav style={{ flex: 1, padding: sidebarOpen ? '4px 10px' : '4px 8px', overflowY: 'auto', overflowX: 'visible', scrollbarWidth: 'none' }}>
@@ -270,12 +282,12 @@ export default function StaffDashboard() {
               <StaffBNavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
             ))}
           </nav>
-          {/* Footer */}
-          <div style={{ padding: sidebarOpen ? '10px 10px 18px' : '10px 8px 18px', flexShrink: 0 }}>
-            <SidebarGhostBtn onClick={() => setSidebarOpen(!sidebarOpen)} icon={sidebarOpen ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />} label={sidebarOpen ? 'Thu gọn' : null} />
-            <SidebarGhostBtn onClick={logout} icon={<LogoutOutlined />} label={sidebarOpen ? 'Đăng xuất' : null} danger style={{ marginTop: 6 }} />
-            {sidebarOpen && <div style={{ marginTop: 14, textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(148,163,184,0.4)', letterSpacing: '0.2em', fontFamily: "'Nunito',sans-serif" }}>#IT'S ALWAYS DAY 1</div>}
-          </div>
+          {/* Footer — tagline only */}
+          {sidebarOpen && (
+            <div style={{ padding: '10px 10px 18px', flexShrink: 0 }}>
+              <div style={{ textAlign: 'center', fontSize: 9, fontWeight: 700, color: 'rgba(148,163,184,0.4)', letterSpacing: '0.2em', fontFamily: "'Nunito',sans-serif" }}>#IT'S ALWAYS DAY 1</div>
+            </div>
+          )}
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ height: 64, background: HC.surface, borderBottom: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, boxShadow: '0 2px 12px rgba(245,166,35,0.06)' }}>
@@ -291,6 +303,43 @@ export default function StaffDashboard() {
         </div>
       </div>
     </>
+  );
+}
+
+function StaffBCollapsedUser({ user, logout }) {
+  const [hovered, setHovered] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const DARK_LOCAL = {
+    bgHover: 'var(--hc-dark-bg-hover)', bgActive: 'var(--hc-dark-active)',
+    borderActive: 'rgba(249,115,22,0.4)', border: 'var(--hc-dark-border)', textMuted: 'var(--hc-dark-text-muted)',
+  };
+  return (
+    <div style={{ padding: '8px 8px 0', position: 'relative' }}>
+      <div onClick={() => setShowMenu(v => !v)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+        style={{ padding: '11px', borderRadius: 10, background: showMenu ? DARK_LOCAL.bgActive : hovered ? DARK_LOCAL.bgHover : 'transparent', border: `1px solid ${showMenu ? DARK_LOCAL.borderActive : 'transparent'}`, cursor: 'pointer', transition: 'all 0.18s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg, #f97316, #c2410c)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#fff', flexShrink: 0 }}>
+          <ShopOutlined />
+        </div>
+      </div>
+      {showMenu && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setShowMenu(false)} />
+          <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.55)', minWidth: 165 }}>
+            <div style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', border: '6px solid transparent', borderRightColor: '#0f172a' }} />
+            <div style={{ padding: '4px 6px 10px', borderBottom: `1px solid ${DARK_LOCAL.border}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif" }}>{(user?.name === 'Vendor' ? 'Vendor' : user?.name) || 'Vendor'}</div>
+              <div style={{ fontSize: 10, color: DARK_LOCAL.textMuted, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}><ShopOutlined style={{ fontSize: 9, color: '#f97316' }} /><span>Vendor Account</span></div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); logout(); }}
+              style={{ width: '100%', marginTop: 8, padding: '7px 10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, color: '#f87171', fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all 0.15s ease' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.16)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}>
+              <LogoutOutlined />Đăng xuất
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
