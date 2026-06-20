@@ -24,6 +24,12 @@ export default function SellerDashboard() {
   const [newsNotifications, setNewsNotifications] = useState([]);
   const [highlightedProductId, setHighlightedProductId] = useState(null);
   const [pendingOpenProductId, setPendingOpenProductId] = useState(null);
+  const [vendorHighlightFileId, setVendorHighlightFileId] = useState(null);
+
+  const handleViewVendorLibrary = (fileId) => {
+    setVendorHighlightFileId(fileId || null);
+    setActive('vendors');
+  };
 
   const PAGE_TITLES = {
     products: 'Danh Sách Sản Phẩm',
@@ -233,8 +239,8 @@ export default function SellerDashboard() {
 
   const renderSection = () => {
     switch (active) {
-      case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} />;
-      case 'vendors': return <VendorsSection />;
+      case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} onViewVendorLibrary={handleViewVendorLibrary} />;
+      case 'vendors': return <VendorsSection highlightFileId={vendorHighlightFileId} onHighlightCleared={() => setVendorHighlightFileId(null)} />;
       case 'setup_price': return <SetupPriceSection />;
       default: return null;
     }

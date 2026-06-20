@@ -7,7 +7,7 @@ import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_A_SELECTIONS, LS_B_SELECTIONS, LS_PR
 import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl } from '../../utils/sellerHelpers';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 
-export default function ProductViewerModal({ product, productVendors, onClose, getStatus }) {
+export default function ProductViewerModal({ product, productVendors, onClose, getStatus, onViewVendorLibrary }) {
   // Ưu tiên dùng assigned_vendors từ API, fallback về localStorage
   const [vendors, setVendors] = useState(() => product?.assigned_vendors || productVendors[product?.id] || []);
   const [selections, setSelections] = useState(() => lsGet(LS_A_SELECTIONS, {})[product?.id] || {});
@@ -525,6 +525,16 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                               <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type}</div>
                                               {v.name && v.vendor_type && v.name !== v.vendor_type && (
                                                 <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{v.vendor_type}</div>
+                                              )}
+                                              {onViewVendorLibrary && v.source_file_id && (
+                                                <button
+                                                  onClick={() => { onClose(); onViewVendorLibrary(v.source_file_id); }}
+                                                  style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: HC.orange, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 6, padding: '3px 8px', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                                                  onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                                  onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                                                >
+                                                  📂 Xem trong Thư Viện
+                                                </button>
                                               )}
                                             </>
                                           : <Na pending />

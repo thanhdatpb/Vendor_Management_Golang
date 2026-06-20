@@ -155,25 +155,45 @@ export default function VendorsSection({ filterProductType = '', filterProductId
 
   const handleAssignVendor = () => {
     if (selectedIds.size === 0) return;
-    
+
     let selected = vendorList.filter(v => selectedIds.has(v.id));
-    
-    if (activeTab === 'all') {
+
+    if (activeTab === 'all' || activeTab === 'bestseller') {
       const excelSelected = [];
       excelVendors.forEach(file => {
         if (file.generalInfo) {
           const matched = file.generalInfo.filter(r => selectedIds.has(r.id));
           matched.forEach(m => {
-            excelSelected.push({
-              id: m.id,
-              name: m.kyHieu || 'Excel Vendor',
-              product_type: m.kyHieu || '',
-              vendor_type: 'New',
+            const baseData = {
+              excel_row_id: m.id,
+              name: m.vendorName || m.kyHieu || 'Excel Vendor',
+              vendor_type: m.productType || m.kyHieu || 'New',
               overview: m.chatLieu || '',
-              size: m.chiTietSize || '',
               media_url: (m.images && m.images.length > 0) ? m.images[0] : '',
-              is_excel: true
-            });
+              link_folder: m.linkFolder || '',
+              is_excel: true,
+              kyHieu: m.kyHieu || '',
+              source_file_id: file.id,
+              source_file_name: file.filename || '',
+            };
+            // Map từng dòng pricing (mỗi size = 1 row trong bảng vendor)
+            const pricingRows = (file.pricing || []).filter(p => p.kyHieu === m.kyHieu);
+            if (pricingRows.length > 0) {
+              pricingRows.forEach((p, pi) => {
+                excelSelected.push({
+                  ...baseData,
+                  id: `${m.id}_${p.size || pi}`,
+                  size: p.size || '',
+                  optional: p.optional || '',
+                  eco_total: p.eco_total ?? null,
+                  eco_price: p.eco_price ?? null,
+                  pricing1: p.pricing1 ?? null,
+                  pricing2: p.pricing2 ?? null,
+                });
+              });
+            } else {
+              excelSelected.push({ ...baseData, id: m.id, size: m.chiTietSize || '' });
+            }
           });
         }
       });

@@ -293,7 +293,7 @@ function PricingTable({ rows, onSave, readOnly }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode }) {
+function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(true);
   const [hovered, setHovered] = useState(false);
@@ -316,12 +316,12 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
       onMouseLeave={() => setHovered(false)}
       style={{
         borderRadius: 12,
-        border: `1.5px solid ${hovered ? HC.orangeMid : HC.border}`,
-        boxShadow: hovered ? '0 6px 20px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.06)',
+        border: `1.5px solid ${highlighted ? HC.orange : hovered ? HC.orangeMid : HC.border}`,
+        boxShadow: highlighted ? `0 0 0 3px ${HC.orangeGlow}, 0 6px 20px rgba(0,0,0,0.09)` : hovered ? '0 6px 20px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.06)',
         overflow: 'hidden', marginBottom: 14,
         transition: 'box-shadow 0.2s, border-color 0.2s, transform 0.18s',
         transform: hovered ? 'translateY(-1px)' : 'none',
-        background: '#fff',
+        background: highlighted ? HC.orangePale || '#fffbeb' : '#fff',
       }}
     >
       {/* Card Header */}
@@ -476,7 +476,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded }) {
+export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId }) {
   const [libraryFiles, setLibraryFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -487,6 +487,13 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef(null);
+  const highlightRef = useRef(null);
+
+  useEffect(() => {
+    if (highlightFileId && highlightRef.current) {
+      setTimeout(() => highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  }, [highlightFileId, libraryFiles]);
 
   const [bestSellerIds, setBestSellerIds] = useState(() => {
     try {
@@ -512,32 +519,28 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       let data = Array.isArray(res.data) ? res.data : [];
 
       if (readOnly && mode === 'all') {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const MOCK_PRODUCTS = JSON.parse(localStorage.getItem('MOCK_PRODUCTS') || '[]');
-
-        const myProductIds = new Set();
-        MOCK_PRODUCTS.forEach(p => {
-          if (user.role === 'admin' || p.seller_name === user.sellerName || p.project === user.project) {
-            myProductIds.add(String(p.id));
-          }
-        });
-
         const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
         const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
         const assignedIds = new Set();
 
-        Object.entries(assigned).forEach(([pId, list]) => {
-          if (myProductIds.has(String(pId))) {
-            list.forEach(v => {
-              if (v.is_excel) assignedIds.add(v.id);
-            });
-          }
+        // Thu thập tất cả excel_row_id (hoặc id) từ mọi product được assign
+        // ProductsSection (seller) đồng bộ API → STAFF_PRODUCT_VENDORS_V1 sau mỗi lần load
+        Object.values(assigned).forEach(list => {
+          (list || []).forEach(v => {
+            if (v.is_excel) {
+              assignedIds.add(v.excel_row_id || v.id);
+            }
+          });
         });
 
-        data = data.map(file => {
-          if (!file.generalInfo) return file;
-          return { ...file, generalInfo: file.generalInfo.filter(r => assignedIds.has(r.id)) };
-        }).filter(file => file.generalInfo && file.generalInfo.length > 0);
+        if (assignedIds.size > 0) {
+          data = data.map(file => {
+            if (!file.generalInfo) return file;
+            return { ...file, generalInfo: file.generalInfo.filter(r => assignedIds.has(r.id)) };
+          }).filter(file => file.generalInfo && file.generalInfo.length > 0);
+        } else {
+          data = [];
+        }
       }
 
       setLibraryFiles(data);
@@ -790,21 +793,23 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           }
 
           return displayFiles.map((entry, idx) => (
-            <LibraryCard
-              key={entry.id}
-              entry={entry}
-              idx={idx}
-              onDelete={handleDelete}
-              onUpdate={handleUpdateEntry}
-              readOnly={readOnly}
-              selectable={selectable}
-              selectedIds={selectedIds}
-              onSelectRow={onSelectRow}
-              onSelectAll={onSelectAll}
-              bestSellerIds={bestSellerIds}
-              toggleBestSeller={toggleBestSeller}
-              mode={mode}
-            />
+            <div key={entry.id} ref={highlightFileId === entry.id ? highlightRef : null}>
+              <LibraryCard
+                entry={entry}
+                idx={idx}
+                onDelete={handleDelete}
+                onUpdate={handleUpdateEntry}
+                readOnly={readOnly}
+                selectable={selectable}
+                selectedIds={selectedIds}
+                onSelectRow={onSelectRow}
+                onSelectAll={onSelectAll}
+                bestSellerIds={bestSellerIds}
+                toggleBestSeller={toggleBestSeller}
+                mode={mode}
+                highlighted={highlightFileId === entry.id}
+              />
+            </div>
           ));
         })()}
       </div>

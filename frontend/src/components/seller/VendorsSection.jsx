@@ -1,12 +1,17 @@
 // ════════════════════════════════════════════════════════
 //  VENDORS SECTION — Thư Viện File
 // ════════════════════════════════════════════════════════
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import VendorLibraryViewer from '../staff-b/sections/VendorLibraryViewer';
 import { HC } from '../../constants/sellerTheme';
 
-export default function VendorsSection() {
+export default function VendorsSection({ highlightFileId, onHighlightCleared }) {
   const [activeTab, setActiveTab] = useState('all');
+
+  // Khi có highlight file → tự động về tab 'all'
+  useEffect(() => {
+    if (highlightFileId) setActiveTab('all');
+  }, [highlightFileId]);
 
   const TabButton = ({ id, label, icon }) => (
     <button
@@ -32,7 +37,12 @@ export default function VendorsSection() {
         <TabButton id="best_seller" label="Best Seller" />
       </div>
 
-      <VendorLibraryViewer readOnly={true} mode={activeTab} />
+      <VendorLibraryViewer
+        readOnly={true}
+        mode={activeTab}
+        highlightFileId={activeTab === 'all' ? highlightFileId : null}
+        onHighlightCleared={onHighlightCleared}
+      />
     </div>
   );
 }

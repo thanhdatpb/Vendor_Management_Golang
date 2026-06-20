@@ -28,7 +28,7 @@ function ThumbnailCell({ src }) {
   );
 }
 
-export default function ProductsSection({ highlightedProductId, onHighlightCleared }) {
+export default function ProductsSection({ highlightedProductId, onHighlightCleared, onViewVendorLibrary }) {
   const { user } = useAuth();
   const [viewProduct, setViewProduct] = useState(null);
   const [submittedProducts, setSubmittedProducts] = useState([]);
@@ -332,6 +332,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         };
       });
       setSubmittedProducts(enriched);
+
+      // Sync lên localStorage để VendorLibraryViewer (Seller) có thể lọc vendor đã gán
+      try {
+        localStorage.setItem('MOCK_PRODUCTS', JSON.stringify(enriched));
+        const vendorMap = lsGet(LS_PRODUCT_VENDORS, {});
+        enriched.forEach(p => {
+          if (p.assigned_vendors && p.assigned_vendors.length > 0) {
+            vendorMap[p.id] = p.assigned_vendors;
+          }
+        });
+        localStorage.setItem(LS_PRODUCT_VENDORS, JSON.stringify(vendorMap));
+      } catch {}
+
       return enriched;
     })
       .catch(err => {
@@ -1122,7 +1135,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         </div>
       )}
 
-      {viewProduct && <ProductViewerModal product={viewProduct} productVendors={productVendors} onClose={() => setViewProduct(null)} getStatus={getStatus} />}
+      {viewProduct && <ProductViewerModal product={viewProduct} productVendors={productVendors} onClose={() => setViewProduct(null)} getStatus={getStatus} onViewVendorLibrary={onViewVendorLibrary} />}
 
       {/* ── Export Confirm Modal ── */}
       {showExportModal && (() => {
