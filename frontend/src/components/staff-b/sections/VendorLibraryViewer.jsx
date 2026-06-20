@@ -793,12 +793,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
       )}
 
-      {/* Import hint */}
-      <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 10, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, fontSize: 12, color: HC.brown }}>
-        💡 Hỗ trợ import nhiều file cùng lúc (định dạng <b>Happy Creative</b>). Mỗi file hiển thị riêng với 2 bảng: <b>Thông tin chung về phôi</b> và <b>Về giá</b>. Dữ liệu được lưu cục bộ.
-      </div>
-
-      {/* Import Errors */}
+{/* Import Errors */}
       {importErrors.length > 0 && (
         <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca' }}>
           <div style={{ fontWeight: 800, fontSize: 12, color: '#b91c1c', marginBottom: 6 }}>⚠️ Có {importErrors.length} file lỗi:</div>
