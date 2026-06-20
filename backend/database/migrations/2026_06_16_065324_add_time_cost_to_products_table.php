@@ -12,9 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->string('production_time')->nullable()->after('product_type_links');
-            $table->string('shipping_time')->nullable()->after('production_time');
-            $table->string('total_cost')->nullable()->after('shipping_time');
+            if (!Schema::hasColumn('products', 'production_time')) {
+                $table->string('production_time')->nullable()->after('product_type_links');
+            }
+            if (!Schema::hasColumn('products', 'shipping_time')) {
+                $table->string('shipping_time')->nullable()->after('production_time');
+            }
+            if (!Schema::hasColumn('products', 'total_cost')) {
+                $table->string('total_cost')->nullable()->after('shipping_time');
+            }
         });
     }
 
