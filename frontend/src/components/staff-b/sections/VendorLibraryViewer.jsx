@@ -646,6 +646,272 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
   );
 }
 
+// ── Manual Add Modal ─────────────────────────────────────────────────────────
+const inputSt = (extra = {}) => ({
+  width: '100%', padding: '7px 10px', fontSize: 12,
+  borderRadius: 6, border: `1.5px solid ${HC.border}`,
+  fontFamily: "'Nunito Sans',sans-serif", color: HC.ink,
+  background: '#fff', outline: 'none', boxSizing: 'border-box', ...extra,
+});
+
+const labelSt = {
+  fontSize: 10.5, fontWeight: 800, color: HC.muted,
+  textTransform: 'uppercase', letterSpacing: '0.05em',
+  marginBottom: 4, display: 'block',
+};
+
+function FieldGroup({ label, children }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <label style={labelSt}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function ManualAddModal({ onClose, onSave, mode }) {
+  const [activeTab, setActiveTab] = useState('general');
+  const [filename, setFilename] = useState('');
+  const [title, setTitle] = useState('');
+  const [saveError, setSaveError] = useState('');
+
+  const mkGeneral = () => ({
+    _key: `${Date.now()}_${Math.random()}`,
+    vendorName: '', productType: '', kyHieu: '',
+    linkFolder: '', chatLieu: '', chiTietSize: '',
+    chiTietSizeImage: '', avgTimeVendor: '', avgTimeActual: '',
+    notes: '', img0: '', img1: '', img2: '', img3: '',
+  });
+
+  const mkPricing = () => ({
+    _key: `${Date.now()}_${Math.random()}`,
+    kyHieu: '', productType: '', size: '', optional: '',
+    pricing1: '', pricing2: '',
+    eco_price: '', eco_total: '',
+    ground_price: '', ground_total: '',
+    express_price: '', express_total: '',
+    twoday_price: '', twoday_total: '',
+    overnight_price: '', overnight_total: '',
+  });
+
+  const [generalRows, setGeneralRows] = useState([mkGeneral()]);
+  const [pricingRows, setPricingRows] = useState([mkPricing()]);
+
+  const updateGeneral = (key, field, val) =>
+    setGeneralRows(prev => prev.map(r => r._key === key ? { ...r, [field]: val } : r));
+
+  const updatePricing = (key, field, val) =>
+    setPricingRows(prev => prev.map(r => r._key === key ? { ...r, [field]: val } : r));
+
+  const handleSave = () => {
+    if (!filename.trim()) { setSaveError('Vui lòng nhập tên file.'); return; }
+    setSaveError('');
+    const ts = Date.now();
+    const toNum = v => (v === '' || v === null || v === undefined) ? null : Number(v);
+
+    const generalInfo = generalRows.map((r, i) => ({
+      id: `manual_${ts}_${i}`,
+      vendorName: r.vendorName,
+      productType: r.productType || title,
+      kyHieu: r.kyHieu,
+      linkFolder: r.linkFolder,
+      chatLieu: r.chatLieu,
+      chiTietSize: r.chiTietSize,
+      chiTietSizeImage: r.chiTietSizeImage,
+      avgTimeVendor: r.avgTimeVendor,
+      avgTimeActual: r.avgTimeActual,
+      notes: r.notes,
+      images: [r.img0, r.img1, r.img2, r.img3].filter(Boolean),
+    }));
+
+    const pricing = pricingRows.map((r, i) => ({
+      id: `manual_p_${ts}_${i}`,
+      kyHieu: r.kyHieu,
+      productType: r.productType || title,
+      size: r.size,
+      optional: r.optional,
+      pricing1: toNum(r.pricing1), pricing2: toNum(r.pricing2),
+      eco_price: toNum(r.eco_price), eco_total: toNum(r.eco_total),
+      ground_price: toNum(r.ground_price), ground_total: toNum(r.ground_total),
+      express_price: toNum(r.express_price), express_total: toNum(r.express_total),
+      twoday_price: toNum(r.twoday_price), twoday_total: toNum(r.twoday_total),
+      overnight_price: toNum(r.overnight_price), overnight_total: toNum(r.overnight_total),
+    }));
+
+    onSave({
+      id: `${ts}_${Math.random().toString(36).slice(2)}`,
+      filename: filename.trim(),
+      importedAt: new Date().toISOString(),
+      title: title.trim() || filename.trim(),
+      generalInfo,
+      pricing,
+      sourceTab: mode === 'new_products' ? 'new_products' : 'all',
+    });
+  };
+
+  const shipMethods = [
+    { label: 'Economy',   pk: 'eco_price',      tk: 'eco_total',      color: '#1d6b3a' },
+    { label: 'Ground',    pk: 'ground_price',   tk: 'ground_total',   color: HC.orangeDark },
+    { label: 'Express',   pk: 'express_price',  tk: 'express_total',  color: '#1e4fa0' },
+    { label: '2 Days',    pk: 'twoday_price',   tk: 'twoday_total',   color: '#7c3aed' },
+    { label: 'Overnight', pk: 'overnight_price',tk: 'overnight_total',color: '#b91c1c' },
+  ];
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 1020, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.25)', animation: 'scaleIn 0.2s ease-out' }}>
+
+        {/* Header */}
+        <div style={{ padding: '18px 24px', borderBottom: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: `linear-gradient(135deg, ${HC.orangeLight}, #fff)` }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>➕ Thêm mới Vendor thủ công</div>
+            <div style={{ fontSize: 11, color: HC.muted, marginTop: 2 }}>Nhập dữ liệu thủ công — sẽ hiển thị như file Excel đã import</div>
+          </div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${HC.border}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        </div>
+
+        {/* File Info */}
+        <div style={{ padding: '14px 24px', borderBottom: `1.5px solid ${HC.border}`, background: HC.cream, flexShrink: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <FieldGroup label="Tên file *">
+              <input
+                type="text" placeholder="VD: HC_Cap_NewVendor_01.xlsx"
+                value={filename} onChange={e => { setFilename(e.target.value); setSaveError(''); }}
+                style={inputSt({ borderColor: saveError ? '#dc2626' : HC.border })}
+              />
+              {saveError && <span style={{ fontSize: 10, color: '#dc2626', marginTop: 3 }}>{saveError}</span>}
+            </FieldGroup>
+            <FieldGroup label="Loại sản phẩm (Badge)">
+              <input type="text" placeholder="VD: CAP, GENERAL MUG..." value={title} onChange={e => setTitle(e.target.value)} style={inputSt()} />
+            </FieldGroup>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', borderBottom: `1.5px solid ${HC.border}`, flexShrink: 0 }}>
+          {[
+            { id: 'general', label: '📋 Thông tin chung về phôi', count: generalRows.length },
+            { id: 'pricing', label: '💰 Về giá', count: pricingRows.length },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+              padding: '11px 20px', border: 'none',
+              borderBottom: activeTab === tab.id ? `2.5px solid ${HC.orange}` : '2.5px solid transparent',
+              background: activeTab === tab.id ? HC.surface : 'transparent',
+              color: activeTab === tab.id ? HC.orangeDark : HC.muted,
+              fontSize: 12, fontWeight: activeTab === tab.id ? 900 : 700,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+              fontFamily: "'Nunito',sans-serif", transition: 'all 0.15s',
+            }}>
+              {tab.label}
+              <span style={{ padding: '1px 8px', borderRadius: 99, background: activeTab === tab.id ? HC.orangeLight : HC.border, color: activeTab === tab.id ? HC.orangeDark : HC.muted, fontSize: 10, fontWeight: 800 }}>{tab.count}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Scrollable body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+
+          {/* ── General Info Tab ── */}
+          {activeTab === 'general' && (
+            <div>
+              {generalRows.map((r, i) => (
+                <div key={r._key} style={{ border: `1.5px solid ${HC.border}`, borderRadius: 10, padding: 16, marginBottom: 14, background: HC.surface }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <span style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, fontFamily: "'Nunito',sans-serif" }}>Dòng {i + 1}</span>
+                    {generalRows.length > 1 && (
+                      <button onClick={() => setGeneralRows(prev => prev.filter(x => x._key !== r._key))} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>✕ Xóa dòng</button>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: 12, marginBottom: 12 }}>
+                    <FieldGroup label="Vendor Name"><input type="text" placeholder="Tên vendor..." value={r.vendorName} onChange={e => updateGeneral(r._key, 'vendorName', e.target.value)} style={inputSt()} /></FieldGroup>
+                    <FieldGroup label="Product Type"><input type="text" placeholder="Loại sản phẩm..." value={r.productType} onChange={e => updateGeneral(r._key, 'productType', e.target.value)} style={inputSt()} /></FieldGroup>
+                    <FieldGroup label="Ký hiệu"><input type="text" placeholder="A, B..." value={r.kyHieu} onChange={e => updateGeneral(r._key, 'kyHieu', e.target.value)} style={inputSt({ textAlign: 'center', fontWeight: 900, color: HC.orangeDark })} /></FieldGroup>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                    <FieldGroup label="AVG TG (Vendor)"><input type="text" placeholder="VD: 3-5 ngày" value={r.avgTimeVendor} onChange={e => updateGeneral(r._key, 'avgTimeVendor', e.target.value)} style={inputSt({ color: HC.success })} /></FieldGroup>
+                    <FieldGroup label="AVG TG (Thực tế)"><input type="text" placeholder="VD: 5-7 ngày" value={r.avgTimeActual} onChange={e => updateGeneral(r._key, 'avgTimeActual', e.target.value)} style={inputSt({ color: HC.warning })} /></FieldGroup>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                    <FieldGroup label="Chất liệu"><textarea rows={3} placeholder="Mô tả chất liệu..." value={r.chatLieu} onChange={e => updateGeneral(r._key, 'chatLieu', e.target.value)} style={{ ...inputSt(), resize: 'vertical' }} /></FieldGroup>
+                    <FieldGroup label="Notes"><textarea rows={3} placeholder="Ghi chú..." value={r.notes} onChange={e => updateGeneral(r._key, 'notes', e.target.value)} style={{ ...inputSt(), resize: 'vertical' }} /></FieldGroup>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                    <FieldGroup label="URL Ảnh Size Guide"><input type="text" placeholder="https://..." value={r.chiTietSizeImage} onChange={e => updateGeneral(r._key, 'chiTietSizeImage', e.target.value)} style={inputSt()} /></FieldGroup>
+                    <FieldGroup label="Chi tiết Size (text)"><input type="text" placeholder="VD: S/M/L/XL..." value={r.chiTietSize} onChange={e => updateGeneral(r._key, 'chiTietSize', e.target.value)} style={inputSt()} /></FieldGroup>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <FieldGroup label="Link Folder"><input type="text" placeholder="https://drive.google.com/..." value={r.linkFolder} onChange={e => updateGeneral(r._key, 'linkFolder', e.target.value)} style={inputSt()} /></FieldGroup>
+                  </div>
+                  <div>
+                    <label style={labelSt}>Hình ảnh (URL)</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                      {['img0','img1','img2','img3'].map((k, n) => (
+                        <input key={k} type="text" placeholder={`Hình ${n + 1}`} value={r[k]} onChange={e => updateGeneral(r._key, k, e.target.value)} style={inputSt({ fontSize: 11 })} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => setGeneralRows(prev => [...prev, mkGeneral()])}
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+              >+ Thêm dòng thông tin chung</button>
+            </div>
+          )}
+
+          {/* ── Pricing Tab ── */}
+          {activeTab === 'pricing' && (
+            <div>
+              {pricingRows.map((r, i) => (
+                <div key={r._key} style={{ border: `1.5px solid ${HC.border}`, borderRadius: 10, padding: 16, marginBottom: 14, background: HC.surface }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <span style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, fontFamily: "'Nunito',sans-serif" }}>Dòng giá {i + 1}</span>
+                    {pricingRows.length > 1 && (
+                      <button onClick={() => setPricingRows(prev => prev.filter(x => x._key !== r._key))} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>✕ Xóa dòng</button>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                    <FieldGroup label="Ký hiệu"><input type="text" placeholder="A, B..." value={r.kyHieu} onChange={e => updatePricing(r._key, 'kyHieu', e.target.value)} style={inputSt({ textAlign: 'center', fontWeight: 900, color: HC.orangeDark })} /></FieldGroup>
+                    <FieldGroup label="Product Type"><input type="text" placeholder="Loại sản phẩm..." value={r.productType} onChange={e => updatePricing(r._key, 'productType', e.target.value)} style={inputSt()} /></FieldGroup>
+                    <FieldGroup label="Size"><input type="text" placeholder="S/M/L..." value={r.size} onChange={e => updatePricing(r._key, 'size', e.target.value)} style={inputSt({ textAlign: 'center' })} /></FieldGroup>
+                    <FieldGroup label="Optional"><input type="text" placeholder="Optional..." value={r.optional} onChange={e => updatePricing(r._key, 'optional', e.target.value)} style={inputSt({ textAlign: 'center' })} /></FieldGroup>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                    <FieldGroup label="Pricing 1 (P1)"><input type="number" step="0.01" placeholder="0.00" value={r.pricing1} onChange={e => updatePricing(r._key, 'pricing1', e.target.value)} style={inputSt({ textAlign: 'right', color: '#b45309', fontWeight: 700 })} /></FieldGroup>
+                    <FieldGroup label="Pricing 2 (P2)"><input type="number" step="0.01" placeholder="0.00" value={r.pricing2} onChange={e => updatePricing(r._key, 'pricing2', e.target.value)} style={inputSt({ textAlign: 'right', color: '#b45309', fontWeight: 700 })} /></FieldGroup>
+                  </div>
+                  <label style={labelSt}>Phí vận chuyển</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+                    {shipMethods.map(m => (
+                      <div key={m.label} style={{ border: `1.5px solid ${m.color}33`, borderRadius: 8, padding: '10px 10px 12px', display: 'flex', flexDirection: 'column', gap: 8, background: '#fff' }}>
+                        <div style={{ fontWeight: 800, fontSize: 10, color: m.color, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{m.label}</div>
+                        <FieldGroup label="Price Ship"><input type="number" step="0.01" placeholder="0.00" value={r[m.pk]} onChange={e => updatePricing(r._key, m.pk, e.target.value)} style={inputSt({ fontSize: 11, textAlign: 'right' })} /></FieldGroup>
+                        <FieldGroup label="Total (fulfill)"><input type="number" step="0.01" placeholder="0.00" value={r[m.tk]} onChange={e => updatePricing(r._key, m.tk, e.target.value)} style={inputSt({ fontSize: 11, textAlign: 'right', color: HC.success, fontWeight: 700 })} /></FieldGroup>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => setPricingRows(prev => [...prev, mkPricing()])}
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+              >+ Thêm dòng giá</button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: `1.5px solid ${HC.border}`, display: 'flex', justifyContent: 'flex-end', gap: 12, flexShrink: 0, background: HC.cream }}>
+          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 8, border: `1px solid ${HC.border}`, background: HC.surface, color: HC.ink, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+          <button onClick={handleSave} style={{ padding: '9px 26px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: `0 4px 14px ${HC.orangeGlow}` }}>
+            💾 Lưu Vendor
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared }) {
   // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
@@ -657,6 +923,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [importErrors, setImportErrors] = useState([]);
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [showManualAdd, setShowManualAdd] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // Filter theo product trong chế độ readOnly
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -878,6 +1145,15 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     showToast('success', '💾 Đã lưu thay đổi');
   };
 
+  const handleManualAdd = async (entry) => {
+    const updated = [...rawFiles, entry];
+    const saved = await saveLibrary(updated);
+    if (saved) {
+      setShowManualAdd(false);
+      showToast('success', '✅ Đã thêm vendor mới thành công');
+    }
+  };
+
   return (
     <div>
       {/* Hidden file input — multiple */}
@@ -937,6 +1213,19 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
         {!readOnly && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={() => setShowManualAdd(true)}
+              style={{
+                padding: '9px 18px', borderRadius: 10,
+                border: `1.5px solid ${HC.orangeMid}`,
+                background: HC.orangeLight, color: HC.orangeDark,
+                fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 7,
+                transition: 'all 0.15s',
+              }}
+            >
+              ➕ Thêm mới vendor
+            </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
@@ -1015,6 +1304,15 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           ));
         })()}
       </div>
+
+      {/* Manual Add Modal */}
+      {showManualAdd && (
+        <ManualAddModal
+          mode={mode}
+          onClose={() => setShowManualAdd(false)}
+          onSave={handleManualAdd}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
