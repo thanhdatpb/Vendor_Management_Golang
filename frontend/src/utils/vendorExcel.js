@@ -520,7 +520,8 @@ export async function parseHappyCreativeLibrary(file) {
         let pricingSubHeaderRow = -1;  // dòng "Size | Optional | ..." sub-header
         let setupRow = -1;             // dòng "Setup giá bán" — dừng đọc
         let veGiaSectionRow = -1;      // dòng label "Về giá" (format thứ 2)
-        let altPricingHeaderRow = -1;  // dòng "Product Type | Detail" (format thứ 2)
+        let altPricingHeaderRow = -1;  // dòng header pricing (format thứ 2)
+        let altPtCol = 0;              // cột chứa "Product Type" trong alt format
 
         for (let r = 0; r < aoa.length; r++) {
           const row = aoa[r] || [];
@@ -536,24 +537,31 @@ export async function parseHappyCreativeLibrary(file) {
           }
 
           // Section 2 header (format chuẩn): "Ký hiệu" ở col 0 + "product type" ở col 1
-          if ((col0 === 'ký hiệu' || col0 === 'ky hieu' || col0 === 'kí hiệu')
+          const col0Norm = col0.normalize('NFD').replace(/[̀-ͯ]/g, '');
+          if ((col0Norm === 'ky hieu' || col0Norm === 'ki hieu' || col0 === 'ky hieu')
               && col1.includes('product type') && pricingHeaderRow === -1) {
             pricingHeaderRow = r;
             pricingSubHeaderRow = r + 1;
           }
 
           // Section 2 header (format thứ 2 — "Về giá"): tìm dòng label "Về giá"
+          // Dùng NFD normalization để tránh lỗi Unicode encoding của Excel
           if (veGiaSectionRow === -1 && row.some(c => {
-            const s = cellStr(c).toLowerCase().trim();
-            return s === 've gia' || s === 'về giá';
+            const s = cellStr(c).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+            return s === 've gia' || s.includes('ve gia');
           })) {
             veGiaSectionRow = r;
           }
 
-          // Sau dòng "Về giá", tìm "Product Type | Detail" (không có cột Ký hiệu)
-          if (veGiaSectionRow >= 0 && altPricingHeaderRow === -1 && r > veGiaSectionRow
-              && col0.includes('product type') && col1.includes('detail')) {
-            altPricingHeaderRow = r;
+          // Sau dòng "Về giá", tìm header row có "product type" ở cột 0, 1 hoặc 2
+          // (không yêu cầu "detail" ở col1 vì nhiều file bỏ qua cột đó)
+          if (veGiaSectionRow >= 0 && altPricingHeaderRow === -1 && r > veGiaSectionRow) {
+            const rowCells = (row || []).map(c => cellStr(c).toLowerCase());
+            const ptIdx = rowCells.slice(0, 3).findIndex(s => s.includes('product type'));
+            if (ptIdx >= 0) {
+              altPricingHeaderRow = r;
+              altPtCol = ptIdx;
+            }
           }
 
           // Dừng khi gặp "Setup giá bán"
@@ -659,8 +667,8 @@ export async function parseHappyCreativeLibrary(file) {
 
             // Nếu gặp tiêu đề của phần 2 ("Về giá") thì dừng đọc Section 1
             const isPricingSection = row.some(cell => {
-              const str = cellStr(cell).toLowerCase().trim();
-              return str === 'về giá' || str === 've gia' || str.includes('về giá') || str.includes('ve gia');
+              const str = cellStr(cell).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+              return str === 've gia' || str.includes('ve gia');
             });
             if (isPricingSection) break;
 
@@ -748,42 +756,95 @@ export async function parseHappyCreativeLibrary(file) {
         }
 
         // ── Parse Section 2 (format thứ 2) — "Về giá" không có cột Ký hiệu ────
-        // Format: Product Type | Size | Optional | Pricing1 | Pricing2 | Eco Ship | Eco Total | Fast Ship | Fast Total | ...
+        // altPtCol xác định cột chứa Product Type (có thể là col0 hoặc col1)
         if (pricing.length === 0 && altPricingHeaderRow >= 0) {
           const endRow = setupRow >= 0 ? setupRow : aoa.length;
-          const dataStart = altPricingHeaderRow + 2; // bỏ qua header + sub-header
+
+          // Đọc sub-header (dòng ngay sau group header) để detect vị trí cột chính xác
+          const subRow = aoa[altPricingHeaderRow + 1] || [];
+          const hasSubHeader = subRow.some(c => {
+            const s = cellStr(c).toLowerCase();
+            return s.includes('size') || s.includes('pricing') || s.includes('price ship') || s.includes('optional');
+          });
+
+          // Vị trí cột mặc định theo offset từ altPtCol
+          let colSize = altPtCol + 1, colOptional = altPtCol + 2;
+          let colP1 = altPtCol + 3, colP2 = altPtCol + 4;
+          const shipCols = []; // [{price, total}, ...] — mỗi phần tử là 1 phương thức ship
+
+          if (hasSubHeader) {
+            const subCells = subRow.map(c => cellStr(c).toLowerCase());
+            subCells.forEach((s, c) => {
+              if (s.includes('size') && c > altPtCol && colSize === altPtCol + 1) colSize = c;
+              else if (s.includes('optional') && c > altPtCol) colOptional = c;
+              else if ((s.includes('pricing 1') || s === 'pricing1') && c > altPtCol) colP1 = c;
+              else if ((s.includes('pricing 2') || s === 'pricing2') && c > altPtCol) colP2 = c;
+            });
+
+            // Tìm shipping method columns từ colP2 trở đi
+            // Mỗi method: "price ship" rồi "total" đầu tiên sau đó
+            // Bỏ qua "Total Price 2", "Total Price 3"... (extra columns trong một số format)
+            let i = colP2 + 1;
+            while (i < subCells.length && shipCols.length < 5) {
+              if (subCells[i].includes('price ship') || subCells[i].includes('price_ship')) {
+                const priceCol = i;
+                let totalCol = null;
+                for (let j = priceCol + 1; j < subCells.length; j++) {
+                  if (subCells[j].includes('price ship') || subCells[j].includes('price_ship')) break;
+                  if (subCells[j].includes('total')) { totalCol = j; break; }
+                }
+                shipCols.push({ price: priceCol, total: totalCol });
+                i = totalCol != null ? totalCol + 1 : priceCol + 1;
+              } else {
+                i++;
+              }
+            }
+          }
+
+          // Fallback nếu không detect được từ sub-header
+          if (shipCols.length === 0) {
+            const base = altPtCol + 5;
+            for (let m = 0; m < 5; m++) shipCols.push({ price: base + m * 2, total: base + m * 2 + 1 });
+          }
+
+          const dataStart = hasSubHeader ? altPricingHeaderRow + 2 : altPricingHeaderRow + 1;
           let lastProductType = '';
 
           for (let r = dataStart; r < endRow; r++) {
             const row = aoa[r] || [];
             if (row.every(c => cellStr(c) === '')) continue;
 
-            const rawType = cellStr(row[0]);
-            // Dừng khi gặp "Set up giá bán"
+            const rawType = cellStr(row[altPtCol]);
             if (rawType.toLowerCase().includes('set up') || rawType.toLowerCase().includes('setup')) break;
-            // Bỏ header lạc
             if (rawType.toLowerCase().includes('product type')) continue;
 
             if (rawType) lastProductType = rawType;
             if (!lastProductType) continue;
 
+            const getShip = (idx, isTotal) => {
+              const col = shipCols[idx];
+              if (!col) return null;
+              const colIdx = isTotal ? col.total : col.price;
+              return colIdx != null ? parseN(row[colIdx]) : null;
+            };
+
             pricing.push({
-              kyHieu: '',
+              kyHieu: altPtCol > 0 ? cellStr(row[0]) : '',
               productType: lastProductType,
-              size: cellStr(row[1]) === 'N/A' ? '' : cellStr(row[1]),
-              optional: cellStr(row[2]) === 'N/A' ? '' : cellStr(row[2]),
-              pricing1: parseN(row[3]),
-              pricing2: parseN(row[4]),
-              eco_price: parseN(row[5]),
-              eco_total: parseN(row[6]),
-              ground_price: parseN(row[7]),
-              ground_total: parseN(row[8]),
-              express_price: parseN(row[9]),
-              express_total: parseN(row[10]),
-              twoday_price: parseN(row[11]),
-              twoday_total: parseN(row[12]),
-              overnight_price: parseN(row[13]),
-              overnight_total: parseN(row[14]),
+              size: cellStr(row[colSize]) === 'N/A' ? '' : cellStr(row[colSize]),
+              optional: cellStr(row[colOptional]) === 'N/A' ? '' : cellStr(row[colOptional]),
+              pricing1: parseN(row[colP1]),
+              pricing2: parseN(row[colP2]),
+              eco_price: getShip(0, false),
+              eco_total: getShip(0, true),
+              ground_price: getShip(1, false),
+              ground_total: getShip(1, true),
+              express_price: getShip(2, false),
+              express_total: getShip(2, true),
+              twoday_price: getShip(3, false),
+              twoday_total: getShip(3, true),
+              overnight_price: getShip(4, false),
+              overnight_total: getShip(4, true),
             });
           }
         }
