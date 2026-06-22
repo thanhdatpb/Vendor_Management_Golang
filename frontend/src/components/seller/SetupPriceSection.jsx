@@ -71,13 +71,22 @@ export default function SetupPriceSection() {
   });
   const [sizeRows, setSizeRows] = useState([mkRow()]);
 
-  // ── Grouped vendors ──────────────────────────────────────
+  // ── Grouped vendors (by vendor_name) ─────────────────────
   const groupedVendors = useMemo(() => {
     const map = {};
     assignedPriceList.forEach(item => {
-      const key = `${item.vendor_id}_${item.product_type}`;
-      if (!map[key]) map[key] = { ...item, _key: key, _rawSizes: [] };
+      // Group solely by vendor_name so all sizes of same vendor merge into one row
+      const key = (item.vendor_name || item.vendor_type || 'unknown').trim();
+      if (!map[key]) {
+        map[key] = {
+          ...item,
+          _key: key,
+          _rawSizes: [],
+          _productTypes: new Set(),
+        };
+      }
       map[key]._rawSizes.push(item);
+      if (item.product_type) map[key]._productTypes.add(item.product_type);
     });
     const allSetups = JSON.parse(localStorage.getItem(LS_VENDOR_SETUP_KEY) || '{}');
     return Object.values(map).map(group => {
@@ -86,8 +95,12 @@ export default function SetupPriceSection() {
         ? saved.sizes.map(r => computeRow(r, saved))
         : [];
       const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
+      // Collect unique size labels from raw data
+      const uniqueSizeLabels = [...new Set(group._rawSizes.map(s => s.size).filter(Boolean))];
       return {
         ...group,
+        _productTypeList: [...group._productTypes],
+        _uniqueSizeLabels: uniqueSizeLabels,
         _saved: saved || null,
         _computedSizes: computedSizes,
         _avgProfit:  avg(computedSizes.map(r => r.profit)),
@@ -100,11 +113,19 @@ export default function SetupPriceSection() {
 
   const filteredGroups = useMemo(() => groupedVendors.filter(g => {
     const q = search.toLowerCase();
-    return (!search || (g.product_type || '').toLowerCase().includes(q) || (g.vendor_name || '').toLowerCase().includes(q))
-      && (!filterProductType || (g.product_type || '').toLowerCase().includes(filterProductType.toLowerCase()));
+    const matchSearch = !search
+      || (g.vendor_name || '').toLowerCase().includes(q)
+      || g._productTypeList.some(pt => pt.toLowerCase().includes(q));
+    const matchFilter = !filterProductType
+      || g._productTypeList.some(pt => pt.toLowerCase().includes(filterProductType.toLowerCase()));
+    return matchSearch && matchFilter;
   }), [groupedVendors, search, filterProductType]);
 
-  const productTypes  = useMemo(() => [...new Set(groupedVendors.map(g => g.product_type).filter(Boolean))], [groupedVendors]);
+  // Collect all unique product types across all groups for the filter dropdown
+  const productTypes = useMemo(() => {
+    const all = groupedVendors.flatMap(g => g._productTypeList);
+    return [...new Set(all)].filter(Boolean);
+  }, [groupedVendors]);
   const totalPages    = Math.ceil(filteredGroups.length / ITEMS_PER_PAGE);
   const pagedGroups   = filteredGroups.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -211,12 +232,33 @@ export default function SetupPriceSection() {
         shipping_cost: s.shipping_cost ?? '0',
       })));
     } else {
-      const base = (parseFloat(group.pricing1) || 0) + (parseFloat(group.pricing2) || 0);
-      const ship = parseFloat(group.eco_price) || 0;
-      setGlobalSettings({ gia_hien_thi: base > 0 ? String(base) : '', custom_design_price: '', ship_price: ship > 0 ? String(ship) : '', coupon_pct: 10, shipping_method: 'economy' });
-      const initRows = (group._rawSizes || []).filter(s => s.size).map(s => ({
-        ...mkRow(), size_label: s.size || '', item_cost: s.eco_total ? String(s.eco_total) : '',
-      }));
+      // Derive default global values from first raw size entry
+      const first = group._rawSizes[0] || {};
+      const base = (parseFloat(first.pricing1) || 0) + (parseFloat(first.pricing2) || 0);
+      const ship = parseFloat(first.eco_price) || parseFloat(first.fast_price) || 0;
+      setGlobalSettings({
+        gia_hien_thi: base > 0 ? String(base) : '',
+        custom_design_price: '',
+        ship_price: ship > 0 ? String(ship) : '',
+        coupon_pct: 10,
+        shipping_method: 'economy',
+      });
+      // Pre-populate one row per unique size from all raw entries
+      // Deduplicate by size label so same size doesn't appear twice
+      const seen = new Set();
+      const initRows = (group._rawSizes || [])
+        .filter(s => {
+          const label = (s.size || '').trim();
+          if (seen.has(label)) return false;
+          seen.add(label);
+          return true;
+        })
+        .map(s => ({
+          ...mkRow(),
+          size_label: s.size || '',
+          item_cost: s.eco_total ? String(parseFloat(s.eco_total) || '') : '',
+          shipping_cost: '0',
+        }));
       setSizeRows(initRows.length ? initRows : [mkRow()]);
     }
     setShowSetupModal(true);
@@ -345,11 +387,26 @@ export default function SetupPriceSection() {
                       <td style={{ padding: '10px 8px', fontWeight: 600, color: group.vendor_type === 'Best Seller' ? '#D4A017' : HC.orange }}>
                         {group.vendor_type || '—'}{group.vendor_type === 'Best Seller' && <span style={{ marginLeft: 4, fontSize: 11 }}>⭐</span>}
                       </td>
-                      <td style={{ padding: '10px 8px', color: HC.ink2, fontWeight: 600 }}>{group.product_type || '—'}</td>
+                      {/* Product Types — all types across the group */}
+                      <td style={{ padding: '8px 8px', maxWidth: 160 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {group._productTypeList.length > 0
+                            ? group._productTypeList.map(pt => (
+                                <span key={pt} style={{ padding: '2px 7px', borderRadius: 10, background: HC.surface2, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.ink2, whiteSpace: 'nowrap' }}>{pt}</span>
+                              ))
+                            : <span style={{ color: HC.muted, fontSize: 11 }}>—</span>}
+                        </div>
+                      </td>
+                      {/* Số Size — count of unique sizes from raw data + setup badge */}
                       <td style={tdCenter}>
-                        {group._computedSizes.length > 0
-                          ? <span style={{ padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontWeight: 700 }}>{group._computedSizes.length}</span>
-                          : <span style={{ color: HC.muted, fontSize: 11 }}>Chưa setup</span>}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                          <span style={{ padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontWeight: 700, fontSize: 11 }}>
+                            {group._rawSizes.length} size
+                          </span>
+                          {group._computedSizes.length > 0
+                            ? <span style={{ fontSize: 10, color: HC.success, fontWeight: 600 }}>✓ Đã setup</span>
+                            : <span style={{ fontSize: 10, color: HC.muted }}>Chưa setup</span>}
+                        </div>
                       </td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 600, color: HC.ink2 }}>
                         {group._minPrice != null
@@ -397,9 +454,17 @@ export default function SetupPriceSection() {
             <div style={{ padding: '14px 24px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontWeight: 900, fontSize: 16 }}>⚙️ Setup Giá Bán</div>
-                  <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
-                    {selectedGroup.vendor_name || selectedGroup.vendor_type} · {selectedGroup.product_type}
+                  <div style={{ fontWeight: 900, fontSize: 16 }}>⚙️ Setup Giá Bán — {selectedGroup.vendor_name || selectedGroup.vendor_type}</div>
+                  <div style={{ fontSize: 11, opacity: 0.9, marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span>{selectedGroup.vendor_type}</span>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <span>{selectedGroup._rawSizes.length} size</span>
+                    {selectedGroup._productTypeList.length > 0 && (
+                      <>
+                        <span style={{ opacity: 0.5 }}>·</span>
+                        <span>Products: {selectedGroup._productTypeList.join(', ')}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => setShowSetupModal(false)}
