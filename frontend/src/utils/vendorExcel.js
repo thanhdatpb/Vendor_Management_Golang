@@ -808,8 +808,17 @@ export async function parseHappyCreativeLibrary(file) {
           }
 
           const dataStart = hasSubHeader ? altPricingHeaderRow + 2 : altPricingHeaderRow + 1;
-          let lastProductType = '';
           let lastKyHieu = '';
+
+          // Pre-populate lastProductType từ group header "Product Type (Night Light)" → "Night Light"
+          // Xử lý trường hợp merged cell kéo dài từ header xuống toàn bộ data rows
+          // (khi đó row[altPtCol] luôn = "" trong data rows)
+          let lastProductType = '';
+          const groupHeaderCell = cellStr((aoa[altPricingHeaderRow] || [])[altPtCol]);
+          const ptHeaderMatch = groupHeaderCell.match(/product type\s*[\(\[]\s*(.+?)\s*[\)\]]/i);
+          if (ptHeaderMatch && ptHeaderMatch[1]) {
+            lastProductType = ptHeaderMatch[1].trim();
+          }
 
           for (let r = dataStart; r < endRow; r++) {
             const row = aoa[r] || [];
