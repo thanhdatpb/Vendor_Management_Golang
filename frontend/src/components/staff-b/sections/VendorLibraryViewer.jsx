@@ -415,7 +415,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 
   const startRename = (e) => {
     e.stopPropagation();
-    setRenameValue(entry.filename);
+    setRenameValue(entry.filename.replace(/\.xlsx?$/i, ''));
     setRenamingFile(true);
     setTimeout(() => renameInputRef.current?.focus(), 50);
   };
@@ -507,7 +507,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 flex: 1, minWidth: 0,
               }}>
-                {entry.filename}
+                {entry.filename.replace(/\.xlsx?$/i, '')}
               </span>
             )}
             {!readOnly && !renamingFile && (
@@ -1093,7 +1093,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         const result = await parseHappyCreativeLibrary(file);
         newEntries.push({
           id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          filename: file.name,
+          filename: file.name.replace(/\.xlsx?$/i, ''),
           importedAt: new Date().toISOString(),
           title: result.title,
           generalInfo: result.generalInfo,
