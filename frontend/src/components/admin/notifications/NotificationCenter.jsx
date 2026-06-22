@@ -1,159 +1,103 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { HC } from '../constants';
 
-export default function NotificationCenter({ onClose, notifications, newsNotifications, markAsRead, markNewsAsRead, onNotificationClick, onNewsClick }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('requests');
-  const [localRequests, setLocalRequests] = useState(notifications || []);
-  const [localNews, setLocalNews] = useState(newsNotifications || []);
-  const [selectedNotif, setSelectedNotif] = useState(null); // Chi tiết thông báo đang xem
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    try {
-      const date = new Date(timestamp);
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
-      const diffDays = Math.floor(diffMs / 86400000);
+const NEWS_COLOR = '#0891b2';
+const NEWS_BG   = '#f0f9ff';
 
-      if (diffMins < 1) return 'Vừa xong';
-      if (diffMins < 60) return `${diffMins} phút trước`;
-      if (diffHours < 24) return `${diffHours} giờ trước`;
-      if (diffDays < 7) return `${diffDays} ngày trước`;
-      return date.toLocaleDateString('vi-VN');
-    } catch {
-      return '';
-    }
-  };
-  // Sync từ props nhưng GIỮ NGUYÊN read=true đã đánh dấu trong local state
+function formatTime(timestamp) {
+  if (!timestamp) return '';
+  try {
+    const date = new Date(timestamp);
+    const diff = Date.now() - date;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'Vừa xong';
+    if (m < 60) return `${m} phút trước`;
+    const h = Math.floor(diff / 3600000);
+    if (h < 24) return `${h} giờ trước`;
+    const d = Math.floor(diff / 86400000);
+    if (d < 7) return `${d} ngày trước`;
+    return date.toLocaleDateString('vi-VN');
+  } catch { return ''; }
+}
+
+export default function NotificationCenter({
+  onClose,
+  notifications,
+  newsNotifications,
+  markAsRead,
+  markNewsAsRead,
+  onNotificationClick,
+  onNewsClick,
+}) {
+  const [isOpen, setIsOpen]         = useState(false);
+  const [localRequests, setLocalRequests] = useState(notifications || []);
+  const [localNews, setLocalNews]   = useState(newsNotifications || []);
+  const [selectedNotif, setSelectedNotif] = useState(null);
+
   useEffect(() => {
     setLocalRequests(prev => {
       const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
-      return (notifications || []).map(n => ({
-        ...n,
-        read: readIds.has(n.id) ? true : n.read,
-      }));
+      return (notifications || []).map(n => ({ ...n, read: readIds.has(n.id) ? true : n.read }));
     });
   }, [notifications]);
 
   useEffect(() => {
     setLocalNews(prev => {
       const readIds = new Set(prev.filter(n => n.read).map(n => n.id));
-      return (newsNotifications || []).map(n => ({
-        ...n,
-        read: readIds.has(n.id) ? true : n.read,
-      }));
+      return (newsNotifications || []).map(n => ({ ...n, read: readIds.has(n.id) ? true : n.read }));
     });
   }, [newsNotifications]);
 
-  const unreadRequests = localRequests.filter(n => !n.read).length;
-  const unreadNews = localNews.filter(n => !n.read).length;
-  const totalUnread = unreadRequests + unreadNews;
+  const totalUnread = useMemo(
+    () => localRequests.filter(n => !n.read).length + localNews.filter(n => !n.read).length,
+    [localRequests, localNews]
+  );
 
-  const handleMarkAsRead = (id) => {
-    markAsRead(id);
-    setLocalRequests(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
+  const allItems = useMemo(() => {
+    const reqs = localRequests.map(n => ({ ...n, _category: 'request' }));
+    const news = localNews.map(n => ({ ...n, _category: 'news' }));
+    return [...reqs, ...news].sort((a, b) => {
+      const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return tb - ta;
+    });
+  }, [localRequests, localNews]);
 
-  const handleMarkNewsAsRead = (id) => {
-    if (markNewsAsRead) {
-      markNewsAsRead(id);
-    }
-    setLocalNews(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
-
-  const handleMarkAllRequestsAsRead = () => {
-    // Cập nhật local state trước
+  const markAllAsRead = () => {
     setLocalRequests(prev => prev.map(n => ({ ...n, read: true })));
-    // Rồi mới gọi parent (không để parent re-render gây race condition)
-    setTimeout(() => {
-      localRequests.forEach(n => {
-        if (!n.read) markAsRead(n.id);
-      });
-    }, 0);
-  };
-
-  const handleMarkAllNewsAsRead = () => {
     setLocalNews(prev => prev.map(n => ({ ...n, read: true })));
     setTimeout(() => {
-      localNews.forEach(n => {
-        if (!n.read && markNewsAsRead) markNewsAsRead(n.id);
-      });
+      localRequests.forEach(n => { if (!n.read) markAsRead(n.id); });
+      localNews.forEach(n => { if (!n.read && markNewsAsRead) markNewsAsRead(n.id); });
     }, 0);
   };
 
-  const handleRequestClick = (notif) => {
-    // Đánh dấu đã đọc local trước
-    setLocalRequests(prev =>
-      prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
-    );
-    setTimeout(() => {
-      if (!notif.read) markAsRead(notif.id);
-    }, 0);
-    // Hiển thị chi tiết trong panel thay vì đóng
-    setSelectedNotif({ ...notif, read: true, _type: 'request' });
+  const handleItemClick = (notif) => {
+    if (notif._category === 'request') {
+      setLocalRequests(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+      setTimeout(() => { if (!notif.read) markAsRead(notif.id); }, 0);
+    } else {
+      setLocalNews(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
+      setTimeout(() => { if (!notif.read && markNewsAsRead) markNewsAsRead(notif.id); }, 0);
+    }
+    setSelectedNotif({ ...notif, read: true });
   };
 
-  const handleNewsClick = (notif) => {
-    setLocalNews(prev =>
-      prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
-    );
-    setTimeout(() => {
-      if (!notif.read && markNewsAsRead) markNewsAsRead(notif.id);
-    }, 0);
-    setSelectedNotif({ ...notif, read: true, _type: 'news' });
-  };
+  const isRequest = (notif) => notif._category === 'request';
 
   return (
     <div style={{ position: 'relative' }}>
+      {/* Bell */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          background: HC.orangeLight,
-          border: `1px solid ${HC.orangeMid}`,
-          borderRadius: 30,
-          width: 40,
-          height: 40,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          position: 'relative',
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.background = HC.orangeMid;
-          e.currentTarget.style.transform = 'scale(1.05)';
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = HC.orangeLight;
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
+        style={{ background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 30, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', transition: 'all 0.2s' }}
+        onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; e.currentTarget.style.transform = 'scale(1.05)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.transform = 'scale(1)'; }}
       >
         <BellOutlined style={{ fontSize: 20, color: HC.orangeDark }} />
         {totalUnread > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: -5,
-            right: -5,
-            background: HC.danger,
-            color: '#fff',
-            fontSize: 10,
-            fontWeight: 900,
-            width: 20,
-            height: 20,
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: `2px solid ${HC.surface}`,
-          }}>
+          <span style={{ position: 'absolute', top: -5, right: -5, background: HC.danger, color: '#fff', fontSize: 10, fontWeight: 900, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${HC.surface}` }}>
             {totalUnread > 99 ? '99+' : totalUnread}
           </span>
         )}
@@ -161,188 +105,67 @@ export default function NotificationCenter({ onClose, notifications, newsNotific
 
       {isOpen && (
         <>
-          <div
-            onClick={() => setIsOpen(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 998,
-            }}
-          />
-          <div style={{
-            position: 'absolute',
-            top: 50,
-            right: 0,
-            width: 520,
-            maxHeight: 680,
-            background: HC.surface,
-            borderRadius: 16,
-            boxShadow: HC.shadowStrong,
-            border: `1.5px solid ${HC.border}`,
-            zIndex: 999,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}>
-            {/* Header với 2 tabs */}
-            <div style={{
-              padding: '14px 18px',
-              background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-              color: '#fff',
-            }}>
-              <div style={{ fontWeight: 900, fontSize: 14, fontFamily: "'Nunito',sans-serif", marginBottom: 12 }}>
-                🔔 Trung tâm thông báo
-              </div>
+          <div onClick={() => setIsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
+          <div style={{ position: 'absolute', top: 50, right: 0, width: 460, maxHeight: 660, background: HC.surface, borderRadius: 16, boxShadow: HC.shadowStrong, border: `1.5px solid ${HC.border}`, zIndex: 999, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-              {/* Tabs */}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => { setActiveTab('requests'); setSelectedNotif(null); }}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: 10,
-                    background: activeTab === 'requests' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                    border: 'none',
-                    color: '#fff',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    fontFamily: "'Nunito',sans-serif",
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  📋 Yêu cầu
-                  {unreadRequests > 0 && (
-                    <span style={{
-                      background: '#fff',
-                      color: HC.orangeDark,
-                      borderRadius: 20,
-                      padding: '2px 8px',
-                      fontSize: 10,
-                      fontWeight: 900,
-                    }}>
-                      {unreadRequests}
+            {/* ── Header ── */}
+            <div style={{ padding: '16px 18px 14px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
+                  🔔 Thông báo
+                  {totalUnread > 0 && (
+                    <span style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 10px' }}>
+                      {totalUnread} chưa đọc
                     </span>
                   )}
-                </button>
-                <button
-                  onClick={() => { setActiveTab('news'); setSelectedNotif(null); }}
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: 10,
-                    background: activeTab === 'news' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)',
-                    border: 'none',
-                    color: '#fff',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    fontFamily: "'Nunito',sans-serif",
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  📰 Tin tức
-                  {unreadNews > 0 && (
-                    <span style={{
-                      background: '#fff',
-                      color: HC.orangeDark,
-                      borderRadius: 20,
-                      padding: '2px 8px',
-                      fontSize: 10,
-                      fontWeight: 900,
-                    }}>
-                      {unreadNews}
-                    </span>
-                  )}
-                </button>
+                </span>
+                {totalUnread > 0 && (
+                  <button onClick={markAllAsRead} style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '5px 12px', fontFamily: "'Nunito',sans-serif", transition: 'all 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.28)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+                  >
+                    Đọc tất cả ✓
+                  </button>
+                )}
+              </div>
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: '#fff', opacity: 0.9, display: 'inline-block' }} />
+                  Yêu cầu
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: NEWS_COLOR, display: 'inline-block' }} />
+                  Tin tức
+                </span>
               </div>
             </div>
 
-            {/* Chi tiết thông báo (khi đã chọn) */}
+            {/* ── Detail View ── */}
             {selectedNotif ? (
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', maxHeight: 530 }}>
-                {/* Thanh back */}
-                <div style={{
-                  padding: '10px 16px',
-                  background: HC.cream,
-                  borderBottom: `1px solid ${HC.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 2,
-                }}>
-                  <button
-                    onClick={() => setSelectedNotif(null)}
-                    style={{
-                      background: HC.orangeLight,
-                      border: `1px solid ${HC.orangeMid}`,
-                      borderRadius: 8,
-                      padding: '4px 12px',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: HC.orangeDark,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
+              <div style={{ flex: 1, overflowY: 'auto', maxHeight: 540 }}>
+                <div style={{ padding: '10px 16px', background: HC.cream, borderBottom: `1px solid ${HC.border}`, display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0, zIndex: 2 }}>
+                  <button onClick={() => setSelectedNotif(null)} style={{ background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 700, color: HC.orangeDark, cursor: 'pointer' }}>
                     ← Quay lại
                   </button>
                   <span style={{ fontSize: 11, color: HC.muted, fontWeight: 600 }}>Chi tiết thông báo</span>
-                  <span style={{
-                    marginLeft: 'auto',
-                    fontSize: 9, fontWeight: 700, color: HC.success,
-                    background: '#ecfdf5', border: '1px solid #bbf7d0',
-                    borderRadius: 99, padding: '2px 8px',
-                  }}>✓ Đã đọc</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, color: HC.success, background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 99, padding: '2px 8px' }}>✓ Đã đọc</span>
                 </div>
-
-                {/* Nội dung chi tiết */}
-                <div style={{ padding: '20px 20px', flex: 1 }}>
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{
-                      fontWeight: 900, fontSize: 14,
-                      color: HC.ink, fontFamily: "'Nunito',sans-serif",
-                      lineHeight: 1.4,
-                    }}>
-                      {selectedNotif.title}
-                    </div>
+                <div style={{ padding: '20px' }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '2px 9px', background: isRequest(selectedNotif) ? HC.orangeLight : NEWS_BG, color: isRequest(selectedNotif) ? HC.orangeDark : NEWS_COLOR, border: `1px solid ${isRequest(selectedNotif) ? HC.orangeMid : '#bae6fd'}` }}>
+                      {isRequest(selectedNotif) ? 'Yêu cầu' : 'Tin tức'}
+                    </span>
                   </div>
-
-                  <div style={{
-                    background: HC.orangePale,
-                    border: `1px solid ${HC.border}`,
-                    borderRadius: 12,
-                    padding: '14px 16px',
-                    fontSize: 13,
-                    color: HC.ink2,
-                    lineHeight: 1.7,
-                    whiteSpace: 'pre-wrap',
-                    marginBottom: 16,
-                  }}>
+                  <div style={{ fontWeight: 900, fontSize: 14, color: HC.ink, fontFamily: "'Nunito',sans-serif", lineHeight: 1.4, marginTop: 10, marginBottom: 14 }}>{selectedNotif.title}</div>
+                  <div style={{ background: HC.orangePale, border: `1px solid ${HC.border}`, borderRadius: 12, padding: '14px 16px', fontSize: 13, color: HC.ink2, lineHeight: 1.7, whiteSpace: 'pre-wrap', marginBottom: 16 }}>
                     {selectedNotif.message || '(Không có nội dung)'}
                   </div>
-
-                  {/* Meta info */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {(selectedNotif.product_type || selectedNotif.productType) && (
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <span style={{ fontSize: 11, color: HC.muted, width: 90 }}>🏷️ Loại SP</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>
-                          {selectedNotif.product_type || selectedNotif.productType}
-                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: HC.brown }}>{selectedNotif.product_type || selectedNotif.productType}</span>
                       </div>
                     )}
                     {selectedNotif.sender && (
@@ -353,334 +176,90 @@ export default function NotificationCenter({ onClose, notifications, newsNotific
                     )}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <span style={{ fontSize: 11, color: HC.muted, width: 90 }}>🕒 Thời gian</span>
-                      <span style={{ fontSize: 12, color: HC.brown }}>
-                        {selectedNotif.time || (selectedNotif.timestamp ? new Date(selectedNotif.timestamp).toLocaleString('vi-VN') : '')}
-                      </span>
+                      <span style={{ fontSize: 12, color: HC.brown }}>{selectedNotif.time || (selectedNotif.timestamp ? new Date(selectedNotif.timestamp).toLocaleString('vi-VN') : '')}</span>
                     </div>
                     {selectedNotif.reason && (
-                      <div style={{
-                        marginTop: 8,
-                        padding: '10px 14px',
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: 10,
-                        fontSize: 12,
-                        color: HC.danger,
-                        lineHeight: 1.5,
-                      }}>
+                      <div style={{ marginTop: 8, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, fontSize: 12, color: HC.danger, lineHeight: 1.5 }}>
                         <b>Lý do từ chối:</b> {selectedNotif.reason}
                       </div>
                     )}
                   </div>
-
-                  {/* Nút điều hướng nếu có productId */}
                   {(selectedNotif.productId || selectedNotif.product_id) && onNotificationClick && (
-                    <button
-                      onClick={() => {
-                        onNotificationClick(selectedNotif);
-                        setSelectedNotif(null);
-                        setIsOpen(false);
-                      }}
-                      style={{
-                        marginTop: 20,
-                        width: '100%',
-                        padding: '10px',
-                        background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-                        border: 'none',
-                        borderRadius: 10,
-                        color: '#fff',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        fontFamily: "'Nunito',sans-serif",
-                      }}
-                    >
+                    <button onClick={() => { onNotificationClick(selectedNotif); setSelectedNotif(null); setIsOpen(false); }} style={{ marginTop: 20, width: '100%', padding: '10px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, border: 'none', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif" }}>
                       🔍 Xem sản phẩm liên quan
                     </button>
                   )}
                 </div>
               </div>
             ) : (
+              /* ── Unified feed ── */
+              <div style={{ overflowY: 'auto', flex: 1, maxHeight: 540, scrollbarWidth: 'thin', scrollbarColor: `${HC.orangeMid} transparent` }}>
+                {/* Subheader */}
+                <div style={{ padding: '8px 16px', background: HC.cream, borderBottom: `1px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
+                    {allItems.length > 0 ? `${allItems.length} thông báo` : 'Tất cả thông báo'}
+                    {totalUnread > 0 && (
+                      <span style={{ marginLeft: 6, color: HC.brown }}>· {totalUnread} chưa đọc</span>
+                    )}
+                  </span>
+                </div>
 
-            /* Danh sách theo tab */
-            <div style={{ overflowY: 'auto', maxHeight: 530, scrollbarWidth: 'thin', scrollbarColor: `${HC.orangeMid} transparent` }}>
-              {activeTab === 'requests' && (
-                <>
-                  <div style={{
-                    padding: '10px 16px',
-                    background: HC.cream,
-                    borderBottom: `1px solid ${HC.border}`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 2,
-                  }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
-                      📋 Form request từ Seller
-                      {localRequests.length > 0 && (
-                        <span style={{ marginLeft: 6, color: HC.muted2 }}>
-                          ({localRequests.filter(n => n.read).length}/{localRequests.length} đã đọc)
-                        </span>
-                      )}
-                    </span>
-                    <button
-                      onClick={handleMarkAllRequestsAsRead}
-                      style={{
-                        background: unreadRequests > 0 ? HC.orangeLight : 'transparent',
-                        border: unreadRequests > 0 ? `1px solid ${HC.orangeMid}` : 'none',
-                        color: unreadRequests > 0 ? HC.orangeDark : HC.muted2,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        cursor: unreadRequests > 0 ? 'pointer' : 'default',
-                        borderRadius: 6,
-                        padding: '3px 8px',
-                      }}
-                    >
-                      {unreadRequests > 0 ? `Đánh dấu tất cả đã đọc (${unreadRequests})` : '✓ Tất cả đã đọc'}
-                    </button>
+                {allItems.length === 0 ? (
+                  <div style={{ padding: '60px 20px', textAlign: 'center', color: HC.muted }}>
+                    <div style={{ fontSize: 44, opacity: 0.4, marginBottom: 12 }}>🔔</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: HC.muted }}>Chưa có thông báo nào</div>
+                    <div style={{ fontSize: 11, marginTop: 4, color: HC.muted2 }}>Thông báo sẽ xuất hiện tại đây</div>
                   </div>
-
-                  {localRequests.length === 0 ? (
-                    <div style={{
-                      padding: '60px 20px',
-                      textAlign: 'center',
-                      color: HC.muted,
-                    }}>
-                      <span style={{ fontSize: 48, opacity: 0.5 }}>📭</span>
-                      <div style={{ fontSize: 13, fontWeight: 600, marginTop: 12 }}>Không có yêu cầu mới</div>
-                      <div style={{ fontSize: 11, marginTop: 4 }}>Các form request từ Seller sẽ hiển thị tại đây</div>
-                    </div>
-                  ) : (
-                    localRequests.map(notif => (
-                      <div
-                        key={notif.id}
-                        onClick={() => handleRequestClick(notif)}
-                        style={{
-                          padding: '14px 16px',
-                          borderBottom: `1px solid ${HC.border}`,
-                          background: notif.read ? HC.surface : HC.orangeLight,
-                          cursor: 'pointer',
-                          transition: 'background 0.2s',
-                          opacity: notif.read ? 0.75 : 1,
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = HC.orangePale}
-                        onMouseLeave={e => e.currentTarget.style.background = notif.read ? HC.surface : HC.orangeLight}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                          <span style={{ fontSize: 24 }}>{notif.icon || '📋'}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{
-                                fontWeight: notif.read ? 600 : 800,
-                                fontSize: 13,
-                                color: notif.read ? HC.muted : HC.ink,
-                                fontFamily: "'Nunito',sans-serif",
-                                flex: 1,
-                              }}>
-                                {notif.title}
-                              </div>
-                              {notif.read && (
-                                <span style={{
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  color: HC.success,
-                                  background: '#ecfdf5',
-                                  border: '1px solid #bbf7d0',
-                                  borderRadius: 99,
-                                  padding: '2px 7px',
-                                  whiteSpace: 'nowrap',
-                                  flexShrink: 0,
-                                }}>✓ Đã đọc</span>
-                              )}
-                            </div>
-                            <div style={{
-                              fontSize: 12,
-                              color: HC.brown,
-                              marginTop: 6,
-                              lineHeight: 1.4,
-                            }}>
+                ) : allItems.map((notif, idx) => {
+                  const req = isRequest(notif);
+                  const accentColor = req ? HC.orange : NEWS_COLOR;
+                  const unreadBg = req ? HC.orangeLight : NEWS_BG;
+                  const bg = notif.read ? HC.surface : unreadBg;
+                  return (
+                    <div
+                      key={notif.id || idx}
+                      onClick={() => handleItemClick(notif)}
+                      style={{ padding: '12px 16px 12px 14px', borderBottom: `1px solid ${HC.border}`, borderLeft: `3px solid ${notif.read ? HC.border : accentColor}`, background: bg, cursor: 'pointer', transition: 'all 0.15s', opacity: notif.read ? 0.78 : 1 }}
+                      onMouseEnter={e => { e.currentTarget.style.background = HC.orangePale; e.currentTarget.style.borderLeftColor = accentColor; e.currentTarget.style.opacity = '1'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = bg; e.currentTarget.style.borderLeftColor = notif.read ? HC.border : accentColor; e.currentTarget.style.opacity = notif.read ? '0.78' : '1'; }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
+                        <div style={{ flex: 1 }}>
+                          {/* Row 1: chip + title + dot */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                            <span style={{ fontSize: 9, fontWeight: 800, borderRadius: 99, padding: '2px 7px', background: req ? HC.orangeLight : NEWS_BG, color: req ? HC.orangeDark : NEWS_COLOR, border: `1px solid ${req ? HC.orangeMid : '#bae6fd'}`, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                              {req ? 'Yêu cầu' : 'Tin tức'}
+                            </span>
+                            <span style={{ fontWeight: notif.read ? 600 : 800, fontSize: 12.5, color: notif.read ? HC.muted : HC.ink, fontFamily: "'Nunito',sans-serif", flex: 1, lineHeight: 1.3 }}>
+                              {notif.title}
+                            </span>
+                            {!notif.read && (
+                              <div style={{ width: 7, height: 7, borderRadius: '50%', background: accentColor, flexShrink: 0, marginTop: 2 }} />
+                            )}
+                          </div>
+                          {/* Row 2: message preview */}
+                          {notif.message && (
+                            <div style={{ fontSize: 11.5, color: HC.ink2, lineHeight: 1.45, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', marginBottom: 6 }}>
                               {notif.message}
                             </div>
-                            <div style={{
-                              display: 'flex',
-                              gap: 12,
-                              marginTop: 8,
-                              fontSize: 10,
-                              color: HC.muted2,
-                            }}>
-                              <span>🏷️ {notif.product_type || 'Sản phẩm'}</span>
-                              <span>🕒 {formatTime(notif.timestamp)}</span>
-                              {notif.sender && <span>👤 {notif.sender}</span>}
-                            </div>
+                          )}
+                          {/* Row 3: meta */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 10, color: HC.muted2 }}>
+                            <span>🕒 {notif.timestamp ? formatTime(notif.timestamp) : (notif.time || '')}</span>
+                            {(notif.product_type || notif.productType) && <span>📦 {notif.product_type || notif.productType}</span>}
+                            {notif.sender && <span>👤 {notif.sender}</span>}
                           </div>
-                          {!notif.read ? (
-                            <div style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              background: HC.orange,
-                              flexShrink: 0,
-                              marginTop: 8,
-                            }} />
-                          ) : null}
                         </div>
                       </div>
-                    ))
-                  )}
-                </>
-              )}
-
-              {activeTab === 'news' && (
-                <>
-                  <div style={{
-                    padding: '10px 16px',
-                    background: HC.cream,
-                    borderBottom: `1px solid ${HC.border}`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 2,
-                  }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
-                      📰 Tin tức & Cập nhật từ Vendor Approver
-                      {localNews.length > 0 && (
-                        <span style={{ marginLeft: 6, color: HC.muted2 }}>
-                          ({localNews.filter(n => n.read).length}/{localNews.length} đã đọc)
-                        </span>
-                      )}
-                    </span>
-                    <button
-                      onClick={handleMarkAllNewsAsRead}
-                      style={{
-                        background: unreadNews > 0 ? HC.orangeLight : 'transparent',
-                        border: unreadNews > 0 ? `1px solid ${HC.orangeMid}` : 'none',
-                        color: unreadNews > 0 ? HC.orangeDark : HC.muted2,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        cursor: unreadNews > 0 ? 'pointer' : 'default',
-                        borderRadius: 6,
-                        padding: '3px 8px',
-                      }}
-                    >
-                      {unreadNews > 0 ? `Đánh dấu tất cả đã đọc (${unreadNews})` : '✓ Tất cả đã đọc'}
-                    </button>
-                  </div>
-
-                  {localNews.length === 0 ? (
-                    <div style={{
-                      padding: '60px 20px',
-                      textAlign: 'center',
-                      color: HC.muted,
-                    }}>
-                      <span style={{ fontSize: 48, opacity: 0.5 }}>📰</span>
-                      <div style={{ fontSize: 13, fontWeight: 600, marginTop: 12 }}>Chưa có tin tức mới</div>
-                      <div style={{ fontSize: 11, marginTop: 4 }}>Thông báo từ Vendor Approver sẽ hiển thị tại đây</div>
                     </div>
-                  ) : (
-                    localNews.map(notif => (
-                      <div
-                        key={notif.id}
-                        onClick={() => handleNewsClick(notif)}
-                        style={{
-                          padding: '14px 16px',
-                          borderBottom: `1px solid ${HC.border}`,
-                          background: notif.read ? HC.surface : HC.orangeLight,
-                          cursor: 'pointer',
-                          transition: 'background 0.2s',
-                          opacity: notif.read ? 0.75 : 1,
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = HC.orangePale}
-                        onMouseLeave={e => e.currentTarget.style.background = notif.read ? HC.surface : HC.orangeLight}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                          <span style={{ fontSize: 24 }}>{notif.icon || '📰'}</span>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <div style={{
-                                fontWeight: notif.read ? 600 : 800,
-                                fontSize: 13,
-                                color: notif.read ? HC.muted : HC.ink,
-                                fontFamily: "'Nunito',sans-serif",
-                                flex: 1,
-                              }}>
-                                {notif.title}
-                              </div>
-                              {notif.read && (
-                                <span style={{
-                                  fontSize: 9,
-                                  fontWeight: 700,
-                                  color: HC.success,
-                                  background: '#ecfdf5',
-                                  border: '1px solid #bbf7d0',
-                                  borderRadius: 99,
-                                  padding: '2px 7px',
-                                  whiteSpace: 'nowrap',
-                                  flexShrink: 0,
-                                }}>✓ Đã đọc</span>
-                              )}
-                            </div>
-                            <div style={{
-                              fontSize: 12,
-                              color: HC.brown,
-                              marginTop: 6,
-                              lineHeight: 1.4,
-                            }}>
-                              {notif.message}
-                            </div>
-                            <div style={{
-                              display: 'flex',
-                              gap: 12,
-                              marginTop: 8,
-                              fontSize: 10,
-                              color: HC.muted2,
-                              flexWrap: 'wrap',
-                            }}>
-                              <span>🕒 {notif.time || new Date(notif.timestamp || Date.now()).toLocaleString('vi-VN')}</span>
-                              {notif.sender && <span>👤 {notif.sender}</span>}
-                              {notif.product_type && <span>📦 {notif.product_type}</span>}
-                            </div>
-                          </div>
-                          {!notif.read ? (
-                            <div style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              background: HC.orange,
-                              flexShrink: 0,
-                              marginTop: 8,
-                            }} />
-                          ) : null}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </>
-              )}
-            </div>
-            )} {/* end selectedNotif ternary */}
+                  );
+                })}
+              </div>
+            )}
 
-            <div style={{
-              padding: '10px 16px',
-              borderTop: `1px solid ${HC.border}`,
-              background: HC.cream,
-              textAlign: 'center',
-            }}>
-              <button
-                onClick={() => setIsOpen(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: HC.orange,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: "'Nunito',sans-serif",
-                }}
-              >
+            {/* ── Footer ── */}
+            <div style={{ padding: '9px 16px', borderTop: `1px solid ${HC.border}`, background: HC.cream, textAlign: 'center' }}>
+              <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: HC.orange, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif" }}>
                 Đóng
               </button>
             </div>
