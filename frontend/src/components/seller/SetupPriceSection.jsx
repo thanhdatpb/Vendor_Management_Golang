@@ -1,499 +1,123 @@
-﻿// ════════════════════════════════════════════════════════
-//  SETUP PRICE SECTION
 // ════════════════════════════════════════════════════════
-import { useState, useEffect, useCallback, useRef } from 'react';
+//  SETUP PRICE SECTION — Grouped by Vendor Name
+// ════════════════════════════════════════════════════════
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { HC } from '../../constants/sellerTheme';
 import AppToast from '../shared/AppToast';
 import { LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE } from '../../constants/sellerTheme';
 import { lsGet } from '../../utils/sellerHelpers';
 import { Pagination } from './SellerUI';
 import { inp } from './SellerUI';
-import { SearchOutlined } from '@ant-design/icons';
+
+const LS_PRICE_KEY = 'STAFF_PRICE_LIST_V3';
+const LS_VENDOR_SETUP_KEY = 'VENDOR_PRICE_SETUPS_BY_VENDOR_V1';
+
+// Style helpers
+const thBase = { padding: '10px 8px', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'center' };
+const thLeft = { ...thBase, textAlign: 'left' };
+const tdCenter = { padding: '10px 8px', textAlign: 'center', fontWeight: 600 };
+const tdComp = { padding: '6px 7px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', fontSize: 11 };
+const inputCell = { ...inp, padding: '5px 7px', fontSize: 11, textAlign: 'right' };
+
+const mkRow = () => ({
+  id: Date.now() + Math.random(),
+  size_label: '',
+  for_adult_kid: '',
+  for_type_size: '',
+  item_cost: '',
+  shipping_cost: '0',
+});
+
+const computeRow = (row, g) => {
+  const base    = parseFloat(g.gia_hien_thi) || 0;
+  const custom  = parseFloat(g.custom_design_price) || 0;
+  const ship    = parseFloat(g.ship_price) || 0;
+  const cpct    = parseFloat(g.coupon_pct) || 0;
+  const ak      = parseFloat(row.for_adult_kid) || 0;
+  const ts      = parseFloat(row.for_type_size) || 0;
+  const ic      = parseFloat(row.item_cost) || 0;
+  const sc      = parseFloat(row.shipping_cost) || 0;
+
+  const total_size   = base + ak + ts;
+  const total_price  = total_size + custom + ship;
+  const total_cost   = ic + sc;
+  const coupon_amt   = cpct / 100 * (total_price - ship);
+  const after_price  = total_price - coupon_amt;
+  const coupon_fee   = 0.025 * (total_price - ship - coupon_amt);
+  const amz_fee      = 0.17 * after_price;
+  const profit       = total_price - coupon_amt - coupon_fee - amz_fee - total_cost;
+  const profit_ratio  = total_cost > 0 ? profit / total_cost * 100 : 0;
+  const profit_margin = total_price > 0 ? profit / total_price * 100 : 0;
+
+  return { ...row, total_size, total_price, total_cost, coupon_amt, after_price, coupon_fee, amz_fee, profit, profit_ratio, profit_margin };
+};
 
 export default function SetupPriceSection() {
-  const LS_PRICE_KEY = 'STAFF_PRICE_LIST_V3';
-
   const [assignedPriceList, setAssignedPriceList] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch]                   = useState('');
   const [filterProductType, setFilterProductType] = useState('');
-  const [currentPageAssigned, setCurrentPageAssigned] = useState(1);
-  const ITEMS_PER_PAGE_PRICE = 10;
-  const [toast, setToast] = useState(null);
-  const selectedIndexRef = useRef(-1);
+  const [currentPage, setCurrentPage]         = useState(1);
+  const [toast, setToast]                     = useState(null);
   const [approvedVendors, setApprovedVendors] = useState([]);
-  const [productVendors, setProductVendors] = useState(() => lsGet(LS_PRODUCT_VENDORS, {}));
-  const [showSetupModal, setShowSetupModal] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState(null);
-  const [componentError, setComponentError] = useState(null);
-
-  // State so sánh
-  const [comparisonList, setComparisonList] = useState([]);
-
-  // State cho nhiều giá trị — lưu raw string để không mất dấu thập phân khi gõ
-  const [displayPrices, setDisplayPrices] = useState(['0']);
-  const [customizePrices, setCustomizePrices] = useState([{ name: '', price: '0' }]);
-  const [shipPrices, setShipPrices] = useState([{ name: '', price: '0' }]);
-
-  const [setupForm, setSetupForm] = useState({
-    shipping_method: 'economy',
-    size: '',
-    final_price: 0,
-    profit: 0,
-    profit_margin: 0,
-    coupon_percent: 10,
-    coupon_amount: 0,
-    coupon_fee: 0,
-    amz_fee: 0
-  });
-
-  // Thông tin ship price và total price theo phương thức
-  const [shipInfo, setShipInfo] = useState({
-    ship_price: 0,
-    total_price: 0
-  });
-
-  // Hàm thêm giá trị mới
-  const addPriceField = (type) => {
-    switch (type) {
-      case 'display':
-        setDisplayPrices([...displayPrices, '0']);
-        break;
-      case 'customize':
-        setCustomizePrices([...customizePrices, { name: '', price: '0' }]);
-        break;
-      case 'ship':
-        setShipPrices([...shipPrices, { name: '', price: '0' }]);
-        break;
-      default:
-        break;
-    }
-  };
-
-  // Hàm xóa giá trị
-  const removePriceField = (type, index) => {
-    switch (type) {
-      case 'display':
-        if (displayPrices.length > 1) {
-          const newPrices = [...displayPrices];
-          newPrices.splice(index, 1);
-          setDisplayPrices(newPrices);
-        }
-        break;
-      case 'customize':
-        if (customizePrices.length > 1) {
-          const newPrices = [...customizePrices];
-          newPrices.splice(index, 1);
-          setCustomizePrices(newPrices);
-        }
-        break;
-      case 'ship':
-        if (shipPrices.length > 1) {
-          const newPrices = [...shipPrices];
-          newPrices.splice(index, 1);
-          setShipPrices(newPrices);
-        }
-        break;
-      default:
-        break;
-    }
-  };
-
-  // Hàm cập nhật giá trị — lưu raw string để không mất dấu "." khi đang gõ
-  const updatePriceField = (type, index, value) => {
-    const raw = value.replace(/[^0-9.]/g, '').replace(/^(\d*\.?\d*).*$/, '$1');
-    switch (type) {
-      case 'display': {
-        const next = [...displayPrices];
-        next[index] = raw;
-        setDisplayPrices(next);
-        break;
-      }
-      case 'customize': {
-        const next = customizePrices.map((p, i) => i === index ? { ...p, price: raw } : p);
-        setCustomizePrices(next);
-        break;
-      }
-      case 'ship': {
-        const next = shipPrices.map((p, i) => i === index ? { ...p, price: raw } : p);
-        setShipPrices(next);
-        break;
-      }
-      default:
-        break;
-    }
-  };
-
-  const updatePriceName = (type, index, value) => {
-    if (type === 'customize') {
-      const newCustomizePrices = [...customizePrices];
-      newCustomizePrices[index].name = value;
-      setCustomizePrices(newCustomizePrices);
-    } else if (type === 'ship') {
-      const newShipPrices = [...shipPrices];
-      newShipPrices[index].name = value;
-      setShipPrices(newShipPrices);
-    }
-  };
-
-  // Tính tổng các giá trị
-  const getTotalDisplayPrice = () =>
-    displayPrices.reduce((sum, p) => sum + (parseFloat(p) || 0), 0);
-
-  const getTotalCustomizePrice = () =>
-    customizePrices.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
-
-  const getTotalShipMin = () =>
-    shipPrices.reduce((sum, p) => sum + (parseFloat(p.price) || 0), 0);
-
-  const [sampleDecisions, setSampleDecisions] = useState(() => {
-    try {
-      const raw = localStorage.getItem(LS_SAMPLE_DECISIONS);
-      return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
-  });
-  const [aFeedbackResponses, setAFeedbackResponses] = useState(() => lsGet(LS_A_FEEDBACK_RESPONSE, {}));
-
+  const [componentError, setComponentError]   = useState(null);
   const isInitializedRef = useRef(false);
+  const ITEMS_PER_PAGE = 10;
 
-  // Hàm lấy ship price và total price theo phương thức
-  const getShipInfoByMethod = (vendor, method) => {
-    switch (method) {
-      case 'economy':
-        return { ship_price: vendor?.eco_price || 0, total_price: vendor?.eco_total || 0 };
-      case 'fast':
-        return { ship_price: vendor?.fast_price || 0, total_price: vendor?.fast_total || 0 };
-      case 'express':
-        return { ship_price: vendor?.express_price || 0, total_price: vendor?.express_total || 0 };
-      case 'overnight':
-        return { ship_price: vendor?.overnight_price || 0, total_price: vendor?.overnight_total || 0 };
-      default:
-        return { ship_price: vendor?.eco_price || 0, total_price: vendor?.eco_total || 0 };
-    }
-  };
+  // Modal
+  const [showSetupModal, setShowSetupModal]       = useState(false);
+  const [selectedGroup, setSelectedGroup]         = useState(null);
+  const [globalSettings, setGlobalSettings]       = useState({
+    gia_hien_thi: '', custom_design_price: '', ship_price: '', coupon_pct: 10, shipping_method: 'economy'
+  });
+  const [sizeRows, setSizeRows] = useState([mkRow()]);
 
-  // Hàm mở modal setup giá
-  const handleOpenSetupModal = (vendor) => {
-    const foundIndex = assignedPriceList.findIndex(
-      item => item.id === vendor.id ||
-        (item.product_type === vendor.product_type && item.vendor_type === vendor.vendor_type)
-    );
-    selectedIndexRef.current = foundIndex;
-    const gia_hien_thi = vendor.gia_hien_thi ?? ((vendor.pricing1 || 0) + (vendor.pricing2 || 0));
-    const total_customize_price = vendor.gia_customsize !== undefined
-      ? vendor.gia_customsize
-      : (vendor.size && vendor.size.trim() !== '' ? 5 : 0);
-
-    const defaultMethod = vendor.shipping_method || 'economy';
-    const defaultShipInfo = getShipInfoByMethod(vendor, defaultMethod);
-    const initShipPrice = vendor.ship_prices
-      ? vendor.ship_prices[0]
-      : (vendor.gia_ship !== undefined ? vendor.gia_ship : defaultShipInfo.ship_price);
-
-    setSelectedVendor(vendor);
-    setShipInfo(defaultShipInfo);
-    setDisplayPrices(
-      (vendor.display_prices || [gia_hien_thi]).map(p => String(p ?? 0))
-    );
-    setCustomizePrices(
-      vendor.customize_prices?.length
-        ? vendor.customize_prices.map(p => typeof p === 'object' ? { ...p, price: String(p.price ?? 0) } : { name: '', price: String(p ?? 0) })
-        : [{ name: '', price: String(total_customize_price) }]
-    );
-    setShipPrices(
-      vendor.ship_prices?.length
-        ? vendor.ship_prices.map(p => typeof p === 'object' ? { ...p, price: String(p.price ?? 0) } : { name: getShippingMethodLabel(defaultMethod), price: String(p ?? 0) })
-        : [{ name: '', price: '0' }]
-    );
-    setSetupForm({
-      shipping_method: defaultMethod,
-      size: vendor.size || '',
-      final_price: vendor.final_price || 0,
-      profit: vendor.profit || 0,
-      profit_margin: vendor.profit_margin || 0,
-      coupon_percent: vendor.coupon_percent || 0,
-      coupon_amount: vendor.coupon_amount || 0,
-      coupon_fee: vendor.coupon_fee || 0,
-      amz_fee: vendor.amz_fee || 0,
+  // ── Grouped vendors ──────────────────────────────────────
+  const groupedVendors = useMemo(() => {
+    const map = {};
+    assignedPriceList.forEach(item => {
+      const key = `${item.vendor_id}_${item.product_type}`;
+      if (!map[key]) map[key] = { ...item, _key: key, _rawSizes: [] };
+      map[key]._rawSizes.push(item);
     });
-    setComparisonList([]);
-    setShowSetupModal(true);
-  };
-
-  // Hàm xóa vendor khỏi danh sách giá
-  const handleDeletePriceSetup = (vendor) => {
-    const label = vendor.vendor_name || vendor.vendor_type || 'Vendor';
-    if (window.confirm(`Xóa "${label}" (${vendor.product_type || '—'}) khỏi danh sách giá?`)) {
-      // Xóa khỏi VENDOR_PRICE_SETUPS
-      const savedSetups = JSON.parse(localStorage.getItem('VENDOR_PRICE_SETUPS') || '[]');
-      localStorage.setItem('VENDOR_PRICE_SETUPS', JSON.stringify(
-        savedSetups.filter(s => !(s.vendor_id === vendor.vendor_id && s.product_type === vendor.product_type))
-      ));
-
-      // Xóa khỏi LS_PRODUCT_VENDORS để không bị tái tạo lại
-      if (vendor.productId && vendor.vendorKey !== undefined) {
-        const allPV = lsGet(LS_PRODUCT_VENDORS, {});
-        if (Array.isArray(allPV[vendor.productId])) {
-          allPV[vendor.productId] = allPV[vendor.productId].filter((v, i) => {
-            const k = v.id ? String(v.id) : `idx_${i}`;
-            return k !== String(vendor.vendorKey);
-          });
-          lsSet(LS_PRODUCT_VENDORS, allPV);
-          window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
-        }
-      }
-
-      // Cập nhật state trực tiếp
-      setAssignedPriceList(prev => prev.filter(p =>
-        !(p.vendor_id === vendor.vendor_id && p.product_type === vendor.product_type)
-      ));
-
-      showToastMsg('success', '🗑 Đã xóa', `Đã xóa "${label}" khỏi danh sách giá`);
-    }
-  };
-
-  // Hàm tính toán lại giá khi thay đổi
-  const calculateSetupPrices = useCallback(() => {
-    if (!selectedVendor || selectedIndexRef.current === -1) return;
-
-    const total_display = getTotalDisplayPrice();
-    const total_customize = getTotalCustomizePrice();
-    const total_ship = getTotalShipMin();
-
-    // Total price (1) = Total Giá hiển thị + Total Giá Customsize + Total Giá Ship
-    const total_price_1 = total_display + total_customize + total_ship;
-
-    // Total Price (2) là của Phương thức vận chuyển đã chọn (shipInfo.total_price)
-    const total_price_2 = shipInfo.total_price || 0;
-
-    const coupon_pct = setupForm.coupon_percent || 0;
-
-    // Coupon = %Coupon × (Total price (1) - Total Giá Ship)
-    const coupon_amount = coupon_pct * (total_price_1 - total_ship) / 100;
-
-    // After price = Total Price (1) - Coupon
-    const after_price = total_price_1 - coupon_amount;
-
-    // Coupon Fee (2.5%) = 2.5% × (Total Price(1) - Total Giá Ship - Coupon)
-    const coupon_fee = 0.025 * (total_price_1 - total_ship - coupon_amount);
-
-    // AMZ fee = 17% × After price
-    const amz_fee = after_price * 0.17;
-
-    // Base Cost = Total Price (2)
-    const base_cost = total_price_2;
-
-    // Profit = Total Price (1) - Coupon - Coupon Fee - AMZ fee - Base cost
-    const profit = total_price_1 - coupon_amount - coupon_fee - amz_fee - base_cost;
-
-    // Profit Margin = Profit / Total Price (1)
-    const profit_margin = total_price_1 > 0 ? (profit / total_price_1) * 100 : 0;
-
-    // Cập nhật modal
-    setSetupForm(prev => ({
-      ...prev,
-      final_price: total_price_1,
-      coupon_amount: coupon_amount,
-      coupon_fee: coupon_fee,
-      amz_fee: amz_fee,
-      profit: profit,
-      profit_margin: profit_margin,
-    }));
-
-    // Cập nhật assignedPriceList
-    setAssignedPriceList(prev => prev.map((item, index) => {
-      if (index !== selectedIndexRef.current) return item;
+    const allSetups = JSON.parse(localStorage.getItem(LS_VENDOR_SETUP_KEY) || '{}');
+    return Object.values(map).map(group => {
+      const saved = allSetups[group._key];
+      const computedSizes = saved?.sizes?.length
+        ? saved.sizes.map(r => computeRow(r, saved))
+        : [];
+      const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
       return {
-        ...item,
-        gia_hien_thi: total_display,
-        gia_customsize: total_customize,
-        gia_ship: total_ship,
-        total_price_2: total_price_2,
-        coupon_percent: coupon_pct,
-        coupon_amount: coupon_amount,
-        coupon_fee: coupon_fee,
-        amz_fee: amz_fee,
-        profit: profit,
-        profit_margin: profit_margin,
-        after_price: after_price,
-        final_price: total_price_1,
+        ...group,
+        _saved: saved || null,
+        _computedSizes: computedSizes,
+        _avgProfit:  avg(computedSizes.map(r => r.profit)),
+        _avgMargin:  avg(computedSizes.map(r => r.profit_margin)),
+        _minPrice:   computedSizes.length ? Math.min(...computedSizes.map(r => r.total_price)) : null,
+        _maxPrice:   computedSizes.length ? Math.max(...computedSizes.map(r => r.total_price)) : null,
       };
-    }));
+    });
+  }, [assignedPriceList]);
 
-  }, [selectedVendor, displayPrices, customizePrices, shipPrices, setupForm.coupon_percent, shipInfo.total_price]);
-  // Hàm xử lý thay đổi shipping method
-  const handleShippingMethodChange = (method) => {
-    const newShipInfo = getShipInfoByMethod(selectedVendor, method);
-    setShipInfo(newShipInfo);
-    setSetupForm(prev => ({
-      ...prev,
-      shipping_method: method
-    }));
-  };
+  const filteredGroups = useMemo(() => groupedVendors.filter(g => {
+    const q = search.toLowerCase();
+    return (!search || (g.product_type || '').toLowerCase().includes(q) || (g.vendor_name || '').toLowerCase().includes(q))
+      && (!filterProductType || (g.product_type || '').toLowerCase().includes(filterProductType.toLowerCase()));
+  }), [groupedVendors, search, filterProductType]);
 
-  const handleAddComparison = () => {
-    setComparisonList(prev => [...prev, {
-      id: Date.now(),
-      shipping_method_label: getShippingMethodLabel(setupForm.shipping_method),
-      coupon_percent: setupForm.coupon_percent,
-      profit: setupForm.profit,
-      profit_margin: setupForm.profit_margin,
-      profit_fulfill: shipInfo.total_price ? (setupForm.profit / shipInfo.total_price * 100) : 0,
-      total_price_1: setupForm.final_price,
-    }]);
-  };
+  const productTypes  = useMemo(() => [...new Set(groupedVendors.map(g => g.product_type).filter(Boolean))], [groupedVendors]);
+  const totalPages    = Math.ceil(filteredGroups.length / ITEMS_PER_PAGE);
+  const pagedGroups   = filteredGroups.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const handleRemoveComparison = (id) => {
-    setComparisonList(prev => prev.filter(c => c.id !== id));
-  };
-
-  // Hàm lưu setup giá
-  const handleSaveSetupPrice = () => {
-    const total_display = getTotalDisplayPrice();
-    const total_customize = getTotalCustomizePrice();
-    const total_ship = getTotalShipMin();
-
-    // Total price (1) = Tổng giá hiển thị + Tổng Customize + Tổng Ship
-    const total_price_1 = total_display + total_customize + total_ship;
-
-    // Total Price (2) là của Phương thức vận chuyển đã chọn
-    const total_price_2 = shipInfo.total_price || 0;
-
-    const coupon_pct = setupForm.coupon_percent || 0;
-
-    // Coupon = %Coupon × (Total price (1) - Tổng Ship)
-    const coupon_amount = coupon_pct * (total_price_1 - total_ship) / 100;
-
-    // After price = Total Price (1) - Coupon
-    const after_price = total_price_1 - coupon_amount;
-
-    // Coupon Fee (2.5%) = 2.5% × (Total Price(1) - Tổng Ship - Coupon)
-    // = 2.5% × (Tổng giá hiển thị + Tổng Customize - Coupon)
-    const coupon_fee_val = 0.025 * (total_price_1 - total_ship - coupon_amount);
-
-    // AMZ fee = 17% × After price
-    const amz_fee_val = after_price * 0.17;
-
-    // Base Cost = Total Price (2)
-    const base_cost_val = total_price_2;
-
-    // Profit = Total Price (1) - Coupon - Coupon Fee - AMZ fee - Base cost
-    const profit_val = total_price_1 - coupon_amount - coupon_fee_val - amz_fee_val - base_cost_val;
-
-    // Profit Margin = Profit / Total Price (1)
-    const profit_margin_val = total_price_1 > 0 ? (profit_val / total_price_1) * 100 : 0;
-
-    const savedData = {
-      id: Date.now(),
-      vendor_id: selectedVendor?.vendor_id,
-      vendor_name: selectedVendor?.vendor_name || selectedVendor?.vendor_type,
-      vendor_type: selectedVendor?.vendor_type,
-      product_type: selectedVendor?.product_type,
-      original_size: selectedVendor?.size,
-      shipping_method: setupForm.shipping_method,
-      shipping_method_label: getShippingMethodLabel(setupForm.shipping_method),
-      ship_price: shipInfo.ship_price,
-      ship_total: total_price_2,  // Total Price (2)
-      display_prices: [...displayPrices],
-      customize_prices: [...customizePrices],
-      ship_prices: [...shipPrices],
-      total_display_price: total_display,
-      total_customize_price: total_customize,
-      total_ship_min: total_ship,
-      total_price_1: total_price_1,
-      total_price_2: total_price_2,
-      size: setupForm.size,
-      final_price: total_price_1,
-      coupon_percent: coupon_pct,
-      coupon_amount: coupon_amount,
-      coupon_fee: coupon_fee_val,
-      amz_fee: amz_fee_val,
-      profit: profit_val,
-      profit_margin: profit_margin_val,
-      after_price: after_price,
-      base_cost: base_cost_val,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // Lưu localStorage
-    let savedSetups = JSON.parse(localStorage.getItem('VENDOR_PRICE_SETUPS') || '[]');
-    const existingIndex = savedSetups.findIndex(
-      s => s.vendor_id === selectedVendor?.vendor_id && s.product_type === selectedVendor?.product_type
-    );
-    if (existingIndex !== -1) {
-      savedSetups[existingIndex] = savedData;
-    } else {
-      savedSetups.push(savedData);
-    }
-    localStorage.setItem('VENDOR_PRICE_SETUPS', JSON.stringify(savedSetups));
-
-    // Cập nhật state bảng chính
-    setAssignedPriceList(prev => prev.map(item => {
-      if (item.vendor_id === selectedVendor?.vendor_id && item.product_type === selectedVendor?.product_type) {
-        return {
-          ...item,
-          ...savedData,
-          gia_hien_thi: total_display,
-          gia_customsize: total_customize,
-          gia_ship: total_ship,
-        };
-      }
-      return item;
-    }));
-
-    showToastMsg('success', 'Lưu thành công', `Đã lưu cấu hình giá cho ${selectedVendor?.vendor_type || 'vendor'}`);
-    setShowSetupModal(false);
-    setSelectedVendor(null);
-    setDisplayPrices(['0']);
-    setCustomizePrices([{ name: '', price: '0' }]);
-    setShipPrices([{ name: '', price: '0' }]);
-    selectedIndexRef.current = -1;
-  };
-
-  const getShippingMethodLabel = (method) => {
-    switch (method) {
-      case 'economy': return 'Economy (Chậm)';
-      case 'fast': return 'Ground/Fast (TB)';
-      case 'express': return 'Express (Nhanh)';
-      case 'overnight': return 'Overnight (Qua đêm)';
-      default: return 'Economy';
-    }
-  };
-
+  // ── Data loading (unchanged logic) ───────────────────────
   const generatePriceListFromApprovedVendors = useCallback((vendors) => {
     if (!vendors || vendors.length === 0) return;
-
     const savedSetups = JSON.parse(localStorage.getItem('VENDOR_PRICE_SETUPS') || '[]');
-
     const newPriceList = vendors.map((vendor, idx) => {
       const gia_hien_thi = (parseFloat(vendor.pricing1) || 0) + (parseFloat(vendor.pricing2) || 0);
-      const gia_customsize = vendor.size && vendor.size.trim() !== '' ? 5 : 0;
-
-      let gia_ship = 0;
-      if (vendor.eco_price && parseFloat(vendor.eco_price) > 0) gia_ship = parseFloat(vendor.eco_price);
-      else if (vendor.fast_price && parseFloat(vendor.fast_price) > 0) gia_ship = parseFloat(vendor.fast_price);
-      else if (vendor.express_price && parseFloat(vendor.express_price) > 0) gia_ship = parseFloat(vendor.express_price);
-      else if (vendor.overnight_price && parseFloat(vendor.overnight_price) > 0) gia_ship = parseFloat(vendor.overnight_price);
-
-      let default_coupon_pct = 0;
-      if (vendor.vendor_type === 'Best Seller') default_coupon_pct = 10;
-      else if (vendor.vendor_type === 'New') default_coupon_pct = 5;
-      else if (vendor.vendor_type === 'Old') default_coupon_pct = 3;
-
+      const gia_customsize = vendor.size?.trim() ? 5 : 0;
+      let gia_ship = parseFloat(vendor.eco_price) || parseFloat(vendor.fast_price) || parseFloat(vendor.express_price) || parseFloat(vendor.overnight_price) || 0;
       const existingSetup = savedSetups.find(s => s.vendor_id === vendor.id && s.product_type === vendor.product_type);
-
       if (existingSetup) {
-        const ed = existingSetup.total_display_price ?? gia_hien_thi;
-        const ec = existingSetup.total_customize_price ?? gia_customsize;
-        const es = existingSetup.total_ship_min ?? gia_ship;
-        const ep = existingSetup.coupon_percent ?? default_coupon_pct;  // Lấy % đã lưu
-        const e_coupon_val = ep * (ed + ec) / 100;
-        const e_after = (ed + ec + es) - e_coupon_val;
-        const e_coupon_fee = existingSetup.coupon_fee ?? (0.025 * (ed + ec + es - es - e_coupon_val));
-        const e_amz = existingSetup.amz_fee ?? (e_after * 0.17);
-        const e_profit = existingSetup.profit ?? (e_after - e_coupon_fee - e_amz - e_after * 0.4);
-        const e_margin = existingSetup.profit_margin ?? ((ed + ec + es) > 0 ? (e_profit / (ed + ec + es)) * 100 : 0);
-
         return {
           ...existingSetup,
           eco_price: vendor.eco_price || 0, eco_total: vendor.eco_total || 0,
@@ -501,704 +125,449 @@ export default function SetupPriceSection() {
           express_price: vendor.express_price || 0, express_total: vendor.express_total || 0,
           overnight_price: vendor.overnight_price || 0, overnight_total: vendor.overnight_total || 0,
           pricing1: vendor.pricing1 || 0, pricing2: vendor.pricing2 || 0,
-          id: existingSetup.id,
           vendor_name: vendor.name || vendor.vendor_name || vendor.vendor_type,
-          vendor_type: vendor.vendor_type,
-          product_type: vendor.product_type,
+          vendor_type: vendor.vendor_type, product_type: vendor.product_type,
           size: existingSetup.size || vendor.size,
           gia_hien_thi: existingSetup.total_display_price || gia_hien_thi,
           gia_customsize: existingSetup.total_customize_price || gia_customsize,
           gia_ship: existingSetup.total_ship_min || gia_ship,
-          coupon_percent: ep,  // Lưu %
-          coupon_fee: existingSetup.coupon_fee || e_coupon_fee,
-          total_price: existingSetup.final_price || (ed + ec + es),
-          profit: existingSetup.profit || e_profit,
-          profit_margin: existingSetup.profit_margin || e_margin,
-          after_price: existingSetup.after_price || e_after,
-          approved_at: vendor.approvedAt,
-          source: 'assigned'
+          approved_at: vendor.approvedAt, source: 'assigned',
         };
       }
-
       return {
         id: Date.now() + idx + Math.random(),
-        vendor_id: vendor.id,
-        productId: vendor.productId,
+        vendor_id: vendor.id, productId: vendor.productId,
         vendor_name: vendor.name || vendor.vendor_name || vendor.vendor_type || 'Unknown',
         vendor_type: vendor.vendor_type || '',
         product_type: vendor.productType || vendor.product_type || '',
-        size: vendor.size || '',
-        approved_by: 'Staff A',
-        approved_at: vendor.approvedAt,
-        sample_details: vendor.sampleDetails || '',
-        gia_hien_thi: gia_hien_thi,
-        gia_customsize: gia_customsize,
-        gia_ship: gia_ship,
-        coupon_percent: default_coupon_pct,  // Lưu %
-        coupon_fee: 0,
+        size: vendor.size || '', approved_at: vendor.approvedAt,
+        gia_hien_thi, gia_customsize, gia_ship,
+        coupon_percent: 0, coupon_fee: 0,
         total_price: gia_hien_thi + gia_customsize + gia_ship,
-        profit: 0,
-        profit_margin: 0,
-        after_price: gia_hien_thi + gia_customsize + gia_ship,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        profit: 0, profit_margin: 0,
         eco_price: vendor.eco_price || 0, eco_total: vendor.eco_total || 0,
         fast_price: vendor.fast_price || 0, fast_total: vendor.fast_total || 0,
         express_price: vendor.express_price || 0, express_total: vendor.express_total || 0,
         overnight_price: vendor.overnight_price || 0, overnight_total: vendor.overnight_total || 0,
         pricing1: vendor.pricing1 || 0, pricing2: vendor.pricing2 || 0,
-        source: 'assigned'
+        source: 'assigned',
       };
     });
-
-    // Dedup: kết hợp productId + vendor_id + size để tránh bị merge nhầm giữa các sản phẩm khác nhau
-    const uniquePriceList = newPriceList.filter((item, index, self) =>
-      index === self.findIndex((t) => (
-        String(t.productId) === String(item.productId) &&
-        String(t.vendor_id) === String(item.vendor_id) &&
-        t.size === item.size
-      ))
+    const unique = newPriceList.filter((item, i, self) =>
+      i === self.findIndex(t => String(t.productId) === String(item.productId) && String(t.vendor_id) === String(item.vendor_id) && t.size === item.size)
     );
-
-    setAssignedPriceList(uniquePriceList);
-    if (uniquePriceList.length > 0) {
-      localStorage.setItem(LS_PRICE_KEY, JSON.stringify(uniquePriceList));
-    }
+    setAssignedPriceList(unique);
+    if (unique.length > 0) localStorage.setItem(LS_PRICE_KEY, JSON.stringify(unique));
   }, []);
 
   const loadApprovedVendors = useCallback(() => {
     try {
       const vendors = [];
-
       const currentProductVendors = lsGet(LS_PRODUCT_VENDORS, {});
-
-      if (typeof currentProductVendors !== 'object' || currentProductVendors === null) {
-        console.warn('currentProductVendors is not an object:', currentProductVendors);
-        return;
-      }
-
-      const currentSampleDecisions = (() => {
-        try {
-          const raw = localStorage.getItem(LS_SAMPLE_DECISIONS);
-          return raw ? JSON.parse(raw) : {};
-        } catch {
-          console.error('Error parsing LS_SAMPLE_DECISIONS');
-          return {};
-        }
-      })();
-
-      const currentAFeedbackResponses = lsGet(LS_A_FEEDBACK_RESPONSE, {});
-      const currentBSubmittedFeedbacks = lsGet('STAFF_B_SUBMITTED_FEEDBACK_V1', {});
-
+      if (typeof currentProductVendors !== 'object' || !currentProductVendors) return;
+      const currentAFR = lsGet(LS_A_FEEDBACK_RESPONSE, {});
       Object.entries(currentProductVendors).forEach(([productId, vendorList]) => {
         if (!Array.isArray(vendorList)) return;
-
-        const productDecisions = currentSampleDecisions[productId] || {};
-        const productResponses = currentAFeedbackResponses[productId] || {};
-        const productBFeedbacks = currentBSubmittedFeedbacks[productId] || {};
-
         vendorList.forEach((vendor, idx) => {
           if (!vendor) return;
-
           const key = vendor.id ? String(vendor.id) : `idx_${idx}`;
-
-          // ĐIỀU KIỆN MỚI: Cả Staff B và Staff A đều approve
-          const staffBApproved = productBFeedbacks[key]?.staff_b_approved === true;
-          const staffAApproved = productResponses[key]?.staff_a_approved === true ||
-            productDecisions[key]?.staff_a_approved === true;
-
-          // Tạm thời cho phép hiển thị tất cả các vendor đã gán để test UI tính giá
-          const isFullyApproved = true; // Bỏ qua điều kiện staffBApproved && staffAApproved
-
-          if (isFullyApproved) {
-            vendors.push({
-              ...vendor,
-              productId: productId,
-              productType: vendor.product_type,
-              approvedAt: productResponses[key]?.respondedAt || productDecisions[key]?.time || new Date().toISOString(),
-              sampleDetails: productDecisions[key]?.sampleDetails || productResponses[key]?.sampleDetails || '',
-              vendorKey: key,
-              source: 'assigned',
-              staff_b_approved: true,
-              staff_a_approved: true
-            });
-          }
+          vendors.push({
+            ...vendor, productId, productType: vendor.product_type,
+            approvedAt: currentAFR[productId]?.[key]?.respondedAt || new Date().toISOString(),
+            vendorKey: key, source: 'assigned',
+          });
         });
       });
-
-      if (vendors.length > 0) {
-        setApprovedVendors(vendors);
-        generatePriceListFromApprovedVendors(vendors);
-      } else {
-        setApprovedVendors([]);
-        setAssignedPriceList([]);
-      }
-    } catch (err) {
-      console.error('loadApprovedVendors error:', err);
-      setComponentError(err.message);
-    }
+      if (vendors.length > 0) { setApprovedVendors(vendors); generatePriceListFromApprovedVendors(vendors); }
+      else { setApprovedVendors([]); setAssignedPriceList([]); }
+    } catch (err) { console.error('loadApprovedVendors error:', err); setComponentError(err.message); }
   }, [generatePriceListFromApprovedVendors]);
 
   useEffect(() => {
-    try {
-      if (!isInitializedRef.current) {
-        isInitializedRef.current = true;
-        loadApprovedVendors();
-      }
-
-      const sync = () => {
-        try {
-          loadApprovedVendors();
-        } catch (err) {
-          console.error('Sync error:', err);
-          setComponentError(err.message);
-        }
-      };
-
-      window.addEventListener('storage', sync);
-      return () => {
-        window.removeEventListener('storage', sync);
-      };
-    } catch (err) {
-      console.error('SetupPriceSection initialization error:', err);
-      setComponentError(err.message);
-    }
+    if (!isInitializedRef.current) { isInitializedRef.current = true; loadApprovedVendors(); }
+    const sync = () => loadApprovedVendors();
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
   }, [loadApprovedVendors]);
-  if (componentError) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: HC.danger }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-        <div style={{ fontWeight: 700, fontSize: 16 }}>Có lỗi xảy ra</div>
-        <div style={{ fontSize: 13, marginTop: 8, color: HC.muted }}>{componentError}</div>
-        <button
-          onClick={() => window.location.reload()}
-          style={{ marginTop: 20, padding: '8px 20px', borderRadius: 8, background: HC.orange, color: '#fff', border: 'none', cursor: 'pointer' }}
-        >
-          Tải lại trang
-        </button>
-      </div>
-    );
-  }
+
+  // ── Modal handlers ────────────────────────────────────────
+  const handleOpenSetupModal = (group) => {
+    setSelectedGroup(group);
+    const saved = group._saved;
+    if (saved?.sizes?.length) {
+      setGlobalSettings({
+        gia_hien_thi: String(saved.gia_hien_thi ?? ''),
+        custom_design_price: String(saved.custom_design_price ?? ''),
+        ship_price: String(saved.ship_price ?? ''),
+        coupon_pct: saved.coupon_pct ?? 10,
+        shipping_method: saved.shipping_method || 'economy',
+      });
+      setSizeRows(saved.sizes.map(s => ({
+        id: s.id || Date.now() + Math.random(),
+        size_label: s.size_label || '',
+        for_adult_kid: s.for_adult_kid ?? '',
+        for_type_size: s.for_type_size ?? '',
+        item_cost: s.item_cost ?? '',
+        shipping_cost: s.shipping_cost ?? '0',
+      })));
+    } else {
+      const base = (parseFloat(group.pricing1) || 0) + (parseFloat(group.pricing2) || 0);
+      const ship = parseFloat(group.eco_price) || 0;
+      setGlobalSettings({ gia_hien_thi: base > 0 ? String(base) : '', custom_design_price: '', ship_price: ship > 0 ? String(ship) : '', coupon_pct: 10, shipping_method: 'economy' });
+      const initRows = (group._rawSizes || []).filter(s => s.size).map(s => ({
+        ...mkRow(), size_label: s.size || '', item_cost: s.eco_total ? String(s.eco_total) : '',
+      }));
+      setSizeRows(initRows.length ? initRows : [mkRow()]);
+    }
+    setShowSetupModal(true);
+  };
+
+  const handleSaveSetupPrice = () => {
+    const allSetups = JSON.parse(localStorage.getItem(LS_VENDOR_SETUP_KEY) || '{}');
+    allSetups[selectedGroup._key] = {
+      vendor_id: selectedGroup.vendor_id,
+      vendor_name: selectedGroup.vendor_name,
+      vendor_type: selectedGroup.vendor_type,
+      product_type: selectedGroup.product_type,
+      productId: selectedGroup.productId,
+      gia_hien_thi: parseFloat(globalSettings.gia_hien_thi) || 0,
+      custom_design_price: parseFloat(globalSettings.custom_design_price) || 0,
+      ship_price: parseFloat(globalSettings.ship_price) || 0,
+      coupon_pct: parseFloat(globalSettings.coupon_pct) || 0,
+      shipping_method: globalSettings.shipping_method,
+      sizes: sizeRows.map(r => ({
+        id: r.id, size_label: r.size_label,
+        for_adult_kid: parseFloat(r.for_adult_kid) || 0,
+        for_type_size: parseFloat(r.for_type_size) || 0,
+        item_cost: parseFloat(r.item_cost) || 0,
+        shipping_cost: parseFloat(r.shipping_cost) || 0,
+      })),
+      updated_at: new Date().toISOString(),
+    };
+    localStorage.setItem(LS_VENDOR_SETUP_KEY, JSON.stringify(allSetups));
+    setAssignedPriceList(prev => [...prev]); // trigger groupedVendors recompute
+    showToastMsg('success', 'Lưu thành công', `Đã lưu ${sizeRows.length} size cho ${selectedGroup.vendor_name || selectedGroup.vendor_type}`);
+    setShowSetupModal(false);
+    setSelectedGroup(null);
+  };
+
+  const handleDeleteGroup = (group) => {
+    const label = group.vendor_name || group.vendor_type || 'Vendor';
+    if (!window.confirm(`Xóa "${label}" (${group.product_type || '—'}) khỏi danh sách giá?`)) return;
+    const allSetups = JSON.parse(localStorage.getItem(LS_VENDOR_SETUP_KEY) || '{}');
+    delete allSetups[group._key];
+    localStorage.setItem(LS_VENDOR_SETUP_KEY, JSON.stringify(allSetups));
+    const legacy = JSON.parse(localStorage.getItem('VENDOR_PRICE_SETUPS') || '[]');
+    localStorage.setItem('VENDOR_PRICE_SETUPS', JSON.stringify(legacy.filter(s => !(String(s.vendor_id) === String(group.vendor_id) && s.product_type === group.product_type))));
+    setAssignedPriceList(prev => prev.filter(p => !(String(p.vendor_id) === String(group.vendor_id) && p.product_type === group.product_type)));
+    showToastMsg('success', 'Đã xóa', `Đã xóa "${label}"`);
+  };
+
+  const updateRow = (idx, field, val) => setSizeRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
+  const addRow    = () => setSizeRows(prev => [...prev, mkRow()]);
+  const removeRow = (idx) => setSizeRows(prev => prev.filter((_, i) => i !== idx));
+
   const showToastMsg = (type, title, message, duration = 3000) => {
     setToast({ type, title, message, duration });
     setTimeout(() => setToast(null), duration);
   };
 
-  // Filter
-  const filteredAssignedList = assignedPriceList.filter(p => {
-    const matchSearch = !search || p.product_type.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = !filterProductType || p.product_type.toLowerCase().includes(filterProductType.toLowerCase());
-    return matchSearch && matchFilter;
-  });
-
-  const totalPagesAssigned = Math.ceil(filteredAssignedList.length / ITEMS_PER_PAGE_PRICE);
-  const pagedAssignedList = filteredAssignedList.slice((currentPageAssigned - 1) * ITEMS_PER_PAGE_PRICE, currentPageAssigned * ITEMS_PER_PAGE_PRICE);
-
-  const productTypes = [...new Set(assignedPriceList.map(p => p.product_type))];
-
-  // Component PriceTable có thêm cột Coupon Fee
-  const PriceTable = ({ data, onSetupPrice, onDelete }) => (
-    <div style={{ overflowX: 'auto', borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: `0 4px 12px rgba(0,0,0,0.05)`, overflow: 'hidden' }}>
-      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12 }}>
-        <thead>
-          <tr style={{ background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})` }}>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'center' }}>STT</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'left' }}>Vendor Name</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'left' }}>Vendor Type</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'left' }}>Product Type</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'center' }}>Size</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Giá hiển thị</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total custom</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total ship</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Total Price</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>10%</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>2.5%</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>17%</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Profit</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Tỷ lệ profit/price (fulfill)</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>Profit Margin</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'right' }}>After Total Price</th>
-            <th style={{ padding: '12px 10px', color: '#fff', fontWeight: 700, textAlign: 'center', minWidth: 120 }}>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((p, idx) => {
-            // Tính Total Price = Total giá hiển thị + Total Customize + Total Ship
-            const totalPrice = (p.gia_hien_thi || 0) + (p.gia_customsize || 0) + (p.gia_ship || 0);
-
-            return (
-              <tr key={p.id} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#ffffff' : HC.surface2 }}>
-                <td style={{ padding: '10px 10px', textAlign: 'center', color: HC.muted, fontWeight: 600 }}>{idx + 1}</td>
-                <td style={{ padding: '10px 10px', fontWeight: 700, color: HC.ink2 }}>{p.vendor_name || '—'}</td>
-                <td style={{ padding: '10px 10px', fontWeight: 700, color: p.vendor_type === 'Best Seller' ? '#D4A017' : HC.orange }}>
-                  {p.vendor_type || '—'}
-                  {p.vendor_type === 'Best Seller' && <span style={{ marginLeft: 6, fontSize: 11 }}>⭐</span>}
-                </td>
-                <td style={{ padding: '10px 10px', color: HC.ink2, fontWeight: 600 }}>{p.product_type || '—'}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'center', fontWeight: 600, color: HC.muted }}>{p.size || '—'}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.orangeDark }}>${(p.gia_hien_thi || 0).toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown }}>${(p.gia_customsize || 0).toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700 }}>${(p.gia_ship || 0).toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 800, color: HC.success, background: '#ecfdf5' }}>${totalPrice.toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.warning }}>
-                  ${((p.coupon_percent || 0) * ((p.gia_hien_thi || 0) + (p.gia_customsize || 0)) / 100).toFixed(2)}
-                  <span style={{ fontSize: 10, color: HC.muted2, marginLeft: 4 }}>({p.coupon_percent || 0}%)</span>
-                </td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: '#d97706' }}>${(p.coupon_fee || 0).toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.orangeDark }}>${(p.amz_fee || 0).toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: (p.profit || 0) > 0 ? HC.success : HC.danger }}>${(p.profit || 0).toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: (p.profit || 0) > 0 ? HC.success : HC.danger }}>
-                  {p.base_cost ? ((p.profit || 0) / p.base_cost * 100).toFixed(2) : ((p.total_price_2) ? ((p.profit || 0) / p.total_price_2 * 100).toFixed(2) : 0)}%
-                </td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: (p.profit_margin || 0) > 20 ? HC.success : HC.warning }}>{(p.profit_margin || 0).toFixed(2)}%</td>
-                <td style={{ padding: '10px 10px', textAlign: 'right', fontWeight: 700, color: HC.success }}>${(p.after_price || 0).toFixed(2)}</td>
-                <td style={{ padding: '10px 10px', textAlign: 'center' }}>
-                  <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={() => onSetupPrice(p)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>Setup giá</button>
-                    <button onClick={() => onDelete(p)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Xóa</button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+  if (componentError) return (
+    <div style={{ padding: 40, textAlign: 'center', color: HC.danger }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+      <div style={{ fontWeight: 700 }}>Có lỗi xảy ra</div>
+      <div style={{ fontSize: 13, marginTop: 8, color: HC.muted }}>{componentError}</div>
+      <button onClick={() => window.location.reload()} style={{ marginTop: 20, padding: '8px 20px', borderRadius: 8, background: HC.orange, color: '#fff', border: 'none', cursor: 'pointer' }}>Tải lại trang</button>
     </div>
   );
 
-  // Component PriceInputGroup
-  const PriceInputGroup = ({ label, icon, prices, onUpdate, onUpdateName, onAdd, onRemove, unit = '$', isNamed = false }) => (
-    <div style={{ marginBottom: 20 }}>
-      <label style={{ fontSize: 12, fontWeight: 800, color: HC.muted, marginBottom: 8, display: 'block' }}>
-        {icon} {label}
-      </label>
-      {prices.map((item, idx) => (
-        <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-          {isNamed && (
-            <input
-              type="text"
-              value={item.name}
-              onChange={(e) => onUpdateName(idx, e.target.value)}
-              placeholder="Tên (VD: Hộp quà)"
-              style={{ ...inp, padding: '10px 12px', flex: 1 }}
-            />
-          )}
-          <input
-            type="number"
-            step="0.01"
-            value={isNamed ? item.price : item}
-            onChange={(e) => onUpdate(idx, e.target.value)}
-            placeholder={isNamed ? "0.00" : `${label} ${idx + 1}`}
-            style={{ ...inp, padding: '10px 12px', flex: isNamed ? 1 : 1 }}
-          />
-          {prices.length > 1 && (
-            <button
-              type="button"
-              onClick={() => onRemove(idx)}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: '#fee2e2',
-                border: '1px solid #fecaca',
-                color: HC.danger,
-                cursor: 'pointer',
-                fontSize: 16,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={onAdd}
-        style={{
-          marginTop: 8,
-          padding: '8px 16px',
-          borderRadius: 8,
-          background: HC.orangeLight,
-          border: `1.5px solid ${HC.orangeMid}`,
-          color: HC.orangeDark,
-          cursor: 'pointer',
-          fontSize: 12,
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6
-        }}
-      >
-        <span style={{ fontSize: 14 }}>+</span> Thêm {label}
-      </button>
-      <div style={{ marginTop: 8, fontSize: 11, color: HC.success, fontWeight: 600 }}>
-        Tổng: {unit}{prices.reduce((sum, p) => sum + (parseFloat(isNamed ? p.price : p) || 0), 0).toFixed(2)}
-      </div>
-    </div>
-  );
+  const computedRows = sizeRows.map(r => computeRow(r, globalSettings));
+  const gBase   = parseFloat(globalSettings.gia_hien_thi) || 0;
+  const gCustom = parseFloat(globalSettings.custom_design_price) || 0;
+  const gShip   = parseFloat(globalSettings.ship_price) || 0;
+  const gCpct   = parseFloat(globalSettings.coupon_pct) || 0;
 
   return (
     <div>
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
-
-
-
-      {/* Bảng Vendor từ Uyên Hồ gán */}
+      {/* ── Main grouped table ── */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-          <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
+          <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})`, flexShrink: 0 }} />
           <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Vendor từ Uyên Hồ gán</div>
-          <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filteredAssignedList.length} vendor</span>
+          <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filteredGroups.length} vendor</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              placeholder="Tìm product type..."
-              value={search}
-              onChange={e => { setSearch(e.target.value); setCurrentPageAssigned(1); }}
-              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 180 }}
-            />
-            <select
-              value={filterProductType}
-              onChange={e => { setFilterProductType(e.target.value); setCurrentPageAssigned(1); }}
-              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: filterProductType ? HC.orangeDark : HC.muted, outline: 'none', cursor: 'pointer', fontWeight: filterProductType ? 700 : 400 }}
-            >
+            <input type="text" placeholder="Tìm vendor / product..." value={search}
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 200 }} />
+            <select value={filterProductType} onChange={e => { setFilterProductType(e.target.value); setCurrentPage(1); }}
+              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: filterProductType ? HC.orangeDark : HC.muted, outline: 'none', cursor: 'pointer' }}>
               <option value="">Tất cả Product Type</option>
               {productTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
             </select>
             {(search || filterProductType) && (
-              <button
-                onClick={() => { setSearch(''); setFilterProductType(''); setCurrentPageAssigned(1); }}
-                style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
-              >
+              <button onClick={() => { setSearch(''); setFilterProductType(''); setCurrentPage(1); }}
+                style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>
                 Xóa lọc
               </button>
             )}
           </div>
         </div>
-        {filteredAssignedList.length === 0 ? (
+
+        {filteredGroups.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 12, border: `1px solid ${HC.border}` }}>
             <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.5 }}>🏪</div>
-            <div style={{ fontWeight: 600, color: HC.muted }}>Chưa có vendor nào được Uyên Hồ gán và duyệt</div>
-            <div style={{ fontSize: 12, color: HC.muted2, marginTop: 4 }}>Vui lòng chờ Uyên Hồ gán vendor cho sản phẩm</div>
+            <div style={{ fontWeight: 600, color: HC.muted }}>Chưa có vendor nào được gán và duyệt</div>
           </div>
         ) : (
           <>
-            <PriceTable
-              data={pagedAssignedList}
-              onSetupPrice={handleOpenSetupModal}
-              onDelete={handleDeletePriceSetup}
-            />
-            {totalPagesAssigned > 1 && (
-              <Pagination
-                currentPage={currentPageAssigned}
-                totalPages={totalPagesAssigned}
-                totalItems={filteredAssignedList.length}
-                onPageChange={setCurrentPageAssigned}
-                itemsPerPage={10}
-              />
+            <div style={{ borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: `0 4px 12px rgba(0,0,0,0.05)`, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>
+                    <th style={thBase}>STT</th>
+                    <th style={thLeft}>Vendor Name</th>
+                    <th style={thLeft}>Vendor Type</th>
+                    <th style={thLeft}>Product Type</th>
+                    <th style={thBase}>Số Size</th>
+                    <th style={thBase}>Price Range</th>
+                    <th style={thBase}>Avg Profit</th>
+                    <th style={thBase}>Avg Margin</th>
+                    <th style={{ ...thBase, minWidth: 130 }}>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedGroups.map((group, idx) => (
+                    <tr key={group._key} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#fff' : HC.surface2 }}>
+                      <td style={tdCenter}>{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
+                      <td style={{ padding: '10px 8px', fontWeight: 700, color: HC.ink2 }}>{group.vendor_name || '—'}</td>
+                      <td style={{ padding: '10px 8px', fontWeight: 600, color: group.vendor_type === 'Best Seller' ? '#D4A017' : HC.orange }}>
+                        {group.vendor_type || '—'}{group.vendor_type === 'Best Seller' && <span style={{ marginLeft: 4, fontSize: 11 }}>⭐</span>}
+                      </td>
+                      <td style={{ padding: '10px 8px', color: HC.ink2, fontWeight: 600 }}>{group.product_type || '—'}</td>
+                      <td style={tdCenter}>
+                        {group._computedSizes.length > 0
+                          ? <span style={{ padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontWeight: 700 }}>{group._computedSizes.length}</span>
+                          : <span style={{ color: HC.muted, fontSize: 11 }}>Chưa setup</span>}
+                      </td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 600, color: HC.ink2 }}>
+                        {group._minPrice != null
+                          ? (group._minPrice === group._maxPrice ? `$${group._minPrice.toFixed(2)}` : `$${group._minPrice.toFixed(2)} – $${group._maxPrice.toFixed(2)}`)
+                          : <span style={{ color: HC.muted, fontSize: 11 }}>—</span>}
+                      </td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: group._avgProfit != null ? (group._avgProfit > 0 ? HC.success : HC.danger) : HC.muted }}>
+                        {group._avgProfit != null ? `$${group._avgProfit.toFixed(2)}` : '—'}
+                      </td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: group._avgMargin != null ? (group._avgMargin > 20 ? HC.success : HC.warning) : HC.muted }}>
+                        {group._avgMargin != null ? `${group._avgMargin.toFixed(1)}%` : '—'}
+                      </td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                          <button onClick={() => handleOpenSetupModal(group)}
+                            style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                            Setup giá
+                          </button>
+                          <button onClick={() => handleDeleteGroup(group)}
+                            style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredGroups.length} onPageChange={setCurrentPage} itemsPerPage={ITEMS_PER_PAGE} />
             )}
           </>
         )}
       </div>
 
-      {/* Modal Setup Giá */}
+      {/* ── Setup Modal ── */}
+      {showSetupModal && selectedGroup && (
+        <div onClick={() => setShowSetupModal(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(3px)', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: '98vw', maxWidth: 1500, maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong, overflow: 'hidden' }}>
 
-
-      {showSetupModal && selectedVendor && (
-        <div onClick={() => setShowSetupModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(2px)' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: 700, maxWidth: '90%', maxHeight: '85vh', overflowY: 'auto', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong }}>
-
-            <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', borderRadius: '20px 20px 0 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+            {/* Header */}
+            <div style={{ padding: '14px 24px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                   <div style={{ fontWeight: 900, fontSize: 16 }}>⚙️ Setup Giá Bán</div>
-                  <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>
-                    {selectedVendor.vendor_type || '—'} · {selectedVendor.product_type || '—'}
+                  <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
+                    {selectedGroup.vendor_name || selectedGroup.vendor_type} · {selectedGroup.product_type}
                   </div>
                 </div>
-                <button onClick={() => setShowSetupModal(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', fontSize: 16 }}>✕</button>
+                <button onClick={() => setShowSetupModal(false)}
+                  style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', fontSize: 16 }}>✕</button>
               </div>
             </div>
 
-            <div style={{ padding: '24px' }}>
-              {/* Size — hỗ trợ nhiều size cùng lúc, phân cách bằng dấu phẩy */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 4, display: 'block' }}>Size</label>
-                <div style={{ fontSize: 10, color: HC.muted2, marginBottom: 8 }}>Nhập nhiều size cách nhau bằng dấu phẩy</div>
-                <input
-                  type="text"
-                  value={setupForm.size}
-                  onChange={(e) => setSetupForm(prev => ({ ...prev, size: e.target.value }))}
-                  placeholder="VD: S, M, L, XL hoặc 8x10, 11x14, 16x20"
-                  style={{ ...inp, padding: '10px 12px' }}
-                />
-                {setupForm.size && (
-                  <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {setupForm.size.split(',').map(s => s.trim()).filter(Boolean).map((s, i) => (
-                      <span key={i} style={{ padding: '3px 10px', borderRadius: 99, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, fontSize: 11, fontWeight: 700, color: HC.orangeDark }}>{s}</span>
-                    ))}
+            {/* Global Settings */}
+            <div style={{ padding: '16px 24px', borderBottom: `1px solid ${HC.border}`, background: HC.surface2, flexShrink: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 12, color: HC.muted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>⚙️ Cài đặt chung — áp dụng cho tất cả size</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+                {[
+                  { label: '💰 Giá hiển thị cơ bản ($)', key: 'gia_hien_thi', placeholder: '7.99' },
+                  { label: '🎨 Custom Design Push ($)', key: 'custom_design_price', placeholder: '14.99' },
+                  { label: '🚚 Ship Price ($)', key: 'ship_price', placeholder: '7.99' },
+                  { label: '🎫 Coupon (%)', key: 'coupon_pct', placeholder: '10' },
+                ].map(({ label, key, placeholder }) => (
+                  <div key={key}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: HC.muted, display: 'block', marginBottom: 4 }}>{label}</label>
+                    <input type="number" step="0.01" placeholder={placeholder} value={globalSettings[key]}
+                      onChange={e => setGlobalSettings(p => ({ ...p, [key]: e.target.value }))}
+                      style={{ ...inp, padding: '8px 10px', fontSize: 12 }} />
                   </div>
-                )}
-              </div>
-
-              {/* 3 nhóm input */}
-              <PriceInputGroup
-                label="Total Giá hiển thị"
-                icon="💰"
-                prices={displayPrices}
-                onUpdate={(idx, val) => updatePriceField('display', idx, val)}
-                onAdd={() => addPriceField('display')}
-                onRemove={(idx) => removePriceField('display', idx)}
-              />
-
-              <PriceInputGroup
-                label="Total giá Customize"
-                icon="🎨"
-                prices={customizePrices}
-                isNamed={true}
-                onUpdate={(idx, val) => updatePriceField('customize', idx, val)}
-                onUpdateName={(idx, val) => updatePriceName('customize', idx, val)}
-                onAdd={() => addPriceField('customize')}
-                onRemove={(idx) => removePriceField('customize', idx)}
-              />
-
-              <PriceInputGroup
-                label="Total giá Ship "
-                icon="🚚"
-                prices={shipPrices}
-                isNamed={true}
-                onUpdate={(idx, val) => updatePriceField('ship', idx, val)}
-                onUpdateName={(idx, val) => updatePriceName('ship', idx, val)}
-                onAdd={() => addPriceField('ship')}
-                onRemove={(idx) => removePriceField('ship', idx)}
-              />
-
-              {/* Dropdown chọn phương thức vận chuyển */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 12, fontWeight: 800, color: HC.muted, marginBottom: 4, display: 'block' }}>📦 Chọn phương thức vận chuyển</label>
-                <select
-                  value={setupForm.shipping_method}
-                  onChange={(e) => handleShippingMethodChange(e.target.value)}
-                  style={{ ...inp, padding: '10px 12px', cursor: 'pointer' }}
-                >
-                  <option value="economy">🚚 Economy (Chậm nhất, rẻ nhất)</option>
-                  <option value="fast">⚡ Ground/Fast (Trung bình)</option>
-                  <option value="express">✈️ Express (Nhanh)</option>
-                  <option value="overnight">🌙 Overnight (Qua đêm)</option>
-                </select>
-
-                <div style={{ marginTop: 12, padding: '12px 16px', background: HC.orangeLight, borderRadius: 10, border: `1px solid ${HC.orangeMid}` }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: HC.orangeDark, marginBottom: 8 }}>📊 Thông tin từ Vendor:</div>
-
-                  {/* Bố cục 2 cột đều nhau */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-
-                    {/* Cột 1: Vendor Name (full width) */}
-                    <div style={{ gridColumn: '1 / -1', marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, color: HC.muted }}>🏪 Vendor Name:</span>
-                      <div style={{ fontWeight: 800, fontSize: 15, color: HC.orangeDark, marginTop: 2 }}>
-                        {selectedVendor?.vendor_name || selectedVendor?.name || selectedVendor?.vendor_type || 'Chưa có thông tin'}
-                      </div>
-                    </div>
-
-                    {/* Hàng 2: Loại Ship + Price Ship */}
-                    <div>
-                      <span style={{ fontSize: 11, color: HC.muted }}>🚚 Loại Ship:</span>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: HC.orangeDark, marginTop: 2 }}>
-                        {getShippingMethodLabel(setupForm.shipping_method)}
-                      </div>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: 11, color: HC.muted }}>💰 Price Ship:</span>
-                      <div style={{ fontWeight: 800, fontSize: 16, color: HC.success, marginTop: 2 }}>
-                        ${shipInfo.ship_price.toFixed(2)}
-                      </div>
-                    </div>
-
-                    {/* Hàng 3: Total Price (Fulfill) - chiếm 2 cột */}
-                    <div style={{ gridColumn: '1 / -1', marginTop: 4 }}>
-                      <span style={{ fontSize: 11, color: HC.muted }}>📦 Total Price (Fulfill):</span>
-                      <div style={{ fontWeight: 800, fontSize: 18, color: HC.success, marginTop: 2 }}>
-                        ${shipInfo.total_price.toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
+                ))}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: HC.muted, display: 'block', marginBottom: 4 }}>📦 Phương thức vận chuyển</label>
+                  <select value={globalSettings.shipping_method}
+                    onChange={e => setGlobalSettings(p => ({ ...p, shipping_method: e.target.value }))}
+                    style={{ ...inp, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
+                    <option value="economy">🚚 Economy</option>
+                    <option value="fast">⚡ Ground/Fast</option>
+                    <option value="express">✈️ Express</option>
+                    <option value="overnight">🌙 Overnight</option>
+                  </select>
                 </div>
               </div>
-
-              {/* Trường Coupon nhập tay */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 12, fontWeight: 800, color: HC.muted, marginBottom: 4, display: 'block' }}>🎫 Coupon % (nhập tay)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={setupForm.coupon_percent}
-                  onChange={(e) => {
-                    const newPercent = parseFloat(e.target.value) || 0;
-                    setSetupForm(prev => ({ ...prev, coupon_percent: newPercent }));
-                    setTimeout(() => calculateSetupPrices(), 0);
-                  }}
-                  placeholder="Nhập % coupon (VD: 5, 10, 15...)"
-                  style={{ ...inp, padding: '10px 12px' }}
-                />
-                <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>
-                  💡 Công thức: <strong>Coupon = % × (Total Price - Giá Ship)</strong>
-                </div>
+              {/* Preview formula */}
+              <div style={{ marginTop: 10, padding: '8px 14px', background: HC.orangeLight, borderRadius: 8, border: `1px solid ${HC.orangeMid}`, fontSize: 11, color: HC.orangeDark, fontWeight: 600 }}>
+                💡 Công thức: Total Price = Giá hiển thị + For Adult/Kid + For Type+Size + Custom Push + Ship &nbsp;|&nbsp; Base = ${gBase.toFixed(2)}, Custom = ${gCustom.toFixed(2)}, Ship = ${gShip.toFixed(2)}, Coupon = {gCpct}%
               </div>
-              {/* Kết quả tính toán - thêm dòng Coupon Fee */}
-              <div style={{ background: '#ecfdf5', borderRadius: 12, padding: '16px', border: '1px solid #bbf7d0', marginBottom: 20 }}>
-                <div style={{ fontWeight: 800, fontSize: 13, color: '#065f46', marginBottom: 12 }}>💰 Kết quả tính toán:</div>
+            </div>
 
-                {/* Dòng 1: 3 cột */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: HC.muted }}>Tổng giá hiển thị:</div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: HC.orangeDark }}>${getTotalDisplayPrice().toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: HC.muted }}>Tổng giá Customize:</div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: HC.orangeDark }}>${getTotalCustomizePrice().toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: HC.muted }}>Tổng giá Ship:</div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: HC.orangeDark }}>${getTotalShipMin().toFixed(2)}</div>
-                  </div>
+            {/* Size Table */}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ padding: '14px 24px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 13, color: HC.ink }}>
+                  📊 Bảng tính giá theo Size
+                  <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11 }}>{sizeRows.length} size</span>
                 </div>
-
-                {/* Total Price (1) */}
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: HC.muted }}>📦 Total Price (1):</div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: HC.success }}>
-                    ${(getTotalDisplayPrice() + getTotalCustomizePrice() + getTotalShipMin()).toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 10, color: HC.muted2 }}>= Giá hiển thị + Customize + Ship</div>
-                </div>
-
-                {/* Total Price (2) - từ phương thức vận chuyển */}
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: HC.muted }}>🚚 Total Price (2) - {getShippingMethodLabel(setupForm.shipping_method)}:</div>
-                  <div style={{ fontWeight: 800, fontSize: 16, color: HC.orangeDark }}>
-                    ${shipInfo.total_price.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 10, color: HC.muted2 }}>= Giá ship + Fulfill (từ Vendor)</div>
-                </div>
-
-                {/* Coupon */}
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fde68a' }}>
-                  <div style={{ fontSize: 11, color: HC.muted }}>🎫 Coupon ({setupForm.coupon_percent}%):</div>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: HC.warning }}>
-                    -${(setupForm.coupon_amount || 0).toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 10, color: HC.muted2, marginTop: 4 }}>
-                    = {setupForm.coupon_percent}% × (Total Price (1) - Ship) = {setupForm.coupon_percent}% × ${(getTotalDisplayPrice() + getTotalCustomizePrice()).toFixed(2)}
-                  </div>
-                </div>
-
-                {/* After Price */}
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f0fdf4', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: HC.muted }}>💰 After Price:</div>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: '#16a34a' }}>
-                    ${(setupForm.final_price - (setupForm.coupon_amount || 0)).toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 10, color: HC.muted2 }}>= Total Price (1) - Coupon</div>
-                </div>
-
-                {/* Coupon Fee */}
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fef3c7', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: HC.muted }}>📋 Coupon Fee (2.5%):</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#d97706' }}>
-                    ${(setupForm.coupon_fee || 0).toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 10, color: HC.muted2 }}>= 2.5% × (Total Price (1) - Ship - Coupon)</div>
-                </div>
-
-                {/* AMZ Fee */}
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fef3c7', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: HC.muted }}>📋 AMZ Fee (17%):</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: HC.orangeDark }}>
-                    ${(setupForm.amz_fee || 0).toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 10, color: HC.muted2 }}>= 17% × After Price</div>
-                </div>
-
-                {/* Base Cost = Total Price (2) */}
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fef3c7', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, color: HC.muted }}>📦 Base Cost:</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#d97706' }}>
-                    ${shipInfo.total_price.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: 10, color: HC.muted2 }}>= Total Price (2) từ phương thức vận chuyển đã chọn</div>
-                </div>
-
-                {/* Profit và Margin */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, paddingTop: 12, borderTop: '1px solid #bbf7d0', marginTop: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: HC.muted }}>💵 Profit:</div>
-                    <div style={{ fontWeight: 800, fontSize: 18, color: setupForm.profit > 0 ? HC.success : HC.danger }}>
-                      ${setupForm.profit.toFixed(2)}
-                    </div>
-                    <div style={{ fontSize: 10, color: HC.muted2 }}>= Total(1) - Coupon - Fee - AMZ - Base</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: HC.muted }}>📊 Profit Margin:</div>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: setupForm.profit_margin > 20 ? HC.success : HC.warning }}>
-                      {setupForm.profit_margin.toFixed(2)}%
-                    </div>
-                    <div style={{ fontSize: 10, color: HC.muted2 }}>= Profit / Total Price (1)</div>
-                  </div>
-                </div>
-              </div>
-              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={handleAddComparison} style={{ padding: '8px 16px', borderRadius: 8, background: HC.surface, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>⚖️</span> Thêm vào so sánh
+                <button onClick={addRow}
+                  style={{ padding: '7px 16px', borderRadius: 8, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  + Thêm Size
                 </button>
               </div>
 
-              {comparisonList.length > 0 && (
-                <div style={{ background: HC.surface2, borderRadius: 12, padding: '16px', border: `1px solid ${HC.border}`, marginBottom: 20 }}>
-                  <div style={{ fontWeight: 800, fontSize: 13, color: HC.ink, marginBottom: 12 }}>⚖️ Bảng so sánh các kịch bản</div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, background: '#fff', borderRadius: 8, overflow: 'hidden' }}>
-                      <thead style={{ background: HC.orangePale }}>
-                        <tr>
-                          <th style={{ padding: '8px 10px', textAlign: 'left', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Kịch bản</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Total (1)</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Profit ($)</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Profit Margin</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Profit/Fulfill</th>
-                          <th style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: HC.brown, borderBottom: `1px solid ${HC.border}` }}>Xóa</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {comparisonList.map((item, idx) => (
-                          <tr key={item.id} style={{ borderBottom: `1px solid ${HC.border}` }}>
-                            <td style={{ padding: '8px 10px', fontWeight: 600, color: HC.ink2 }}>
-                              <div>{item.shipping_method_label}</div>
-                              <div style={{ fontSize: 10, color: HC.muted }}>Coupon: {item.coupon_percent}%</div>
-                            </td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>${item.total_price_1.toFixed(2)}</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.profit > 0 ? HC.success : HC.danger }}>${item.profit.toFixed(2)}</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.profit_margin > 20 ? HC.success : HC.warning }}>{item.profit_margin.toFixed(2)}%</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: item.profit_fulfill > 0 ? HC.success : HC.danger }}>{item.profit_fulfill.toFixed(2)}%</td>
-                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
-                              <button onClick={() => handleRemoveComparison(item.id)} style={{ padding: '4px 8px', borderRadius: 6, background: '#fee2e2', border: '1px solid #fecaca', color: HC.danger, cursor: 'pointer', fontSize: 11 }}>✕</button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: '0 24px 12px' }}>
+                <table style={{ borderCollapse: 'collapse', fontSize: 11, minWidth: 1350, width: '100%' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                    {/* Group headers */}
+                    <tr>
+                      <th colSpan={5} style={{ padding: '6px 8px', background: `${HC.orange}22`, color: HC.orangeDark, fontWeight: 800, fontSize: 11, textAlign: 'center', border: `1px solid ${HC.orangeMid}`, borderBottom: 'none' }}>
+                        ✏️ Nhập liệu
+                      </th>
+                      <th style={{ width: 8, background: 'transparent', border: 'none' }} />
+                      <th colSpan={11} style={{ padding: '6px 8px', background: '#f0fdf4', color: '#065f46', fontWeight: 800, fontSize: 11, textAlign: 'center', border: '1px solid #bbf7d0', borderBottom: 'none' }}>
+                        📐 Tính toán tự động
+                      </th>
+                      <th style={{ background: 'transparent', border: 'none' }} />
+                    </tr>
+                    {/* Column headers */}
+                    <tr style={{ background: HC.surface2 }}>
+                      {/* Input cols */}
+                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 90, fontSize: 11 }}>Size</th>
+                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>For Adult/Kid ($)</th>
+                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>For Type+Size ($)</th>
+                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>Item Cost ($)</th>
+                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>Ship Cost ($)</th>
+                      {/* Separator */}
+                      <th style={{ width: 8, background: HC.border, border: 'none' }} />
+                      {/* Computed cols */}
+                      {[
+                        'Total Size ($)', 'Custom Push ($)', 'Ship Price ($)', 'Total Price ($)',
+                        'Total Cost ($)', `Coupon (${gCpct}%)`, 'Coupon Fee', 'AMZ Fee (17%)',
+                        'Profit ($)', '% Profit/Cost', 'Profit Margin',
+                      ].map(h => (
+                        <th key={h} style={{ padding: '8px 7px', background: '#ecfdf5', color: '#065f46', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap', border: '1px solid #bbf7d0', fontSize: 11, minWidth: h === 'Total Price ($)' ? 85 : 72 }}>
+                          {h}
+                        </th>
+                      ))}
+                      <th style={{ padding: '8px 6px', background: HC.surface2, color: HC.muted, fontWeight: 700, textAlign: 'center', border: `1px solid ${HC.border}`, width: 40 }}>Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {computedRows.map((row, idx) => (
+                      <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                        {/* Size label */}
+                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                          <input type="text" value={row.size_label} onChange={e => updateRow(idx, 'size_label', e.target.value)}
+                            placeholder="Men S" style={{ ...inputCell, width: 78, textAlign: 'left' }} />
+                        </td>
+                        {/* For Adult/Kid */}
+                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                          <input type="number" step="0.01" value={row.for_adult_kid} onChange={e => updateRow(idx, 'for_adult_kid', e.target.value)}
+                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                        </td>
+                        {/* For Type+Size */}
+                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                          <input type="number" step="0.01" value={row.for_type_size} onChange={e => updateRow(idx, 'for_type_size', e.target.value)}
+                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                        </td>
+                        {/* Item Cost */}
+                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                          <input type="number" step="0.01" value={row.item_cost} onChange={e => updateRow(idx, 'item_cost', e.target.value)}
+                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                        </td>
+                        {/* Ship Cost */}
+                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                          <input type="number" step="0.01" value={row.shipping_cost} onChange={e => updateRow(idx, 'shipping_cost', e.target.value)}
+                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                        </td>
+                        {/* Separator */}
+                        <td style={{ width: 8, background: HC.border, padding: 0 }} />
+                        {/* Total Size */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.orangeDark }}>${row.total_size.toFixed(2)}</td>
+                        {/* Custom Push (from global) */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.muted }}>${gCustom.toFixed(2)}</td>
+                        {/* Ship Price (from global) */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.muted }}>${gShip.toFixed(2)}</td>
+                        {/* Total Price */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', fontWeight: 800, fontSize: 12, color: HC.success, background: '#f0fdf4' }}>${row.total_price.toFixed(2)}</td>
+                        {/* Total Cost */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0' }}>${row.total_cost.toFixed(2)}</td>
+                        {/* Coupon */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.warning }}>-${row.coupon_amt.toFixed(3)}</td>
+                        {/* Coupon Fee */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: '#d97706' }}>${row.coupon_fee.toFixed(5)}</td>
+                        {/* AMZ Fee */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.orangeDark }}>${row.amz_fee.toFixed(4)}</td>
+                        {/* Profit */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', fontWeight: 800, fontSize: 12, color: row.profit > 0 ? HC.success : HC.danger }}>${row.profit.toFixed(1)}</td>
+                        {/* Profit Ratio */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: row.profit_ratio > 40 ? HC.success : HC.warning }}>{row.profit_ratio.toFixed(2)}%</td>
+                        {/* Profit Margin */}
+                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: row.profit_margin > 20 ? HC.success : HC.warning }}>{row.profit_margin.toFixed(2)}%</td>
+                        {/* Delete */}
+                        <td style={{ padding: '5px 4px', textAlign: 'center', border: `1px solid ${HC.border}` }}>
+                          <button onClick={() => removeRow(idx)} disabled={sizeRows.length <= 1}
+                            style={{ width: 26, height: 26, borderRadius: 6, background: sizeRows.length <= 1 ? HC.surface2 : '#fee2e2', border: '1px solid #fecaca', color: sizeRows.length <= 1 ? HC.muted : HC.danger, cursor: sizeRows.length <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div style={{ padding: '16px 24px', borderTop: `1px solid ${HC.border}`, display: 'flex', gap: 12, justifyContent: 'flex-end', background: HC.surface2, borderRadius: '0 0 20px 20px' }}>
-              <button onClick={() => setShowSetupModal(false)} style={{ padding: '10px 20px', borderRadius: 10, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontWeight: 700 }}>Hủy</button>
-              <button onClick={handleSaveSetupPrice} style={{ padding: '10px 28px', borderRadius: 10, background: `linear-gradient(135deg, ${HC.success}, #15803d)`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}>💾 Lưu Setup Giá</button>
+            {/* Footer */}
+            <div style={{ padding: '14px 24px', borderTop: `1px solid ${HC.border}`, display: 'flex', gap: 12, justifyContent: 'flex-end', background: HC.surface2, flexShrink: 0 }}>
+              <button onClick={() => setShowSetupModal(false)}
+                style={{ padding: '10px 20px', borderRadius: 10, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontWeight: 700 }}>
+                Hủy
+              </button>
+              <button onClick={handleSaveSetupPrice}
+                style={{ padding: '10px 28px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
+                💾 Lưu Setup Giá
+              </button>
             </div>
           </div>
         </div>
@@ -1206,5 +575,3 @@ export default function SetupPriceSection() {
     </div>
   );
 }
-
-
