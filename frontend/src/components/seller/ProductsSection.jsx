@@ -55,6 +55,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const processedProductIdRef = useRef(null);
   const importFileRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
+  const [tempVideoLink, setTempVideoLink] = useState('');
 
   // Xóa localStorage cũ khi API đã là source of truth
   useEffect(() => {
@@ -98,6 +99,29 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     }));
   };
 
+  // Thêm link video
+  const addVideoLink = () => {
+    if (tempVideoLink.trim()) {
+      let url = tempVideoLink.trim();
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      setForm(prev => ({
+        ...prev,
+        product_video_links: [...(prev.product_video_links || []), url]
+      }));
+      setTempVideoLink('');
+    }
+  };
+
+  // Xóa link video
+  const removeVideoLink = (indexToRemove) => {
+    setForm(prev => ({
+      ...prev,
+      product_video_links: (prev.product_video_links || []).filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
   // Mở link
   const openLink = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -106,9 +130,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   // Reset form
   const resetForm = () => {
     previewUrls.forEach(url => URL.revokeObjectURL(url));
-    setForm({ ...EMPTY_FORM, mediaFiles: [], product_type_links: [] });
+    setForm({ ...EMPTY_FORM, mediaFiles: [], product_type_links: [], product_video_links: [] });
     setPreviewUrls([]);
     setTempLink('');
+    setTempVideoLink('');
     setFormErrors({});
     setIsEditing(false);
     setEditingProduct(null);
@@ -140,6 +165,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       links = [product.product_type_link];
     }
 
+    let videoLinks = [];
+    if (product.product_video_links) {
+      if (Array.isArray(product.product_video_links)) {
+        videoLinks = product.product_video_links;
+      } else if (typeof product.product_video_links === 'string') {
+        try {
+          videoLinks = JSON.parse(product.product_video_links);
+        } catch {
+          videoLinks = [product.product_video_links];
+        }
+      }
+    }
+
     const existingMediaUrls = product.media_urls || (product.media_url ? [product.media_url] : []);
     setPreviewUrls(existingMediaUrls);
     setForm({
@@ -147,6 +185,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       product_type: product.product_type || '',
       mediaFiles: [],
       product_type_links: links,
+      product_video_links: videoLinks,
       production_time: product.production_time || '',
       shipping_time: product.shipping_time || '',
       total_cost: product.total_cost || '',
@@ -263,7 +302,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       errors.total_cost = 'Vui lòng nhập Total Cost';
     }
     if (!form.product_type_links || form.product_type_links.length === 0) {
-      errors.product_type_links = 'Vui lòng thêm ít nhất 1 link sản phẩm';
+      errors.product_type_links = 'Vui lòng thêm ít nhất 1 link hình ảnh sản phẩm';
     }
     if (!form.material?.trim()) {
       errors.material = 'Vui lòng nhập chất liệu';
@@ -285,9 +324,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     }
     if (!form.other_packaging?.trim()) {
       errors.other_packaging = 'Vui lòng nhập other packaging';
-    }
-    if (!form.product_type_links || form.product_type_links.length === 0) {
-      errors.product_type_links = 'Vui lòng cung cấp ít nhất 1 link sản phẩm';
     }
 
     setFormErrors(errors);
@@ -326,9 +362,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         } else if (p.product_type_link) {
           links = [p.product_type_link];
         }
+        let videoLinks = [];
+        if (p.product_video_links) {
+          if (Array.isArray(p.product_video_links)) {
+            videoLinks = p.product_video_links;
+          } else if (typeof p.product_video_links === 'string') {
+            try { videoLinks = JSON.parse(p.product_video_links); }
+            catch { videoLinks = [p.product_video_links]; }
+          }
+        }
         return {
           ...p,
           product_type_links: links,
+          product_video_links: videoLinks,
           media_urls: p.media_urls || (p.media_url ? [p.media_url] : [])
         };
       });
@@ -365,7 +411,14 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         try { links = JSON.parse(p.product_type_links); } catch { links = [p.product_type_links]; }
       }
     } else if (p.product_type_link) links = [p.product_type_link];
-    return { ...p, product_type_links: links, media_urls: p.media_urls || (p.media_url ? [p.media_url] : []) };
+    let videoLinks = [];
+    if (p.product_video_links) {
+      if (Array.isArray(p.product_video_links)) videoLinks = p.product_video_links;
+      else if (typeof p.product_video_links === 'string') {
+        try { videoLinks = JSON.parse(p.product_video_links); } catch { videoLinks = [p.product_video_links]; }
+      }
+    }
+    return { ...p, product_type_links: links, product_video_links: videoLinks, media_urls: p.media_urls || (p.media_url ? [p.media_url] : []) };
   };
 
   useEffect(() => { loadProducts(); }, [loadProducts]);
@@ -390,6 +443,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     if (form.product_type_links && form.product_type_links.length > 0) {
       data.append('product_type_links', JSON.stringify(form.product_type_links));
+    }
+    if (form.product_video_links && form.product_video_links.length > 0) {
+      data.append('product_video_links', JSON.stringify(form.product_video_links));
     }
 
     if (user?.sellerName || user?.seller_name) {
@@ -423,6 +479,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         shipping_time: form.shipping_time,
         total_cost: form.total_cost,
         product_type_links: form.product_type_links,
+        product_video_links: form.product_video_links || [],
         seller_name: user?.sellerName || user?.seller_name,
         project: user?.project,
         media_urls: previewUrls,
@@ -460,6 +517,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       shipping_time: form.shipping_time,
       total_cost: form.total_cost,
       product_type_links: [...form.product_type_links],
+      product_video_links: [...(form.product_video_links || [])],
     };
     const savedProductId = editingProduct.id;
 
@@ -470,6 +528,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     if (form.product_type_links && form.product_type_links.length > 0) {
       data.append('product_type_links', JSON.stringify(form.product_type_links));
+    }
+    if (form.product_video_links && form.product_video_links.length > 0) {
+      data.append('product_video_links', JSON.stringify(form.product_video_links));
     }
 
     form.mediaFiles.forEach(file => { data.append('media[]', file); });
@@ -961,7 +1022,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <Field label="1.1 Link hình ảnh và video (Nhiều link, sau mỗi link bấm enter)" required error={formErrors.product_type_links}>
+                <Field label="1.1 Link hình ảnh (Nhiều link, sau mỗi link bấm enter)" required error={formErrors.product_type_links}>
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input
                       type="url"
@@ -1012,14 +1073,59 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
+              <div style={{ marginBottom: 16 }}>
+                <Field label="1.2 Link video (Nhiều link, sau mỗi link bấm enter)">
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input
+                      type="url"
+                      placeholder="Câu trả lời của bạn"
+                      value={tempVideoLink}
+                      onChange={e => setTempVideoLink(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && addVideoLink()}
+                      style={{ ...inp, flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addVideoLink}
+                      style={{
+                        padding: '9px 16px',
+                        borderRadius: 9,
+                        background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+                        color: '#fff',
+                        border: 'none',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Thêm link
+                    </button>
+                  </div>
+
+                  {(form.product_video_links || []).length > 0 && (
+                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {(form.product_video_links || []).map((link, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: HC.orangeLight, borderRadius: 20, border: `1px solid ${HC.orangeMid}` }}>
+                          <a href="#" onClick={(e) => { e.preventDefault(); openLink(link); }} style={{ color: HC.orangeDark, fontSize: 12, fontWeight: 600, textDecoration: 'none', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} title={link}>
+                            🎬 {link.length > 40 ? link.substring(0, 40) + '...' : link}
+                          </a>
+                          <button type="button" onClick={() => removeVideoLink(idx)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: HC.danger, fontSize: 12, display: 'flex', alignItems: 'center', padding: 0 }}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Field>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="1.2 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
+                <Field label="1.3 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
                   <input type="text" placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ ...inp, borderColor: formErrors.production_time ? HC.danger : HC.border }} />
                 </Field>
-                <Field label="1.3 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
+                <Field label="1.4 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
                   <input type="text" placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ ...inp, borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
                 </Field>
-                <Field label="1.4 Total Cost (Bao gồm Base và Shipping cost)" required error={formErrors.total_cost}>
+                <Field label="1.5 Total Cost (Bao gồm Base và Shipping cost)" required error={formErrors.total_cost}>
                   <input type="text" placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ ...inp, borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
                 </Field>
               </div>
