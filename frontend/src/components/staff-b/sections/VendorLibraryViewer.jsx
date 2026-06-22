@@ -37,6 +37,12 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
       productType: row.productType || '',
       kyHieu: row.kyHieu || '',
       linkFolder: row.linkFolder || '',
+      chatLieu: row.chatLieu || '',
+      chiTietSize: row.chiTietSize || '',
+      chiTietSizeImage: row.chiTietSizeImage || '',
+      avgTimeVendor: row.avgTimeVendor || '',
+      avgTimeActual: row.avgTimeActual || '',
+      notes: row.notes || '',
       img0: row.images?.[0] || '',
       img1: row.images?.[1] || '',
       img2: row.images?.[2] || '',
@@ -47,7 +53,20 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   const saveEdit = (idx) => {
     const newRows = [...rows];
     const images = [editForm.img0, editForm.img1, editForm.img2, editForm.img3].filter(Boolean);
-    newRows[idx] = { ...newRows[idx], vendorName: editForm.vendorName, productType: editForm.productType, kyHieu: editForm.kyHieu, linkFolder: editForm.linkFolder, images };
+    newRows[idx] = {
+      ...newRows[idx],
+      vendorName: editForm.vendorName,
+      productType: editForm.productType,
+      kyHieu: editForm.kyHieu,
+      linkFolder: editForm.linkFolder,
+      chatLieu: editForm.chatLieu,
+      chiTietSize: editForm.chiTietSize,
+      chiTietSizeImage: editForm.chiTietSizeImage,
+      avgTimeVendor: editForm.avgTimeVendor,
+      avgTimeActual: editForm.avgTimeActual,
+      notes: editForm.notes,
+      images,
+    };
     setEditIdx(-1);
     setEditForm(null);
     onSave(newRows);
@@ -147,18 +166,43 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                   </div>
                 )}
               </td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{fmtNA(r.chatLieu)}</td>
               <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
-                {r.chiTietSizeImage && (
-                  <a href={r.chiTietSizeImage} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: r.chiTietSize ? 6 : 0 }}>
-                    <img src={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
-                  </a>
-                )}
-                {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
+                {isEditing ? (
+                  <textarea rows={3} placeholder="Chất liệu..." value={editForm.chatLieu} onChange={e => setEditForm(p => ({ ...p, chatLieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box', resize: 'vertical' }} />
+                ) : fmtNA(r.chatLieu)}
               </td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>
-              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{fmtNA(r.notes)}</td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                {isEditing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <input type="text" placeholder="URL ảnh size guide..." value={editForm.chiTietSizeImage} onChange={e => setEditForm(p => ({ ...p, chiTietSizeImage: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                    <textarea rows={2} placeholder="Chi tiết size (text)..." value={editForm.chiTietSize} onChange={e => setEditForm(p => ({ ...p, chiTietSize: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 10, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box', resize: 'vertical' }} />
+                  </div>
+                ) : (
+                  <>
+                    {r.chiTietSizeImage && (
+                      <a href={r.chiTietSizeImage} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: r.chiTietSize ? 6 : 0 }}>
+                        <img src={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
+                      </a>
+                    )}
+                    {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
+                  </>
+                )}
+              </td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.success }}>
+                {isEditing ? (
+                  <input type="text" placeholder="VD: 3-5 ngày" value={editForm.avgTimeVendor} onChange={e => setEditForm(p => ({ ...p, avgTimeVendor: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                ) : fmtNA(r.avgTimeVendor)}
+              </td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.warning }}>
+                {isEditing ? (
+                  <input type="text" placeholder="VD: 5-7 ngày" value={editForm.avgTimeActual} onChange={e => setEditForm(p => ({ ...p, avgTimeActual: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                ) : fmtNA(r.avgTimeActual)}
+              </td>
+              <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                {isEditing ? (
+                  <textarea rows={3} placeholder="Ghi chú..." value={editForm.notes} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box', resize: 'vertical' }} />
+                ) : fmtNA(r.notes)}
+              </td>
               <td style={{ ...TD(i) }}>
                 {isEditing ? (
                   <input type="text" placeholder="Link Folder..." value={editForm.linkFolder} onChange={e => setEditForm(p => ({ ...p, linkFolder: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
@@ -197,14 +241,55 @@ function PricingTable({ rows, onSave, readOnly }) {
 
   const startEdit = (idx, row) => {
     setEditIdx(idx);
-    setEditForm({ kyHieu: row.kyHieu || '', productType: row.productType || '' });
+    setEditForm({
+      kyHieu: row.kyHieu || '',
+      productType: row.productType || '',
+      size: row.size ?? '',
+      optional: row.optional ?? '',
+      pricing1: row.pricing1 ?? '',
+      pricing2: row.pricing2 ?? '',
+      eco_price: row.eco_price ?? '',
+      eco_total: row.eco_total ?? '',
+      ground_price: row.ground_price ?? '',
+      ground_total: row.ground_total ?? '',
+      express_price: row.express_price ?? '',
+      express_total: row.express_total ?? '',
+      twoday_price: row.twoday_price ?? '',
+      twoday_total: row.twoday_total ?? '',
+      overnight_price: row.overnight_price ?? '',
+      overnight_total: row.overnight_total ?? '',
+    });
   };
 
   const saveEdit = (idx) => {
     const newRows = [...rows];
-    newRows[idx] = { ...newRows[idx], kyHieu: editForm.kyHieu, productType: editForm.productType };
+    const toNum = v => (v === '' || v === null || v === undefined) ? null : Number(v);
+    newRows[idx] = {
+      ...newRows[idx],
+      kyHieu: editForm.kyHieu,
+      productType: editForm.productType,
+      size: editForm.size,
+      optional: editForm.optional,
+      pricing1: toNum(editForm.pricing1),
+      pricing2: toNum(editForm.pricing2),
+      eco_price: toNum(editForm.eco_price),
+      eco_total: toNum(editForm.eco_total),
+      ground_price: toNum(editForm.ground_price),
+      ground_total: toNum(editForm.ground_total),
+      express_price: toNum(editForm.express_price),
+      express_total: toNum(editForm.express_total),
+      twoday_price: toNum(editForm.twoday_price),
+      twoday_total: toNum(editForm.twoday_total),
+      overnight_price: toNum(editForm.overnight_price),
+      overnight_total: toNum(editForm.overnight_total),
+    };
     setEditIdx(-1);
     setEditForm(null);
+    if (onSave) onSave(newRows);
+  };
+
+  const deleteRow = (idx) => {
+    const newRows = rows.filter((_, i) => i !== idx);
     if (onSave) onSave(newRows);
   };
 
@@ -263,13 +348,37 @@ function PricingTable({ rows, onSave, readOnly }) {
                     r.productType ? <span style={{ fontWeight: 700 }}>{r.productType}</span> : <span style={naStyle}>N/A</span>
                   )}
                 </td>
-                <td style={{ ...TD(i), textAlign: 'center' }}>{fmtNA(r.size)}</td>
-                <td style={{ ...TD(i), textAlign: 'center' }}>{fmtNA(r.optional)}</td>
-                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt$(r.pricing1)}</td>
-                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>{fmt$(r.pricing2)}</td>
+                <td style={{ ...TD(i), textAlign: 'center' }}>
+                  {isEditing ? (
+                    <input type="text" value={editForm.size} onChange={e => setEditForm(p => ({ ...p, size: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
+                  ) : fmtNA(r.size)}
+                </td>
+                <td style={{ ...TD(i), textAlign: 'center' }}>
+                  {isEditing ? (
+                    <input type="text" value={editForm.optional} onChange={e => setEditForm(p => ({ ...p, optional: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
+                  ) : fmtNA(r.optional)}
+                </td>
+                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>
+                  {isEditing ? (
+                    <input type="number" step="0.01" value={editForm.pricing1} onChange={e => setEditForm(p => ({ ...p, pricing1: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                  ) : fmt$(r.pricing1)}
+                </td>
+                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>
+                  {isEditing ? (
+                    <input type="number" step="0.01" value={editForm.pricing2} onChange={e => setEditForm(p => ({ ...p, pricing2: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                  ) : fmt$(r.pricing2)}
+                </td>
                 {shipMethods.map((m) => [
-                  <td key={`${m.label}-price`} style={{ ...TD(i), textAlign: 'right', color: HC.muted }}>{fmt$(r[m.priceKey])}</td>,
-                  <td key={`${m.label}-total`} style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>{fmt$(r[m.totalKey])}</td>,
+                  <td key={`${m.label}-price`} style={{ ...TD(i), textAlign: 'right', color: HC.muted }}>
+                    {isEditing ? (
+                      <input type="number" step="0.01" value={editForm[m.priceKey]} onChange={e => setEditForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                    ) : fmt$(r[m.priceKey])}
+                  </td>,
+                  <td key={`${m.label}-total`} style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>
+                    {isEditing ? (
+                      <input type="number" step="0.01" value={editForm[m.totalKey]} onChange={e => setEditForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
+                    ) : fmt$(r[m.totalKey])}
+                  </td>,
                 ])}
                 {!readOnly && (
                   <td style={{ ...TD(i), textAlign: 'center' }}>
@@ -279,7 +388,10 @@ function PricingTable({ rows, onSave, readOnly }) {
                         <button onClick={() => setEditIdx(-1)} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
                       </div>
                     ) : (
-                      <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>✏️ Sửa</button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>✏️ Sửa</button>
+                        <button onClick={() => deleteRow(i)} style={{ padding: '4px 8px', borderRadius: 4, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>🗑 Xóa</button>
+                      </div>
                     )}
                   </td>
                 )}
@@ -297,6 +409,29 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [renamingFile, setRenamingFile] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef(null);
+
+  const startRename = (e) => {
+    e.stopPropagation();
+    setRenameValue(entry.filename);
+    setRenamingFile(true);
+    setTimeout(() => renameInputRef.current?.focus(), 50);
+  };
+
+  const commitRename = () => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== entry.filename) {
+      onUpdate({ ...entry, filename: trimmed });
+    }
+    setRenamingFile(false);
+  };
+
+  const handleRenameKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+    if (e.key === 'Escape') { setRenamingFile(false); }
+  };
 
   const fileRowIds = entry.generalInfo?.map(r => r.id) || [];
   const selectedInFile = fileRowIds.filter(id => selectedIds?.has(id)).length;
@@ -346,12 +481,48 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Filename */}
-          <div style={{
-            fontWeight: 800, fontSize: 12.5, color: HC.ink,
-            fontFamily: "'Nunito',sans-serif", marginBottom: 3,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {entry.filename}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            {renamingFile ? (
+              <input
+                ref={renameInputRef}
+                type="text"
+                value={renameValue}
+                onChange={e => setRenameValue(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={handleRenameKeyDown}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  flex: 1, padding: '3px 8px', fontSize: 12.5, fontWeight: 800,
+                  fontFamily: "'Nunito',sans-serif", borderRadius: 6,
+                  border: `1.5px solid ${HC.orange}`,
+                  boxShadow: `0 0 0 3px ${HC.orangeGlow}`,
+                  outline: 'none', color: HC.ink,
+                  background: '#fffbeb',
+                }}
+              />
+            ) : (
+              <span style={{
+                fontWeight: 800, fontSize: 12.5, color: HC.ink,
+                fontFamily: "'Nunito',sans-serif",
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                flex: 1, minWidth: 0,
+              }}>
+                {entry.filename}
+              </span>
+            )}
+            {!readOnly && !renamingFile && (
+              <button
+                onClick={startRename}
+                title="Đổi tên file"
+                style={{
+                  flexShrink: 0, padding: '2px 7px', borderRadius: 5,
+                  border: `1px solid ${HC.orangeMid}`,
+                  background: HC.orangeLight, color: HC.orangeDark,
+                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                  lineHeight: 1.4, transition: 'all 0.15s',
+                }}
+              >✏️</button>
+            )}
           </div>
 
           {/* Meta row */}
