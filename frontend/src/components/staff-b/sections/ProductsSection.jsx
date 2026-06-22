@@ -247,6 +247,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   const allUrls = getMediaUrls(p);
                   const mediaSrc = allUrls.length > 0 ? allUrls[0] : null;
                   const assignedVendors = productVendors[p.id] || [];
+                  const uniqueVendorCount = new Set(assignedVendors.map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim()).filter(Boolean)).size || assignedVendors.length;
                   const hasVendors = assignedVendors.length > 0;
                   const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
                   const aSelectedCount = Object.values(aSelections).filter(s => s?.checked).length;
@@ -280,7 +281,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                               alignItems: 'center', justifyContent: 'center', gap: 2,
                             }}>
                               <span style={{ fontSize: 18 }}>🏪</span>
-                              <span style={{ fontSize: 10, fontWeight: 900, color: HC.orangeDark }}>{assignedVendors.length}</span>
+                              <span style={{ fontSize: 10, fontWeight: 900, color: HC.orangeDark }}>{uniqueVendorCount}</span>
                             </div>
                           ) : '—'
                         )}
@@ -293,7 +294,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                       <td style={{ padding: '12px 13px' }}>
                         {hasVendors ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Assigned: {assignedVendors.length} vendor</span>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>Assigned: {uniqueVendorCount} vendor</span>
                             {aSelectedCount > 0 && <span style={{ fontSize: 11, color: HC.success, fontWeight: 600 }}>✓ A đã chọn {aSelectedCount}</span>}
                           </div>
                         ) : <span style={{ color: HC.muted2, fontSize: 12, fontStyle: 'italic' }}>—</span>}
