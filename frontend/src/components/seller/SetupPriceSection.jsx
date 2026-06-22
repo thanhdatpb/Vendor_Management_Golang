@@ -43,7 +43,7 @@ const computeRow = (row, g) => {
   const total_cost   = ic + sc;
   const coupon_amt   = cpct / 100 * (total_price - ship);
   const after_price  = total_price - coupon_amt;
-  const coupon_fee   = 0.025 * (total_price - ship - coupon_amt);
+  const coupon_fee   = cpct > 0 ? 0.025 * (total_price - ship - coupon_amt) : 0;
   const amz_fee      = 0.17 * after_price;
   const profit       = total_price - coupon_amt - coupon_fee - amz_fee - total_cost;
   const profit_ratio  = total_cost > 0 ? profit / total_cost * 100 : 0;
