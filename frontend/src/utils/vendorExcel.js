@@ -342,13 +342,20 @@ export async function downloadVendorLibraryTemplate() {
   const XLSX = xlsxModule.default ?? xlsxModule;
 
   // ── Section 1: Thông tin chung về phôi ──────────────────────────────────────
-  // Thứ tự cột = thứ tự hiển thị trong bảng UI
-  // col 0: Ký hiệu | col 1: Tên Vendor | col 2-5: Hình ảnh 1-4
-  // col 6: Chất liệu | col 7: Chi tiết Size | col 8: AVG TG (theo Vendor)
-  // col 9: AVG TG (Thực tế) | col 10: Ghi chú | col 11: Thư mục / Link
+  // Thứ tự cột khớp với thứ tự hiển thị UI:
+  //   Vendor Name → (Product Type — tự điền từ cross-ref) → Ký hiệu → Hình ảnh → ...
+  // col 0 : Tên Vendor        → vendorName
+  // col 1 : Ký hiệu           → kyHieu  (A/B/C… — phải khớp với col 0 Section 2)
+  // col 2-5: Hình ảnh 1-4    → images[]
+  // col 6 : Chất liệu         → chatLieu
+  // col 7 : Chi tiết Size     → chiTietSize (URL ảnh size guide hoặc text)
+  // col 8 : AVG TG (theo Vendor) → avgTimeVendor
+  // col 9 : AVG TG (Thực tế)  → avgTimeActual
+  // col 10: Ghi chú           → notes
+  // col 11: Thư mục / Link    → linkFolder
   const sec1Header = [
-    'Ký hiệu',
     'Tên Vendor',
+    'Ký hiệu',
     'Hình ảnh 1', 'Hình ảnh 2', 'Hình ảnh 3', 'Hình ảnh 4',
     'Chất liệu',
     'Chi tiết Size',
@@ -387,12 +394,12 @@ export async function downloadVendorLibraryTemplate() {
     sec1Header,
 
     // ── Row 3+: Dữ liệu mẫu — xóa/sửa tùy ý ─────────────────────────────────
-    // col 0: Ký hiệu (A/B/C…) phải khớp với Ký hiệu bên Section 2 để tự điền Product Type
-    // col 1: Tên vendor thực tế
+    // col 0: Tên Vendor thực tế
+    // col 1: Ký hiệu (A/B/C…) — phải khớp với col 0 ở Section 2 để tự điền Product Type
     // col 2: URL hình ảnh (để trống nếu không có)
-    // col 7: URL ảnh size guide hoặc mô tả size dạng text (VD: S/M/L/XL)
-    ['A', 'Tên Vendor A', 'https://example.com/img1.jpg', '', '', '', 'Vải cotton 100%',   'S/M/L/XL',   '3-5 ngày', '5-7 ngày', 'Ghi chú ví dụ', 'https://drive.google.com/folder1'],
-    ['B', 'Tên Vendor B', 'https://example.com/img2.jpg', '', '', '', 'Polyester cao cấp', 'One size',   '4-6 ngày', '6-8 ngày', '',              'https://drive.google.com/folder2'],
+    // col 7: URL ảnh size guide HOẶC mô tả size dạng text (VD: S/M/L/XL)
+    ['Tên Vendor A', 'A', 'https://example.com/img1.jpg', '', '', '', 'Vải cotton 100%',   'S/M/L/XL', '3-5 ngày', '5-7 ngày', 'Ghi chú ví dụ', 'https://drive.google.com/folder1'],
+    ['Tên Vendor B', 'B', 'https://example.com/img2.jpg', '', '', '', 'Polyester cao cấp', 'One size', '4-6 ngày', '6-8 ngày', '',              'https://drive.google.com/folder2'],
 
     // ── Dòng trống ngăn cách ─────────────────────────────────────────────────
     [],
@@ -417,8 +424,8 @@ export async function downloadVendorLibraryTemplate() {
 
   // ── Column widths ────────────────────────────────────────────────────────────
   ws['!cols'] = [
-    { wch: 12 }, // col 0:  Ký hiệu / Ký hiệu
-    { wch: 22 }, // col 1:  Tên Vendor / Product Type
+    { wch: 24 }, // col 0:  Tên Vendor / Ký hiệu (sec2)
+    { wch: 12 }, // col 1:  Ký hiệu / Product Type (sec2)
     { wch: 34 }, // col 2:  Hình ảnh 1 / Size
     { wch: 20 }, // col 3:  Hình ảnh 2 / Optional
     { wch: 20 }, // col 4:  Hình ảnh 3 / Pricing 1
@@ -428,11 +435,11 @@ export async function downloadVendorLibraryTemplate() {
     { wch: 22 }, // col 8:  AVG TG Vendor / Ground Price
     { wch: 22 }, // col 9:  AVG TG Thực tế / Ground Total
     { wch: 28 }, // col 10: Ghi chú / Express Price
-    { wch: 28 }, // col 11: Thư mục / Express Total
+    { wch: 30 }, // col 11: Thư mục / Express Total
     { wch: 18 }, // col 12: — / 2Day Price
     { wch: 18 }, // col 13: — / 2Day Total
-    { wch: 20 }, // col 14: — / Overnight Price
-    { wch: 20 }, // col 15: — / Overnight Total
+    { wch: 22 }, // col 14: — / Overnight Price
+    { wch: 22 }, // col 15: — / Overnight Total
   ];
 
   // ── Row heights ──────────────────────────────────────────────────────────────
@@ -590,9 +597,22 @@ export async function parseHappyCreativeLibrary(file) {
           const hRow = aoa[generalInfoHeaderRow] || [];
           let imagesHeaderFound = false;
           let col_vendorName = -1;
+          // Pass 1: detect explicit 'ký hiệu' label (takes priority over 'product type' fallback)
+          let kyHieuExplicit = -1;
           hRow.forEach((h, c) => {
             const s = cellStr(h).toLowerCase();
-            if (s.includes('product type')) col_kyHieu = c;
+            const sNorm = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+            if (sNorm.includes('ky hieu') || sNorm.includes('ki hieu') || s.includes('ký hiệu') || s.includes('kí hiệu')) {
+              kyHieuExplicit = c;
+            }
+          });
+          if (kyHieuExplicit >= 0) col_kyHieu = kyHieuExplicit;
+
+          // Pass 2: detect all other columns
+          hRow.forEach((h, c) => {
+            const s = cellStr(h).toLowerCase();
+            // 'product type' → col_kyHieu only when no explicit 'ký hiệu' label exists (old format compat)
+            if (kyHieuExplicit < 0 && s.includes('product type')) col_kyHieu = c;
             if (s.includes('hình ảnh') || s.includes('hinh anh') || s.includes('video')) { col_imagesStart = c; imagesHeaderFound = true; }
             if (s.includes('chất liệu') || s.includes('chat lieu') || s.includes('material')) col_chatLieu = c;
             if (s.includes('chi tiết size') || s.includes('chi tiet size')) col_chiTietSize = c;
