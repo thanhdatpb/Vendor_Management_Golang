@@ -8,6 +8,12 @@ import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, get
 import { pushNotif } from '../../utils/notifUtils';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 
+function ThumbnailImg({ src }) {
+  const [err, setErr] = useState(false);
+  if (err) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', fontSize: 18, color: 'rgba(255,255,255,0.3)' }}>🖼️</div>;
+  return <img src={src} alt="" loading="lazy" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+}
+
 export default function ProductViewerModal({ product, productVendors, onClose, getStatus, onViewVendorLibrary }) {
   // Ưu tiên dùng assigned_vendors từ API, fallback về localStorage
   const [vendors, setVendors] = useState(() => product?.assigned_vendors || productVendors[product?.id] || []);
@@ -30,6 +36,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [imgError, setImgError] = useState(false);
   // Tách riêng: ảnh/video upload vs link tham khảo
   const mediaUrls = getProductImages(product);
   const referenceLinks = getProductLinks(product);
@@ -37,6 +44,8 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   useEffect(() => {
     setVendors(product?.assigned_vendors || productVendors[product?.id] || []);
   }, [product?.id, product?.assigned_vendors, productVendors]);
+
+  useEffect(() => { setImgError(false); }, [currentMediaIndex]);
 
   useEffect(() => {
     const sync = () => {
@@ -310,16 +319,15 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
               <div style={{ width: 320, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}>
                   {mediaUrls.length > 0 ? (
-                    isVideo(mediaUrls[currentMediaIndex]) ? (
+                    imgError ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+                        <div style={{ fontSize: 44, marginBottom: 8 }}>🖼️</div>
+                        <div style={{ fontSize: 12 }}>Không tải được ảnh</div>
+                      </div>
+                    ) : isVideo(mediaUrls[currentMediaIndex]) ? (
                       <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     ) : (
-                      <>
-                        <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
-                        <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-                          <div style={{ fontSize: 44, marginBottom: 8 }}>🖼️</div>
-                          <div style={{ fontSize: 12 }}>Không tải được ảnh</div>
-                        </div>
-                      </>
+                      <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" onError={() => setImgError(true)} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     )
                   ) : (
                     <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
@@ -401,10 +409,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                               >
                                 {/\.(mp4|mov|webm)$/i.test(url)
                                   ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
-                                  : <>
-                                      <img src={url} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                      <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', fontSize: 18, color: 'rgba(255,255,255,0.3)' }}>🖼️</div>
-                                    </>
+                                  : <ThumbnailImg src={url} />
                                 }
                               </div>
                             ))}
