@@ -809,6 +809,7 @@ export async function parseHappyCreativeLibrary(file) {
 
           const dataStart = hasSubHeader ? altPricingHeaderRow + 2 : altPricingHeaderRow + 1;
           let lastProductType = '';
+          let lastKyHieu = '';
 
           for (let r = dataStart; r < endRow; r++) {
             const row = aoa[r] || [];
@@ -821,6 +822,12 @@ export async function parseHappyCreativeLibrary(file) {
             if (rawType) lastProductType = rawType;
             if (!lastProductType) continue;
 
+            // Propagate vendor name (col 0) across merged cells — same as lastProductType pattern
+            if (altPtCol > 0) {
+              const rawVendor = cellStr(row[0]);
+              if (rawVendor) lastKyHieu = rawVendor;
+            }
+
             const getShip = (idx, isTotal) => {
               const col = shipCols[idx];
               if (!col) return null;
@@ -829,7 +836,7 @@ export async function parseHappyCreativeLibrary(file) {
             };
 
             pricing.push({
-              kyHieu: altPtCol > 0 ? cellStr(row[0]) : '',
+              kyHieu: lastKyHieu,
               productType: lastProductType,
               size: cellStr(row[colSize]) === 'N/A' ? '' : cellStr(row[colSize]),
               optional: cellStr(row[colOptional]) === 'N/A' ? '' : cellStr(row[colOptional]),

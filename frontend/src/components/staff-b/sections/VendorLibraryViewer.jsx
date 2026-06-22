@@ -972,7 +972,10 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         const filteredGeneral = file.generalInfo.filter(r => assignedIds.has(r.id));
         if (filteredGeneral.length === 0) return null;
         const assignedKyHieus = new Set(filteredGeneral.map(r => r.kyHieu).filter(Boolean));
-        const filteredPricing = (file.pricing || []).filter(p => assignedKyHieus.has(p.kyHieu));
+        // Khi không có kyHieu nào (alt format không dùng Ký hiệu), hiển thị toàn bộ pricing
+        const filteredPricing = assignedKyHieus.size > 0
+          ? (file.pricing || []).filter(p => !p.kyHieu || assignedKyHieus.has(p.kyHieu))
+          : (file.pricing || []);
         return { ...file, generalInfo: filteredGeneral, pricing: filteredPricing };
       }).filter(Boolean);
     } catch { return rawFiles; }
