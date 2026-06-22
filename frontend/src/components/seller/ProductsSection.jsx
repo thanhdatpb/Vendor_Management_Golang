@@ -655,7 +655,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     let av = p.assigned_vendors;
     if (typeof av === 'string') { try { av = JSON.parse(av); } catch { av = []; } }
     const vendors = (Array.isArray(av) && av.length ? av : null) || productVendors[p.id] || [];
-    const count = vendors.length;
+    const uniqueNames = new Set(vendors.map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim()).filter(Boolean));
+    const count = uniqueNames.size || vendors.length;
     const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
     const selectedCount = Object.values(aSelections).filter(s => s?.checked).length;
     if (count === 0) return <span style={{ color: HC.muted2, fontSize: 11, fontStyle: 'italic' }}>Chưa gán</span>;
