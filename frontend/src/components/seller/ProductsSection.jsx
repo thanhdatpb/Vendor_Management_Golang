@@ -371,11 +371,17 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             catch { videoLinks = [p.product_video_links]; }
           }
         }
+        let assignedVendors = p.assigned_vendors || [];
+        if (typeof assignedVendors === 'string') {
+          try { assignedVendors = JSON.parse(assignedVendors); } catch { assignedVendors = []; }
+        }
+        if (!Array.isArray(assignedVendors)) assignedVendors = [];
         return {
           ...p,
           product_type_links: links,
           product_video_links: videoLinks,
-          media_urls: p.media_urls || (p.media_url ? [p.media_url] : [])
+          media_urls: p.media_urls || (p.media_url ? [p.media_url] : []),
+          assigned_vendors: assignedVendors
         };
       });
       setSubmittedProducts(enriched);
@@ -646,7 +652,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
   const renderVendorBadge = (p) => {
     // Ưu tiên assigned_vendors từ API, fallback về localStorage
-    const vendors = (p.assigned_vendors?.length ? p.assigned_vendors : null) || productVendors[p.id] || [];
+    let av = p.assigned_vendors;
+    if (typeof av === 'string') { try { av = JSON.parse(av); } catch { av = []; } }
+    const vendors = (Array.isArray(av) && av.length ? av : null) || productVendors[p.id] || [];
     const count = vendors.length;
     const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
     const selectedCount = Object.values(aSelections).filter(s => s?.checked).length;
