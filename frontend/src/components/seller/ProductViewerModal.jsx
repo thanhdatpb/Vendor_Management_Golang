@@ -313,7 +313,13 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     isVideo(mediaUrls[currentMediaIndex]) ? (
                       <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     ) : (
-                      <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                      <>
+                        <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                        <div style={{ display: 'none', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+                          <div style={{ fontSize: 44, marginBottom: 8 }}>🖼️</div>
+                          <div style={{ fontSize: 12 }}>Không tải được ảnh</div>
+                        </div>
+                      </>
                     )
                   ) : (
                     <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
@@ -395,7 +401,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                               >
                                 {/\.(mp4|mov|webm)$/i.test(url)
                                   ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
-                                  : <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  : <>
+                                      <img src={url} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', fontSize: 18, color: 'rgba(255,255,255,0.3)' }}>🖼️</div>
+                                    </>
                                 }
                               </div>
                             ))}
