@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { HC } from '../utils/constants';
-import { parseHappyCreativeLibrary } from '../../../utils/vendorExcel';
+import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate } from '../../../utils/vendorExcel';
 import { vendorLibraryApi } from '../../../services/api';
 import AppToast from '../../shared/AppToast';
 
@@ -1225,6 +1225,20 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
               }}
             >
               ➕ Thêm mới vendor
+            </button>
+            <button
+              onClick={() => downloadVendorLibraryTemplate()}
+              title="Tải file Excel mẫu — điền vào rồi import ngược lên"
+              style={{
+                padding: '9px 18px', borderRadius: 10,
+                border: `1.5px solid ${HC.border}`,
+                background: HC.surface, color: HC.ink,
+                fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 7,
+                transition: 'all 0.15s',
+              }}
+            >
+              📄 Template mẫu
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}

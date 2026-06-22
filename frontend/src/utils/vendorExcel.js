@@ -315,6 +315,87 @@ export async function parseVendorExcel(file) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  downloadVendorLibraryTemplate — tải file Excel mẫu đúng định dạng HC parser
+//
+//  Cấu trúc sheet (0-indexed rows):
+//    Row 0 : Tiêu đề loại sản phẩm  (VD: "CAP")  — parser đọc làm title/badge
+//    Row 1 : Label "Thông tin chung về phôi"       — kích hoạt Section 1 detection
+//    Row 2 : Header cột Section 1                  — parser map từng cột
+//    Row 3–4: Dữ liệu mẫu Section 1
+//    Row 5–6: Trống (ngăn cách)
+//    Row 7 : Header Section 2 — col0="Ký hiệu", col1 chứa "Product Type"
+//    Row 8 : Sub-header Section 2
+//    Row 9+: Dữ liệu giá mẫu
+// ─────────────────────────────────────────────────────────────────────────────
+export async function downloadVendorLibraryTemplate() {
+  const xlsxModule = await import('xlsx');
+  const XLSX = xlsxModule.default ?? xlsxModule;
+
+  const aoa = [
+    // Row 0: Title — ALL-CAPS ASCII, parser đọc làm badge hiển thị
+    ['CAP'],
+
+    // Row 1: Section 1 label — kích hoạt generalInfoHeaderRow detection
+    ['Thông tin chung về phôi'],
+
+    // Row 2: Section 1 column headers (keyword phải khớp với parser)
+    // col 0: kyHieu | col 1-4: images | col 5: chatLieu | col 6: chiTietSize
+    // col 7: avgVendor | col 8: avgActual | col 9: notes | col 10: linkFolder | col 11: vendorName
+    [
+      'Ký hiệu',
+      'Hình ảnh 1', 'Hình ảnh 2', 'Hình ảnh 3', 'Hình ảnh 4',
+      'Chất liệu',
+      'Chi tiết Size',
+      'AVG TG (theo Vendor)',
+      'AVG TG (Thực tế)',
+      'Ghi chú',
+      'Thư mục / Link',
+      'Tên Vendor',
+    ],
+
+    // Row 3-4: Dữ liệu mẫu Section 1
+    ['A', 'https://example.com/image1.jpg', '', '', '', 'Vải cotton 100%', 'S/M/L/XL', '3-5 ngày', '5-7 ngày', 'Ghi chú ví dụ', 'https://drive.google.com/...', 'Tên Vendor A'],
+    ['B', 'https://example.com/image2.jpg', '', '', '', 'Polyester cao cấp', 'One size', '4-6 ngày', '6-8 ngày', '', 'https://drive.google.com/...', 'Tên Vendor B'],
+
+    // Row 5-6: Trống — ngăn cách hai section
+    [],
+    [],
+
+    // Row 7: Section 2 header — col0="Ký hiệu", col1 chứa "Product Type" (bắt buộc)
+    ['Ký hiệu', 'Product Type (Tên sản phẩm)', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+
+    // Row 8: Section 2 sub-header (vị trí cột giá cố định, không đổi)
+    [
+      '', '',
+      'Size', 'Optional',
+      'Pricing 1', 'Pricing 2',
+      'Economy Price Ship', 'Economy Total',
+      'Ground Price Ship',  'Ground Total',
+      'Express Price Ship', 'Express Total',
+      '2Day Price Ship',    '2Day Total',
+      'Overnight Price Ship','Overnight Total',
+    ],
+
+    // Row 9-11: Dữ liệu giá mẫu
+    ['A', 'CAP Happy Logo - S/M',    'S/M',      '', 8.5, 9.5,  2.5, 11.0, 3.0, 11.5, 5.0, 13.5, 7.0, 15.5, 15.0, 23.5],
+    ['A', 'CAP Happy Logo - L/XL',   'L/XL',     '', 9.0, 10.0, 2.5, 11.5, 3.0, 12.0, 5.0, 14.0, 7.0, 16.0, 15.0, 24.0],
+    ['B', 'CAP Creative - One size', 'One size', '', 7.5, 8.5,  2.5, 10.0, 3.0, 10.5, 5.0, 12.5, 7.0, 14.5, 15.0, 22.5],
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  ws['!cols'] = [
+    { wch: 14 }, { wch: 36 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+    { wch: 26 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 26 },
+    { wch: 32 }, { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'CAP');
+  XLSX.writeFile(wb, 'HC_VendorLibrary_Template.xlsx');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  parseHappyCreativeLibrary — parse định dạng "Happy Creative" vendor library
 //  Trả về: { title, generalInfo: [], pricing: [] }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -450,6 +531,7 @@ export async function parseHappyCreativeLibrary(file) {
         if (generalInfoHeaderRow >= 0) {
           const hRow = aoa[generalInfoHeaderRow] || [];
           let imagesHeaderFound = false;
+          let col_vendorName = -1;
           hRow.forEach((h, c) => {
             const s = cellStr(h).toLowerCase();
             if (s.includes('product type')) col_kyHieu = c;
@@ -458,8 +540,9 @@ export async function parseHappyCreativeLibrary(file) {
             if (s.includes('chi tiết size') || s.includes('chi tiet size')) col_chiTietSize = c;
             if (s.includes('avg') && (s.includes('vendor') || s.includes('theo vendor'))) col_avgVendor = c;
             if (s.includes('avg') && (s.includes('thực tế') || s.includes('thuc te'))) col_avgActual = c;
-            if (s.includes('notes') || s.includes('ghi chú')) col_notes = c;
-            if (s.includes('link folder') || s.includes('thư mục')) col_linkFolder = c;
+            if (s.includes('notes') || s.includes('ghi chú') || s.includes('ghi chu')) col_notes = c;
+            if (s.includes('link folder') || s.includes('thư mục') || s.includes('thu muc')) col_linkFolder = c;
+            if (s.includes('tên vendor') || s.includes('ten vendor') || s.includes('vendor name') || s.includes('nhà cung cấp')) col_vendorName = c;
           });
 
           // Nếu không có header "Hình ảnh" tường minh mà cột chatLieu xuất hiện sớm (col ≤ 5),
@@ -526,7 +609,7 @@ export async function parseHappyCreativeLibrary(file) {
 
             generalInfo.push({
               id: 'row-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 6),
-              vendorName: '',
+              vendorName: col_vendorName >= 0 ? cellStr(row[col_vendorName]) : '',
               productType: '',
               kyHieu: originalKyHieu,
               images,
