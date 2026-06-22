@@ -94,44 +94,32 @@ export default function StaffBNotificationCenter({
       {isOpen && (
         <>
           <div onClick={() => setIsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
-          <div style={{ position: 'absolute', top: 50, right: 0, width: 440, maxHeight: 620, background: HC.surface, borderRadius: 16, boxShadow: HC.shadowStrong, border: `1.5px solid ${HC.border}`, zIndex: 999, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ position: 'absolute', top: 50, right: 0, width: 440, maxHeight: 806, background: HC.surface, borderRadius: 16, boxShadow: HC.shadowStrong, border: `1.5px solid ${HC.border}`, zIndex: 999, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
             {/* ── Header ── */}
-            <div style={{ padding: '16px 18px 14px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
-                  🔔 Thông báo
-                  {totalUnread > 0 && (
-                    <span style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 10px' }}>
-                      {totalUnread} chưa đọc
-                    </span>
-                  )}
-                </span>
+            <div style={{ padding: '14px 18px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
+                🔔 Thông báo
                 {totalUnread > 0 && (
-                  <button onClick={markAllAsRead}
-                    style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '5px 12px', fontFamily: "'Nunito',sans-serif", transition: 'all 0.2s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.28)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
-                  >
-                    Đọc tất cả ✓
-                  </button>
+                  <span style={{ background: 'rgba(255,255,255,0.22)', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 10px' }}>
+                    {totalUnread} chưa đọc
+                  </span>
                 )}
-              </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: '#fff', opacity: 0.9, display: 'inline-block' }} />
-                  Yêu cầu
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: NEWS_COLOR, display: 'inline-block' }} />
-                  Tin tức
-                </span>
-              </div>
+              </span>
+              {totalUnread > 0 && (
+                <button onClick={markAllAsRead}
+                  style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '5px 12px', fontFamily: "'Nunito',sans-serif", transition: 'all 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.28)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+                >
+                  Đọc tất cả ✓
+                </button>
+              )}
             </div>
 
             {/* ── Detail View ── */}
             {selectedNotif ? (
-              <div style={{ flex: 1, overflowY: 'auto', maxHeight: 500 }}>
+              <div style={{ flex: 1, overflowY: 'auto', maxHeight: 650 }}>
                 <div style={{ padding: '10px 16px', background: HC.cream, borderBottom: `1px solid ${HC.border}`, display: 'flex', alignItems: 'center', gap: 8, position: 'sticky', top: 0, zIndex: 2 }}>
                   <button onClick={() => setSelectedNotif(null)} style={{ background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 700, color: HC.orangeDark, cursor: 'pointer' }}>
                     ← Quay lại
@@ -182,7 +170,7 @@ export default function StaffBNotificationCenter({
               </div>
             ) : (
               /* ── Unified feed ── */
-              <div style={{ overflowY: 'auto', flex: 1, maxHeight: 500, scrollbarWidth: 'thin', scrollbarColor: `${HC.orangeMid} transparent` }}>
+              <div style={{ overflowY: 'auto', flex: 1, maxHeight: 650, scrollbarWidth: 'thin', scrollbarColor: `${HC.orangeMid} transparent` }}>
                 <div style={{ padding: '8px 16px', background: HC.cream, borderBottom: `1px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
                   <span style={{ fontSize: 11, fontWeight: 600, color: HC.muted }}>
                     {allItems.length > 0 ? `${allItems.length} thông báo` : 'Tất cả thông báo'}
