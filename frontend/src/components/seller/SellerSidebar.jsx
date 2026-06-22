@@ -162,7 +162,7 @@ function CollapsedUserItem({ user, logout }) {
                 display: 'flex', alignItems: 'center', gap: 4,
               }}>
                 <UserOutlined style={{ fontSize: 9, color: HC.orange }} />
-                <span>Vendor Account</span>
+                <span>Seller Account</span>
               </div>
             </div>
             <button
@@ -311,7 +311,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
                 display: 'flex', alignItems: 'center', gap: 4, marginTop: 2,
               }}>
                 <UserOutlined style={{ fontSize: 9, color: HC.orange }} />
-                <span>Vendor Account</span>
+                <span>Seller Account</span>
               </div>
             </div>
           </div>
