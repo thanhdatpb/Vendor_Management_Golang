@@ -317,77 +317,135 @@ export async function parseVendorExcel(file) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  downloadVendorLibraryTemplate — tải file Excel mẫu đúng định dạng HC parser
 //
-//  Cấu trúc sheet (0-indexed rows):
-//    Row 0 : Tiêu đề loại sản phẩm  (VD: "CAP")  — parser đọc làm title/badge
-//    Row 1 : Label "Thông tin chung về phôi"       — kích hoạt Section 1 detection
-//    Row 2 : Header cột Section 1                  — parser map từng cột
-//    Row 3–4: Dữ liệu mẫu Section 1
-//    Row 5–6: Trống (ngăn cách)
-//    Row 7 : Header Section 2 — col0="Ký hiệu", col1 chứa "Product Type"
-//    Row 8 : Sub-header Section 2
-//    Row 9+: Dữ liệu giá mẫu
+//  Thứ tự cột Section 1 khớp với thứ tự hiển thị trong UI:
+//    col 0 : Ký hiệu          → kyHieu  (A, B, C… — dùng để cross-ref Section 2)
+//    col 1 : Tên Vendor        → vendorName
+//    col 2-5: Hình ảnh 1-4    → images[]  (URL trực tiếp hoặc =IMAGE("url"))
+//    col 6 : Chất liệu         → chatLieu
+//    col 7 : Chi tiết Size     → chiTietSize / chiTietSizeImage (URL ảnh size guide)
+//    col 8 : AVG TG (theo Vendor) → avgTimeVendor
+//    col 9 : AVG TG (Thực tế)  → avgTimeActual
+//    col 10: Ghi chú           → notes
+//    col 11: Thư mục / Link    → linkFolder
+//
+//  Section 2 — Về giá (vị trí cột cố định, không đổi):
+//    col 0: Ký hiệu | col 1: Product Type | col 2: Size | col 3: Optional
+//    col 4: Pricing 1 | col 5: Pricing 2
+//    col 6-7: Economy | col 8-9: Ground | col 10-11: Express
+//    col 12-13: 2 Days | col 14-15: Overnight
+//
+//  NOTE: "Product Type" KHÔNG cần điền ở Section 1 — parser tự điền từ cross-ref
+//        với Ký hiệu tương ứng trong Section 2.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function downloadVendorLibraryTemplate() {
   const xlsxModule = await import('xlsx');
   const XLSX = xlsxModule.default ?? xlsxModule;
 
+  // ── Section 1: Thông tin chung về phôi ──────────────────────────────────────
+  // Thứ tự cột = thứ tự hiển thị trong bảng UI
+  // col 0: Ký hiệu | col 1: Tên Vendor | col 2-5: Hình ảnh 1-4
+  // col 6: Chất liệu | col 7: Chi tiết Size | col 8: AVG TG (theo Vendor)
+  // col 9: AVG TG (Thực tế) | col 10: Ghi chú | col 11: Thư mục / Link
+  const sec1Header = [
+    'Ký hiệu',
+    'Tên Vendor',
+    'Hình ảnh 1', 'Hình ảnh 2', 'Hình ảnh 3', 'Hình ảnh 4',
+    'Chất liệu',
+    'Chi tiết Size',
+    'AVG TG (theo Vendor)',
+    'AVG TG (Thực tế)',
+    'Ghi chú',
+    'Thư mục / Link',
+  ];
+
+  // ── Section 2: Về giá ────────────────────────────────────────────────────────
+  // Header row kích hoạt pricingHeaderRow detection: col0="Ký hiệu", col1 chứa "Product Type"
+  const sec2Header = ['Ký hiệu', 'Product Type (Tên sản phẩm)', '', '', '', '', '', '', '', '', '', '', '', '', '', ''];
+  // Sub-header: vị trí cột giá cố định (parser đọc theo index, không theo keyword)
+  const sec2SubHeader = [
+    '', '',
+    'Size', 'Optional',
+    'Pricing 1', 'Pricing 2',
+    'Economy Price Ship', 'Economy Total (Fulfill)',
+    'Ground Price Ship',  'Ground Total (Fulfill)',
+    'Express Price Ship', 'Express Total (Fulfill)',
+    '2Day Price Ship',    '2Day Total (Fulfill)',
+    'Overnight Price Ship','Overnight Total (Fulfill)',
+  ];
+
   const aoa = [
-    // Row 0: Title — ALL-CAPS ASCII, parser đọc làm badge hiển thị
+    // ── Row 0: Tên loại sản phẩm ─────────────────────────────────────────────
+    // Chỉ dùng chữ HOA không dấu ASCII (VD: CAP, MUG, POSTER)
+    // Parser đọc cell này làm badge/title hiển thị trên card
+    // ➡ THAY "CAP" THÀNH TÊN LOẠI SẢN PHẨM CỦA BẠN
     ['CAP'],
 
-    // Row 1: Section 1 label — kích hoạt generalInfoHeaderRow detection
+    // ── Row 1: Label Section 1 (không xóa) ───────────────────────────────────
     ['Thông tin chung về phôi'],
 
-    // Row 2: Section 1 column headers (keyword phải khớp với parser)
-    // col 0: kyHieu | col 1-4: images | col 5: chatLieu | col 6: chiTietSize
-    // col 7: avgVendor | col 8: avgActual | col 9: notes | col 10: linkFolder | col 11: vendorName
-    [
-      'Ký hiệu',
-      'Hình ảnh 1', 'Hình ảnh 2', 'Hình ảnh 3', 'Hình ảnh 4',
-      'Chất liệu',
-      'Chi tiết Size',
-      'AVG TG (theo Vendor)',
-      'AVG TG (Thực tế)',
-      'Ghi chú',
-      'Thư mục / Link',
-      'Tên Vendor',
-    ],
+    // ── Row 2: Header cột Section 1 (không xóa, không đổi tên) ───────────────
+    sec1Header,
 
-    // Row 3-4: Dữ liệu mẫu Section 1
-    ['A', 'https://example.com/image1.jpg', '', '', '', 'Vải cotton 100%', 'S/M/L/XL', '3-5 ngày', '5-7 ngày', 'Ghi chú ví dụ', 'https://drive.google.com/...', 'Tên Vendor A'],
-    ['B', 'https://example.com/image2.jpg', '', '', '', 'Polyester cao cấp', 'One size', '4-6 ngày', '6-8 ngày', '', 'https://drive.google.com/...', 'Tên Vendor B'],
+    // ── Row 3+: Dữ liệu mẫu — xóa/sửa tùy ý ─────────────────────────────────
+    // col 0: Ký hiệu (A/B/C…) phải khớp với Ký hiệu bên Section 2 để tự điền Product Type
+    // col 1: Tên vendor thực tế
+    // col 2: URL hình ảnh (để trống nếu không có)
+    // col 7: URL ảnh size guide hoặc mô tả size dạng text (VD: S/M/L/XL)
+    ['A', 'Tên Vendor A', 'https://example.com/img1.jpg', '', '', '', 'Vải cotton 100%',   'S/M/L/XL',   '3-5 ngày', '5-7 ngày', 'Ghi chú ví dụ', 'https://drive.google.com/folder1'],
+    ['B', 'Tên Vendor B', 'https://example.com/img2.jpg', '', '', '', 'Polyester cao cấp', 'One size',   '4-6 ngày', '6-8 ngày', '',              'https://drive.google.com/folder2'],
 
-    // Row 5-6: Trống — ngăn cách hai section
+    // ── Dòng trống ngăn cách ─────────────────────────────────────────────────
     [],
     [],
 
-    // Row 7: Section 2 header — col0="Ký hiệu", col1 chứa "Product Type" (bắt buộc)
-    ['Ký hiệu', 'Product Type (Tên sản phẩm)', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    // ── Section 2: Về giá ─────────────────────────────────────────────────────
+    // Row 7: Header kích hoạt parser (không xóa, không đổi col 0 và col 1)
+    sec2Header,
 
-    // Row 8: Section 2 sub-header (vị trí cột giá cố định, không đổi)
-    [
-      '', '',
-      'Size', 'Optional',
-      'Pricing 1', 'Pricing 2',
-      'Economy Price Ship', 'Economy Total',
-      'Ground Price Ship',  'Ground Total',
-      'Express Price Ship', 'Express Total',
-      '2Day Price Ship',    '2Day Total',
-      'Overnight Price Ship','Overnight Total',
-    ],
+    // Row 8: Sub-header cột giá (không xóa, không đổi)
+    sec2SubHeader,
 
-    // Row 9-11: Dữ liệu giá mẫu
-    ['A', 'CAP Happy Logo - S/M',    'S/M',      '', 8.5, 9.5,  2.5, 11.0, 3.0, 11.5, 5.0, 13.5, 7.0, 15.5, 15.0, 23.5],
-    ['A', 'CAP Happy Logo - L/XL',   'L/XL',     '', 9.0, 10.0, 2.5, 11.5, 3.0, 12.0, 5.0, 14.0, 7.0, 16.0, 15.0, 24.0],
-    ['B', 'CAP Creative - One size', 'One size', '', 7.5, 8.5,  2.5, 10.0, 3.0, 10.5, 5.0, 12.5, 7.0, 14.5, 15.0, 22.5],
+    // ── Row 9+: Dữ liệu giá — xóa/sửa tùy ý ─────────────────────────────────
+    // col 0: Ký hiệu khớp Section 1 | col 1: Tên sản phẩm đầy đủ
+    // col 4-5: Pricing 1, 2 (giá base) | col 6-15: giá ship từng phương thức
+    ['A', 'CAP Happy Logo - S/M',    'S/M',      '',         8.5,  9.5,  2.5, 11.0, 3.0, 11.5, 5.0, 13.5, 7.0, 15.5, 15.0, 23.5],
+    ['A', 'CAP Happy Logo - L/XL',   'L/XL',     '',         9.0, 10.0,  2.5, 11.5, 3.0, 12.0, 5.0, 14.0, 7.0, 16.0, 15.0, 24.0],
+    ['B', 'CAP Creative - One size', 'One size', 'Printed',  7.5,  8.5,  2.5, 10.0, 3.0, 10.5, 5.0, 12.5, 7.0, 14.5, 15.0, 22.5],
   ];
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
+  // ── Column widths ────────────────────────────────────────────────────────────
   ws['!cols'] = [
-    { wch: 14 }, { wch: 36 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
-    { wch: 26 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 26 },
-    { wch: 32 }, { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 20 },
+    { wch: 12 }, // col 0:  Ký hiệu / Ký hiệu
+    { wch: 22 }, // col 1:  Tên Vendor / Product Type
+    { wch: 34 }, // col 2:  Hình ảnh 1 / Size
+    { wch: 20 }, // col 3:  Hình ảnh 2 / Optional
+    { wch: 20 }, // col 4:  Hình ảnh 3 / Pricing 1
+    { wch: 20 }, // col 5:  Hình ảnh 4 / Pricing 2
+    { wch: 28 }, // col 6:  Chất liệu / Economy Price Ship
+    { wch: 28 }, // col 7:  Chi tiết Size / Economy Total
+    { wch: 22 }, // col 8:  AVG TG Vendor / Ground Price
+    { wch: 22 }, // col 9:  AVG TG Thực tế / Ground Total
+    { wch: 28 }, // col 10: Ghi chú / Express Price
+    { wch: 28 }, // col 11: Thư mục / Express Total
+    { wch: 18 }, // col 12: — / 2Day Price
+    { wch: 18 }, // col 13: — / 2Day Total
+    { wch: 20 }, // col 14: — / Overnight Price
+    { wch: 20 }, // col 15: — / Overnight Total
+  ];
+
+  // ── Row heights ──────────────────────────────────────────────────────────────
+  ws['!rows'] = [
+    { hpt: 20 }, // row 0 title
+    { hpt: 18 }, // row 1 label
+    { hpt: 32 }, // row 2 header — cao hơn để dễ đọc
+    { hpt: 18 },
+    { hpt: 18 },
+    {},
+    {},
+    { hpt: 28 }, // row 7 section 2 header
+    { hpt: 28 }, // row 8 sub-header
   ];
 
   const wb = XLSX.utils.book_new();
