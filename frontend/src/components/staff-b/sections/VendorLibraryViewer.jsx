@@ -766,11 +766,6 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
         {!readOnly && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            {rawFiles.length > 0 && (
-              <button onClick={handleClearAll} style={{ padding: '9px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', color: '#dc2626', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
-                Xóa tất cả
-              </button>
-            )}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
