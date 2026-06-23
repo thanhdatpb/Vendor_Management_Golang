@@ -6,9 +6,29 @@ import PriceComparisonMatrix from './PriceComparisonMatrix';
 import Lightbox from './Lightbox';
 import { BestSellerBadge } from '../ui/StaffBUI';
 
+const parseAssignedVendors = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw); } catch { return []; }
+};
+
 export default function VendorViewerModal({ product, onClose }) {
   const LS_A_FEEDBACK_RESPONSE = 'STAFF_A_FEEDBACK_RESPONSE_V1';
-  const [vendors, setVendors] = useState(() => lsGet(LS_PRODUCT_VENDORS, {})[product?.id] || []);
+
+  const getVendors = (pid) => {
+    const fromLS = lsGet(LS_PRODUCT_VENDORS, {})[pid] || [];
+    if (fromLS.length > 0) return fromLS;
+    const fromAPI = parseAssignedVendors(product?.assigned_vendors);
+    if (fromAPI.length > 0) {
+      const all = lsGet(LS_PRODUCT_VENDORS, {});
+      all[pid] = fromAPI;
+      lsSet(LS_PRODUCT_VENDORS, all);
+      return fromAPI;
+    }
+    return [];
+  };
+
+  const [vendors, setVendors] = useState(() => getVendors(product?.id));
   const [bSelections, setBSelections] = useState(() => lsGet(LS_B_SELECTIONS, {})[product?.id] || {});
   const [bFeedbacks, setBFeedbacks] = useState(() => lsGet('STAFF_B_FEEDBACKS_V1', {})[product?.id] || {});
   const [bSubmittedFeedbacks, setBSubmittedFeedbacks] = useState(() => lsGet('STAFF_B_SUBMITTED_FEEDBACK_V1', {})[product?.id] || {});
@@ -39,7 +59,7 @@ export default function VendorViewerModal({ product, onClose }) {
     isMountedRef.current = true;
     const sync = () => {
       if (!isMountedRef.current) return;
-      const allVendors = lsGet(LS_PRODUCT_VENDORS, {})[product?.id] || [];
+      const allVendors = getVendors(product?.id);
       const decisions = (() => { try { const raw = localStorage.getItem('STAFF_SAMPLE_DECISIONS_V1'); const all = raw ? JSON.parse(raw) : {}; return all[product?.id] || {}; } catch { return {}; } })();
       const approvedKeys = Object.entries(decisions).filter(([_, d]) => d.decision === 'dat').map(([key]) => key);
       const allResponses = lsGet(LS_A_FEEDBACK_RESPONSE, {});
