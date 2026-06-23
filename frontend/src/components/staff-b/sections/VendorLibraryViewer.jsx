@@ -985,10 +985,21 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         const filteredGeneral = file.generalInfo.filter(r => assignedIds.has(r.id));
         if (filteredGeneral.length === 0) return null;
         const assignedKyHieus = new Set(filteredGeneral.map(r => r.kyHieu).filter(Boolean));
-        // Khi không có kyHieu nào (alt format không dùng Ký hiệu), hiển thị toàn bộ pricing
-        const filteredPricing = assignedKyHieus.size > 0
-          ? (file.pricing || []).filter(p => !p.kyHieu || assignedKyHieus.has(p.kyHieu))
-          : (file.pricing || []);
+        // Vendors không có kyHieu → fallback match theo productType
+        const noKyHieuProductTypes = new Set(
+          filteredGeneral
+            .filter(r => !r.kyHieu)
+            .map(r => (r.productType || '').toLowerCase().trim())
+            .filter(Boolean)
+        );
+        const filteredPricing = assignedKyHieus.size === 0
+          ? (file.pricing || [])
+          : (file.pricing || []).filter(p => {
+              if (!p.kyHieu) return true;
+              if (assignedKyHieus.has(p.kyHieu)) return true;
+              if (noKyHieuProductTypes.size > 0 && noKyHieuProductTypes.has((p.productType || '').toLowerCase().trim())) return true;
+              return false;
+            });
         return { ...file, generalInfo: filteredGeneral, pricing: filteredPricing };
       }).filter(Boolean);
     } catch { return rawFiles; }
