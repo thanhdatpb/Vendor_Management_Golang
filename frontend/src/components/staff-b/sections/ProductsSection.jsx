@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
-import { lsGet, fmtDate, getMediaUrls } from '../utils/helpers';
+import { lsGet, lsSet, fmtDate, getMediaUrls } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/StaffBUI';
 import VendorViewerModal from '../components/VendorViewerModal';
 import { productApi } from '../../../services/api';
@@ -10,6 +10,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 const ITEMS_PER_PAGE = 10;
 const LS_A_SELECTIONS = 'STAFF_A_SELECTIONS_V1';
+const LS_B_SELECTIONS = 'STAFF_B_SELECTIONS_V1';
 
 function ThumbnailImg({ src, size = 72 }) {
   const [broken, setBroken] = useState(false);
@@ -43,6 +44,9 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const [deadlineProduct, setDeadlineProduct] = useState(null);
   const [deadlineDate, setDeadlineDate] = useState('');
   const [settingDeadline, setSettingDeadline] = useState(false);
+
+  const [confirmDeleteProduct, setConfirmDeleteProduct] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const processedProductIdRef = useRef(null);
 
   useEffect(() => {
@@ -124,6 +128,31 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       alert('Lỗi: ' + (err.response?.data?.message || err.message));
     } finally {
       setSettingDeadline(false);
+    }
+  };
+
+  const handleDelete = async (product) => {
+    setDeletingId(product.id);
+    try {
+      await productApi.delete(product.id);
+      setSubmittedProducts(prev => prev.filter(p => p.id !== product.id));
+      const pid = String(product.id);
+      const allVendors = lsGet(LS_PRODUCT_VENDORS, {});
+      delete allVendors[pid];
+      lsSet(LS_PRODUCT_VENDORS, allVendors);
+      const aSelections = lsGet(LS_A_SELECTIONS, {});
+      delete aSelections[pid];
+      lsSet(LS_A_SELECTIONS, aSelections);
+      const bSelections = lsGet(LS_B_SELECTIONS, {});
+      delete bSelections[pid];
+      lsSet(LS_B_SELECTIONS, bSelections);
+      window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
+      window.dispatchEvent(new StorageEvent('storage', { key: LS_A_SELECTIONS }));
+      setConfirmDeleteProduct(null);
+    } catch (err) {
+      alert('Lỗi xóa: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -327,6 +356,16 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                               ⚡ Gán nhanh ({availableCount})
                             </button>
                           )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteProduct(p); }}
+                            style={{
+                              padding: '5px 10px', borderRadius: 7,
+                              border: '1.5px solid #fecaca', background: '#fef2f2',
+                              cursor: 'pointer', fontSize: 11, fontWeight: 800, color: HC.danger
+                            }}
+                          >
+                            🗑 Xóa
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -360,6 +399,42 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button onClick={handleFeedbackSubmit} disabled={sendingFeedback} style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: sendingFeedback ? HC.muted2 : `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 13, fontWeight: 800, cursor: sendingFeedback ? 'not-allowed' : 'pointer' }}>{sendingFeedback ? '⟳ Đang gửi...' : '📨 Gửi phản hồi'}</button>
               <button onClick={() => { setFeedbackOpen(false); setFeedbackProduct(null); setFeedbackText(''); }} style={{ padding: '10px 18px', borderRadius: 10, background: HC.cream, color: HC.brown, border: `1.5px solid ${HC.border}`, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDeleteProduct && (
+        <div onClick={() => !deletingId && setConfirmDeleteProduct(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1001, backdropFilter: 'blur(2px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: 420, background: HC.surface, borderRadius: 20, padding: 28, boxShadow: '0 32px 80px rgba(26,15,0,0.25)', border: '1.5px solid #fecaca' }}>
+            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, marginBottom: 6, fontFamily: "'Nunito',sans-serif" }}>
+              🗑 Xác nhận xóa form
+            </div>
+            <div style={{ height: 3, background: 'linear-gradient(90deg,#dc2626,#fca5a5)', borderRadius: 99, marginBottom: 16 }} />
+            <div style={{ fontSize: 13, color: HC.ink2, marginBottom: 12 }}>
+              Bạn có chắc muốn xóa form sản phẩm này không?
+            </div>
+            <div style={{ padding: '10px 14px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', fontSize: 12, color: HC.danger, marginBottom: 12 }}>
+              <div><b>Loại sản phẩm:</b> {confirmDeleteProduct.product_type || '—'}</div>
+              <div style={{ marginTop: 4 }}><b>Project:</b> {confirmDeleteProduct.project || '—'}</div>
+            </div>
+            <div style={{ fontSize: 12, color: HC.brown, marginBottom: 20, padding: '8px 12px', borderRadius: 8, background: HC.orangeLight, border: `1px solid ${HC.border}` }}>
+              ⚠️ Form này sẽ bị xóa khỏi tất cả các giao diện (Seller, Admin).
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => handleDelete(confirmDeleteProduct)}
+                disabled={!!deletingId}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: deletingId ? HC.muted2 : 'linear-gradient(135deg,#dc2626,#b91c1c)', color: '#fff', border: 'none', fontSize: 13, fontWeight: 800, cursor: deletingId ? 'not-allowed' : 'pointer' }}
+              >
+                {deletingId ? '⟳ Đang xóa...' : '🗑 Xóa form'}
+              </button>
+              <button
+                onClick={() => setConfirmDeleteProduct(null)}
+                disabled={!!deletingId}
+                style={{ padding: '10px 18px', borderRadius: 10, background: HC.cream, color: HC.brown, border: `1.5px solid ${HC.border}`, fontSize: 13, fontWeight: 700, cursor: deletingId ? 'not-allowed' : 'pointer' }}
+              >
+                Hủy
+              </button>
             </div>
           </div>
         </div>
