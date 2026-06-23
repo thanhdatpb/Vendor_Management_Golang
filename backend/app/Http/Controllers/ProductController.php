@@ -304,20 +304,23 @@ public function update(Request $request, $id)
         $isAdmin = method_exists($user, 'isAdmin') && $user->isAdmin();
         $isStaff = method_exists($user, 'isStaff') && $user->isStaff();
 
+        $role = strtolower($user->role ?? '');
         if (!$isAdmin && !$isStaff) {
-            $role = strtolower($user->role ?? '');
             $isAdmin = in_array($role, ['admin', 'super_admin']);
-            $isStaff = in_array($role, ['staff', 'staff_a', 'staff_b', 'staff-a', 'staff-b','staffa', 'staffb',]);
+            $isStaff = in_array($role, ['staff', 'staff_a', 'staff_b', 'staff-a', 'staff-b', 'staffa', 'staffb']);
         }
 
-        if (!$isAdmin && !$isStaff) {
+        $isVendor = in_array($role, ['vendor', 'staffb', 'staff_b', 'staff-b']);
+
+        if (!$isAdmin && !$isStaff && !$isVendor) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        if ($isStaff) {
+        // Vendor có quyền xóa bất kỳ form nào (dùng cho demo/thử nghiệm)
+        if (!$isAdmin && !$isVendor && $isStaff) {
             $creator = \App\Models\User::find($product->created_by);
             $isSameProject = !empty($user->project) && !empty($creator->project) && $user->project === $creator->project;
-            
+
             if (!$isSameProject && (int)$product->created_by !== (int)$user->id) {
                 return response()->json(['message' => 'Bạn không có quyền xóa sản phẩm của project khác'], 403);
             }
