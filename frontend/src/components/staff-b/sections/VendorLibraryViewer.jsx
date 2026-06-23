@@ -30,6 +30,10 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
 
   if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu thông tin chung.</div>;
 
+  // Nếu toàn bộ file chỉ có đúng 1 link folder khác nhau → dùng chung cho các row trống
+  const uniqueLinks = [...new Set(rows.map(r => (r.linkFolder || '').trim()).filter(Boolean))];
+  const fileLevelLink = uniqueLinks.length === 1 ? uniqueLinks[0] : null;
+
   const startEdit = (idx, row) => {
     setEditIdx(idx);
     setEditForm({
@@ -206,11 +210,16 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
               <td style={{ ...TD(i) }}>
                 {isEditing ? (
                   <input type="text" placeholder="Link Folder..." value={editForm.linkFolder} onChange={e => setEditForm(p => ({ ...p, linkFolder: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
-                ) : (
-                  r.linkFolder
-                    ? <a href={r.linkFolder} target="_blank" rel="noreferrer" title={r.linkFolder} style={{ color: HC.orangeDark, textDecoration: 'underline', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🔗 Folder</a>
-                    : <span style={{ color: HC.muted2 }}>—</span>
-                )}
+                ) : (() => {
+                  const link = r.linkFolder || fileLevelLink || '';
+                  const isShared = !r.linkFolder && !!fileLevelLink;
+                  return link
+                    ? <a href={link} target="_blank" rel="noreferrer" title={isShared ? `${link}\n(dùng chung cả file)` : link}
+                        style={{ color: isShared ? HC.muted : HC.orangeDark, textDecoration: 'underline', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: isShared ? 'italic' : 'normal' }}>
+                        🔗 Folder{isShared && <span style={{ fontSize: 9, marginLeft: 3, opacity: 0.7 }}>(chung)</span>}
+                      </a>
+                    : <span style={{ color: HC.muted2 }}>—</span>;
+                })()}
               </td>
               {!readOnly && (
                 <td style={{ ...TD(i), textAlign: 'center' }}>
