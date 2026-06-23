@@ -162,6 +162,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       const excelSelected = [];
       excelVendors.forEach(file => {
         if (file.generalInfo) {
+          const uniqueLinks = [...new Set(file.generalInfo.map(r => (r.linkFolder || '').trim()).filter(Boolean))];
+          const fileLevelLink = uniqueLinks.length === 1 ? uniqueLinks[0] : null;
           const matched = file.generalInfo.filter(r => selectedIds.has(r.id));
           matched.forEach(m => {
             const baseData = {
@@ -170,7 +172,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               vendor_type: m.productType || m.kyHieu || 'New',
               overview: m.chatLieu || '',
               media_url: (m.images && m.images.length > 0) ? m.images[0] : '',
-              link_folder: m.linkFolder || '',
+              link_folder: m.linkFolder || fileLevelLink || '',
               is_excel: true,
               kyHieu: m.kyHieu || '',
               source_file_id: file.id,
