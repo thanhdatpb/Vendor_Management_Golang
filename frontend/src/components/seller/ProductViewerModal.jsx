@@ -323,9 +323,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: displayUrls.length ? 'pointer' : 'default' }}>
                   {displayUrls.length > 0 ? (
                     imgError ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-                        <div style={{ fontSize: 44, marginBottom: 8 }}>🖼️</div>
-                        <div style={{ fontSize: 12 }}>Không tải được ảnh</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                        <div style={{ fontSize: 11, fontWeight: 600 }}>Không tải được ảnh</div>
                       </div>
                     ) : isVideo(displayUrls[currentMediaIndex]) ? (
                       <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={displayUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
@@ -334,9 +334,8 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     )
                   ) : (
                     <div style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
-                      <div style={{ fontSize: 44, marginBottom: 8, opacity: 0.5 }}>📷</div>
-                      <div style={{ fontSize: 12, fontWeight: 600 }}>Chưa có ảnh</div>
-                      <div style={{ fontSize: 10, marginTop: 4, opacity: 0.6 }}>Seller chưa đính kèm ảnh</div>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.35)' }}>Chưa có ảnh</div>
                     </div>
                   )}
                   {displayUrls.length > 1 && (
@@ -354,8 +353,8 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   )}
                   {/* Badge: link tham khảo (khi dùng fallback) */}
                   {mediaUrls.length === 0 && displayUrls.length > 0 && (
-                    <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(245,158,11,0.85)', borderRadius: 6, padding: '2px 8px', fontSize: 9, fontWeight: 800, color: '#fff', backdropFilter: 'blur(4px)' }}>
-                      🔗 Link tham khảo
+                    <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(245,158,11,0.82)', borderRadius: 5, padding: '2px 8px', fontSize: 9, fontWeight: 800, color: '#fff', backdropFilter: 'blur(4px)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                      Ref. Link
                     </div>
                   )}
                 </div>
@@ -374,94 +373,102 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 )}
               </div>
 
-              {/* Product Info — Full Form Fields */}
-              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 20px', background: '#fff' }}>
-                {/* Header row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <span style={{ fontSize: 16 }}>📋</span>
-                  <div style={{ fontWeight: 900, fontSize: 13, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.02em' }}>Thông tin request sản phẩm</div>
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-                    <span style={{ padding: '2px 10px', borderRadius: 99, background: HC.cream, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 700, color: HC.muted }}>
-                      Ngày gửi: {fmtDate(product.created_at) || '—'}
+              {/* Product Info */}
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 20px', background: '#f8fafc' }}>
+
+                {/* Section header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 3, height: 16, borderRadius: 2, background: HC.orange, flexShrink: 0 }} />
+                    <span style={{ fontWeight: 800, fontSize: 11, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Thông tin request sản phẩm</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <span style={{ padding: '3px 10px', borderRadius: 6, background: HC.surface, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.muted }}>
+                      {fmtDate(product.created_at) || '—'}
                     </span>
                     {product.deadline_date && (
-                      <span style={{ padding: '2px 10px', borderRadius: 99, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 10, fontWeight: 700, color: HC.danger }}>
-                        Deadline: {fmtDate(product.deadline_date)}
+                      <span style={{ padding: '3px 10px', borderRadius: 6, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 10, fontWeight: 700, color: HC.danger }}>
+                        Deadline {fmtDate(product.deadline_date)}
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Form Fields Compact Layout */}
-                {(() => {
-                  const F = ({ label, value, bg, border, valueColor, bold }) => (
-                    <div style={{ background: bg || '#f9fafb', border: `1px solid ${border || '#e5e7eb'}`, borderRadius: 10, padding: '9px 12px' }}>
-                      <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
-                      <div style={{ fontSize: 12, fontWeight: bold ? 800 : 600, color: valueColor || HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {/* Row 1: Key metrics */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.3fr', gap: 8 }}>
+                    <div style={{ background: HC.orangePale, border: `1px solid ${HC.orangeMid}`, borderRadius: 10, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 10, color: HC.orangeDark, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Product Type</div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: HC.orangeDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.product_type || '—'}</div>
                     </div>
-                  );
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {/* Row 1: Key metrics */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1fr 1.2fr', gap: 8 }}>
-                        <F label="Product Type" value={product.product_type} bg={HC.orangePale} valueColor={HC.orangeDark} bold />
-                        <F label="⏱ Sản xuất" value={product.production_time} valueColor={HC.brown} bold />
-                        <F label="🚢 Giao hàng" value={product.shipping_time} valueColor={HC.brown} bold />
-                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: 7, padding: '7px 11px' }}>
-                          <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>💰 Target Cost</div>
-                          <div style={{ fontSize: 13, fontWeight: 900, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
-                        </div>
+                    {[
+                      { label: 'Thời gian SX', value: product.production_time },
+                      { label: 'Thời gian Ship', value: product.shipping_time },
+                    ].map(({ label, value }) => (
+                      <div key={label} style={{ background: '#fff', border: `1px solid #e5e7eb`, borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: HC.ink }}>{value || '—'}</div>
                       </div>
-
-                      {/* Row 2: Spec fields */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr', gap: 8 }}>
-                        <F label="Chất liệu" value={product.material} />
-                        <F label="Vùng In" value={product.print_area} />
-                        <F label="Đặc tính KT" value={product.other_specs} />
-                        <F label="Packaging" value={product.packaging_links} />
-                        <F label="Other Pkg" value={product.other_packaging} />
-                      </div>
-
-                      {/* Row 3: Links tham khảo */}
-                      <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Links tham khảo</span>
-                        {referenceLinks.length > 0
-                          ? referenceLinks.map((link, idx) => (
-                              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 12px', borderRadius: 20, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                              >
-                                Link {idx + 1}
-                              </a>
-                            ))
-                          : <span style={{ color: HC.muted2, fontSize: 11 }}>Chưa có link</span>
-                        }
-                      </div>
-
-                      {/* Row 4: Reviews */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
-                          <div style={{ fontSize: 9, color: '#166534', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>👍 Good Review</div>
-                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#166534', whiteSpace: 'pre-wrap', maxHeight: 56, overflowY: 'auto', lineHeight: 1.5 }}>{product.good_review || '—'}</div>
-                        </div>
-                        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px' }}>
-                          <div style={{ fontSize: 9, color: '#991b1b', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>👎 Bad Review</div>
-                          <div className="custom-scrollbar" style={{ fontSize: 11, fontWeight: 600, color: '#991b1b', whiteSpace: 'pre-wrap', maxHeight: 56, overflowY: 'auto', lineHeight: 1.5 }}>{product.bad_review || '—'}</div>
-                        </div>
-                      </div>
+                    ))}
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 10, color: '#065f46', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Target Cost</div>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
                     </div>
-                  );
-                })()}
+                  </div>
+
+                  {/* Row 2: Spec fields */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr', gap: 8 }}>
+                    {[
+                      { label: 'Chất liệu', value: product.material },
+                      { label: 'Vùng In', value: product.print_area },
+                      { label: 'Đặc tính KT', value: product.other_specs },
+                      { label: 'Packaging', value: product.packaging_links },
+                      { label: 'Other Pkg', value: product.other_packaging },
+                    ].map(({ label, value }) => (
+                      <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '9px 12px' }}>
+                        <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Row 3: Reference links */}
+                  {referenceLinks.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Ref. Links</span>
+                      {referenceLinks.map((link, idx) => (
+                        <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                          style={{ fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '3px 12px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                        >
+                          Link {idx + 1}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Row 4: Reviews */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 10, color: '#166534', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Good Review</div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#166534', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{product.good_review || '—'}</div>
+                    </div>
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 10, color: '#991b1b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Bad Review</div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: '#991b1b', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{product.bad_review || '—'}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
 
             {/* BOTTOM SECTION: Vendors List */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#faf9f8' }}>
-              <div style={{ padding: '10px 20px', background: '#fef3c7', borderBottom: '1.5px solid #fde68a', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 18 }}>🏪</span>
-                <div style={{ fontWeight: 800, fontSize: 12, color: '#78350f', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
+              <div style={{ padding: '10px 20px', background: '#fff', borderBottom: `1.5px solid ${HC.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: HC.orange, flexShrink: 0 }} />
+                <div style={{ fontWeight: 800, fontSize: 11, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Danh sách nhà phân phối đã gán</div>
                 {vendors.length > 0 && (() => {
                   const uCount = new Set(vendors.map(v => (v.name || v.vendor_type || '').toString().trim()).filter(Boolean)).size || vendors.length;
                   return (
@@ -474,10 +481,12 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
               <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px' }}>
                 {vendors.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 60, background: HC.surface, borderRadius: 16, border: `1.5px dashed ${HC.border}` }}>
-                    <div style={{ fontSize: 40, marginBottom: 12 }}>🏪</div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: HC.brown }}>Chưa có nhà phân phối nào được gán</div>
-                    <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Bộ phận Vận hành sẽ gán nhà cung cấp sau khi xem xét sản phẩm này.</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 40px', background: HC.surface, borderRadius: 14, border: `1px solid ${HC.border}` }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: HC.cream, border: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={HC.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: HC.ink, marginBottom: 6 }}>Chưa có nhà phân phối được gán</div>
+                    <div style={{ fontSize: 12, color: HC.muted, lineHeight: 1.6, textAlign: 'center', maxWidth: 320 }}>Bộ phận Vận hành sẽ gán nhà cung cấp phù hợp sau khi xem xét yêu cầu sản phẩm này.</div>
                   </div>
                 ) : (() => {
                   const Na = ({ pending } = {}) => (
