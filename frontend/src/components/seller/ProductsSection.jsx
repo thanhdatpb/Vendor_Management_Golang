@@ -15,7 +15,9 @@ import ProductViewerModal from './ProductViewerModal';
 function ThumbnailCell({ src }) {
   const [broken, setBroken] = useState(false);
   const placeholder = (
-    <div style={{ width: 48, height: 48, borderRadius: 10, background: '#f1f5f9', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#cbd5e1' }}>□</div>
+    <div style={{ width: 60, height: 60, borderRadius: 12, background: '#f1f5f9', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
   );
   if (!src || broken) return placeholder;
   return (
@@ -23,7 +25,7 @@ function ThumbnailCell({ src }) {
       src={src}
       alt=""
       loading="lazy"
-      style={{ width: 48, height: 48, borderRadius: 10, objectFit: 'cover', border: '1.5px solid #e2e8f0', display: 'block' }}
+      style={{ width: 60, height: 60, borderRadius: 12, objectFit: 'cover', border: '1.5px solid #e2e8f0', display: 'block' }}
       onError={() => setBroken(true)}
     />
   );
@@ -790,17 +792,17 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào. Hãy tạo request đầu tiên!' : 'Không tìm thấy kết quả phù hợp'} />
       ) : (
         <>
-          <div style={{ overflowX: 'auto', borderRadius: 18, border: `1.5px solid ${HC.border}`, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div style={{ overflowX: 'auto', borderRadius: 16, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff' }}>
               <thead>
-                <tr style={{ background: '#f8fafc' }}>
+                <tr style={{ background: '#fafafa' }}>
                   {/* Checkbox chọn tất cả */}
-                  <th style={{ padding: '14px 16px', borderBottom: `2px solid #e2e8f0`, width: 44, textAlign: 'center' }}>
+                  <th style={{ padding: '16px 16px', borderBottom: `1.5px solid #e5e7eb`, width: 44, textAlign: 'center' }}>
                     <div
                       onClick={toggleSelectAll}
                       style={{
                         width: 18, height: 18, borderRadius: 5, cursor: 'pointer',
-                        border: `2px solid ${allFiltered ? '#16a34a' : someFiltered ? '#16a34a' : '#cbd5e1'}`,
+                        border: `2px solid ${allFiltered ? '#16a34a' : someFiltered ? '#16a34a' : '#d1d5db'}`,
                         background: allFiltered ? '#16a34a' : someFiltered ? 'rgba(22,163,74,0.15)' : '#fff',
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 0.15s',
@@ -813,20 +815,20 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   {[
                     { label: 'No',            w: 48 },
                     { label: 'Product Type',  w: 180 },
-                    { label: 'Image',         w: 80 },
-                    { label: 'Date Request',  w: 120 },
-                    { label: 'Deadline',      w: 100 },
-                    { label: 'Status',        w: 110 },
-                    { label: 'Note',          w: 160 },
-                    { label: 'Distributor',   w: 140 },
-                    { label: 'Actions',       w: 160 },
+                    { label: 'Image',         w: 90 },
+                    { label: 'Date Request',  w: 130 },
+                    { label: 'Deadline',      w: 110 },
+                    { label: 'Status',        w: 120 },
+                    { label: 'Note',          w: 170 },
+                    { label: 'Distributor',   w: 150 },
+                    { label: 'Actions',       w: 180 },
                   ].map(h => (
                     <th key={h.label} style={{
-                      textAlign: 'left', padding: '14px 18px',
-                      color: '#475569', fontWeight: 700,
-                      borderBottom: `2px solid #e2e8f0`,
-                      fontSize: 11,
-                      letterSpacing: '0.08em',
+                      textAlign: 'left', padding: '16px 18px',
+                      color: '#6b7280', fontWeight: 700,
+                      borderBottom: `1.5px solid #e5e7eb`,
+                      fontSize: 10,
+                      letterSpacing: '0.09em',
                       textTransform: 'uppercase',
                       whiteSpace: 'nowrap',
                       width: h.w,
@@ -856,7 +858,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       onMouseLeave={e => e.currentTarget.style.background = rowBg}
                     >
                       {/* Checkbox */}
-                      <td style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0', textAlign: 'center' }}>
+                      <td style={{ padding: '18px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
                         <div
                           onClick={e => toggleSelect(p.id, e)}
                           style={{
@@ -871,43 +873,43 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                         </div>
                       </td>
                       {/* # */}
-                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: '#f1f5f9', color: '#64748b', fontWeight: 700, fontSize: 11 }}>
                           {(currentPage - 1) * ITEMS_PER_PAGE + i + 1}
                         </span>
                       </td>
 
                       {/* Product Type */}
-                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', maxWidth: 200 }}>
+                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb', maxWidth: 200 }}>
                         <div style={{ fontWeight: 700, color: HC.ink, fontSize: 13, lineHeight: 1.4 }}>{p.product_type || '—'}</div>
                       </td>
 
                       {/* Thumbnail */}
-                      <td style={{ padding: '10px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '13px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <ThumbnailCell src={mediaUrls[0]} />
                       </td>
 
                       {/* Date Request */}
-                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         {dt ? (
                           <div>
                             <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 12 }}>{dt.date}</div>
-                            <div style={{ fontSize: 11, color: HC.muted, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                              <span>🕐</span>{dt.time}
+                            <div style={{ fontSize: 11, color: HC.muted, marginTop: 2, fontWeight: 600 }}>
+                              {dt.time}
                             </div>
                           </div>
                         ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
 
                       {/* Deadline */}
-                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         {p.deadline_date ? (
                           <div style={{ fontSize: 12, fontWeight: 700, color: HC.ink2 }}>{fmtDate(p.deadline_date)}</div>
                         ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
 
                       {/* Status Badge */}
-                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
                           padding: '4px 11px', borderRadius: 999,
@@ -923,7 +925,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       </td>
 
                       {/* Note / Rejection reason */}
-                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0', maxWidth: 180 }}>
+                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb', maxWidth: 180 }}>
                         {isRejected && (p.rejection_reason || p.reason) ? (
                           <div style={{ fontSize: 12, color: HC.danger, fontWeight: 600, lineHeight: 1.4 }}>
                             {(p.rejection_reason || p.reason).length > 60
@@ -934,12 +936,12 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       </td>
 
                       {/* Vendor badge */}
-                      <td style={{ padding: '14px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         {renderVendorBadge(p)}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '12px 18px', borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: '15px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
                           {(isDraft || isRejected) && (
                             <button
