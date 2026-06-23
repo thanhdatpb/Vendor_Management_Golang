@@ -407,8 +407,12 @@ function PricingTable({ rows, onSave, readOnly }) {
 // ── Single Library File Card ──────────────────────────────────────────────────
 function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted }) {
   const [activeSection, setActiveSection] = useState('general');
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    if (highlighted) setExpanded(true);
+  }, [highlighted]);
   const [renamingFile, setRenamingFile] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const renameInputRef = useRef(null);
