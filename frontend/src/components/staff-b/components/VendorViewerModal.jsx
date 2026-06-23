@@ -436,7 +436,7 @@ export default function VendorViewerModal({ product, onClose }) {
                                       </td>
                                     )}
                                     <td style={{ ...tdS({ textAlign: 'center', borderRight: 'none' }) }}>
-                                      {vi.eco_total != null && vi.eco_total !== '' && vi.eco_total !== 0
+                                      {vi.eco_total != null && vi.eco_total !== ''
                                         ? <span style={{ fontWeight: 900, fontSize: 14, color: '#059669' }}>${Number(vi.eco_total).toFixed(2)}</span>
                                         : <Na pending />}
                                     </td>

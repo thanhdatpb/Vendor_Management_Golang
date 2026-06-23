@@ -176,19 +176,36 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               source_file_id: file.id,
               source_file_name: file.filename || '',
             };
-            // Map từng dòng pricing (mỗi size = 1 row trong bảng vendor)
-            const pricingRows = (file.pricing || []).filter(p => p.kyHieu === m.kyHieu);
+            // Map từng dòng pricing — khớp theo kyHieu (case-insensitive, trim)
+            const norm = s => (s || '').toString().trim().toLowerCase();
+            const mk = norm(m.kyHieu);
+            let pricingRows = (file.pricing || []).filter(p => norm(p.kyHieu) === mk);
+            // Fallback 1: kyHieu trống → dùng toàn bộ pricing rows
+            if (pricingRows.length === 0 && !mk) {
+              pricingRows = file.pricing || [];
+            }
+            // Fallback 2: vẫn không khớp → dùng toàn bộ nếu chỉ có 1 vendor được chọn từ file này
+            if (pricingRows.length === 0 && matched.length === 1) {
+              pricingRows = file.pricing || [];
+            }
+
             if (pricingRows.length > 0) {
               pricingRows.forEach((p, pi) => {
                 excelSelected.push({
                   ...baseData,
                   id: `${m.id}_${p.size || pi}`,
-                  size: p.size || '',
+                  size: p.size || m.chiTietSize || '',
                   optional: p.optional || '',
                   eco_total: p.eco_total ?? null,
                   eco_price: p.eco_price ?? null,
                   pricing1: p.pricing1 ?? null,
                   pricing2: p.pricing2 ?? null,
+                  fast_total: p.fast_total ?? null,
+                  fast_price: p.fast_price ?? null,
+                  express_total: p.express_total ?? null,
+                  express_price: p.express_price ?? null,
+                  ground_total: p.ground_total ?? null,
+                  ground_price: p.ground_price ?? null,
                 });
               });
             } else {
