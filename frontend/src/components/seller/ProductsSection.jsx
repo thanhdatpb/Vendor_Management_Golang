@@ -701,21 +701,21 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
       {/* ── Page Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <p style={{ fontSize: 13, color: HC.ink2, margin: 0, fontWeight: 700 }}>Tổng cộng: {submittedProducts.length} sản phẩm đã tạo</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={openExportModal}
             disabled={exporting || submittedProducts.length === 0}
             style={{
-              padding: '10px 20px', borderRadius: 12,
+              padding: '8px 16px', borderRadius: 10,
               background: exporting ? HC.muted2 : 'linear-gradient(135deg,#16a34a,#15803d)',
-              color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
+              color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 800,
               cursor: exporting || submittedProducts.length === 0 ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 4px 14px rgba(22,163,74,0.3)',
+              display: 'flex', alignItems: 'center', gap: 7,
+              boxShadow: '0 3px 10px rgba(22,163,74,0.28)',
               opacity: submittedProducts.length === 0 ? 0.55 : 1,
               transition: 'transform 0.15s,box-shadow 0.15s',
             }}
@@ -728,11 +728,11 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
           <button
             onClick={openCreateModal}
             style={{
-              padding: '10px 20px', borderRadius: 12,
+              padding: '8px 16px', borderRadius: 10,
               background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
-              color: '#fff', border: 'none', fontSize: 13, fontWeight: 800,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 4px 14px rgba(245,166,35,0.4)',
+              color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 800,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+              boxShadow: '0 3px 10px rgba(245,166,35,0.35)',
               transition: 'transform 0.15s,box-shadow 0.15s',
             }}
             onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
@@ -752,7 +752,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       )}
 
       {/* ── Filter Bar ── */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20, padding: '14px 18px', background: '#fff', borderRadius: 16, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14, padding: '10px 14px', background: '#fff', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
         <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
           <SearchOutlined style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
           <input
@@ -797,7 +797,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
               <thead>
                 <tr style={{ background: '#fafafa' }}>
                   {/* Checkbox chọn tất cả */}
-                  <th style={{ padding: '16px 16px', borderBottom: `1.5px solid #e5e7eb`, width: 44, textAlign: 'center' }}>
+                  <th style={{ padding: '14px 16px', borderBottom: `1.5px solid #e5e7eb`, width: 44, textAlign: 'center' }}>
                     <div
                       onClick={toggleSelectAll}
                       style={{
@@ -824,7 +824,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     { label: 'Actions',       w: 180 },
                   ].map(h => (
                     <th key={h.label} style={{
-                      textAlign: 'left', padding: '16px 18px',
+                      textAlign: 'left', padding: '14px 18px',
                       color: '#6b7280', fontWeight: 700,
                       borderBottom: `1.5px solid #e5e7eb`,
                       fontSize: 10,
@@ -858,7 +858,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       onMouseLeave={e => e.currentTarget.style.background = rowBg}
                     >
                       {/* Checkbox */}
-                      <td style={{ padding: '18px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
+                      <td style={{ padding: '22px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
                         <div
                           onClick={e => toggleSelect(p.id, e)}
                           style={{
@@ -873,24 +873,24 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                         </div>
                       </td>
                       {/* # */}
-                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: '#f1f5f9', color: '#64748b', fontWeight: 700, fontSize: 11 }}>
                           {(currentPage - 1) * ITEMS_PER_PAGE + i + 1}
                         </span>
                       </td>
 
                       {/* Product Type */}
-                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb', maxWidth: 200 }}>
+                      <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb', maxWidth: 200 }}>
                         <div style={{ fontWeight: 700, color: HC.ink, fontSize: 13, lineHeight: 1.4 }}>{p.product_type || '—'}</div>
                       </td>
 
                       {/* Thumbnail */}
-                      <td style={{ padding: '13px 18px', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '16px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <ThumbnailCell src={mediaUrls[0]} />
                       </td>
 
                       {/* Date Request */}
-                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         {dt ? (
                           <div>
                             <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 12 }}>{dt.date}</div>
@@ -902,14 +902,14 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       </td>
 
                       {/* Deadline */}
-                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         {p.deadline_date ? (
                           <div style={{ fontSize: 12, fontWeight: 700, color: HC.ink2 }}>{fmtDate(p.deadline_date)}</div>
                         ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
 
                       {/* Status Badge */}
-                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <span style={{
                           display: 'inline-flex', alignItems: 'center', gap: 5,
                           padding: '4px 11px', borderRadius: 999,
@@ -925,7 +925,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       </td>
 
                       {/* Note / Rejection reason */}
-                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb', maxWidth: 180 }}>
+                      <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb', maxWidth: 180 }}>
                         {isRejected && (p.rejection_reason || p.reason) ? (
                           <div style={{ fontSize: 12, color: HC.danger, fontWeight: 600, lineHeight: 1.4 }}>
                             {(p.rejection_reason || p.reason).length > 60
@@ -936,12 +936,12 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       </td>
 
                       {/* Vendor badge */}
-                      <td style={{ padding: '18px 18px', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         {renderVendorBadge(p)}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '15px 18px', borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '19px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
                           {(isDraft || isRejected) && (
                             <button
