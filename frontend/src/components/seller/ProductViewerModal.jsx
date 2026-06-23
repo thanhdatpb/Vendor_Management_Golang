@@ -317,9 +317,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
             {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
-            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface, height: 320 }}>
+            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface, height: 220 }}>
               {/* Media */}
-              <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
+              <div style={{ width: 240, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: displayUrls.length ? 'pointer' : 'default' }}>
                   {displayUrls.length > 0 ? (
                     imgError ? (
@@ -373,113 +373,91 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 )}
               </div>
 
-              {/* Product Info */}
-              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 20px', background: '#f8fafc' }}>
-
-                {/* Section header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 3, height: 16, borderRadius: 2, background: HC.orange, flexShrink: 0 }} />
-                    <span style={{ fontWeight: 800, fontSize: 11, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Thông tin request sản phẩm</span>
+              {/* Product Info — compact */}
+              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 16px', background: '#f8fafc' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 3, height: 13, borderRadius: 2, background: HC.orange, flexShrink: 0 }} />
+                    <span style={{ fontWeight: 800, fontSize: 10, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Thông tin request</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 6, background: HC.surface, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.muted }}>
-                      {fmtDate(product.created_at) || '—'}
-                    </span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 5, background: '#f1f5f9', border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.muted }}>{fmtDate(product.created_at) || '—'}</span>
                     {product.deadline_date && (
-                      <span style={{ padding: '3px 10px', borderRadius: 6, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 10, fontWeight: 700, color: HC.danger }}>
-                        Deadline {fmtDate(product.deadline_date)}
-                      </span>
+                      <span style={{ padding: '2px 8px', borderRadius: 5, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 10, fontWeight: 700, color: HC.danger }}>Deadline {fmtDate(product.deadline_date)}</span>
                     )}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {/* Row 1: Key metrics */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.3fr', gap: 8 }}>
-                    <div style={{ background: HC.orangePale, border: `1px solid ${HC.orangeMid}`, borderRadius: 10, padding: '10px 14px' }}>
-                      <div style={{ fontSize: 10, color: HC.orangeDark, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Product Type</div>
-                      <div style={{ fontSize: 14, fontWeight: 900, color: HC.orangeDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.product_type || '—'}</div>
-                    </div>
-                    {[
-                      { label: 'Thời gian SX', value: product.production_time },
-                      { label: 'Thời gian Ship', value: product.shipping_time },
-                    ].map(({ label, value }) => (
-                      <div key={label} style={{ background: '#fff', border: `1px solid #e5e7eb`, borderRadius: 10, padding: '10px 14px' }}>
-                        <div style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{label}</div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: HC.ink }}>{value || '—'}</div>
-                      </div>
-                    ))}
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
-                      <div style={{ fontSize: 10, color: '#065f46', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>Target Cost</div>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
-                    </div>
+                {/* Row 1: key metrics */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.2fr', gap: 6, marginBottom: 6 }}>
+                  <div style={{ background: HC.orangePale, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '7px 11px' }}>
+                    <div style={{ fontSize: 9, color: HC.orangeDark, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Product Type</div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: HC.orangeDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.product_type || '—'}</div>
                   </div>
-
-                  {/* Row 2: Spec fields */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr', gap: 8 }}>
-                    {[
-                      { label: 'Chất liệu', value: product.material },
-                      { label: 'Vùng In', value: product.print_area },
-                      { label: 'Đặc tính KT', value: product.other_specs },
-                      { label: 'Packaging', value: product.packaging_links },
-                      { label: 'Other Pkg', value: product.other_packaging },
-                    ].map(({ label, value }) => (
-                      <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '9px 12px' }}>
-                        <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Row 3: Reference links */}
-                  {referenceLinks.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Ref. Links</span>
-                      {referenceLinks.map((link, idx) => (
-                        <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                          style={{ fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '3px 12px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                        >
-                          Link {idx + 1}
-                        </a>
-                      ))}
+                  {[{ label: 'SX', value: product.production_time }, { label: 'Ship', value: product.shipping_time }].map(({ label, value }) => (
+                    <div key={label} style={{ background: '#fff', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>T.gian {label}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: HC.ink }}>{value || '—'}</div>
                     </div>
-                  )}
-
-                  {/* Row 4: Reviews */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
-                      <div style={{ fontSize: 10, color: '#166534', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Good Review</div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: '#166534', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{product.good_review || '—'}</div>
-                    </div>
-                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px' }}>
-                      <div style={{ fontSize: 10, color: '#991b1b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Bad Review</div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: '#991b1b', whiteSpace: 'pre-wrap', lineHeight: 1.55 }}>{product.bad_review || '—'}</div>
-                    </div>
+                  ))}
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '7px 11px' }}>
+                    <div style={{ fontSize: 9, color: '#065f46', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Target Cost</div>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: '#065f46' }}>{product.total_cost != null ? `$${product.total_cost}` : '—'}</div>
                   </div>
                 </div>
+
+                {/* Row 2: specs + reviews inline */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr 1.2fr 1.2fr', gap: 6, marginBottom: 6 }}>
+                  {[
+                    { label: 'Chất liệu', value: product.material },
+                    { label: 'Vùng In', value: product.print_area },
+                    { label: 'Đặc tính KT', value: product.other_specs },
+                    { label: 'Good Review', value: product.good_review, color: '#166534', bg: '#f0fdf4', bc: '#bbf7d0' },
+                    { label: 'Bad Review', value: product.bad_review, color: '#991b1b', bg: '#fef2f2', bc: '#fecaca' },
+                  ].map(({ label, value, color, bg, bc }) => (
+                    <div key={label} style={{ background: bg || '#fff', border: `1px solid ${bc || '#e5e7eb'}`, borderRadius: 8, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color: color || '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: color || HC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value || ''}>{value || '—'}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Row 3: ref links inline */}
+                {referenceLinks.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Links</span>
+                    {referenceLinks.map((link, idx) => (
+                      <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        style={{ fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                      >Link {idx + 1}</a>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
 
-            {/* BOTTOM SECTION: Vendors List */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#faf9f8' }}>
-              <div style={{ padding: '10px 20px', background: '#fff', borderBottom: `1.5px solid ${HC.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 3, height: 14, borderRadius: 2, background: HC.orange, flexShrink: 0 }} />
-                <div style={{ fontWeight: 800, fontSize: 11, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Danh sách nhà phân phối đã gán</div>
+            {/* BOTTOM SECTION: Vendor Comparison */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f8fafc' }}>
+              {/* Section bar */}
+              <div style={{ padding: '8px 20px', background: '#fff', borderBottom: `1.5px solid ${HC.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: HC.orange }} />
+                <span style={{ fontWeight: 800, fontSize: 11, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.07em' }}>So sánh nhà phân phối</span>
                 {vendors.length > 0 && (() => {
                   const uCount = new Set(vendors.map(v => (v.name || v.vendor_type || '').toString().trim()).filter(Boolean)).size || vendors.length;
-                  return (
-                    <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 20, background: 'rgba(120,53,15,0.1)', color: '#78350f', fontSize: 10, fontWeight: 700 }}>
-                      {uCount} vendor
-                    </span>
-                  );
+                  return <span style={{ padding: '2px 10px', borderRadius: 20, background: 'rgba(120,53,15,0.1)', color: '#78350f', fontSize: 10, fontWeight: 700 }}>{uCount} vendor</span>;
                 })()}
+                {product.total_cost != null && (
+                  <span style={{ marginLeft: 4, padding: '2px 10px', borderRadius: 20, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: 10, fontWeight: 700 }}>
+                    Target: ${product.total_cost}
+                  </span>
+                )}
               </div>
 
-              <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px' }}>
+              <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
                 {vendors.length === 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 40px', background: HC.surface, borderRadius: 14, border: `1px solid ${HC.border}` }}>
                     <div style={{ width: 48, height: 48, borderRadius: 12, background: HC.cream, border: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
@@ -489,191 +467,233 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     <div style={{ fontSize: 12, color: HC.muted, lineHeight: 1.6, textAlign: 'center', maxWidth: 320 }}>Bộ phận Vận hành sẽ gán nhà cung cấp phù hợp sau khi xem xét yêu cầu sản phẩm này.</div>
                   </div>
                 ) : (() => {
-                  const Na = ({ pending } = {}) => (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#94a3b8', padding: '2px 7px', borderRadius: 4, background: '#f8fafc', border: '1px dashed #cbd5e1', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
-                      N/A{pending && <span style={{ fontSize: 8, opacity: 0.7 }}> · chờ cập nhật</span>}
+                  const target = product.total_cost != null ? Number(product.total_cost) : null;
+
+                  // N/A phân biệt: thư viện trống vs chờ Staff B
+                  const NaLib = ({ title: tip } = {}) => (
+                    <span style={{ fontSize: 10, color: '#cbd5e1', fontStyle: 'italic' }} title={tip || 'Chưa có trong thư viện vendor'}>—</span>
+                  );
+                  const NaStaff = () => (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: '#92400e', padding: '2px 7px', borderRadius: 4, background: '#fffbeb', border: '1px solid #fde68a', whiteSpace: 'nowrap' }}>
+                      chờ Staff B
                     </span>
                   );
-                  const thStyle = (color, align = 'center') => ({
-                    padding: '9px 12px', fontWeight: 800, fontSize: 10, color: color || HC.muted,
+
+                  const TIER_META = [
+                    { key: 'eco_total',       short: 'ECO',  label: 'Economy',   color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+                    { key: 'ground_total',    short: 'GND',  label: 'Ground',    color: '#0284c7', bg: '#eff6ff', border: '#bfdbfe' },
+                    { key: 'fast_total',      short: 'FAST', label: 'Fast',      color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+                    { key: 'express_total',   short: 'EXP',  label: 'Express',   color: '#b45309', bg: '#fff7ed', border: '#fed7aa' },
+                    { key: 'overnight_total', short: 'OVN',  label: 'Overnight', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+                  ];
+
+                  // Hàm lấy giá tốt nhất của 1 vendor group (eco trước, rồi xuống tiers)
+                  const getBestPrice = (items) => {
+                    for (const vi of items) {
+                      for (const t of TIER_META) {
+                        const v = Number(vi[t.key]);
+                        if (vi[t.key] != null && vi[t.key] !== '' && v > 0) return v;
+                      }
+                    }
+                    return null;
+                  };
+
+                  const groupPrices = groupedVendors.map(g => getBestPrice(g.items));
+                  const validPrices = groupPrices.filter(p => p != null);
+                  const lowestPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
+
+                  const thS = (extra = {}) => ({
+                    padding: '9px 12px', fontWeight: 800, fontSize: 10, color: '#6b7280',
                     textTransform: 'uppercase', letterSpacing: '0.05em',
-                    borderRight: `1px solid ${HC.border}`, borderBottom: `1.5px solid ${HC.border}`,
-                    textAlign: align, background: HC.cream, whiteSpace: 'nowrap',
+                    borderRight: `1px solid ${HC.border}`, borderBottom: `1.5px solid #e5e7eb`,
+                    background: '#f8fafc', whiteSpace: 'nowrap', textAlign: 'center', ...extra,
                   });
-                  const tdBase = (extra = {}) => ({
-                    padding: '10px 12px', verticalAlign: 'middle',
-                    borderRight: `1px solid ${HC.border}`, borderBottom: `1px solid ${HC.border}`,
-                    ...extra,
+                  const td = (extra = {}) => ({
+                    padding: '11px 12px', verticalAlign: 'middle',
+                    borderRight: `1px solid #f1f5f9`, borderBottom: `1px solid #f1f5f9`, ...extra,
                   });
 
                   return (
                     <>
-                      <div style={{ borderRadius: 12, border: `1px solid ${HC.border}`, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.04)' }}>
+                      <div style={{ borderRadius: 12, border: `1.5px solid ${HC.border}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                         <div style={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', minWidth: 960, borderCollapse: 'collapse', fontSize: 12 }}>
+                          <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', fontSize: 12 }}>
                             <thead>
                               <tr>
-                                <th style={{ ...thStyle(), width: 72 }}>Ảnh</th>
-                                <th style={{ ...thStyle(HC.ink, 'left'), minWidth: 130 }}>Vendor Name</th>
-                                <th style={{ ...thStyle(HC.orangeDark) }}>Product Type</th>
-                                <th style={{ ...thStyle(null, 'left'), minWidth: 140 }}>Chất liệu</th>
-                                <th style={{ ...thStyle() }}>T.gian SX</th>
-                                <th style={{ ...thStyle() }}>T.gian Ship</th>
-                                <th style={{ ...thStyle() }}>Size</th>
-                                <th style={{ ...thStyle() }}>Link Folder</th>
-                                <th style={{ ...thStyle('#059669'), borderRight: 'none' }}>Total Price</th>
+                                <th style={{ ...thS({ width: 60 }) }}>Ảnh</th>
+                                <th style={{ ...thS({ textAlign: 'left', minWidth: 150 }) }}>Vendor</th>
+                                <th style={{ ...thS({ textAlign: 'left', minWidth: 120 }) }}>Chất liệu</th>
+                                <th style={{ ...thS({ width: 56 }) }}>Size</th>
+                                <th style={{ ...thS({ width: 70 }) }}>Folder</th>
+                                <th style={{ ...thS({ minWidth: 260, borderRight: 'none', color: '#059669' }) }}>Giá & So sánh Target</th>
                               </tr>
                             </thead>
                             <tbody>
                               {groupedVendors.map((group, gIdx) => {
                                 const v = group.firstVendor;
-                                // Fallback ảnh: media_url → images[0] (field từ Excel parser)
                                 const vendorImg = v.media_url || (Array.isArray(v.images) && v.images[0]) || null;
-                                const rowBg = gIdx % 2 === 0 ? '#ffffff' : HC.orangePale;
                                 const rawMaterial = v.overview || '';
-                                const materialText = rawMaterial.length > 70 ? rawMaterial.slice(0, 70) + '…' : rawMaterial || null;
                                 const vendorLink = v.link_folder || null;
 
-                                return group.items.map((vi, idx) => (
-                                  <tr key={`${gIdx}-${idx}`}
-                                    style={{ background: rowBg, transition: 'background 0.12s' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#fff8f0'}
-                                    onMouseLeave={e => e.currentTarget.style.background = rowBg}
-                                  >
-                                    {/* Ảnh */}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center', width: 72 }) }}>
-                                        {vendorImg
-                                          ? <img src={vendorImg} loading="lazy" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }} />
-                                          : null}
-                                        <div style={{ width: 52, height: 52, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, alignItems: 'center', justifyContent: 'center', fontSize: 18, margin: '0 auto', color: HC.muted2, display: vendorImg ? 'none' : 'flex' }}>📷</div>
-                                      </td>
-                                    )}
+                                const bestPrice = getBestPrice(group.items);
+                                const isBest = bestPrice != null && lowestPrice != null
+                                  && Math.abs(bestPrice - lowestPrice) < 0.001
+                                  && groupedVendors.length > 1;
+                                const isWithinTarget = target != null && bestPrice != null && bestPrice <= target;
 
-                                    {/* Vendor Name */}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'left' }) }}>
-                                        {v.name || v.vendor_type
-                                          ? <>
-                                              <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type}</div>
-                                              {v.name && v.vendor_type && v.name !== v.vendor_type && (
-                                                <div style={{ fontSize: 10, color: HC.muted2, marginTop: 2 }}>{v.vendor_type}</div>
-                                              )}
-                                              {onViewVendorLibrary && v.source_file_id && (
-                                                <button
-                                                  onClick={() => { onClose(); onViewVendorLibrary(v.source_file_id); }}
-                                                  style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: HC.orange, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 6, padding: '3px 8px', cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
-                                                  onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                                                  onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                                                >
-                                                  📂 Xem trong Thư Viện
-                                                </button>
-                                              )}
-                                            </>
-                                          : <Na pending />
-                                        }
-                                      </td>
-                                    )}
+                                const rowBg = isBest ? '#f0fdf4' : gIdx % 2 === 0 ? '#fff' : '#fafafa';
+                                const leftBorder = isBest ? '3px solid #22c55e' : '3px solid transparent';
 
-                                    {/* Product Type */}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                        {v.vendor_type
-                                          ? <span style={{ fontWeight: 800, fontSize: 10, color: HC.orangeDark, padding: '3px 10px', borderRadius: 20, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, display: 'inline-block', whiteSpace: 'nowrap' }}>
-                                              {v.vendor_type}
-                                            </span>
-                                          : <Na pending />
-                                        }
-                                      </td>
-                                    )}
+                                return group.items.map((vi, idx) => {
+                                  const tierRows = TIER_META
+                                    .map(t => ({ ...t, value: vi[t.key] }))
+                                    .filter(t => t.value != null && t.value !== '' && Number(t.value) > 0);
 
-                                    {/* Chất liệu */}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'left' }) }}>
-                                        {materialText
-                                          ? <span style={{ color: HC.ink2, fontSize: 11, lineHeight: 1.5 }} title={rawMaterial}>{materialText}</span>
-                                          : <Na pending />
-                                        }
-                                      </td>
-                                    )}
-
-                                    {/* T.gian SX */}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                        {product.production_time
-                                          ? <span style={{ fontWeight: 700, color: HC.brown }}>{product.production_time}</span>
-                                          : <Na />
-                                        }
-                                      </td>
-                                    )}
-
-                                    {/* T.gian Ship */}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                        {product.shipping_time
-                                          ? <span style={{ fontWeight: 700, color: HC.brown }}>{product.shipping_time}</span>
-                                          : <Na />
-                                        }
-                                      </td>
-                                    )}
-
-                                    {/* Size (per item) */}
-                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                      {vi.size
-                                        ? <>
-                                            <div style={{ fontWeight: 700, color: HC.ink }}>{vi.size}</div>
-                                            {vi.optional && <div style={{ fontSize: 9, color: HC.muted2, marginTop: 2 }}>{vi.optional}</div>}
-                                          </>
-                                        : <Na />
-                                      }
-                                    </td>
-
-                                    {/* Link Folder (vendor-specific, per group) */}
-                                    {idx === 0 && (
-                                      <td rowSpan={group.items.length} style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                        {vendorLink
-                                          ? <a href={vendorLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '5px 10px', borderRadius: 7, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
-                                              onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                                              onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                                            >📁 Xem folder</a>
-                                          : <Na pending />
-                                        }
-                                      </td>
-                                    )}
-
-                                    {/* Total Price — stacked tiers */}
-                                    <td style={{ ...tdBase({ textAlign: 'left', borderRight: 'none' }) }}>
-                                      {(() => {
-                                        const tiers = [
-                                          { label: 'Economy', value: vi.eco_total, color: '#059669' },
-                                          { label: 'Fast', value: vi.fast_total, color: '#0284c7' },
-                                          { label: 'Express', value: vi.express_total, color: '#7c3aed' },
-                                          { label: 'Overnight', value: vi.overnight_total, color: '#b45309' },
-                                        ].filter(t => t.value != null && t.value !== '' && Number(t.value) !== 0);
-                                        return tiers.length > 0 ? (
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                            {tiers.map(({ label, value, color }) => (
-                                              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <span style={{ fontSize: 9, fontWeight: 700, color, minWidth: 52, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</span>
-                                                <span style={{ fontWeight: 800, fontSize: 12, color }}>${Number(value).toFixed(2)}</span>
+                                  return (
+                                    <tr key={`${gIdx}-${idx}`}
+                                      style={{ background: rowBg, transition: 'background 0.12s' }}
+                                      onMouseEnter={e => { e.currentTarget.style.background = isBest ? '#dcfce7' : '#fff8f0'; }}
+                                      onMouseLeave={e => { e.currentTarget.style.background = rowBg; }}
+                                    >
+                                      {/* Ảnh + BEST badge */}
+                                      {idx === 0 && (
+                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 60, position: 'relative', borderLeft: leftBorder }) }}>
+                                          {vendorImg
+                                            ? <img src={vendorImg} loading="lazy" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+                                            : <div style={{ width: 44, height: 44, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: HC.muted2 }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                                               </div>
-                                            ))}
+                                          }
+                                          {isBest && (
+                                            <div style={{ marginTop: 4, padding: '1px 5px', borderRadius: 4, background: '#16a34a', color: '#fff', fontSize: 7.5, fontWeight: 900, letterSpacing: '0.06em', textAlign: 'center' }}>BEST</div>
+                                          )}
+                                        </td>
+                                      )}
+
+                                      {/* Vendor name + badges */}
+                                      {idx === 0 && (
+                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'left' }) }}>
+                                          <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type || '—'}</div>
+                                          {v.name && v.vendor_type && v.name !== v.vendor_type && (
+                                            <div style={{ fontSize: 10, color: HC.muted2, marginTop: 1 }}>{v.vendor_type}</div>
+                                          )}
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+                                            {isWithinTarget && (
+                                              <span style={{ padding: '1px 7px', borderRadius: 4, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 9, fontWeight: 800, color: '#16a34a' }}>✓ Trong target</span>
+                                            )}
+                                            {!isWithinTarget && bestPrice != null && target != null && (
+                                              <span style={{ padding: '1px 7px', borderRadius: 4, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 9, fontWeight: 700, color: '#dc2626' }}>Vượt target</span>
+                                            )}
+                                            {onViewVendorLibrary && v.source_file_id && (
+                                              <button
+                                                onClick={() => { onClose(); onViewVendorLibrary(v.source_file_id); }}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: HC.orange, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 4, padding: '1px 7px', cursor: 'pointer' }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                                              >Xem thư viện</button>
+                                            )}
                                           </div>
-                                        ) : <Na />;
-                                      })()}
-                                    </td>
-                                  </tr>
-                                ));
+                                        </td>
+                                      )}
+
+                                      {/* Chất liệu */}
+                                      {idx === 0 && (
+                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'left' }) }}>
+                                          {rawMaterial
+                                            ? <span style={{ color: HC.ink2, fontSize: 11, lineHeight: 1.5 }} title={rawMaterial}>{rawMaterial.length > 55 ? rawMaterial.slice(0, 55) + '…' : rawMaterial}</span>
+                                            : <NaLib title="Thư viện chưa có thông tin chất liệu" />
+                                          }
+                                        </td>
+                                      )}
+
+                                      {/* Size */}
+                                      <td style={{ ...td({ textAlign: 'center', width: 56 }) }}>
+                                        {vi.size
+                                          ? <span style={{ fontWeight: 700, color: HC.ink, fontSize: 11 }}>{vi.size}</span>
+                                          : <NaLib title="Thư viện chưa có thông tin size" />
+                                        }
+                                      </td>
+
+                                      {/* Link Folder — chờ Staff B nếu trống */}
+                                      {idx === 0 && (
+                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 70 }) }}>
+                                          {vendorLink
+                                            ? <a href={vendorLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 8px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = HC.orangeMid}
+                                                onMouseLeave={e => e.currentTarget.style.background = HC.orangeLight}
+                                              >
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                                                Folder
+                                              </a>
+                                            : <NaStaff />
+                                          }
+                                        </td>
+                                      )}
+
+                                      {/* Giá & Delta */}
+                                      <td style={{ ...td({ borderRight: 'none', minWidth: 260 }) }}>
+                                        {tierRows.length > 0 ? (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            {tierRows.map(({ short, label, value, color, bg, border: bc }, ti) => {
+                                              const price = Number(value);
+                                              const delta = target != null ? price - target : null;
+                                              const isPrimary = ti === 0;
+                                              const dColor = delta == null ? '#94a3b8'
+                                                : delta < 0 ? '#16a34a'
+                                                : delta === 0 ? '#16a34a'
+                                                : delta <= (target ?? 0) * 0.1 ? '#d97706'
+                                                : '#dc2626';
+                                              const dLabel = delta == null ? null
+                                                : delta <= 0 ? `−$${Math.abs(delta).toFixed(2)} dưới target`
+                                                : `+$${delta.toFixed(2)} trên target`;
+                                              return (
+                                                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                                  {/* Tier badge */}
+                                                  <span style={{ fontSize: 8, fontWeight: 900, color, background: bg, border: `1px solid ${bc}`, padding: '2px 6px', borderRadius: 4, minWidth: 34, textAlign: 'center', letterSpacing: '0.04em', flexShrink: 0 }}>{short}</span>
+                                                  {/* Price */}
+                                                  <span style={{ fontWeight: isPrimary ? 900 : 700, fontSize: isPrimary ? 15 : 12, color, minWidth: 56, letterSpacing: '-0.01em' }}>${price.toFixed(2)}</span>
+                                                  {/* Delta badge — chỉ primary row */}
+                                                  {isPrimary && delta != null && (
+                                                    <span style={{ fontSize: 9, fontWeight: 800, color: dColor, padding: '2px 8px', borderRadius: 4, background: dColor + '14', border: `1px solid ${dColor}30`, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                      {dLabel}
+                                                    </span>
+                                                  )}
+                                                  {/* Secondary tiers: hiển thị tên đầy đủ */}
+                                                  {!isPrimary && (
+                                                    <span style={{ fontSize: 9, color: '#94a3b8', fontStyle: 'italic' }}>{label}</span>
+                                                  )}
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        ) : <NaLib title="Thư viện chưa có dữ liệu giá" />}
+                                      </td>
+                                    </tr>
+                                  );
+                                });
                               })}
                             </tbody>
                           </table>
                         </div>
                       </div>
 
-                      <div style={{ marginTop: 10, padding: '8px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#92400e' }}>
-                        <span>ℹ️</span>
-                        <span>Các ô hiển thị <strong>N/A</strong> đang chờ bộ phận Vận hành (Staff B) cập nhật thông tin vendor.</span>
+                      {/* Legend */}
+                      <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '7px 12px', background: '#fff', borderRadius: 8, border: `1px solid ${HC.border}` }}>
+                        <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700 }}>Chú thích:</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 10, color: '#cbd5e1' }}>—</span> Thư viện chưa có dữ liệu
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: HC.muted }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: '#92400e', padding: '1px 6px', borderRadius: 4, background: '#fffbeb', border: '1px solid #fde68a' }}>chờ Staff B</span>
+                          Bộ phận Vận hành chưa nhập
+                        </span>
+                        {groupedVendors.length > 1 && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: HC.muted }}>
+                            <span style={{ fontSize: 8, fontWeight: 900, color: '#fff', padding: '1px 5px', borderRadius: 3, background: '#16a34a' }}>BEST</span>
+                            Giá tốt nhất trong danh sách
+                          </span>
+                        )}
                       </div>
                     </>
                   );
