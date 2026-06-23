@@ -517,13 +517,15 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     <>
                       <div style={{ borderRadius: 12, border: `1.5px solid ${HC.border}`, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                         <div style={{ overflowX: 'auto' }}>
-                          <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', fontSize: 12 }}>
+                          <table style={{ width: '100%', minWidth: 990, borderCollapse: 'collapse', fontSize: 12 }}>
                             <thead>
                               <tr>
                                 <th style={{ ...thS({ width: 60 }) }}>Ảnh</th>
                                 <th style={{ ...thS({ textAlign: 'left', minWidth: 150 }) }}>Vendor</th>
                                 <th style={{ ...thS({ textAlign: 'left', minWidth: 120 }) }}>Chất liệu</th>
                                 <th style={{ ...thS({ width: 56 }) }}>Size</th>
+                                <th style={{ ...thS({ width: 62 }) }}>T.gian SX</th>
+                                <th style={{ ...thS({ width: 62 }) }}>T.gian Ship</th>
                                 <th style={{ ...thS({ width: 70 }) }}>Folder</th>
                                 <th style={{ ...thS({ minWidth: 260, borderRight: 'none', color: '#059669' }) }}>Giá & So sánh Target</th>
                               </tr>
@@ -613,6 +615,26 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                           : <NaLib title="Thư viện chưa có thông tin size" />
                                         }
                                       </td>
+
+                                      {/* T.gian SX */}
+                                      {idx === 0 && (
+                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 62 }) }}>
+                                          {product.production_time
+                                            ? <span style={{ fontWeight: 700, fontSize: 11, color: '#0284c7' }}>{product.production_time}</span>
+                                            : <NaLib title="Chưa có thông tin thời gian sản xuất" />
+                                          }
+                                        </td>
+                                      )}
+
+                                      {/* T.gian Ship */}
+                                      {idx === 0 && (
+                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 62 }) }}>
+                                          {product.shipping_time
+                                            ? <span style={{ fontWeight: 700, fontSize: 11, color: '#7c3aed' }}>{product.shipping_time}</span>
+                                            : <NaLib title="Chưa có thông tin thời gian giao hàng" />
+                                          }
+                                        </td>
+                                      )}
 
                                       {/* Link Folder — chờ Staff B nếu trống */}
                                       {idx === 0 && (
