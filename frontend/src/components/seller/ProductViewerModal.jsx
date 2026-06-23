@@ -40,11 +40,14 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   // Tách riêng: ảnh/video upload vs link tham khảo
   const mediaUrls = getProductImages(product);
   const referenceLinks = getProductLinks(product);
+  // Dùng referenceLinks làm fallback khi không có ảnh upload
+  const displayUrls = mediaUrls.length > 0 ? mediaUrls : referenceLinks;
 
   useEffect(() => {
     setVendors(product?.assigned_vendors || productVendors[product?.id] || []);
   }, [product?.id, product?.assigned_vendors, productVendors]);
 
+  useEffect(() => { setImgError(false); setCurrentMediaIndex(0); }, [product?.id]);
   useEffect(() => { setImgError(false); }, [currentMediaIndex]);
 
   useEffect(() => {
@@ -316,36 +319,59 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
             {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
             <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface, height: 320 }}>
               {/* Media */}
-              <div style={{ width: 320, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#2a1a00' }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: mediaUrls.length ? 'pointer' : 'default' }}>
-                  {mediaUrls.length > 0 ? (
+              <div style={{ width: 300, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: displayUrls.length ? 'pointer' : 'default' }}>
+                  {displayUrls.length > 0 ? (
                     imgError ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
                         <div style={{ fontSize: 44, marginBottom: 8 }}>🖼️</div>
                         <div style={{ fontSize: 12 }}>Không tải được ảnh</div>
                       </div>
-                    ) : isVideo(mediaUrls[currentMediaIndex]) ? (
-                      <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                    ) : isVideo(displayUrls[currentMediaIndex]) ? (
+                      <video onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={displayUrls[currentMediaIndex]} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     ) : (
-                      <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={mediaUrls[currentMediaIndex]} alt="" onError={() => setImgError(true)} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
+                      <img onClick={() => { setLightboxIndex(currentMediaIndex); setLightboxOpen(true); }} src={displayUrls[currentMediaIndex]} alt="" onError={() => setImgError(true)} style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
                     )
                   ) : (
-                    <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div>Không có ảnh</div></div>
+                    <div style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>
+                      <div style={{ fontSize: 44, marginBottom: 8, opacity: 0.5 }}>📷</div>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>Chưa có ảnh</div>
+                      <div style={{ fontSize: 10, marginTop: 4, opacity: 0.6 }}>Seller chưa đính kèm ảnh</div>
+                    </div>
                   )}
-                  {mediaUrls.length > 1 && (
+                  {displayUrls.length > 1 && (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p > 0 ? p - 1 : mediaUrls.length - 1); }} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p > 0 ? p - 1 : displayUrls.length - 1); }} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
                         <LeftOutlined />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p < mediaUrls.length - 1 ? p + 1 : 0); }} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p < displayUrls.length - 1 ? p + 1 : 0); }} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
                         <RightOutlined />
                       </button>
-                      <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 10px', fontSize: 11, color: '#fff' }}>
-                        {currentMediaIndex + 1} / {mediaUrls.length}
+                      <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,0.65)', borderRadius: 20, padding: '3px 9px', fontSize: 10, color: '#fff', fontWeight: 700 }}>
+                        {currentMediaIndex + 1} / {displayUrls.length}
                       </div>
                     </>
                   )}
+                  {/* Badge: link tham khảo (khi dùng fallback) */}
+                  {mediaUrls.length === 0 && displayUrls.length > 0 && (
+                    <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(245,158,11,0.85)', borderRadius: 6, padding: '2px 8px', fontSize: 9, fontWeight: 800, color: '#fff', backdropFilter: 'blur(4px)' }}>
+                      🔗 Link tham khảo
+                    </div>
+                  )}
                 </div>
+                {/* Thumbnail strip */}
+                {displayUrls.length > 1 && (
+                  <div style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.4)', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {displayUrls.map((url, idx) => (
+                      <div key={idx} onClick={() => { setCurrentMediaIndex(idx); setImgError(false); }} style={{ width: 38, height: 38, borderRadius: 5, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${currentMediaIndex === idx ? HC.orange : 'rgba(255,255,255,0.15)'}`, flexShrink: 0, transition: 'border-color 0.15s' }}>
+                        {/\.(mp4|mov|webm)$/i.test(url)
+                          ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                          : <ThumbnailImg src={url} />
+                        }
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Product Info — Full Form Fields */}
@@ -369,9 +395,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 {/* Form Fields Compact Layout */}
                 {(() => {
                   const F = ({ label, value, bg, border, valueColor, bold }) => (
-                    <div style={{ background: bg || '#f9fafb', border: `1px solid ${border || '#e5e7eb'}`, borderRadius: 10, padding: '10px 13px' }}>
-                      <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
-                      <div style={{ fontSize: 11, fontWeight: bold ? 800 : 600, color: valueColor || HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
+                    <div style={{ background: bg || '#f9fafb', border: `1px solid ${border || '#e5e7eb'}`, borderRadius: 10, padding: '9px 12px' }}>
+                      <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+                      <div style={{ fontSize: 12, fontWeight: bold ? 800 : 600, color: valueColor || HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
                     </div>
                   );
                   return (
@@ -396,28 +422,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                         <F label="Other Pkg" value={product.other_packaging} />
                       </div>
 
-                      {/* Row 3a: Ảnh sản phẩm (preview thumbnails) */}
-                      {mediaUrls.length > 1 && (
-                        <div style={{ background: '#1a1a2e', border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Ảnh / Video sản phẩm</div>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {mediaUrls.map((url, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() => { setCurrentMediaIndex(idx); setLightboxIndex(idx); setLightboxOpen(true); }}
-                                style={{ width: 48, height: 48, borderRadius: 6, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${currentMediaIndex === idx ? HC.orange : 'rgba(255,255,255,0.15)'}`, flexShrink: 0, transition: 'border-color 0.15s' }}
-                              >
-                                {/\.(mp4|mov|webm)$/i.test(url)
-                                  ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
-                                  : <ThumbnailImg src={url} />
-                                }
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Row 3b: Links tham khảo */}
+                      {/* Row 3: Links tham khảo */}
                       <div style={{ background: HC.cream, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>Links tham khảo</span>
                         {referenceLinks.length > 0
@@ -457,11 +462,14 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
               <div style={{ padding: '10px 20px', background: '#fef3c7', borderBottom: '1.5px solid #fde68a', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 18 }}>🏪</span>
                 <div style={{ fontWeight: 800, fontSize: 12, color: '#78350f', fontFamily: "'Nunito',sans-serif" }}>Danh sách nhà phân phối đã gán</div>
-                {vendors.length > 0 && (
-                  <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 20, background: 'rgba(120,53,15,0.1)', color: '#78350f', fontSize: 10, fontWeight: 700 }}>
-                    {vendors.length} vendor
-                  </span>
-                )}
+                {vendors.length > 0 && (() => {
+                  const uCount = new Set(vendors.map(v => (v.name || v.vendor_type || '').toString().trim()).filter(Boolean)).size || vendors.length;
+                  return (
+                    <span style={{ marginLeft: 'auto', padding: '2px 10px', borderRadius: 20, background: 'rgba(120,53,15,0.1)', color: '#78350f', fontSize: 10, fontWeight: 700 }}>
+                      {uCount} vendor
+                    </span>
+                  );
+                })()}
               </div>
 
               <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px' }}>
