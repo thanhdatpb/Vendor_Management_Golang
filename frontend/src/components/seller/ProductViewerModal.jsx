@@ -521,10 +521,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 <th style={{ ...thStyle() }}>T.gian Ship</th>
                                 <th style={{ ...thStyle() }}>Size</th>
                                 <th style={{ ...thStyle() }}>Link Folder</th>
-                                <th style={{ ...thStyle('#059669') }}>Economy</th>
-                                <th style={{ ...thStyle('#0284c7') }}>Fast</th>
-                                <th style={{ ...thStyle('#7c3aed') }}>Express</th>
-                                <th style={{ ...thStyle('#b45309'), borderRight: 'none' }}>Overnight</th>
+                                <th style={{ ...thStyle('#059669'), borderRight: 'none' }}>Total Price</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -645,26 +642,26 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                       </td>
                                     )}
 
-                                    {/* Total Price — 4 line ship */}
-                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                      {vi.eco_total != null && vi.eco_total !== '' && Number(vi.eco_total) !== 0
-                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#059669' }}>${Number(vi.eco_total).toFixed(2)}</span>
-                                        : <Na />}
-                                    </td>
-                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                      {vi.fast_total != null && vi.fast_total !== '' && Number(vi.fast_total) !== 0
-                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#0284c7' }}>${Number(vi.fast_total).toFixed(2)}</span>
-                                        : <Na />}
-                                    </td>
-                                    <td style={{ ...tdBase({ textAlign: 'center' }) }}>
-                                      {vi.express_total != null && vi.express_total !== '' && Number(vi.express_total) !== 0
-                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#7c3aed' }}>${Number(vi.express_total).toFixed(2)}</span>
-                                        : <Na />}
-                                    </td>
-                                    <td style={{ ...tdBase({ textAlign: 'center', borderRight: 'none' }) }}>
-                                      {vi.overnight_total != null && vi.overnight_total !== '' && Number(vi.overnight_total) !== 0
-                                        ? <span style={{ fontWeight: 800, fontSize: 12, color: '#b45309' }}>${Number(vi.overnight_total).toFixed(2)}</span>
-                                        : <Na />}
+                                    {/* Total Price — stacked tiers */}
+                                    <td style={{ ...tdBase({ textAlign: 'left', borderRight: 'none' }) }}>
+                                      {(() => {
+                                        const tiers = [
+                                          { label: 'Economy', value: vi.eco_total, color: '#059669' },
+                                          { label: 'Fast', value: vi.fast_total, color: '#0284c7' },
+                                          { label: 'Express', value: vi.express_total, color: '#7c3aed' },
+                                          { label: 'Overnight', value: vi.overnight_total, color: '#b45309' },
+                                        ].filter(t => t.value != null && t.value !== '' && Number(t.value) !== 0);
+                                        return tiers.length > 0 ? (
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            {tiers.map(({ label, value, color }) => (
+                                              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <span style={{ fontSize: 9, fontWeight: 700, color, minWidth: 52, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</span>
+                                                <span style={{ fontWeight: 800, fontSize: 12, color }}>${Number(value).toFixed(2)}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : <Na />;
+                                      })()}
                                     </td>
                                   </tr>
                                 ));
