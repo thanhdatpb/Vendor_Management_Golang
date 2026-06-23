@@ -29,6 +29,19 @@ function ThumbnailCell({ src }) {
   );
 }
 
+function LinkPreviewImg({ src }) {
+  const [err, setErr] = useState(false);
+  return (
+    <div style={{ width: '100%', height: 90, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {err ? (
+        <span style={{ fontSize: 26, color: '#94a3b8' }}>🖼️</span>
+      ) : (
+        <img src={src} alt="" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      )}
+    </div>
+  );
+}
+
 export default function ProductsSection({ highlightedProductId, onHighlightCleared, onViewVendorLibrary }) {
   const { user } = useAuth();
   const [viewProduct, setViewProduct] = useState(null);
@@ -1064,14 +1077,34 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     </button>
                   </div>
 
+                  {/* Live preview khi đang nhập link */}
+                  {tempLink && (
+                    <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', border: `2px dashed ${HC.orangeMid}`, flexShrink: 0 }}>
+                        <LinkPreviewImg src={tempLink} />
+                      </div>
+                      <span style={{ fontSize: 11, color: HC.muted, fontStyle: 'italic' }}>Preview — nhấn Enter hoặc "+ Thêm link" để xác nhận</span>
+                    </div>
+                  )}
+
+                  {/* Thumbnail grid sau khi đã thêm link */}
                   {form.product_type_links.length > 0 && (
                     <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {form.product_type_links.map((link, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: HC.orangeLight, borderRadius: 20, border: `1px solid ${HC.orangeMid}` }}>
-                          <a href="#" onClick={(e) => { e.preventDefault(); openLink(link); }} style={{ color: HC.orangeDark, fontSize: 12, fontWeight: 600, textDecoration: 'none', maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }} title={link}>
-                            🔗 {link.length > 40 ? link.substring(0, 40) + '...' : link}
-                          </a>
-                          <button type="button" onClick={() => removeLink(idx)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: HC.danger, fontSize: 12, display: 'flex', alignItems: 'center', padding: 0 }}>✕</button>
+                        <div key={idx} style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', border: `1.5px solid ${HC.orangeMid}`, background: HC.surface, flexShrink: 0 }}>
+                          <LinkPreviewImg src={link} />
+                          <button
+                            type="button"
+                            onClick={() => removeLink(idx)}
+                            style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >✕</button>
+                          <div
+                            onClick={() => openLink(link)}
+                            style={{ padding: '4px 6px', background: HC.orangeLight, fontSize: 9, color: HC.orangeDark, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                            title={link}
+                          >
+                            🔗 {link.length > 18 ? link.substring(0, 18) + '…' : link}
+                          </div>
                         </div>
                       ))}
                     </div>
