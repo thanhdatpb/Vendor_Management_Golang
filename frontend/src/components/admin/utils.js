@@ -2,6 +2,17 @@ import { API_BASE_URL } from './constants';
 
 export const fmt = n => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n || 0);
 
+const toImageEmbedUrl = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  const driveFile = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  if (driveFile) return `https://drive.google.com/thumbnail?id=${driveFile[1]}&sz=w400`;
+  const driveOpen = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if (driveOpen) return `https://drive.google.com/thumbnail?id=${driveOpen[1]}&sz=w400`;
+  const driveUc = url.match(/drive\.google\.com\/uc\?.*[?&]id=([^&]+)/);
+  if (driveUc) return `https://drive.google.com/thumbnail?id=${driveUc[1]}&sz=w400`;
+  return url;
+};
+
 export const fmtDate = iso => { 
   try { 
     return iso ? new Date(iso).toLocaleDateString('vi-VN') : '—'; 
@@ -48,14 +59,14 @@ export const getMediaUrls = (product) => {
   }
 
   if (product.product_type_links && Array.isArray(product.product_type_links)) {
-    urls = urls.concat(product.product_type_links);
+    urls = urls.concat(product.product_type_links.map(toImageEmbedUrl));
   } else if (product.product_type_link) {
-    urls.push(product.product_type_link);
+    urls.push(toImageEmbedUrl(product.product_type_link));
   } else if (typeof product.product_type_links === 'string') {
     try {
-      urls = urls.concat(JSON.parse(product.product_type_links));
+      urls = urls.concat(JSON.parse(product.product_type_links).map(toImageEmbedUrl));
     } catch {
-      urls.push(product.product_type_links);
+      urls.push(toImageEmbedUrl(product.product_type_links));
     }
   }
 

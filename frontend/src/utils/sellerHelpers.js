@@ -27,6 +27,21 @@ export const fmtDateTime = iso => {
   } catch { return { date: iso, time: '' }; }
 };
 
+// ─── Chuyển đổi URL chia sẻ (Google Drive, v.v.) thành URL có thể nhúng vào <img> ─────
+export const toImageEmbedUrl = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  // Google Drive: /file/d/{id}/view  →  thumbnail API
+  const driveFile = url.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  if (driveFile) return `https://drive.google.com/thumbnail?id=${driveFile[1]}&sz=w400`;
+  // Google Drive: open?id={id}
+  const driveOpen = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if (driveOpen) return `https://drive.google.com/thumbnail?id=${driveOpen[1]}&sz=w400`;
+  // Google Drive: uc?id={id}
+  const driveUc = url.match(/drive\.google\.com\/uc\?.*[?&]id=([^&]+)/);
+  if (driveUc) return `https://drive.google.com/thumbnail?id=${driveUc[1]}&sz=w400`;
+  return url;
+};
+
 // ─── Media URL helpers ───────────────────────────────────
 export const getMediaUrls = (product) => {
   if (!product) return [];
@@ -49,14 +64,14 @@ export const getMediaUrls = (product) => {
   }
 
   if (product.product_type_links && Array.isArray(product.product_type_links)) {
-    urls = urls.concat(product.product_type_links);
+    urls = urls.concat(product.product_type_links.map(toImageEmbedUrl));
   } else if (product.product_type_link) {
-    urls.push(product.product_type_link);
+    urls.push(toImageEmbedUrl(product.product_type_link));
   } else if (typeof product.product_type_links === 'string') {
     try {
-      urls = urls.concat(JSON.parse(product.product_type_links));
+      urls = urls.concat(JSON.parse(product.product_type_links).map(toImageEmbedUrl));
     } catch {
-      urls.push(product.product_type_links);
+      urls.push(toImageEmbedUrl(product.product_type_links));
     }
   }
 
