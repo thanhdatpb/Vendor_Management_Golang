@@ -31,29 +31,29 @@ export const normalizeList = resp => {
   return [];
 };
 
+// Normalize any absolute https://domain/storage/... URL to relative /storage/...
+const toStorageRelUrl = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  if (url.startsWith('http') && url.includes('/storage/')) {
+    return url.substring(url.indexOf('/storage/'));
+  }
+  if (url.startsWith('/storage/')) return url;
+  if (!url.startsWith('http')) return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  return url;
+};
+
 export const getMediaUrls = (product) => {
   if (!product) return [];
   let urls = [];
 
   if (product.media_urls && Array.isArray(product.media_urls) && product.media_urls.length) {
-    urls = urls.concat(product.media_urls.map(url => {
-      if (url.startsWith('http')) return url;
-      if (url.startsWith('/storage')) return `${API_BASE_URL}${url}`;
-      return `${API_BASE_URL}/storage/${url}`;
-    }));
+    urls = urls.concat(product.media_urls.map(toStorageRelUrl));
   } else if (product.media_url) {
-    const url = product.media_url;
-    if (url.startsWith('http')) urls.push(url);
-    else if (url.startsWith('/storage')) urls.push(`${API_BASE_URL}${url}`);
-    else urls.push(`${API_BASE_URL}/storage/${url}`);
+    urls.push(toStorageRelUrl(product.media_url));
   } else if (product.media_path) {
     let path = product.media_path;
-    if (path.startsWith('storage/')) {
-      path = path.replace('storage/', '');
-    }
-    if (path.startsWith('/storage/')) {
-      path = path.replace('/storage/', '');
-    }
+    if (path.startsWith('storage/')) path = path.replace('storage/', '');
+    if (path.startsWith('/storage/')) path = path.replace('/storage/', '');
     if (path.startsWith('http')) urls.push(path);
     else urls.push(`${API_BASE_URL}/storage/${path}`);
   }

@@ -42,20 +42,28 @@ export const toImageEmbedUrl = (url) => {
   return url;
 };
 
+// ─── Storage URL normalizer ─────────────────────────────
+// Converts any absolute https://domain/storage/... URL to relative /storage/...
+// so that Vite proxy (local) and serve-storage.php (production) can serve it.
+const toStorageRelUrl = (url) => {
+  if (!url || typeof url !== 'string') return url;
+  if (url.startsWith('http') && url.includes('/storage/')) {
+    return url.substring(url.indexOf('/storage/'));
+  }
+  if (url.startsWith('/storage/')) return url;
+  if (!url.startsWith('http')) return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  return url;
+};
+
 // ─── Media URL helpers ───────────────────────────────────
 export const getMediaUrls = (product) => {
   if (!product) return [];
   let urls = [];
 
   if (product.media_urls && Array.isArray(product.media_urls) && product.media_urls.length) {
-    urls = urls.concat(product.media_urls.map(url =>
-      url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
-    ));
+    urls = urls.concat(product.media_urls.map(toStorageRelUrl));
   } else if (product.media_url) {
-    const full = product.media_url.startsWith('http')
-      ? product.media_url
-      : `${API_BASE_URL}${product.media_url.startsWith('/') ? '' : '/'}${product.media_url}`;
-    urls.push(full);
+    urls.push(toStorageRelUrl(product.media_url));
   } else if (product.media_path) {
     let cleanPath = product.media_path;
     if (cleanPath.startsWith('storage/')) cleanPath = cleanPath.replace('storage/', '');
@@ -88,14 +96,9 @@ export const getProductImages = (product) => {
   if (!product) return [];
   let urls = [];
   if (product.media_urls && Array.isArray(product.media_urls) && product.media_urls.length) {
-    urls = product.media_urls.map(url =>
-      url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
-    );
+    urls = product.media_urls.map(toStorageRelUrl);
   } else if (product.media_url) {
-    const full = product.media_url.startsWith('http')
-      ? product.media_url
-      : `${API_BASE_URL}${product.media_url.startsWith('/') ? '' : '/'}${product.media_url}`;
-    urls.push(full);
+    urls.push(toStorageRelUrl(product.media_url));
   } else if (product.media_path) {
     let cleanPath = product.media_path;
     if (cleanPath.startsWith('storage/')) cleanPath = cleanPath.replace('storage/', '');
