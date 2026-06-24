@@ -1,4 +1,4 @@
-import{P as O}from"./vendor-antd-icons-B4gPl4Jb-v5.js";var y={exports:{}},n={};/**
+import{J as O}from"./vendor-antd-icons-CB3nLPJS-v5.js";var y={exports:{}},n={};/**
  * @license React
  * react-dom.production.js
  *

@@ -580,8 +580,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
   const filteredProjects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
 
-  const overallRate = formStats.total > 0 ? Math.round((formStats.approved / formStats.total) * 100) : 0;
-
   return (
     <div style={{ fontFamily: "'Nunito Sans',sans-serif", maxWidth: 1440, margin: '0 auto' }}>
       <style>{`
@@ -590,29 +588,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-
-      {/* ── Section header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, animation: 'fadeUp 0.4s ease' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: '#FFF8EE', border: '1.5px solid #FDE8B8', color: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}><BarChartOutlined /></div>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Tổng Quan</div>
-            <div style={{ fontSize: 12, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>Cập nhật mỗi 15 giây · {formStats.total} form tổng cộng</div>
-          </div>
-        </div>
-        <div style={{ padding: '6px 16px', borderRadius: 20, background: overallRate >= 70 ? '#ecfdf5' : overallRate >= 40 ? '#fffbeb' : '#fef2f2', border: `1.5px solid ${overallRate >= 70 ? '#bbf7d0' : overallRate >= 40 ? '#fde68a' : '#fecaca'}`, color: overallRate >= 70 ? '#166534' : overallRate >= 40 ? '#92400e' : '#991b1b', fontSize: 12, fontWeight: 800, fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ display: 'flex', alignItems: 'center' }}>{overallRate >= 70 ? <CheckCircleFilled /> : overallRate >= 40 ? <WarningFilled /> : <CloseCircleFilled />}</span>
-          Tỷ lệ duyệt: {overallRate}%
-        </div>
-      </div>
-
-      {/* ── Stat Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20, marginBottom: 36, animation: 'fadeUp 0.45s ease' }}>
-        <StatCard label="Tổng Form Request" value={formStats.total} icon={<FolderOpenOutlined />} color="#F5A623" subLabel="Tất cả trạng thái" onClick={() => handleCardClick('status', 'all', 'Tất cả Form Request')} />
-        <StatCard label="Chờ Duyệt" value={formStats.pending} icon={<HourglassOutlined />} color="#F59E0B" subLabel={formStats.pending > 0 ? 'Cần xử lý ngay' : 'Không có form chờ'} onClick={() => handleCardClick('status', 'pending', 'Form Chờ Duyệt')} />
-        <StatCard label="Đã Duyệt" value={formStats.approved} icon={<CheckCircleOutlined />} color="#10B981" subLabel={`${overallRate}% tỷ lệ duyệt`} onClick={() => handleCardClick('status', 'approved', 'Form Đã Duyệt')} />
-        <StatCard label="Từ Chối" value={formStats.rejected} icon={<CloseCircleOutlined />} color="#EF4444" subLabel={formStats.rejected > 0 ? `${Math.round((formStats.rejected / (formStats.total || 1)) * 100)}% tổng form` : 'Không có từ chối'} onClick={() => handleCardClick('status', 'rejected', 'Form Từ Chối')} />
-      </div>
 
       {/* ── Project section header ── */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, animation: 'fadeUp 0.5s ease' }}>
