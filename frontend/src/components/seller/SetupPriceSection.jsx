@@ -631,7 +631,7 @@ export default function SetupPriceSection() {
               </button>
               <button onClick={handleSaveSetupPrice}
                 style={{ padding: '10px 28px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
-                💾 Lưu Setup Giá
+                Lưu Setup Giá
               </button>
             </div>
           </div>
