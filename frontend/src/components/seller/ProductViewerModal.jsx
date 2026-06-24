@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { LeftOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_A_SELECTIONS, LS_B_SELECTIONS, LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE, LS_B_SUBMITTED_FEEDBACK } from '../../constants/sellerTheme';
-import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, getProductLinks } from '../../utils/sellerHelpers';
+import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, getProductLinks, toImageEmbedUrl } from '../../utils/sellerHelpers';
 import { pushNotif } from '../../utils/notifUtils';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 
@@ -37,11 +37,12 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [imgError, setImgError] = useState(false);
-  // Tách riêng: ảnh/video upload vs link tham khảo
+  // Ảnh upload từ máy + link tham khảo (convert Drive URLs → embeddable)
   const mediaUrls = getProductImages(product);
   const referenceLinks = getProductLinks(product);
-  // Dùng referenceLinks làm fallback khi không có ảnh upload
-  const displayUrls = mediaUrls.length > 0 ? mediaUrls : referenceLinks;
+  const referenceImageUrls = referenceLinks.map(toImageEmbedUrl);
+  // Gộp cả hai: ảnh upload trước, link sau
+  const displayUrls = [...mediaUrls, ...referenceImageUrls];
 
   useEffect(() => {
     setVendors(product?.assigned_vendors || productVendors[product?.id] || []);

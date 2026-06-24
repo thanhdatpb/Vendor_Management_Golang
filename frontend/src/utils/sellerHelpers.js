@@ -27,7 +27,7 @@ export const fmtDateTime = iso => {
   } catch { return { date: iso, time: '' }; }
 };
 
-// ─── Chuyển đổi URL chia sẻ (Google Drive, v.v.) thành URL có thể nhúng vào <img> ─────
+// ─── Chuyển đổi URL chia sẻ (Google Drive, v.v.) thành URL có thể nhúng vào <img> ────
 export const toImageEmbedUrl = (url) => {
   if (!url || typeof url !== 'string') return url;
   // Google Drive: /file/d/{id}/view  →  thumbnail API
