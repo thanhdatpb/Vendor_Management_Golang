@@ -69,6 +69,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const [showExportModal, setShowExportModal] = useState(false);
   const processedProductIdRef = useRef(null);
   const importFileRef = useRef(null);
+  const fileUploadRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
   const [tempVideoLink, setTempVideoLink] = useState('');
 
@@ -1162,14 +1163,78 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
+              {/* 1.3 Ảnh từ máy tính */}
+              <div style={{ marginBottom: 16 }}>
+                <Field label="1.3 Ảnh từ máy tính (Tải ảnh lên trực tiếp, hỗ trợ nhiều file)">
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileUploadRef}
+                    type="file"
+                    accept="image/*,video/mp4,video/webm"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                  />
+
+                  {/* Upload trigger button */}
+                  <div
+                    onClick={() => fileUploadRef.current?.click()}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '11px 16px', borderRadius: 10,
+                      border: `2px dashed ${HC.orangeMid}`,
+                      background: HC.orangeLight, cursor: 'pointer',
+                      transition: 'all 0.15s', marginBottom: 10,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#ffe4c4'; e.currentTarget.style.borderColor = HC.orange; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.borderColor = HC.orangeMid; }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={HC.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: HC.orangeDark }}>
+                      {previewUrls.length > 0 ? `Đã chọn ${previewUrls.length} ảnh — nhấn để thêm` : 'Nhấn để chọn ảnh từ máy tính'}
+                    </span>
+                    <span style={{ marginLeft: 'auto', fontSize: 10, color: HC.muted, fontWeight: 600 }}>JPG, PNG, WEBP, MP4</span>
+                  </div>
+
+                  {/* Preview grid — giống link preview */}
+                  {previewUrls.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {previewUrls.map((url, idx) => (
+                        <div key={idx} style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', border: `1.5px solid ${HC.orangeMid}`, background: HC.surface, flexShrink: 0 }}>
+                          <div style={{ width: '100%', height: 90, background: '#f1f5f9', overflow: 'hidden' }}>
+                            {form.mediaFiles[idx]?.type?.startsWith('video') ? (
+                              <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                            ) : (
+                              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          >✕</button>
+                          <div style={{ padding: '3px 6px', background: HC.orangeLight, fontSize: 9, color: HC.orangeDark, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {form.mediaFiles[idx]?.name?.length > 16
+                              ? form.mediaFiles[idx].name.substring(0, 16) + '…'
+                              : form.mediaFiles[idx]?.name || 'file'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Field>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="1.3 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
+                <Field label="1.4 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
                   <input type="text" placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ ...inp, borderColor: formErrors.production_time ? HC.danger : HC.border }} />
                 </Field>
-                <Field label="1.4 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
+                <Field label="1.5 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
                   <input type="text" placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ ...inp, borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
                 </Field>
-                <Field label="1.5 Total Cost (Bao gồm Base và Shipping cost)" required error={formErrors.total_cost}>
+                <Field label="1.6 Total Cost (Bao gồm Base và Shipping cost)" required error={formErrors.total_cost}>
                   <input type="text" placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ ...inp, borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
                 </Field>
               </div>
