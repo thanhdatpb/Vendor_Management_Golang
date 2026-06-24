@@ -80,7 +80,6 @@ class ProductController extends Controller
 
             $paginated = $query->paginate((int)($request->input('per_page', 20)));
             $paginated->getCollection()->transform(function ($product) {
-                $product = $this->addMediaUrlsToProduct($product);
                 if ($product->creator) {
                     $product->project = $product->creator->project;
                     $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
@@ -88,6 +87,11 @@ class ProductController extends Controller
                 return $product;
             });
             return $paginated;
+        });
+
+        // Normalize media URLs outside cache so stale cached data is always corrected
+        $products->getCollection()->transform(function ($product) {
+            return $this->addMediaUrlsToProduct($product);
         });
 
         return response()->json([
@@ -533,28 +537,29 @@ public function approvedProducts()
 {
     $products = Cache::remember('products_approved', 3600, function () {
         $prods = Product::where('status', 'approved')
-            ->with('creator:id,name,email,project,seller_name')  // ← THÊM project
+            ->with('creator:id,name,email,project,seller_name')
             ->latest()
             ->get();
-        
+
         $prods->transform(function ($product) {
-            $product = $this->addMediaUrlsToProduct($product);
-            
             if ($product->creator) {
                 $product->seller_name = $product->creator->seller_name ?? $product->creator->name;
                 $product->seller_email = $product->creator->email;
-                $product->project = $product->creator->project;  // ← THÊM DÒNG NÀY
+                $product->project = $product->creator->project;
             }
-            
             if ($product->product_type_links && is_string($product->product_type_links)) {
                 $product->product_type_links = json_decode($product->product_type_links, true);
             }
-            
             return $product;
         });
         return $prods;
     });
-    
+
+    // Normalize media URLs outside cache so stale cached data is always corrected
+    $products->transform(function ($product) {
+        return $this->addMediaUrlsToProduct($product);
+    });
+
     return response()->json([
         'data' => $products
     ]);
