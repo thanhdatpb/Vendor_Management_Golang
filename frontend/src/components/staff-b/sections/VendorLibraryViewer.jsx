@@ -242,11 +242,14 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
 }
 
 // ── Section 2 Table ──────────────────────────────────────────────────────────
-function PricingTable({ rows, onSave, readOnly }) {
+function PricingTable({ rows, onSave, readOnly, generalInfo }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
 
   if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>;
+
+  const kyHieuToVendor = {};
+  (generalInfo || []).forEach(r => { if (r.kyHieu) kyHieuToVendor[r.kyHieu] = r.vendorName || ''; });
 
   const startEdit = (idx, row) => {
     setEditIdx(idx);
@@ -318,7 +321,7 @@ function PricingTable({ rows, onSave, readOnly }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1100 }}>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ ...TH(), width: 54 }}>Ký hiệu</th>
+            <th rowSpan={2} style={{ ...TH(), minWidth: 120, textAlign: 'left' }}>Vendor Name</th>
             <th rowSpan={2} style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Product Type</th>
             <th colSpan={2} style={{ ...TH() }}>Detail</th>
             <th colSpan={2} style={{ ...TH() }}>Pricing</th>
@@ -343,12 +346,15 @@ function PricingTable({ rows, onSave, readOnly }) {
             const isEditing = editIdx === i;
             return (
               <tr key={i}>
-                <td style={{ ...TD(i), textAlign: 'center' }}>
+                <td style={{ ...TD(i) }}>
                   {isEditing ? (
                     <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
-                  ) : (
-                    r.kyHieu ? <span style={{ fontWeight: 900, color: HC.orangeDark }}>{r.kyHieu}</span> : <span style={naStyle}>N/A</span>
-                  )}
+                  ) : (() => {
+                    const vName = r.kyHieu ? (kyHieuToVendor[r.kyHieu] || r.kyHieu) : '';
+                    return vName
+                      ? <span style={{ fontWeight: 700, color: HC.ink }}>{vName}</span>
+                      : <span style={naStyle}>N/A</span>;
+                  })()}
                 </td>
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
@@ -651,7 +657,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
             {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
-            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
+            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
           </div>
         </div>
       )}
