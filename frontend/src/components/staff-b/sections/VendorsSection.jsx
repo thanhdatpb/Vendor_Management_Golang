@@ -208,6 +208,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
                   express_price: p.express_price ?? null,
                   ground_total: p.ground_total ?? null,
                   ground_price: p.ground_price ?? null,
+                  twoday_total: p.twoday_total ?? null,
+                  twoday_price: p.twoday_price ?? null,
+                  overnight_total: p.overnight_total ?? null,
+                  overnight_price: p.overnight_price ?? null,
                 });
               });
             } else {

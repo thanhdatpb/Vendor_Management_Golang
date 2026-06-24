@@ -482,17 +482,27 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   const TIER_META = [
                     { key: 'eco_total',       short: 'ECO',  label: 'Economy',   color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
                     { key: 'ground_total',    short: 'GND',  label: 'Ground',    color: '#0284c7', bg: '#eff6ff', border: '#bfdbfe' },
-                    { key: 'fast_total',      short: 'FAST', label: 'Fast',      color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+                    { key: 'twoday_total',    short: '2DAY', label: '2 Days',    color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
                     { key: 'express_total',   short: 'EXP',  label: 'Express',   color: '#b45309', bg: '#fff7ed', border: '#fed7aa' },
                     { key: 'overnight_total', short: 'OVN',  label: 'Overnight', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
                   ];
 
-                  // Hàm lấy giá tốt nhất của 1 vendor group (eco trước, rồi xuống tiers)
+                  // Helper: resolve total, fallback eco_total = pricing1+eco_price for legacy data
+                  const getTotal = (vi, key) => {
+                    const v = Number(vi[key]);
+                    if (vi[key] != null && vi[key] !== '' && v > 0) return v;
+                    if (key === 'eco_total') {
+                      const p1 = Number(vi.pricing1); const ep = Number(vi.eco_price);
+                      if (p1 > 0 && ep > 0) return p1 + ep;
+                    }
+                    return null;
+                  };
+
                   const getBestPrice = (items) => {
                     for (const vi of items) {
                       for (const t of TIER_META) {
-                        const v = Number(vi[t.key]);
-                        if (vi[t.key] != null && vi[t.key] !== '' && v > 0) return v;
+                        const v = getTotal(vi, t.key);
+                        if (v != null && v > 0) return v;
                       }
                     }
                     return null;
@@ -552,8 +562,8 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 // Price range (min–max) per tier across all sizes
                                 const tierRanges = TIER_META.map(t => {
                                   const vals = group.items
-                                    .map(vi => Number(vi[t.key]))
-                                    .filter(n => !isNaN(n) && n > 0);
+                                    .map(vi => getTotal(vi, t.key))
+                                    .filter(n => n != null && n > 0);
                                   if (vals.length === 0) return null;
                                   return { ...t, min: Math.min(...vals), max: Math.max(...vals) };
                                 }).filter(Boolean);
