@@ -29,17 +29,22 @@ class ProductController extends Controller
     private function addMediaUrlsToProduct($product)
     {
         if ($product->media_path) {
-            $fullUrl = Storage::url($product->media_path);
-            $product->media_url = $fullUrl;
-            
+            $relUrl = '/storage/' . $product->media_path;
+            $product->media_url = $relUrl;
+
             if (empty($product->media_urls)) {
-                $product->media_urls = [$fullUrl];
+                $product->media_urls = [$relUrl];
             } else {
                 $product->media_urls = array_map(function($url) {
-                    if (!str_starts_with($url, 'http') && !str_starts_with($url, '/storage')) {
-                        return Storage::url($url);
+                    // Normalize absolute domain URLs → relative /storage/... paths
+                    if (str_starts_with($url, 'http') && str_contains($url, '/storage/')) {
+                        return substr($url, strpos($url, '/storage/'));
                     }
-                    return $url;
+                    if (str_starts_with($url, '/storage/')) {
+                        return $url;
+                    }
+                    // Bare relative path like products/uuid.jpg
+                    return '/storage/' . $url;
                 }, $product->media_urls);
             }
         } else {
@@ -143,8 +148,7 @@ public function store(Request $request)
             $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
             $kind = in_array($ext, ['mp4', 'webm'], true) ? 'video' : 'image';
             $path = $file->store('products', 'public');
-            $fullUrl = Storage::url($path);
-            $mediaUrls[] = $fullUrl;
+            $mediaUrls[] = '/storage/' . $path;
             if (!$mediaPath) {
                 $mediaPath = $path;
                 $mediaKind = $kind;
@@ -275,8 +279,7 @@ public function update(Request $request, $id)
         foreach ($files as $file) {
             $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
             $path = $file->store('products', 'public');
-            $fullUrl = Storage::url($path);
-            $newUrls[] = $fullUrl;
+            $newUrls[] = '/storage/' . $path;
             if (empty($product->media_path)) {
                 $product->media_path = $path;
                 $product->media_kind = in_array($ext, ['mp4', 'webm']) ? 'video' : 'image';
