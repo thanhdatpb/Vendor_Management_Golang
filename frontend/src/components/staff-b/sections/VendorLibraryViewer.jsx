@@ -1068,7 +1068,12 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         file.title?.toLowerCase().includes(q)
       );
     }
-    return files;
+    // File mới upload nhất lên đầu
+    return [...files].sort((a, b) => {
+      const ta = a.importedAt ? new Date(a.importedAt).getTime() : 0;
+      const tb = b.importedAt ? new Date(b.importedAt).getTime() : 0;
+      return tb - ta;
+    });
   }, [libraryFiles, mode, bestSellerIds, searchQuery]);
 
   const fetchLibrary = useCallback(async () => {
