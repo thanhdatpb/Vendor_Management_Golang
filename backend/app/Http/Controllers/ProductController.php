@@ -101,6 +101,7 @@ public function store(Request $request)
         'product_type'      => 'nullable|string|max:255',
         'product_type_link' => 'nullable|string|max:500',
         'product_type_links' => 'nullable|string',
+        'product_video_links' => 'nullable|string',
         'other_specs'       => 'nullable|string',
         'good_review'       => 'nullable|string',
         'bad_review'        => 'nullable|string',
@@ -125,6 +126,12 @@ public function store(Request $request)
     if ($request->filled('product_type_links')) {
         $decoded = json_decode($request->product_type_links, true);
         $productTypeLinks = is_array($decoded) ? $decoded : [$request->product_type_links];
+    }
+
+    $productVideoLinks = null;
+    if ($request->filled('product_video_links')) {
+        $decoded = json_decode($request->product_video_links, true);
+        $productVideoLinks = is_array($decoded) ? $decoded : [$request->product_video_links];
     }
 
     if ($request->hasFile('media')) {
@@ -158,11 +165,13 @@ public function store(Request $request)
         'media_urls'    => $mediaUrls,
     ];
     
-    // Chỉ thêm product_type_links nếu có giá trị
     if ($productTypeLinks !== null) {
         $data['product_type_links'] = $productTypeLinks;
     }
-    
+    if ($productVideoLinks !== null) {
+        $data['product_video_links'] = $productVideoLinks;
+    }
+
     $product = Product::create($data);
     $product = $this->addMediaUrlsToProduct($product);
 
@@ -194,7 +203,8 @@ public function update(Request $request, $id)
         'deadline_date'     => 'sometimes|nullable|date',
         'product_type'      => 'sometimes|nullable|string|max:255',
         'product_type_link' => 'sometimes|nullable|string|max:500',
-        'product_type_links' => 'sometimes|nullable|string', // ← THÊM DÒNG NÀY
+        'product_type_links' => 'sometimes|nullable|string',
+        'product_video_links' => 'sometimes|nullable|string',
         'other_specs'       => 'sometimes|nullable|string',
         'good_review'       => 'sometimes|nullable|string',
         'bad_review'        => 'sometimes|nullable|string',
@@ -213,18 +223,21 @@ public function update(Request $request, $id)
     // Xử lý product_type_links từ JSON string
     if ($request->filled('product_type_links')) {
         $productTypeLinks = json_decode($request->product_type_links, true);
-        if (is_array($productTypeLinks)) {
-            $validated['product_type_links'] = $productTypeLinks;
-        } else {
-            $validated['product_type_links'] = [$request->product_type_links];
-        }
+        $validated['product_type_links'] = is_array($productTypeLinks) ? $productTypeLinks : [$request->product_type_links];
     }
 
-    $product->fill(collect($validated)->except(['media', 'delete_media_indices', 'product_type_links'])->all());
-    
-    // Cập nhật product_type_links riêng
+    if ($request->filled('product_video_links')) {
+        $productVideoLinks = json_decode($request->product_video_links, true);
+        $validated['product_video_links'] = is_array($productVideoLinks) ? $productVideoLinks : [$request->product_video_links];
+    }
+
+    $product->fill(collect($validated)->except(['media', 'delete_media_indices', 'product_type_links', 'product_video_links'])->all());
+
     if (isset($validated['product_type_links'])) {
         $product->product_type_links = $validated['product_type_links'];
+    }
+    if (isset($validated['product_video_links'])) {
+        $product->product_video_links = $validated['product_video_links'];
     }
 
     // Xóa media theo chỉ số

@@ -34,6 +34,7 @@ protected $fillable = [
     'product_type',
     'product_type_link',
     'product_type_links',
+    'product_video_links',
     'production_time',
     'shipping_time',
     'total_cost',
@@ -49,6 +50,7 @@ protected $fillable = [
 protected $casts = [
     'media_urls' => 'array',
     'product_type_links' => 'array',
+    'product_video_links' => 'array',
     'assigned_vendors' => 'array',
     'created_at' => 'datetime',
     'updated_at' => 'datetime',

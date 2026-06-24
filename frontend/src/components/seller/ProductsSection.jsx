@@ -71,6 +71,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const importFileRef = useRef(null);
   const fileUploadRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
+  const [tempVideoLink, setTempVideoLink] = useState('');
 
   // Xóa localStorage cũ khi API đã là source of truth
   useEffect(() => {
@@ -114,6 +115,28 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     }));
   };
 
+  // Thêm video link
+  const addVideoLink = () => {
+    if (tempVideoLink.trim()) {
+      let url = tempVideoLink.trim();
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      setForm(prev => ({
+        ...prev,
+        product_video_links: [...(prev.product_video_links || []), url]
+      }));
+      setTempVideoLink('');
+    }
+  };
+
+  const removeVideoLink = (indexToRemove) => {
+    setForm(prev => ({
+      ...prev,
+      product_video_links: (prev.product_video_links || []).filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
   // Mở link
   const openLink = (url) => {
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -125,6 +148,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     setForm({ ...EMPTY_FORM, mediaFiles: [], product_type_links: [], product_video_links: [] });
     setPreviewUrls([]);
     setTempLink('');
+    setTempVideoLink('');
     setFormErrors({});
     setIsEditing(false);
     setEditingProduct(null);
@@ -1143,6 +1167,59 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
                   {formErrors.product_type_links && (
                     <span style={{ color: HC.danger, fontSize: 10, marginTop: 2 }}>⚠ {formErrors.product_type_links}</span>
+                  )}
+                </Field>
+              </div>
+
+              {/* 1.2 Link video sản phẩm */}
+              <div style={{ marginBottom: 16 }}>
+                <Field label="1.2 Link video sản phẩm (YouTube, Google Drive, v.v.)">
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input
+                      type="url"
+                      placeholder="Câu trả lời của bạn"
+                      value={tempVideoLink}
+                      onChange={e => setTempVideoLink(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && addVideoLink()}
+                      style={{ ...inp, flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addVideoLink}
+                      style={{
+                        padding: '9px 16px', borderRadius: 9,
+                        background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+                        color: '#fff', border: 'none', fontSize: 12, fontWeight: 700,
+                        cursor: 'pointer', whiteSpace: 'nowrap'
+                      }}
+                    >
+                      + Thêm link
+                    </button>
+                  </div>
+                  {(form.product_video_links || []).length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {(form.product_video_links || []).map((link, idx) => (
+                        <div key={idx} style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '5px 10px', borderRadius: 20,
+                          background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`,
+                          fontSize: 11, fontWeight: 700, color: HC.orangeDark, maxWidth: 280,
+                        }}>
+                          <span
+                            onClick={() => openLink(link)}
+                            style={{ cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            title={link}
+                          >
+                            🎬 {link.length > 32 ? link.substring(0, 32) + '…' : link}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeVideoLink(idx)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: HC.orangeDark, fontSize: 12, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                          >✕</button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </Field>
               </div>
