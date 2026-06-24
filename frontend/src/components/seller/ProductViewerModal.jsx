@@ -523,7 +523,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 <th style={{ ...thS({ width: 60 }) }}>Ảnh</th>
                                 <th style={{ ...thS({ textAlign: 'left', minWidth: 150 }) }}>Vendor</th>
                                 <th style={{ ...thS({ textAlign: 'left', minWidth: 120 }) }}>Chất liệu</th>
-                                <th style={{ ...thS({ width: 56 }) }}>Size</th>
+                                <th style={{ ...thS({ width: 80 }) }}>Size</th>
                                 <th style={{ ...thS({ width: 62 }) }}>T.gian SX</th>
                                 <th style={{ ...thS({ width: 62 }) }}>T.gian Ship</th>
                                 <th style={{ ...thS({ width: 70 }) }}>Folder</th>
@@ -546,154 +546,151 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 const rowBg = isBest ? '#f0fdf4' : gIdx % 2 === 0 ? '#fff' : '#fafafa';
                                 const leftBorder = isBest ? '3px solid #22c55e' : '3px solid transparent';
 
-                                return group.items.map((vi, idx) => {
-                                  const tierRows = TIER_META
-                                    .map(t => ({ ...t, value: vi[t.key] }))
-                                    .filter(t => t.value != null && t.value !== '' && Number(t.value) > 0);
+                                // All sizes for this vendor (deduplicated)
+                                const sizes = [...new Set(group.items.map(vi => vi.size).filter(Boolean))];
 
-                                  return (
-                                    <tr key={`${gIdx}-${idx}`}
-                                      style={{ background: rowBg, transition: 'background 0.12s' }}
-                                      onMouseEnter={e => { e.currentTarget.style.background = isBest ? '#dcfce7' : '#fff8f0'; }}
-                                      onMouseLeave={e => { e.currentTarget.style.background = rowBg; }}
-                                    >
-                                      {/* Ảnh + BEST badge */}
-                                      {idx === 0 && (
-                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 60, position: 'relative', borderLeft: leftBorder }) }}>
-                                          {vendorImg
-                                            ? <img src={vendorImg} loading="lazy" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
-                                            : <div style={{ width: 44, height: 44, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: HC.muted2 }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                // Price range (min–max) per tier across all sizes
+                                const tierRanges = TIER_META.map(t => {
+                                  const vals = group.items
+                                    .map(vi => Number(vi[t.key]))
+                                    .filter(n => !isNaN(n) && n > 0);
+                                  if (vals.length === 0) return null;
+                                  return { ...t, min: Math.min(...vals), max: Math.max(...vals) };
+                                }).filter(Boolean);
+
+                                return (
+                                  <tr key={group.key}
+                                    style={{ background: rowBg, transition: 'background 0.12s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = isBest ? '#dcfce7' : '#fff8f0'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = rowBg; }}
+                                  >
+                                    {/* Ảnh + BEST badge */}
+                                    <td style={{ ...td({ textAlign: 'center', width: 60, position: 'relative', borderLeft: leftBorder }) }}>
+                                      {vendorImg
+                                        ? <img src={vendorImg} loading="lazy" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, border: `1px solid ${HC.border}`, display: 'block', margin: '0 auto' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+                                        : <div style={{ width: 44, height: 44, borderRadius: 8, background: HC.cream, border: `1px dashed ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: HC.muted2 }}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                          </div>
+                                      }
+                                      {isBest && (
+                                        <div style={{ marginTop: 4, padding: '1px 5px', borderRadius: 4, background: '#16a34a', color: '#fff', fontSize: 7.5, fontWeight: 900, letterSpacing: '0.06em', textAlign: 'center' }}>BEST</div>
+                                      )}
+                                    </td>
+
+                                    {/* Vendor name + badges */}
+                                    <td style={{ ...td({ textAlign: 'left' }) }}>
+                                      <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type || '—'}</div>
+                                      {v.name && v.vendor_type && v.name !== v.vendor_type && (
+                                        <div style={{ fontSize: 10, color: HC.muted2, marginTop: 1 }}>{v.vendor_type}</div>
+                                      )}
+                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
+                                        {isWithinTarget && (
+                                          <span style={{ padding: '1px 7px', borderRadius: 4, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 9, fontWeight: 800, color: '#16a34a' }}>✓ Trong target</span>
+                                        )}
+                                        {!isWithinTarget && bestPrice != null && target != null && (
+                                          <span style={{ padding: '1px 7px', borderRadius: 4, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 9, fontWeight: 700, color: '#dc2626' }}>Vượt target</span>
+                                        )}
+                                        {onViewVendorLibrary && v.source_file_id && (
+                                          <button
+                                            onClick={() => { onClose(); onViewVendorLibrary(v.source_file_id); }}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: HC.orange, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 4, padding: '1px 7px', cursor: 'pointer' }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                                          >Xem thư viện</button>
+                                        )}
+                                      </div>
+                                    </td>
+
+                                    {/* Chất liệu */}
+                                    <td style={{ ...td({ textAlign: 'left' }) }}>
+                                      {rawMaterial
+                                        ? <span style={{ color: HC.ink2, fontSize: 11, lineHeight: 1.5 }} title={rawMaterial}>{rawMaterial.length > 55 ? rawMaterial.slice(0, 55) + '…' : rawMaterial}</span>
+                                        : <NaLib title="Thư viện chưa có thông tin chất liệu" />
+                                      }
+                                    </td>
+
+                                    {/* Size — tất cả size dưới dạng pills */}
+                                    <td style={{ ...td({ textAlign: 'center', width: 80 }) }}>
+                                      {sizes.length === 0
+                                        ? <NaLib title="Thư viện chưa có thông tin size" />
+                                        : (
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center' }}>
+                                            {sizes.map(s => (
+                                              <span key={s} style={{ fontSize: 9, fontWeight: 700, color: HC.ink, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 4, padding: '2px 5px', whiteSpace: 'nowrap' }}>{s}</span>
+                                            ))}
+                                          </div>
+                                        )
+                                      }
+                                    </td>
+
+                                    {/* T.gian SX */}
+                                    <td style={{ ...td({ textAlign: 'center', width: 62 }) }}>
+                                      {product.production_time
+                                        ? <span style={{ fontWeight: 700, fontSize: 11, color: '#0284c7' }}>{product.production_time}</span>
+                                        : <NaLib title="Chưa có thông tin thời gian sản xuất" />
+                                      }
+                                    </td>
+
+                                    {/* T.gian Ship */}
+                                    <td style={{ ...td({ textAlign: 'center', width: 62 }) }}>
+                                      {product.shipping_time
+                                        ? <span style={{ fontWeight: 700, fontSize: 11, color: '#7c3aed' }}>{product.shipping_time}</span>
+                                        : <NaLib title="Chưa có thông tin thời gian giao hàng" />
+                                      }
+                                    </td>
+
+                                    {/* Link Folder */}
+                                    <td style={{ ...td({ textAlign: 'center', width: 70 }) }}>
+                                      {vendorLink
+                                        ? <a href={vendorLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 8px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = HC.orangeMid}
+                                            onMouseLeave={e => e.currentTarget.style.background = HC.orangeLight}
+                                          >
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                                            Folder
+                                          </a>
+                                        : <NaStaff />
+                                      }
+                                    </td>
+
+                                    {/* Giá & So sánh Target — khoảng min–max per tier */}
+                                    <td style={{ ...td({ borderRight: 'none', minWidth: 260 }) }}>
+                                      {tierRanges.length > 0 ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                          {tierRanges.map(({ short, label, min, max, color, bg, border: bc }, ti) => {
+                                            const isPrimary = ti === 0;
+                                            const delta = target != null ? min - target : null;
+                                            const dColor = delta == null ? '#94a3b8'
+                                              : delta <= 0 ? '#16a34a'
+                                              : delta <= (target ?? 0) * 0.1 ? '#d97706'
+                                              : '#dc2626';
+                                            const dLabel = delta == null ? null
+                                              : delta <= 0 ? `-$${Math.abs(delta).toFixed(2)} dưới target`
+                                              : `+$${delta.toFixed(2)} trên target`;
+                                            const priceLabel = min === max
+                                              ? `$${min.toFixed(2)}`
+                                              : `$${min.toFixed(2)} – $${max.toFixed(2)}`;
+                                            return (
+                                              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                                <span style={{ fontSize: 8, fontWeight: 900, color, background: bg, border: `1px solid ${bc}`, padding: '2px 6px', borderRadius: 4, minWidth: 34, textAlign: 'center', letterSpacing: '0.04em', flexShrink: 0 }}>{short}</span>
+                                                <span style={{ fontWeight: isPrimary ? 900 : 700, fontSize: isPrimary ? 14 : 12, color, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>{priceLabel}</span>
+                                                {isPrimary && delta != null && (
+                                                  <span style={{ fontSize: 9, fontWeight: 800, color: dColor, padding: '2px 8px', borderRadius: 4, background: dColor + '14', border: `1px solid ${dColor}30`, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                    {dLabel}
+                                                  </span>
+                                                )}
+                                                {!isPrimary && (
+                                                  <span style={{ fontSize: 9, color: '#94a3b8', fontStyle: 'italic' }}>{label}</span>
+                                                )}
                                               </div>
-                                          }
-                                          {isBest && (
-                                            <div style={{ marginTop: 4, padding: '1px 5px', borderRadius: 4, background: '#16a34a', color: '#fff', fontSize: 7.5, fontWeight: 900, letterSpacing: '0.06em', textAlign: 'center' }}>BEST</div>
-                                          )}
-                                        </td>
-                                      )}
-
-                                      {/* Vendor name + badges */}
-                                      {idx === 0 && (
-                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'left' }) }}>
-                                          <div style={{ fontWeight: 800, fontSize: 12, color: HC.ink }}>{v.name || v.vendor_type || '—'}</div>
-                                          {v.name && v.vendor_type && v.name !== v.vendor_type && (
-                                            <div style={{ fontSize: 10, color: HC.muted2, marginTop: 1 }}>{v.vendor_type}</div>
-                                          )}
-                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 5 }}>
-                                            {isWithinTarget && (
-                                              <span style={{ padding: '1px 7px', borderRadius: 4, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 9, fontWeight: 800, color: '#16a34a' }}>✓ Trong target</span>
-                                            )}
-                                            {!isWithinTarget && bestPrice != null && target != null && (
-                                              <span style={{ padding: '1px 7px', borderRadius: 4, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 9, fontWeight: 700, color: '#dc2626' }}>Vượt target</span>
-                                            )}
-                                            {onViewVendorLibrary && v.source_file_id && (
-                                              <button
-                                                onClick={() => { onClose(); onViewVendorLibrary(v.source_file_id); }}
-                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: HC.orange, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 4, padding: '1px 7px', cursor: 'pointer' }}
-                                                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                                                onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                                              >Xem thư viện</button>
-                                            )}
-                                          </div>
-                                        </td>
-                                      )}
-
-                                      {/* Chất liệu */}
-                                      {idx === 0 && (
-                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'left' }) }}>
-                                          {rawMaterial
-                                            ? <span style={{ color: HC.ink2, fontSize: 11, lineHeight: 1.5 }} title={rawMaterial}>{rawMaterial.length > 55 ? rawMaterial.slice(0, 55) + '…' : rawMaterial}</span>
-                                            : <NaLib title="Thư viện chưa có thông tin chất liệu" />
-                                          }
-                                        </td>
-                                      )}
-
-                                      {/* Size */}
-                                      <td style={{ ...td({ textAlign: 'center', width: 56 }) }}>
-                                        {vi.size
-                                          ? <span style={{ fontWeight: 700, color: HC.ink, fontSize: 11 }}>{vi.size}</span>
-                                          : <NaLib title="Thư viện chưa có thông tin size" />
-                                        }
-                                      </td>
-
-                                      {/* T.gian SX */}
-                                      {idx === 0 && (
-                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 62 }) }}>
-                                          {product.production_time
-                                            ? <span style={{ fontWeight: 700, fontSize: 11, color: '#0284c7' }}>{product.production_time}</span>
-                                            : <NaLib title="Chưa có thông tin thời gian sản xuất" />
-                                          }
-                                        </td>
-                                      )}
-
-                                      {/* T.gian Ship */}
-                                      {idx === 0 && (
-                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 62 }) }}>
-                                          {product.shipping_time
-                                            ? <span style={{ fontWeight: 700, fontSize: 11, color: '#7c3aed' }}>{product.shipping_time}</span>
-                                            : <NaLib title="Chưa có thông tin thời gian giao hàng" />
-                                          }
-                                        </td>
-                                      )}
-
-                                      {/* Link Folder — chờ Staff B nếu trống */}
-                                      {idx === 0 && (
-                                        <td rowSpan={group.items.length} style={{ ...td({ textAlign: 'center', width: 70 }) }}>
-                                          {vendorLink
-                                            ? <a href={vendorLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '4px 8px', borderRadius: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'all 0.15s' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = HC.orangeMid}
-                                                onMouseLeave={e => e.currentTarget.style.background = HC.orangeLight}
-                                              >
-                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-                                                Folder
-                                              </a>
-                                            : <NaStaff />
-                                          }
-                                        </td>
-                                      )}
-
-                                      {/* Giá & Delta */}
-                                      <td style={{ ...td({ borderRight: 'none', minWidth: 260 }) }}>
-                                        {tierRows.length > 0 ? (
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                            {tierRows.map(({ short, label, value, color, bg, border: bc }, ti) => {
-                                              const price = Number(value);
-                                              const delta = target != null ? price - target : null;
-                                              const isPrimary = ti === 0;
-                                              const dColor = delta == null ? '#94a3b8'
-                                                : delta < 0 ? '#16a34a'
-                                                : delta === 0 ? '#16a34a'
-                                                : delta <= (target ?? 0) * 0.1 ? '#d97706'
-                                                : '#dc2626';
-                                              const dLabel = delta == null ? null
-                                                : delta <= 0 ? `−$${Math.abs(delta).toFixed(2)} dưới target`
-                                                : `+$${delta.toFixed(2)} trên target`;
-                                              return (
-                                                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                                  {/* Tier badge */}
-                                                  <span style={{ fontSize: 8, fontWeight: 900, color, background: bg, border: `1px solid ${bc}`, padding: '2px 6px', borderRadius: 4, minWidth: 34, textAlign: 'center', letterSpacing: '0.04em', flexShrink: 0 }}>{short}</span>
-                                                  {/* Price */}
-                                                  <span style={{ fontWeight: isPrimary ? 900 : 700, fontSize: isPrimary ? 15 : 12, color, minWidth: 56, letterSpacing: '-0.01em' }}>${price.toFixed(2)}</span>
-                                                  {/* Delta badge — chỉ primary row */}
-                                                  {isPrimary && delta != null && (
-                                                    <span style={{ fontSize: 9, fontWeight: 800, color: dColor, padding: '2px 8px', borderRadius: 4, background: dColor + '14', border: `1px solid ${dColor}30`, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                                      {dLabel}
-                                                    </span>
-                                                  )}
-                                                  {/* Secondary tiers: hiển thị tên đầy đủ */}
-                                                  {!isPrimary && (
-                                                    <span style={{ fontSize: 9, color: '#94a3b8', fontStyle: 'italic' }}>{label}</span>
-                                                  )}
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        ) : <NaLib title="Thư viện chưa có dữ liệu giá" />}
-                                      </td>
-                                    </tr>
-                                  );
-                                });
+                                            );
+                                          })}
+                                        </div>
+                                      ) : <NaLib title="Thư viện chưa có dữ liệu giá" />}
+                                    </td>
+                                  </tr>
+                                );
                               })}
                             </tbody>
                           </table>
