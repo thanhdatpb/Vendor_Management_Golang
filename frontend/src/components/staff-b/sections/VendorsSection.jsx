@@ -178,24 +178,44 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               source_file_id: file.id,
               source_file_name: file.filename || '',
             };
-            // Map từng dòng pricing — khớp theo kyHieu (case-insensitive, trim)
             const norm = s => (s || '').toString().trim().toLowerCase();
             const mk = norm(m.kyHieu);
+
+            // Tập kyHieu + vendorName của các vendor KHÁC trong cùng file (để loại trừ)
+            const otherKeys = new Set();
+            (file.generalInfo || []).forEach(g => {
+              if (g.id !== m.id) {
+                if (g.kyHieu) otherKeys.add(norm(g.kyHieu));
+                if (g.vendorName) otherKeys.add(norm(g.vendorName));
+              }
+            });
+
+            // Bước 1: khớp chính xác theo kyHieu (bao gồm cả hai đều trống)
             let pricingRows = (file.pricing || []).filter(p => norm(p.kyHieu) === mk);
-            // Fallback 1: kyHieu trống → dùng toàn bộ pricing rows
-            if (pricingRows.length === 0 && !mk) {
-              pricingRows = file.pricing || [];
+
+            // Bước 2: kyHieu generalInfo trống nhưng pricing rows không trống →
+            //         thử khớp kyHieu của pricing row theo vendorName (e.g. generalInfo.kyHieu='' nhưng row.kyHieu='VN3')
+            if (pricingRows.length === 0 && !mk && m.vendorName) {
+              const mvk = norm(m.vendorName);
+              pricingRows = (file.pricing || []).filter(p => norm(p.kyHieu) === mvk);
             }
-            // Fallback 2: vẫn không khớp → dùng toàn bộ nếu chỉ có 1 vendor được chọn từ file này
-            if (pricingRows.length === 0 && matched.length === 1) {
-              pricingRows = file.pricing || [];
-            }
-            // Fallback 3: kyHieu khác nhau → match theo productType (substring, case-insensitive)
+
+            // Bước 3: productType match, loại trừ rows thuộc vendor khác
             if (pricingRows.length === 0 && m.productType) {
               const mpt = norm(m.productType);
               pricingRows = (file.pricing || []).filter(p => {
+                const pk = norm(p.kyHieu);
+                if (pk && otherKeys.has(pk)) return false;
                 const ppt = norm(p.productType || '');
                 return mpt && ppt && (ppt === mpt || ppt.includes(mpt) || mpt.includes(ppt));
+              });
+            }
+
+            // Bước 4 (fallback cuối): 1 vendor được chọn → lấy rows không thuộc vendor khác
+            if (pricingRows.length === 0 && matched.length === 1) {
+              pricingRows = (file.pricing || []).filter(p => {
+                const pk = norm(p.kyHieu);
+                return !pk || !otherKeys.has(pk);
               });
             }
 
