@@ -556,8 +556,24 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                 const rowBg = isBest ? '#f0fdf4' : gIdx % 2 === 0 ? '#fff' : '#fafafa';
                                 const leftBorder = isBest ? '3px solid #22c55e' : '3px solid transparent';
 
-                                // All sizes for this vendor (deduplicated)
-                                const sizes = [...new Set(group.items.map(vi => vi.size).filter(Boolean))];
+                                // All sizes deduplicated by (size, product_type) — same size across different shapes shown separately
+                                const _sizeEntries = [];
+                                const _seenSizeKeys = new Set();
+                                group.items.forEach(vi => {
+                                  if (!vi.size) return;
+                                  const _k = `${vi.size}|${(vi.product_type || '').trim()}`;
+                                  if (!_seenSizeKeys.has(_k)) { _seenSizeKeys.add(_k); _sizeEntries.push({ size: vi.size, pt: vi.product_type || '' }); }
+                                });
+                                const _sizeCount = {};
+                                _sizeEntries.forEach(e => { _sizeCount[e.size] = (_sizeCount[e.size] || 0) + 1; });
+                                const sizes = _sizeEntries.map(e => {
+                                  if (_sizeCount[e.size] > 1) {
+                                    const _m = e.pt.match(/\(Shape:\s*([^)]+)\)/i);
+                                    const _shape = _m ? _m[1].trim() : '';
+                                    return _shape ? `${e.size} (${_shape})` : e.size;
+                                  }
+                                  return e.size;
+                                });
 
                                 // Price range (min–max) per tier across all sizes
                                 const tierRanges = TIER_META.map(t => {
@@ -625,8 +641,8 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                         ? <NaLib title="Thư viện chưa có thông tin size" />
                                         : (
                                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center' }}>
-                                            {sizes.map(s => (
-                                              <span key={s} style={{ fontSize: 9, fontWeight: 700, color: HC.ink, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 4, padding: '2px 5px', whiteSpace: 'nowrap' }}>{s}</span>
+                                            {sizes.map((s, si) => (
+                                              <span key={`${s}_${si}`} style={{ fontSize: 9, fontWeight: 700, color: HC.ink, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 4, padding: '2px 5px', whiteSpace: 'nowrap' }}>{s}</span>
                                             ))}
                                           </div>
                                         )
