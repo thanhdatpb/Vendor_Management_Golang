@@ -577,6 +577,12 @@ public function approvedProducts()
     {
         $product = Product::findOrFail($id);
 
+        if ($product->status !== 'approved') {
+            return response()->json([
+                'message' => 'Chỉ được gán vendor cho sản phẩm đã được Admin duyệt',
+            ], 422);
+        }
+
         $vendors = $request->input('vendors', []);
         $product->assigned_vendors = is_array($vendors) ? $vendors : [];
         $product->save();
