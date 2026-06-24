@@ -190,6 +190,14 @@ export default function VendorsSection({ filterProductType = '', filterProductId
             if (pricingRows.length === 0 && matched.length === 1) {
               pricingRows = file.pricing || [];
             }
+            // Fallback 3: kyHieu khác nhau → match theo productType (substring, case-insensitive)
+            if (pricingRows.length === 0 && m.productType) {
+              const mpt = norm(m.productType);
+              pricingRows = (file.pricing || []).filter(p => {
+                const ppt = norm(p.productType || '');
+                return mpt && ppt && (ppt === mpt || ppt.includes(mpt) || mpt.includes(ppt));
+              });
+            }
 
             if (pricingRows.length > 0) {
               pricingRows.forEach((p, pi) => {

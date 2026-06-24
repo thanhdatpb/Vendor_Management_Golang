@@ -350,7 +350,19 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                   {isEditing ? (
                     <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
                   ) : (() => {
-                    const vName = r.kyHieu ? (kyHieuToVendor[r.kyHieu] || r.kyHieu) : '';
+                    const normStr = s => (s || '').toString().trim().toLowerCase();
+                    const vName = (() => {
+                      if (r.kyHieu) return kyHieuToVendor[r.kyHieu] || r.kyHieu;
+                      const rpt = normStr(r.productType);
+                      if (rpt && generalInfo?.length) {
+                        const gi = generalInfo.find(g => {
+                          const gpt = normStr(g.productType || '');
+                          return gpt && (gpt === rpt || gpt.includes(rpt) || rpt.includes(gpt));
+                        });
+                        if (gi?.vendorName) return gi.vendorName;
+                      }
+                      return '';
+                    })();
                     return vName
                       ? <span style={{ fontWeight: 700, color: HC.ink }}>{vName}</span>
                       : <span style={naStyle}>N/A</span>;

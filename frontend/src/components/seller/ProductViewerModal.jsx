@@ -697,16 +697,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                             );
                                           })}
                                         </div>
-                                      ) : (
-                                        <div>
-                                          <NaLib title="Thư viện chưa có dữ liệu giá" />
-                                          <div style={{ fontSize: 8, color: '#999', marginTop: 3, lineHeight: 1.5, fontFamily: 'monospace' }}>
-                                            {group.items.map((vi, _di) => (
-                                              <div key={_di}>#{_di+1} eco:{String(vi.eco_total??'∅')} p1:{String(vi.pricing1??'∅')} ep:{String(vi.eco_price??'∅')} gnd:{String(vi.ground_total??'∅')}</div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
+                                      ) : <NaLib title="Thư viện chưa có dữ liệu giá" />}
                                     </td>
                                   </tr>
                                 );
