@@ -2,6 +2,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 
+const TYPE_META = {
+  approved:                { icon: '✅', label: 'Đã duyệt',      color: '#10B981', bg: '#ecfdf5', border: '#bbf7d0' },
+  rejected:                { icon: '❌', label: 'Từ chối',        color: '#EF4444', bg: '#fef2f2', border: '#fecaca' },
+  vendor_assigned:         { icon: '🏪', label: 'Gán vendor',     color: '#3B82F6', bg: '#eff6ff', border: '#bfdbfe' },
+  new_form:                { icon: '📋', label: 'Request mới',    color: '#F59E0B', bg: '#fffbeb', border: '#fde68a' },
+  needs_vendor:            { icon: '🔧', label: 'Cần gán phôi',   color: '#8B5CF6', bg: '#f5f3ff', border: '#ddd6fe' },
+  sample_approved:         { icon: '✅', label: 'Sample OK',      color: '#10B981', bg: '#ecfdf5', border: '#bbf7d0' },
+  sample_rejected:         { icon: '❌', label: 'Sample từ chối', color: '#EF4444', bg: '#fef2f2', border: '#fecaca' },
+  staff_a_approved_vendor: { icon: '✅', label: 'Vendor OK',      color: '#10B981', bg: '#ecfdf5', border: '#bbf7d0' },
+  feedback:                { icon: '💬', label: 'Phản hồi',       color: '#6366F1', bg: '#eef2ff', border: '#c7d2fe' },
+  deadline_updated:        { icon: '📅', label: 'Deadline',       color: '#7C3AED', bg: '#f5f3ff', border: '#ddd6fe' },
+  news:                    { icon: '📰', label: 'Tin tức',        color: '#0891b2', bg: '#f0f9ff', border: '#bae6fd' },
+};
+const DEF_META = { icon: '📢', label: 'Thông báo', color: '#6B7280', bg: '#f9fafb', border: '#e5e7eb' };
 const NEWS_COLOR = '#0891b2';
 const NEWS_BG   = '#f0f9ff';
 
@@ -185,9 +199,9 @@ export default function StaffBNotificationCenter({
                     <div style={{ fontSize: 11, marginTop: 4, color: HC.muted2 }}>Thông báo sẽ xuất hiện tại đây</div>
                   </div>
                 ) : allItems.map((notif, idx) => {
-                  const req = isReq(notif);
-                  const accentColor = req ? HC.orange : NEWS_COLOR;
-                  const unreadBg = req ? HC.orangeLight : NEWS_BG;
+                  const meta = TYPE_META[notif.type] || (notif._category === 'news' ? TYPE_META.news : DEF_META);
+                  const accentColor = meta.color;
+                  const unreadBg = meta.bg;
                   const bg = notif.read ? HC.surface : unreadBg;
                   return (
                     <div
@@ -199,8 +213,8 @@ export default function StaffBNotificationCenter({
                     >
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                          <span style={{ fontSize: 9, fontWeight: 800, borderRadius: 99, padding: '2px 7px', background: req ? HC.orangeLight : NEWS_BG, color: req ? HC.orangeDark : NEWS_COLOR, border: `1px solid ${req ? HC.orangeMid : '#bae6fd'}`, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            {req ? 'Yêu cầu' : 'Tin tức'}
+                          <span style={{ fontSize: 9, fontWeight: 800, borderRadius: 99, padding: '2px 7px', background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {meta.icon} {meta.label}
                           </span>
                           <span style={{ fontWeight: notif.read ? 600 : 800, fontSize: 12.5, color: notif.read ? HC.muted : HC.ink, fontFamily: "'Nunito',sans-serif", flex: 1, lineHeight: 1.3 }}>
                             {notif.title}

@@ -175,7 +175,7 @@ export default function SetupPriceSection() {
       };
     });
     const unique = newPriceList.filter((item, i, self) =>
-      i === self.findIndex(t => String(t.productId) === String(item.productId) && String(t.vendor_id) === String(item.vendor_id) && t.size === item.size)
+      i === self.findIndex(t => String(t.productId) === String(item.productId) && String(t.vendor_id) === String(item.vendor_id) && t.size === item.size && t.product_type === item.product_type)
     );
     setAssignedPriceList(unique);
     if (unique.length > 0) localStorage.setItem(LS_PRICE_KEY, JSON.stringify(unique));
@@ -243,22 +243,26 @@ export default function SetupPriceSection() {
         coupon_pct: 10,
         shipping_method: 'economy',
       });
-      // Pre-populate one row per unique size from all raw entries
-      // Deduplicate by size label so same size doesn't appear twice
+      // Pre-populate one row per unique (size, product_type) combo from all raw entries
       const seen = new Set();
       const initRows = (group._rawSizes || [])
         .filter(s => {
-          const label = (s.size || '').trim();
-          if (seen.has(label)) return false;
-          seen.add(label);
+          const key = `${(s.size || '').trim()}|${(s.product_type || '').trim()}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
           return true;
         })
-        .map(s => ({
-          ...mkRow(),
-          size_label: s.size || '',
-          item_cost: s.eco_total ? String(parseFloat(s.eco_total) || '') : '',
-          shipping_cost: '0',
-        }));
+        .map(s => {
+          const shapeMatch = (s.product_type || '').match(/\(Shape:\s*([^)]+)\)/i);
+          const shape = shapeMatch ? shapeMatch[1].trim() : '';
+          const sizeLabel = shape ? `${s.size || ''} (${shape})` : (s.size || '');
+          return {
+            ...mkRow(),
+            size_label: sizeLabel,
+            item_cost: s.eco_total ? String(parseFloat(s.eco_total) || '') : '',
+            shipping_cost: '0',
+          };
+        });
       setSizeRows(initRows.length ? initRows : [mkRow()]);
     }
     setShowSetupModal(true);

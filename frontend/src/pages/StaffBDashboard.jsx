@@ -64,15 +64,16 @@ export default function StaffDashboard() {
       .then(r => {
         const apiNotifs = r.data?.data || [];
         apiNotifs.forEach(n => {
-          if (n.type === 'approved') {
-            requests.push({
-              id: `api_${n.id}`, type: 'approved', source: 'admin', icon: '',
-              title: 'Form sản phẩm đã được duyệt',
-              message: `Form sản phẩm "${n.product_type || ''}" của Seller "${n.seller_name || 'Seller'}" đã được Admin duyệt.`,
-              time: new Date(n.created_at).toLocaleString('vi-VN'), read: n.is_read || false,
-              productId: n.product_id, productType: n.product_type, sellerName: n.seller_name, timestamp: n.created_at
-            });
-          }
+          const productName = n.data?.product_type || n.product_type || '';
+          const productId = n.data?.product_id || n.product_id || null;
+          const sellerName = n.data?.seller_name || n.seller_name || '';
+          requests.push({
+            id: `api_${n.id}`, type: n.type, source: 'api',
+            title: n.title || 'Thông báo',
+            message: n.body || '',
+            time: new Date(n.created_at).toLocaleString('vi-VN'), read: n.is_read || false,
+            productId, productType: productName, sellerName, timestamp: n.created_at
+          });
         });
       }).catch(() => { });
 

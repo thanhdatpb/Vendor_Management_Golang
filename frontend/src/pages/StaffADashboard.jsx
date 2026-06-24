@@ -41,29 +41,26 @@ export default function SellerDashboard() {
   const loadRequestNotifications = useCallback(() => {
     const requests = [];
 
-    // 1. Từ API (Admin duyệt/từ chối)
+    // 1. Từ API (Admin duyệt/từ chối/vendor_assigned/feedback/deadline)
     notificationApi.list()
       .then(r => {
         const apiNotifs = r.data.data || [];
         apiNotifs.forEach(n => {
-          const productName = n.product_type || n.product_name || n.productType || 'Sản phẩm';
+          const productName = n.data?.product_type || n.product_type || 'Sản phẩm';
+          const productId = n.data?.product_id || n.product_id || null;
           const exists = requests.some(ex => ex.id === `api_${n.id}`);
           if (!exists) {
             requests.push({
               id: `api_${n.id}`,
               type: n.type,
-              source: 'admin',
-              icon: n.type === 'approved' ? '' : '',
-              title: n.type === 'approved' ? 'Sản phẩm được duyệt' : 'Sản phẩm bị từ chối',
-              message: n.type === 'approved'
-                ? `Sản phẩm "${productName}" đã được Admin duyệt`
-                : `Sản phẩm "${productName}" đã bị Admin từ chối. Lý do: ${n.reason || 'Không có lý do'}`,
+              source: 'api',
+              title: n.title || 'Thông báo',
+              message: n.body || '',
               time: new Date(n.created_at).toLocaleString('vi-VN'),
               read: n.is_read || false,
-              productId: n.product_id,
+              productId,
               productType: productName,
               timestamp: n.created_at,
-              reason: n.reason || null,
             });
           }
         });

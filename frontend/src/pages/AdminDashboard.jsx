@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { productApi } from '../services/api';
+import { productApi, notificationApi } from '../services/api';
 import { HC, PAGE_TITLES } from '../components/admin/constants';
 import { normalizeList } from '../components/admin/utils';
 import Sidebar from '../components/admin/Sidebar';
@@ -57,38 +57,69 @@ export default function AdminDashboard() {
   }, []);
 
   const loadRequestNotifications = useCallback(() => {
-    try {
-      let staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
-      
-      // Tự động fix lại text của các thông báo cũ còn kẹt trong localStorage
-      let hasChanges = false;
-      staffANotifs = staffANotifs.map(n => {
-        if (n.type === 'new_form' && n.message && n.message.includes('thuộc Project')) {
-          const match = n.message.match(/thuộc Project\s+"([^"]+)"/);
-          const projectName = match ? match[1] : (n.project || 'Không xác định');
-          hasChanges = true;
-          return { ...n, message: `Seller của project ${projectName} vừa gửi form request mới.` };
-        }
-        return n;
-      });
-      if (hasChanges) {
-        localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(staffANotifs));
-      }
+    const requests = [];
 
-      const requests = staffANotifs
-        .filter(n => n.type === 'new_form')
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-        .slice(0, 50);
-      setRequestNotifications(prev => {
-        const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
-        return requests.map(n => ({
-          ...n,
-          read: prevMap[n.id]?.read === true ? true : (n.read || false),
-        }));
+    // 1. Từ API (new_form / pending từ EventServiceProvider)
+    notificationApi.list()
+      .then(r => {
+        const apiNotifs = r.data?.data || [];
+        apiNotifs.forEach(n => {
+          const productId = n.data?.product_id || n.product_id || null;
+          const productType = n.data?.product_type || n.product_type || '';
+          const sellerName = n.data?.seller_name || n.seller_name || '';
+          requests.push({
+            id: `api_${n.id}`,
+            type: n.type,
+            source: 'api',
+            title: n.title || 'Thông báo',
+            message: n.body || '',
+            timestamp: n.created_at,
+            read: n.is_read || false,
+            productId,
+            product_id: productId,
+            productType,
+            product_type: productType,
+            sellerName,
+          });
+        });
+
+        // 2. Từ localStorage STAFF_A_NOTIFICATIONS (new_form, fallback cũ)
+        try {
+          const lsNotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
+          lsNotifs.filter(n => n.type === 'new_form').forEach(n => {
+            if (!requests.some(r => r.product_id && String(r.product_id) === String(n.product_id) && r.source === 'api')) {
+              requests.push({
+                ...n,
+                productId: n.product_id || n.productId,
+                source: 'localStorage',
+              });
+            }
+          });
+        } catch { }
+
+        requests.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        setRequestNotifications(prev => {
+          const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
+          return requests.slice(0, 50).map(n => ({
+            ...n,
+            read: prevMap[n.id]?.read === true ? true : (n.read || false),
+          }));
+        });
+      })
+      .catch(() => {
+        // Fallback: localStorage only
+        try {
+          const lsNotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
+          const filtered = lsNotifs.filter(n => n.type === 'new_form')
+            .map(n => ({ ...n, productId: n.product_id || n.productId }))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 50);
+          setRequestNotifications(prev => {
+            const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
+            return filtered.map(n => ({ ...n, read: prevMap[n.id]?.read === true ? true : (n.read || false) }));
+          });
+        } catch { }
       });
-    } catch (err) {
-      console.error('Error loading request notifications:', err);
-    }
   }, []);
 
   const loadNewsNotifications = useCallback(() => {
@@ -120,18 +151,19 @@ export default function AdminDashboard() {
   }, []);
 
   const markRequestAsRead = useCallback((notificationId) => {
-    try {
-      const staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
-      const updated = staffANotifs.map(n =>
-        n.id === notificationId ? { ...n, read: true } : n
-      );
-      localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(updated));
-      setRequestNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-      );
-    } catch (err) {
-      console.error('Error marking request as read:', err);
+    if (String(notificationId).startsWith('api_')) {
+      const realId = String(notificationId).replace('api_', '');
+      notificationApi.readOne(realId).catch(() => {});
+    } else {
+      try {
+        const staffANotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
+        const updated = staffANotifs.map(n => n.id === notificationId ? { ...n, read: true } : n);
+        localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(updated));
+      } catch { }
     }
+    setRequestNotifications(prev =>
+      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+    );
   }, []);
 
   const markNewsAsRead = useCallback((notificationId) => {
@@ -150,7 +182,7 @@ export default function AdminDashboard() {
   }, []);
 
   const handleRequestClick = useCallback(async (notification) => {
-    const productId = notification.product_id;
+    const productId = notification.productId || notification.product_id;
     if (!productId) return;
 
     setActive('overview');

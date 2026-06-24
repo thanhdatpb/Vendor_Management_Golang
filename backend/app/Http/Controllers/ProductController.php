@@ -404,20 +404,34 @@ public function pendingApprovals()
         $product->rejection_reason = $isApproved ? null : $request->reason;
         $product->save();
 
+        $pt = $product->product_type;
+        $notifData = ['product_id' => (int)$product->id, 'product_type' => $pt];
+
         if ($product->created_by) {
             $message = $isApproved
-                ? "✅ Sản phẩm \"{$product->product_type}\" đã được Admin phê duyệt."
-                : "❌ Sản phẩm \"{$product->product_type}\" bị từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '');
+                ? "Sản phẩm \"{$pt}\" đã được Admin phê duyệt."
+                : "Sản phẩm \"{$pt}\" bị Admin từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '');
             NotificationService::send(
                 $product->created_by,
                 $isApproved ? 'approved' : 'rejected',
                 $isApproved ? '✅ Sản phẩm đã được duyệt' : '❌ Sản phẩm bị từ chối',
-                $message
+                $message,
+                $notifData
             );
         }
-        
+
+        if ($isApproved) {
+            NotificationService::sendToRole(
+                'staff_b',
+                'needs_vendor',
+                '🔧 Sản phẩm cần gán vendor',
+                "Sản phẩm \"{$pt}\" đã được Admin duyệt, cần gán vendor.",
+                $notifData
+            );
+        }
+
         $this->clearProductsCache();
-        
+
         return response()->json(['message' => $isApproved ? 'Product approved' : 'Product rejected']);
     }
 
@@ -436,7 +450,8 @@ public function pendingApprovals()
                 $product->created_by,
                 'rejected',
                 '❌ Sản phẩm bị từ chối',
-                "Sản phẩm \"{$product->product_type}\" bị từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '')
+                "Sản phẩm \"{$product->product_type}\" bị Admin từ chối." . ($request->reason ? " Lý do: {$request->reason}" : ''),
+                ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
             );
         }
 
@@ -459,7 +474,8 @@ public function pendingApprovals()
                 $product->created_by,
                 'feedback',
                 '💬 Có phản hồi mới từ Staff B',
-                "Sản phẩm \"{$product->product_type}\": {$validated['feedback']}"
+                "Sản phẩm \"{$product->product_type}\": {$validated['feedback']}",
+                ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
             );
         }
 
@@ -558,7 +574,8 @@ public function approvedProducts()
                 $product->created_by,
                 'deadline_updated',
                 '📅 Deadline đã được cập nhật',
-                "Sản phẩm \"{$product->product_type}\" có deadline mới: " . date('d/m/Y', strtotime($validated['deadline_date']))
+                "Sản phẩm \"{$product->product_type}\" có deadline mới: " . date('d/m/Y', strtotime($validated['deadline_date'])),
+                ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
             );
         }
 
@@ -591,12 +608,20 @@ public function approvedProducts()
 
         // Gửi thông báo cho Seller (người tạo sản phẩm)
         if ($product->created_by) {
-            $count = count($product->assigned_vendors);
+            $firstVendorName = '';
+            if (!empty($vendors) && is_array($vendors) && isset($vendors[0])) {
+                $first = $vendors[0];
+                $firstVendorName = $first['vendorName'] ?? ($first['name'] ?? '');
+            }
+            $vendorBody = $firstVendorName
+                ? "Vendor \"{$firstVendorName}\" đã được gán cho sản phẩm \"{$product->product_type}\"."
+                : "Sản phẩm \"{$product->product_type}\" đã được gán " . count($vendors) . " vendor để tham khảo.";
             NotificationService::send(
                 $product->created_by,
                 'vendor_assigned',
                 '🏪 Vendor đã được gán',
-                "Sản phẩm \"{$product->product_type}\" đã được gán {$count} vendor để tham khảo."
+                $vendorBody,
+                ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
             );
         }
 

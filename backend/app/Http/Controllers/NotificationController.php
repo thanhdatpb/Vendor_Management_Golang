@@ -16,7 +16,14 @@ class NotificationController extends Controller
         $notifications = Notification::where('user_id', Auth::id())
             ->latest()
             ->take(50)
-            ->get();
+            ->get()
+            ->map(function ($n) {
+                if ($n->data && is_string($n->data)) {
+                    $parsed = json_decode($n->data, true);
+                    $n->data = is_array($parsed) ? $parsed : null;
+                }
+                return $n;
+            });
 
         $unread = Notification::where('user_id', Auth::id())
             ->where('is_read', false)
