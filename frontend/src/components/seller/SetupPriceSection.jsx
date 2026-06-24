@@ -494,10 +494,10 @@ export default function SetupPriceSection() {
                   <select value={globalSettings.shipping_method}
                     onChange={e => setGlobalSettings(p => ({ ...p, shipping_method: e.target.value }))}
                     style={{ ...inp, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
-                    <option value="economy">🚚 Economy</option>
-                    <option value="fast">⚡ Ground/Fast</option>
-                    <option value="express">✈️ Express</option>
-                    <option value="overnight">🌙 Overnight</option>
+                    <option value="economy">Economy</option>
+                    <option value="fast">Ground/Fast</option>
+                    <option value="express">Express</option>
+                    <option value="overnight">Overnight</option>
                   </select>
                 </div>
               </div>
