@@ -21,6 +21,7 @@ const inputCell = { ...inp, padding: '5px 7px', fontSize: 11, textAlign: 'right'
 
 const mkRow = () => ({
   id: Date.now() + Math.random(),
+  product_type: '',
   size_label: '',
   for_adult_kid: '',
   for_type_size: '',
@@ -225,6 +226,7 @@ export default function SetupPriceSection() {
       });
       setSizeRows(saved.sizes.map(s => ({
         id: s.id || Date.now() + Math.random(),
+        product_type: s.product_type || '',
         size_label: s.size_label || '',
         for_adult_kid: s.for_adult_kid ?? '',
         for_type_size: s.for_type_size ?? '',
@@ -258,6 +260,7 @@ export default function SetupPriceSection() {
           const sizeLabel = shape ? `${s.size || ''} (${shape})` : (s.size || '');
           return {
             ...mkRow(),
+            product_type: s.product_type || '',
             size_label: sizeLabel,
             item_cost: s.eco_total ? String(parseFloat(s.eco_total) || '') : '',
             shipping_cost: '0',
@@ -282,7 +285,7 @@ export default function SetupPriceSection() {
       coupon_pct: parseFloat(globalSettings.coupon_pct) || 0,
       shipping_method: globalSettings.shipping_method,
       sizes: sizeRows.map(r => ({
-        id: r.id, size_label: r.size_label,
+        id: r.id, product_type: r.product_type || '', size_label: r.size_label,
         for_adult_kid: parseFloat(r.for_adult_kid) || 0,
         for_type_size: parseFloat(r.for_type_size) || 0,
         item_cost: parseFloat(r.item_cost) || 0,
@@ -529,7 +532,7 @@ export default function SetupPriceSection() {
                   <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                     {/* Group headers */}
                     <tr>
-                      <th colSpan={5} style={{ padding: '6px 8px', background: `${HC.orange}22`, color: HC.orangeDark, fontWeight: 800, fontSize: 11, textAlign: 'center', border: `1px solid ${HC.orangeMid}`, borderBottom: 'none' }}>
+                      <th colSpan={6} style={{ padding: '6px 8px', background: `${HC.orange}22`, color: HC.orangeDark, fontWeight: 800, fontSize: 11, textAlign: 'center', border: `1px solid ${HC.orangeMid}`, borderBottom: 'none' }}>
                         ✏️ Nhập liệu
                       </th>
                       <th style={{ width: 8, background: 'transparent', border: 'none' }} />
@@ -541,6 +544,7 @@ export default function SetupPriceSection() {
                     {/* Column headers */}
                     <tr style={{ background: HC.surface2 }}>
                       {/* Input cols */}
+                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 120, fontSize: 11 }}>Product Type</th>
                       <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 90, fontSize: 11 }}>Size</th>
                       <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>For Adult/Kid ($)</th>
                       <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>For Type+Size ($)</th>
@@ -564,6 +568,19 @@ export default function SetupPriceSection() {
                   <tbody>
                     {computedRows.map((row, idx) => (
                       <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                        {/* Product Type */}
+                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                          {selectedGroup._productTypeList.length > 0 ? (
+                            <select value={row.product_type} onChange={e => updateRow(idx, 'product_type', e.target.value)}
+                              style={{ ...inputCell, width: 108, textAlign: 'left', cursor: 'pointer', paddingRight: 4 }}>
+                              <option value="">— chọn —</option>
+                              {selectedGroup._productTypeList.map(pt => <option key={pt} value={pt}>{pt}</option>)}
+                            </select>
+                          ) : (
+                            <input type="text" value={row.product_type} onChange={e => updateRow(idx, 'product_type', e.target.value)}
+                              placeholder="Product Type" style={{ ...inputCell, width: 108, textAlign: 'left' }} />
+                          )}
+                        </td>
                         {/* Size label */}
                         <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
                           <input type="text" value={row.size_label} onChange={e => updateRow(idx, 'size_label', e.target.value)}
