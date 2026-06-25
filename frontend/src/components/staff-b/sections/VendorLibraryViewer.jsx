@@ -1009,7 +1009,11 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         if (!file.generalInfo) return file;
         const filteredGeneral = file.generalInfo.filter(r => assignedIds.has(r.id));
         if (filteredGeneral.length === 0) return null;
-        const assignedKyHieus = new Set(filteredGeneral.map(r => r.kyHieu).filter(Boolean));
+        // Include kyHieu AND vendorName so pricing rows tagged with vendorName (when generalInfo.kyHieu is empty) are matched
+        const assignedKyHieus = new Set([
+          ...filteredGeneral.map(r => r.kyHieu).filter(Boolean),
+          ...filteredGeneral.map(r => (r.vendorName || '').trim()).filter(Boolean),
+        ]);
         // Vendors không có kyHieu → fallback match theo productType
         const noKyHieuProductTypes = new Set(
           filteredGeneral
@@ -1017,13 +1021,25 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
             .map(r => (r.productType || '').toLowerCase().trim())
             .filter(Boolean)
         );
-        const filteredPricing = assignedKyHieus.size === 0
+        // All kyHieu values appearing in pricing that do NOT belong to assigned vendors
+        const unassignedPricingKyHieus = new Set(
+          (file.pricing || []).map(p => (p.kyHieu || '').trim()).filter(k => k && !assignedKyHieus.has(k))
+        );
+        const filteredPricing = (assignedKyHieus.size === 0 && noKyHieuProductTypes.size === 0)
           ? (file.pricing || [])
           : (file.pricing || []).filter(p => {
-              if (!p.kyHieu) return true;
-              if (assignedKyHieus.has(p.kyHieu)) return true;
-              if (noKyHieuProductTypes.size > 0 && noKyHieuProductTypes.has((p.productType || '').toLowerCase().trim())) return true;
-              return false;
+              const pk = (p.kyHieu || '').trim();
+              if (pk) {
+                if (assignedKyHieus.has(pk)) return true;
+                if (noKyHieuProductTypes.size > 0 && noKyHieuProductTypes.has((p.productType || '').toLowerCase().trim())) return true;
+                return false;
+              }
+              // Empty kyHieu row: include unless file has distinguishable unassigned vendor rows
+              if (noKyHieuProductTypes.size > 0) {
+                const ppt = (p.productType || '').toLowerCase().trim();
+                return ppt && noKyHieuProductTypes.has(ppt);
+              }
+              return unassignedPricingKyHieus.size === 0;
             });
         return { ...file, generalInfo: filteredGeneral, pricing: filteredPricing };
       }).filter(Boolean);
