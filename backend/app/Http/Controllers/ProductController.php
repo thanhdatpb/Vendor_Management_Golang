@@ -10,6 +10,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class ProductController extends Controller
 {
@@ -176,7 +177,7 @@ public function store(Request $request)
     if ($productTypeLinks !== null) {
         $data['product_type_links'] = $productTypeLinks;
     }
-    if ($productVideoLinks !== null) {
+    if ($productVideoLinks !== null && Schema::hasColumn('products', 'product_video_links')) {
         $data['product_video_links'] = $productVideoLinks;
     }
 
@@ -244,7 +245,7 @@ public function update(Request $request, $id)
     if (isset($validated['product_type_links'])) {
         $product->product_type_links = $validated['product_type_links'];
     }
-    if (isset($validated['product_video_links'])) {
+    if (isset($validated['product_video_links']) && Schema::hasColumn('products', 'product_video_links')) {
         $product->product_video_links = $validated['product_video_links'];
     }
 
