@@ -279,6 +279,34 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
       color: HC.orange,
       bold: false
     },
+    {
+      label: 'Video',
+      value: (() => {
+        let vLinks = [];
+        if (product.product_video_links && Array.isArray(product.product_video_links)) {
+          vLinks = product.product_video_links;
+        } else if (typeof product.product_video_links === 'string') {
+          try { vLinks = JSON.parse(product.product_video_links); } catch { vLinks = [product.product_video_links]; }
+        }
+        vLinks = vLinks.filter(Boolean);
+        if (vLinks.length === 0) return '—';
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {vLinks.map((link, idx) => (
+              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                style={{ color: '#7c3aed', textDecoration: 'none', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6, wordBreak: 'break-all' }}
+                onMouseEnter={e => { e.currentTarget.style.textDecoration = 'underline'; }}
+                onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}
+              >
+                ▶ {link.length > 60 ? link.substring(0, 60) + '...' : link}
+              </a>
+            ))}
+          </div>
+        );
+      })(),
+      color: '#7c3aed',
+      bold: false
+    },
     { label: 'Status', value: product.status || 'draft', bold: true, color: HC.brown },
   ];
 
@@ -437,6 +465,32 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     ))}
                   </div>
                 )}
+
+                {/* Row 4: video links inline */}
+                {(() => {
+                  let vLinks = [];
+                  if (product.product_video_links && Array.isArray(product.product_video_links)) {
+                    vLinks = product.product_video_links;
+                  } else if (typeof product.product_video_links === 'string') {
+                    try { vLinks = JSON.parse(product.product_video_links); } catch { vLinks = [product.product_video_links]; }
+                  }
+                  vLinks = vLinks.filter(Boolean);
+                  if (vLinks.length === 0) return null;
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Video</span>
+                      {vLinks.map((link, idx) => (
+                        <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                          style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: '#f5f3ff', border: '1px solid #ddd6fe', transition: 'background 0.15s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#ede9fe'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#f5f3ff'; }}
+                        >
+                          ▶ Video {idx + 1}
+                        </a>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
