@@ -223,9 +223,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               pricingRows.forEach((p, pi) => {
                 excelSelected.push({
                   ...baseData,
-                  id: `${m.id}_${p.size || pi}`,
+                  id: `${m.id}_${pi}`,
                   size: p.size || m.chiTietSize || '',
                   optional: p.optional || '',
+                  product_type: p.productType || '',
                   eco_total: p.eco_total ?? null,
                   eco_price: p.eco_price ?? null,
                   pricing1: p.pricing1 ?? null,
