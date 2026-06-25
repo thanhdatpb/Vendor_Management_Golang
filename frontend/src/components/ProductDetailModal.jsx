@@ -72,6 +72,14 @@ export default function ProductDetailModal({ product, productVendors, onClose, g
     else { try { links = JSON.parse(product.product_type_links); } catch { links = [product.product_type_links]; } }
   } else if (product.product_type_link) links = [product.product_type_link];
 
+  // Parse video links
+  let videoLinks = [];
+  if (product.product_video_links) {
+    if (Array.isArray(product.product_video_links)) videoLinks = product.product_video_links;
+    else { try { videoLinks = JSON.parse(product.product_video_links); } catch { videoLinks = [product.product_video_links]; } }
+  }
+  videoLinks = videoLinks.filter(Boolean);
+
   // Group vendors by name
   const groupedVendors = [];
   const groupMap = new Map();
@@ -277,7 +285,23 @@ export default function ProductDetailModal({ product, productVendors, onClose, g
                   </div>
                 )}
 
-                {/* Row 4: Good / Bad Review */}
+                {/* Row 4: Video links */}
+                {videoLinks.length > 0 && (
+                  <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 10, padding: '8px 13px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>▶ Video</span>
+                    {videoLinks.map((link, idx) => (
+                      <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', padding: '4px 12px', borderRadius: 20, background: '#ede9fe', border: '1px solid #c4b5fd' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#ddd6fe'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#ede9fe'; }}
+                      >
+                        ▶ Video {idx + 1}
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                {/* Row 5: Good / Bad Review */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px' }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>👍 Good Review</div>
