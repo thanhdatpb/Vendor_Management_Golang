@@ -254,7 +254,8 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
   if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>;
 
   const kyHieuToVendor = {};
-  (generalInfo || []).forEach(r => { if (r.kyHieu) kyHieuToVendor[r.kyHieu] = r.vendorName || ''; });
+  (generalInfo || []).forEach(r => { if (r.kyHieu) kyHieuToVendor[r.kyHieu] = r.vendorName || r.kyHieu || ''; });
+  const uniqueVendorNames = [...new Set((generalInfo || []).map(g => g.vendorName || g.kyHieu).filter(Boolean))];
 
   const startEdit = (idx, row) => {
     setEditIdx(idx);
@@ -366,6 +367,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                         });
                         if (gi?.vendorName) return gi.vendorName;
                       }
+                      if (uniqueVendorNames.length === 1) return uniqueVendorNames[0];
                       return '';
                     })();
                     return vName
