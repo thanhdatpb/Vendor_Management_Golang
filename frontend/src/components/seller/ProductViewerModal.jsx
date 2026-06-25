@@ -452,21 +452,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   ))}
                 </div>
 
-                {/* Row 3: ref links inline */}
-                {referenceLinks.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Links</span>
-                    {referenceLinks.map((link, idx) => (
-                      <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                        style={{ fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                      >Link {idx + 1}</a>
-                    ))}
-                  </div>
-                )}
-
-                {/* Row 4: video links inline */}
+                {/* Row 3 & 4: links + video — always visible */}
                 {(() => {
                   let vLinks = [];
                   if (product.product_video_links && Array.isArray(product.product_video_links)) {
@@ -475,19 +461,36 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     try { vLinks = JSON.parse(product.product_video_links); } catch { vLinks = [product.product_video_links]; }
                   }
                   vLinks = vLinks.filter(Boolean);
-                  if (vLinks.length === 0) return null;
                   return (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Video</span>
-                      {vLinks.map((link, idx) => (
-                        <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                          style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: '#f5f3ff', border: '1px solid #ddd6fe', transition: 'background 0.15s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#ede9fe'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = '#f5f3ff'; }}
-                        >
-                          ▶ Video {idx + 1}
-                        </a>
-                      ))}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: referenceLinks.length > 0 || vLinks.length > 0 ? 0 : 0 }}>
+                      {/* Ref links */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, minWidth: 38 }}>Links</span>
+                        {referenceLinks.length > 0
+                          ? referenceLinks.map((link, idx) => (
+                              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                style={{ fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                              >Link {idx + 1}</a>
+                            ))
+                          : <span style={{ fontSize: 10, color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
+                        }
+                      </div>
+                      {/* Video links */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, minWidth: 38 }}>Video</span>
+                        {vLinks.length > 0
+                          ? vLinks.map((link, idx) => (
+                              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: '#f5f3ff', border: '1px solid #ddd6fe', transition: 'background 0.15s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#ede9fe'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#f5f3ff'; }}
+                              >▶ Video {idx + 1}</a>
+                            ))
+                          : <span style={{ fontSize: 10, color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
+                        }
+                      </div>
                     </div>
                   );
                 })()}
