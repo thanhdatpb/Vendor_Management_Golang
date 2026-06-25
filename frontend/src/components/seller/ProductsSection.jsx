@@ -1048,15 +1048,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
               {/* 1.1 Hình ảnh sản phẩm — link + upload gộp 1 mục */}
               <div style={{ marginBottom: 16 }}>
                 <Field label="1.1 Link hình ảnh (Nhiều link, sau mỗi link bấm enter)" required error={formErrors.product_type_links}>
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileUploadRef}
-                    type="file"
-                    accept="image/*,video/mp4,video/webm"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                  />
+                  {/* Hidden file input — disabled */}
 
                   {/* Input row — link + 2 buttons */}
                   <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -1083,25 +1075,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       }}
                     >
                       + Thêm link
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fileUploadRef.current?.click()}
-                      style={{
-                        padding: '9px 13px', borderRadius: 9,
-                        background: HC.orangeLight,
-                        color: HC.orangeDark,
-                        border: `1.5px solid ${HC.orangeMid}`,
-                        fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                        whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#ffe4c4'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                      </svg>
-                      {previewUrls.length > 0 ? `Tải ảnh (${previewUrls.length})` : 'Tải ảnh'}
                     </button>
                   </div>
 
@@ -1138,32 +1111,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     </div>
                   )}
 
-                  {/* Thumbnail grid — file upload từ máy */}
-                  {previewUrls.length > 0 && (
-                    <div style={{ marginTop: form.product_type_links.length > 0 ? 8 : 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {previewUrls.map((url, idx) => (
-                        <div key={idx} style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', border: `1.5px solid ${HC.orangeMid}`, background: HC.surface, flexShrink: 0 }}>
-                          <div style={{ width: '100%', height: 90, background: '#f1f5f9', overflow: 'hidden' }}>
-                            {form.mediaFiles[idx]?.type?.startsWith('video') ? (
-                              <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
-                            ) : (
-                              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(idx)}
-                            style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          >✕</button>
-                          <div style={{ padding: '3px 6px', background: '#e0f2fe', fontSize: 9, color: '#0369a1', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {form.mediaFiles[idx]?.name?.length > 16
-                              ? form.mediaFiles[idx].name.substring(0, 16) + '…'
-                              : form.mediaFiles[idx]?.name || 'file'}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
 
                   {formErrors.product_type_links && (
                     <span style={{ color: HC.danger, fontSize: 10, marginTop: 2 }}>⚠ {formErrors.product_type_links}</span>
