@@ -588,6 +588,7 @@ export async function parseHappyCreativeLibrary(file) {
           // Data bắt đầu từ sub-header + 1 (skip cả 2 dòng header)
           const dataStart = pricingSubHeaderRow >= 0 ? pricingSubHeaderRow + 1 : pricingHeaderRow + 2;
 
+          let lastPricingKyHieu = '';
           for (let r = dataStart; r < endRow; r++) {
             const row = aoa[r] || [];
             if (row.every(c => cellStr(c) === '')) continue;
@@ -598,8 +599,11 @@ export async function parseHappyCreativeLibrary(file) {
             // Bỏ header rows lạc
             if (kyHieu.toLowerCase().includes('ký hiệu') || kyHieu.toLowerCase() === 'ky hieu') continue;
 
+            // Propagate kyHieu: only first row of each vendor block has it; carry it forward
+            if (kyHieu) lastPricingKyHieu = kyHieu;
+
             pricing.push({
-              kyHieu,
+              kyHieu: lastPricingKyHieu,
               productType,
               size: cellStr(row[2]) === 'N/A' ? '' : cellStr(row[2]),
               optional: cellStr(row[3]) === 'N/A' ? '' : cellStr(row[3]),
