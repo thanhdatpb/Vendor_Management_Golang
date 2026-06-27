@@ -495,15 +495,25 @@ export default function SetupPriceSection() {
                       <td style={{ padding: '10px 8px', fontWeight: 600, color: group.vendor_type === 'Best Seller' ? '#D4A017' : HC.orange }}>
                         {group.vendor_type || '—'}{group.vendor_type === 'Best Seller' && <span style={{ marginLeft: 4, fontSize: 11 }}>⭐</span>}
                       </td>
-                      {/* Product Types — all types across the group */}
-                      <td style={{ padding: '8px 8px', maxWidth: 160 }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {group._productTypeList.length > 0
-                            ? group._productTypeList.map(pt => (
-                                <span key={pt} style={{ padding: '2px 7px', borderRadius: 10, background: HC.surface2, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.ink2, whiteSpace: 'nowrap' }}>{pt}</span>
-                              ))
-                            : <span style={{ color: HC.muted, fontSize: 11 }}>—</span>}
-                        </div>
+                      {/* Product Types — capped at 3 visible chips + overflow badge */}
+                      <td style={{ padding: '8px 10px', maxWidth: 220 }}>
+                        {group._productTypeList.length === 0
+                          ? <span style={{ color: HC.muted, fontSize: 11 }}>—</span>
+                          : (() => {
+                              const visible = group._productTypeList.slice(0, 3);
+                              const rest = group._productTypeList.length - 3;
+                              return (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                                  {visible.map(pt => (
+                                    <span key={pt} title={pt} style={{ padding: '2px 8px', borderRadius: 10, background: HC.surface2, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.ink2, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }}>{pt}</span>
+                                  ))}
+                                  {rest > 0 && (
+                                    <span title={group._productTypeList.slice(3).join(', ')} style={{ padding: '2px 8px', borderRadius: 10, background: HC.orangeLight, color: HC.orangeDark, fontSize: 10, fontWeight: 700, cursor: 'default', whiteSpace: 'nowrap' }}>+{rest}</span>
+                                  )}
+                                </div>
+                              );
+                            })()
+                        }
                       </td>
                       {/* Số Size — count of unique sizes from raw data + setup badge */}
                       <td style={tdCenter}>
