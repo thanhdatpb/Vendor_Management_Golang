@@ -44,6 +44,7 @@ class UserSeeder extends Seeder {
             ['email' => 'happyc.seller.creative', 'name' => 'Creative Project', 'project' => 'Creative Project'],
             ['email' => 'happyc.seller.global',   'name' => 'Global Project',   'project' => 'Global Project'],
             ['email' => 'happyc.seller.pilot',    'name' => 'Pilot Project',    'project' => 'Pilot Project'],
+            ['email' => 'hc.hapify84',            'name' => 'Hapify84 Project', 'project' => 'Hapify84 Project'],
         ];
 
         foreach ($staffAccounts as $account) {
@@ -67,11 +68,12 @@ class UserSeeder extends Seeder {
         $this->command->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         $this->command->info("🔴 Admin:     happyc.admin");
         $this->command->info("🟡 Staff B:   happyc.vendor");
-        $this->command->info("🟢 Staff A:   4 sellers:");
+        $this->command->info("🟢 Staff A:   5 sellers:");
         $this->command->info("   - happyc.seller.creative");
         $this->command->info("   - happyc.seller.happy");
         $this->command->info("   - happyc.seller.pilot");
         $this->command->info("   - happyc.seller.global");
+        $this->command->info("   - hc.hapify84");
         $this->command->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 }
