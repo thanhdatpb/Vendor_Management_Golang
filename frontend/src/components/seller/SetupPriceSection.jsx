@@ -8,6 +8,26 @@ import { LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE } from 
 import { lsGet } from '../../utils/sellerHelpers';
 import { Pagination } from './SellerUI';
 import { inp } from './SellerUI';
+import { vendorLibraryApi } from '../../services/api';
+
+// ── Project filter helpers (mirror VendorLibraryViewer) ──────────────────────
+function _extractFileProject(filename) {
+  if (!filename) return null;
+  const fn = filename.toLowerCase();
+  if (fn.includes('p.hapify84')) return 'hapify84';
+  if (fn.includes('p.happy')) return 'happy';
+  if (fn.includes('p.creative')) return 'creative';
+  if (fn.includes('p.global')) return 'global';
+  return null;
+}
+function _getUserProjectKey() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = (u.role || '').toLowerCase().replace(/[-_\s]/g, '');
+    if (role === 'admin' || role === 'staffb' || role === 'vendor') return { skip: true };
+    return { skip: false, key: (u.project || u.name || u.seller_name || '').trim().toLowerCase() };
+  } catch { return { skip: false, key: '' }; }
+}
 
 const LS_PRICE_KEY = 'STAFF_PRICE_LIST_V3';
 const LS_VENDOR_SETUP_KEY = 'VENDOR_PRICE_SETUPS_BY_VENDOR_V1';
@@ -55,6 +75,7 @@ const computeRow = (row, g) => {
 
 export default function SetupPriceSection() {
   const [assignedPriceList, setAssignedPriceList] = useState([]);
+  const [libraryPriceList, setLibraryPriceList]   = useState([]);
   const [search, setSearch]                   = useState('');
   const [filterProductType, setFilterProductType] = useState('');
   const [currentPage, setCurrentPage]         = useState(1);
@@ -72,10 +93,86 @@ export default function SetupPriceSection() {
   });
   const [sizeRows, setSizeRows] = useState([mkRow()]);
 
+  // ── Load vendors from project-filtered library ────────────
+  const loadLibraryVendors = useCallback(async () => {
+    try {
+      const res = await vendorLibraryApi.get('all');
+      const allFiles = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+      const { skip, key: userProjectKey } = _getUserProjectKey();
+      const filteredFiles = (skip || !userProjectKey) ? [] : allFiles.filter(file => {
+        const fp = _extractFileProject(file.filename);
+        if (!fp) return true;
+        return userProjectKey.includes(fp) || fp.includes(userProjectKey);
+      });
+      const normStr = s => (s || '').toString().trim().toLowerCase();
+      const items = [];
+      filteredFiles.forEach(file => {
+        const generalInfo = Array.isArray(file.generalInfo) ? file.generalInfo : [];
+        const pricing = Array.isArray(file.pricing) ? file.pricing : [];
+        const kyHieuToVendor = {};
+        const ptToVendor = {};
+        generalInfo.forEach(g => {
+          if (g.kyHieu && g.vendorName) kyHieuToVendor[g.kyHieu] = g.vendorName;
+          if (g.productType && g.vendorName) ptToVendor[normStr(g.productType)] = g.vendorName;
+        });
+        const untaggedVendorNames = [...new Set(generalInfo.filter(g => !g.kyHieu && g.vendorName).map(g => g.vendorName))];
+        const untaggedFallback = untaggedVendorNames.length === 1 ? untaggedVendorNames[0] : '';
+        const uniqueVendorNames = [...new Set(generalInfo.map(g => g.vendorName).filter(Boolean))];
+        let lastKy = '';
+        pricing.forEach(p => {
+          const pk = (p.kyHieu || '').trim();
+          if (pk) lastKy = pk;
+          const effKy = pk || lastKy;
+          let vendorName = effKy ? (kyHieuToVendor[effKy] || effKy) : '';
+          if (!vendorName) {
+            const rpt = normStr(p.productType);
+            if (rpt && ptToVendor[rpt]) vendorName = ptToVendor[rpt];
+            if (!vendorName) {
+              const mk = Object.keys(ptToVendor).find(k => k.includes(rpt) || rpt.includes(k));
+              if (mk) vendorName = ptToVendor[mk];
+            }
+          }
+          if (!vendorName) vendorName = untaggedFallback || (uniqueVendorNames.length === 1 ? uniqueVendorNames[0] : '');
+          if (!vendorName) return;
+          items.push({
+            id: `lib_${file.id}_${p.id || Math.random()}`,
+            vendor_id: `lib_${effKy || vendorName}_${file.id}`,
+            vendor_name: vendorName,
+            vendor_type: p.productType || '',
+            product_type: p.productType || '',
+            size: p.size || '',
+            pricing1: parseFloat(p.pricing1) || 0,
+            pricing2: parseFloat(p.pricing2) || 0,
+            eco_price: parseFloat(p.eco_price) || 0,
+            eco_total: parseFloat(p.eco_total) || 0,
+            ground_price: parseFloat(p.ground_price) || 0,
+            ground_total: parseFloat(p.ground_total) || 0,
+            express_price: parseFloat(p.express_price) || 0,
+            express_total: parseFloat(p.express_total) || 0,
+            twoday_price: parseFloat(p.twoday_price) || 0,
+            twoday_total: parseFloat(p.twoday_total) || 0,
+            overnight_price: parseFloat(p.overnight_price) || 0,
+            overnight_total: parseFloat(p.overnight_total) || 0,
+            source: 'library',
+          });
+        });
+      });
+      setLibraryPriceList(items);
+    } catch (err) {
+      console.error('loadLibraryVendors error:', err);
+    }
+  }, []);
+
   // ── Grouped vendors (by vendor_name) ─────────────────────
   const groupedVendors = useMemo(() => {
+    // Merge library vendors + assigned vendors; library rows deduplicated by vendor+size+productType
+    const assignedKeys = new Set(assignedPriceList.map(i => `${i.vendor_name}|${i.size}|${i.product_type}`));
+    const combinedList = [
+      ...assignedPriceList,
+      ...libraryPriceList.filter(i => !assignedKeys.has(`${i.vendor_name}|${i.size}|${i.product_type}`)),
+    ];
     const map = {};
-    assignedPriceList.forEach(item => {
+    combinedList.forEach(item => {
       // Group solely by vendor_name so all sizes of same vendor merge into one row
       const key = (item.vendor_name || item.vendor_type || 'unknown').trim();
       if (!map[key]) {
@@ -110,7 +207,7 @@ export default function SetupPriceSection() {
         _maxPrice:   computedSizes.length ? Math.max(...computedSizes.map(r => r.total_price)) : null,
       };
     });
-  }, [assignedPriceList]);
+  }, [assignedPriceList, libraryPriceList]);
 
   const filteredGroups = useMemo(() => groupedVendors.filter(g => {
     const q = search.toLowerCase();
@@ -206,11 +303,15 @@ export default function SetupPriceSection() {
   }, [generatePriceListFromApprovedVendors]);
 
   useEffect(() => {
-    if (!isInitializedRef.current) { isInitializedRef.current = true; loadApprovedVendors(); }
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      loadApprovedVendors();
+      loadLibraryVendors();
+    }
     const sync = () => loadApprovedVendors();
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
-  }, [loadApprovedVendors]);
+  }, [loadApprovedVendors, loadLibraryVendors]);
 
   // ── Modal handlers ────────────────────────────────────────
   const handleOpenSetupModal = (group) => {
@@ -344,7 +445,7 @@ export default function SetupPriceSection() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})`, flexShrink: 0 }} />
-          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Vendor từ Uyên Hồ gán</div>
+          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Vendor từ Thư Viện</div>
           <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filteredGroups.length} vendor</span>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <input type="text" placeholder="Tìm vendor / product..." value={search}
@@ -367,7 +468,7 @@ export default function SetupPriceSection() {
         {filteredGroups.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 12, border: `1px solid ${HC.border}` }}>
             <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.5 }}>🏪</div>
-            <div style={{ fontWeight: 600, color: HC.muted }}>Chưa có vendor nào được gán và duyệt</div>
+            <div style={{ fontWeight: 600, color: HC.muted }}>Chưa có vendor nào trong thư viện</div>
           </div>
         ) : (
           <>
