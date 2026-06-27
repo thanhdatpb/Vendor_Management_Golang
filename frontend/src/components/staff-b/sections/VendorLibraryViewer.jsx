@@ -278,9 +278,29 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
 
   if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>;
 
+  const normStr = s => (s || '').toString().trim().toLowerCase();
+
+  // kyHieu → vendorName từ generalInfo
   const kyHieuToVendor = {};
   (generalInfo || []).forEach(r => { if (r.kyHieu) kyHieuToVendor[r.kyHieu] = r.vendorName || r.kyHieu || ''; });
+
+  // productType → vendorName từ generalInfo (dùng khi pricing row không có kyHieu)
+  const ptToVendor = {};
+  (generalInfo || []).forEach(g => { if (g.productType && g.vendorName) ptToVendor[normStr(g.productType)] = g.vendorName; });
+
+  // Vendor không có kyHieu trong generalInfo → dùng làm fallback cho pricing rows không có kyHieu
+  const untaggedVendorNames = [...new Set((generalInfo || []).filter(g => !g.kyHieu && g.vendorName).map(g => g.vendorName))];
+  const untaggedVendorName = untaggedVendorNames.length === 1 ? untaggedVendorNames[0] : '';
+
   const uniqueVendorNames = [...new Set((generalInfo || []).map(g => g.vendorName || g.kyHieu).filter(Boolean))];
+
+  // Sticky kyHieu propagation: nhiều Excel chỉ ghi kyHieu ở row đầu của mỗi vendor block
+  let _lastKy = '';
+  const processedRows = rows.map(r => {
+    const pk = (r.kyHieu || '').trim();
+    if (pk) _lastKy = pk;
+    return { ...r, _effKy: pk || _lastKy };
+  });
 
   const startEdit = (idx, row) => {
     setEditIdx(idx);
@@ -373,7 +393,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => {
+          {processedRows.map((r, i) => {
             const isEditing = editIdx === i;
             return (
               <tr key={i}>
@@ -381,17 +401,19 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                   {isEditing ? (
                     <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
                   ) : (() => {
-                    const normStr = s => (s || '').toString().trim().toLowerCase();
                     const vName = (() => {
-                      if (r.kyHieu) return kyHieuToVendor[r.kyHieu] || r.kyHieu;
+                      // 1. Dùng effective kyHieu (có sticky propagation)
+                      if (r._effKy) return kyHieuToVendor[r._effKy] || r._effKy;
+                      // 2. Lookup trực tiếp theo productType từ generalInfo
                       const rpt = normStr(r.productType);
-                      if (rpt && generalInfo?.length) {
-                        const gi = generalInfo.find(g => {
-                          const gpt = normStr(g.productType || '');
-                          return gpt && (gpt === rpt || gpt.includes(rpt) || rpt.includes(gpt));
-                        });
-                        if (gi?.vendorName) return gi.vendorName;
+                      if (rpt) {
+                        if (ptToVendor[rpt]) return ptToVendor[rpt];
+                        const matchKey = Object.keys(ptToVendor).find(k => k.includes(rpt) || rpt.includes(k));
+                        if (matchKey) return ptToVendor[matchKey];
                       }
+                      // 3. Nếu generalInfo chỉ có 1 vendor không có kyHieu → dùng làm mặc định
+                      if (untaggedVendorName) return untaggedVendorName;
+                      // 4. Nếu cả file chỉ có 1 vendor duy nhất
                       if (uniqueVendorNames.length === 1) return uniqueVendorNames[0];
                       return '';
                     })();

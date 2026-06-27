@@ -362,7 +362,7 @@ export default function Login() {
               <input
                 className="hc-input"
                 type="text"
-                placeholder="happyc.admin"
+                placeholder=""
                 value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
