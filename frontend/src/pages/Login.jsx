@@ -393,7 +393,7 @@ export default function Login() {
               <input
                 className="hc-input has-eye"
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••••"
+                placeholder=""
                 value={form.password}
                 onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
