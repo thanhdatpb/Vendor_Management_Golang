@@ -1000,6 +1000,12 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   // libraryFiles = rawFiles đã filter theo product (chỉ trong readOnly + mode all)
   const libraryFiles = useMemo(() => {
     if (!readOnly || mode !== 'all') return rawFiles;
+    // Nếu user có project → project-based filter sẽ xử lý trong displayFiles,
+    // không cần filter theo vendor được assign vào sản phẩm.
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      if ((u.project || '').trim()) return rawFiles;
+    } catch {}
     try {
       const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
       const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
