@@ -652,118 +652,80 @@ export default function SetupPriceSection() {
                 </button>
               </div>
 
-              <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: '0 24px 12px' }}>
-                <table style={{ borderCollapse: 'collapse', fontSize: 11, minWidth: 1350, width: '100%' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 12px' }}>
+                <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%' }}>
                   <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                    {/* Group headers */}
-                    <tr>
-                      <th colSpan={6} style={{ padding: '6px 8px', background: `${HC.orange}22`, color: HC.orangeDark, fontWeight: 800, fontSize: 11, textAlign: 'center', border: `1px solid ${HC.orangeMid}`, borderBottom: 'none' }}>
-                        ✏️ Nhập liệu
-                      </th>
-                      <th style={{ width: 8, background: 'transparent', border: 'none' }} />
-                      <th colSpan={11} style={{ padding: '6px 8px', background: '#f0fdf4', color: '#065f46', fontWeight: 800, fontSize: 11, textAlign: 'center', border: '1px solid #bbf7d0', borderBottom: 'none' }}>
-                        📐 Tính toán tự động
-                      </th>
-                      <th style={{ background: 'transparent', border: 'none' }} />
-                    </tr>
-                    {/* Column headers */}
-                    <tr style={{ background: HC.surface2 }}>
-                      {/* Input cols */}
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 120, fontSize: 11 }}>Product Type</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 90, fontSize: 11 }}>Size</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>For Adult/Kid ($)</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>For Type+Size ($)</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>Item Cost ($)</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>Ship Cost ($)</th>
-                      {/* Separator */}
-                      <th style={{ width: 8, background: HC.border, border: 'none' }} />
-                      {/* Computed cols */}
-                      {[
-                        'Total Size ($)', 'Custom Push ($)', 'Ship Price ($)', 'Total Price ($)',
-                        'Total Cost ($)', `Coupon (${gCpct}%)`, 'Coupon Fee', 'AMZ Fee (17%)',
-                        'Profit ($)', '% Profit/Cost', 'Profit Margin',
-                      ].map(h => (
-                        <th key={h} style={{ padding: '8px 7px', background: '#ecfdf5', color: '#065f46', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap', border: '1px solid #bbf7d0', fontSize: 11, minWidth: h === 'Total Price ($)' ? 85 : 72 }}>
-                          {h}
-                        </th>
-                      ))}
-                      <th style={{ padding: '8px 6px', background: HC.surface2, color: HC.muted, fontWeight: 700, textAlign: 'center', border: `1px solid ${HC.border}`, width: 40 }}>Xóa</th>
+                    <tr style={{ background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>
+                      <th style={{ ...thBase, color: '#fff', fontSize: 11, minWidth: 150, textAlign: 'left', paddingLeft: 10 }}>Product Type</th>
+                      <th style={{ ...thBase, color: '#fff', fontSize: 11, minWidth: 90, textAlign: 'left' }}>Size</th>
+                      <th style={{ ...thBase, color: '#fff', fontSize: 11, minWidth: 90 }}>Adult/Kid ($)</th>
+                      <th style={{ ...thBase, color: '#fff', fontSize: 11, minWidth: 90 }}>Type+Size ($)</th>
+                      <th style={{ ...thBase, color: '#fff', fontSize: 11, minWidth: 90 }}>Item Cost ($)</th>
+                      <th style={{ ...thBase, color: '#fff', fontSize: 11, minWidth: 90 }}>Ship Cost ($)</th>
+                      <th style={{ ...thBase, color: '#fff', fontSize: 11, width: 38 }}>Xóa</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {computedRows.map((row, idx) => (
-                      <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                        {/* Product Type */}
-                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
-                          {selectedGroup._productTypeList.length > 0 ? (
-                            <select value={row.product_type} onChange={e => updateRow(idx, 'product_type', e.target.value)}
-                              style={{ ...inputCell, width: 108, textAlign: 'left', cursor: 'pointer', paddingRight: 4 }}>
-                              <option value="">— chọn —</option>
-                              {selectedGroup._productTypeList.map(pt => <option key={pt} value={pt}>{pt}</option>)}
-                            </select>
-                          ) : (
-                            <input type="text" value={row.product_type} onChange={e => updateRow(idx, 'product_type', e.target.value)}
-                              placeholder="Product Type" style={{ ...inputCell, width: 108, textAlign: 'left' }} />
-                          )}
+                    {computedRows.map((row, idx) => [
+                      /* ── Input row ── */
+                      <tr key={`${row.id}-in`} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                        {/* Product Type — static */}
+                        <td style={{ padding: '7px 10px', borderLeft: `1px solid ${HC.border}`, borderTop: `1px solid ${HC.border}`, fontWeight: 600, color: HC.ink2, fontSize: 11, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.product_type}>
+                          {row.product_type || <span style={{ color: HC.muted }}>—</span>}
                         </td>
-                        {/* Size label */}
-                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                        <td style={{ padding: '4px 5px', borderLeft: `1px solid ${HC.border}`, borderTop: `1px solid ${HC.border}` }}>
                           <input type="text" value={row.size_label} onChange={e => updateRow(idx, 'size_label', e.target.value)}
-                            placeholder="Men S" style={{ ...inputCell, width: 78, textAlign: 'left' }} />
+                            placeholder="Men S" style={{ ...inputCell, width: '100%', textAlign: 'left', boxSizing: 'border-box' }} />
                         </td>
-                        {/* For Adult/Kid */}
-                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                        <td style={{ padding: '4px 5px', borderLeft: `1px solid ${HC.border}`, borderTop: `1px solid ${HC.border}` }}>
                           <input type="number" step="0.01" value={row.for_adult_kid} onChange={e => updateRow(idx, 'for_adult_kid', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
                         </td>
-                        {/* For Type+Size */}
-                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                        <td style={{ padding: '4px 5px', borderLeft: `1px solid ${HC.border}`, borderTop: `1px solid ${HC.border}` }}>
                           <input type="number" step="0.01" value={row.for_type_size} onChange={e => updateRow(idx, 'for_type_size', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
                         </td>
-                        {/* Item Cost */}
-                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                        <td style={{ padding: '4px 5px', borderLeft: `1px solid ${HC.border}`, borderTop: `1px solid ${HC.border}` }}>
                           <input type="number" step="0.01" value={row.item_cost} onChange={e => updateRow(idx, 'item_cost', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
                         </td>
-                        {/* Ship Cost */}
-                        <td style={{ padding: '5px 5px', border: `1px solid ${HC.border}` }}>
+                        <td style={{ padding: '4px 5px', borderLeft: `1px solid ${HC.border}`, borderTop: `1px solid ${HC.border}` }}>
                           <input type="number" step="0.01" value={row.shipping_cost} onChange={e => updateRow(idx, 'shipping_cost', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: 68 }} />
+                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
                         </td>
-                        {/* Separator */}
-                        <td style={{ width: 8, background: HC.border, padding: 0 }} />
-                        {/* Total Size */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.orangeDark }}>${row.total_size.toFixed(2)}</td>
-                        {/* Custom Push (from global) */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.muted }}>${gCustom.toFixed(2)}</td>
-                        {/* Ship Price (from global) */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.muted }}>${gShip.toFixed(2)}</td>
-                        {/* Total Price */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', fontWeight: 800, fontSize: 12, color: HC.success, background: '#f0fdf4' }}>${row.total_price.toFixed(2)}</td>
-                        {/* Total Cost */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0' }}>${row.total_cost.toFixed(2)}</td>
-                        {/* Coupon */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.warning }}>-${row.coupon_amt.toFixed(3)}</td>
-                        {/* Coupon Fee */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: '#d97706' }}>${row.coupon_fee.toFixed(5)}</td>
-                        {/* AMZ Fee */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.orangeDark }}>${row.amz_fee.toFixed(4)}</td>
-                        {/* Profit */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', fontWeight: 800, fontSize: 12, color: row.profit > 0 ? HC.success : HC.danger }}>${row.profit.toFixed(1)}</td>
-                        {/* Profit Ratio */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: row.profit_ratio > 40 ? HC.success : HC.warning }}>{row.profit_ratio.toFixed(2)}%</td>
-                        {/* Profit Margin */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: row.profit_margin > 20 ? HC.success : HC.warning }}>{row.profit_margin.toFixed(2)}%</td>
-                        {/* Delete */}
-                        <td style={{ padding: '5px 4px', textAlign: 'center', border: `1px solid ${HC.border}` }}>
+                        <td rowSpan={2} style={{ padding: '4px 4px', textAlign: 'center', border: `1px solid ${HC.border}`, verticalAlign: 'middle' }}>
                           <button onClick={() => removeRow(idx)} disabled={sizeRows.length <= 1}
                             style={{ width: 26, height: 26, borderRadius: 6, background: sizeRows.length <= 1 ? HC.surface2 : '#fee2e2', border: '1px solid #fecaca', color: sizeRows.length <= 1 ? HC.muted : HC.danger, cursor: sizeRows.length <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>
                             ✕
                           </button>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>,
+                      /* ── Computed result row ── */
+                      <tr key={`${row.id}-out`} style={{ background: idx % 2 === 0 ? '#f8fdff' : '#f2f9ff' }}>
+                        <td colSpan={6} style={{ padding: '5px 10px', borderLeft: `1px solid ${HC.border}`, borderBottom: `2px solid ${HC.border}` }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                            {[
+                              { label: 'Total Size',   val: `$${row.total_size.toFixed(2)}`,        c: HC.orangeDark },
+                              { label: 'Custom Push',  val: `$${gCustom.toFixed(2)}`,               c: HC.muted },
+                              { label: 'Ship Price',   val: `$${gShip.toFixed(2)}`,                 c: HC.muted },
+                              { label: 'Total Price',  val: `$${row.total_price.toFixed(2)}`,       c: HC.success, bold: true },
+                              { label: 'Total Cost',   val: `$${row.total_cost.toFixed(2)}`,        c: HC.ink2 },
+                              { label: `Coupon ${gCpct}%`, val: `-$${row.coupon_amt.toFixed(3)}`,   c: '#d97706' },
+                              { label: 'Coupon Fee',   val: `$${row.coupon_fee.toFixed(4)}`,        c: '#b45309' },
+                              { label: 'AMZ Fee 17%',  val: `$${row.amz_fee.toFixed(3)}`,           c: HC.orangeDark },
+                              { label: 'Profit',       val: `$${row.profit.toFixed(2)}`,            c: row.profit > 0 ? HC.success : HC.danger, bold: true },
+                              { label: '% P/Cost',     val: `${row.profit_ratio.toFixed(1)}%`,      c: row.profit_ratio > 40 ? HC.success : HC.warning },
+                              { label: 'Margin',       val: `${row.profit_margin.toFixed(1)}%`,     c: row.profit_margin > 20 ? HC.success : HC.warning },
+                            ].map(({ label, val, c, bold }) => (
+                              <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 8, background: '#fff', border: `1px solid ${HC.border}`, fontSize: 10 }}>
+                                <span style={{ color: HC.muted, fontWeight: 500 }}>{label}:</span>
+                                <span style={{ color: c, fontWeight: bold ? 800 : 700 }}>{val}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>,
+                    ])}
                   </tbody>
                 </table>
               </div>
