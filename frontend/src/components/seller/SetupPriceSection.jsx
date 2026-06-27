@@ -154,6 +154,8 @@ export default function SetupPriceSection() {
             overnight_price: parseFloat(p.overnight_price) || 0,
             overnight_total: parseFloat(p.overnight_total) || 0,
             source: 'library',
+            _fileId: file.id,
+            _filename: (file.filename || '').replace(/\.[^.]+$/, ''),
           });
         });
       });
@@ -173,14 +175,19 @@ export default function SetupPriceSection() {
     ];
     const map = {};
     combinedList.forEach(item => {
-      // Group solely by vendor_name so all sizes of same vendor merge into one row
-      const key = (item.vendor_name || item.vendor_type || 'unknown').trim();
+      // Library items: separate by file so same vendor name in different files = different rows
+      const baseName = (item.vendor_name || item.vendor_type || 'unknown').trim();
+      const key = item.source === 'library' && item._fileId
+        ? `${baseName}__lib_${item._fileId}`
+        : baseName;
       if (!map[key]) {
         map[key] = {
           ...item,
           _key: key,
+          _displayName: baseName,
           _rawSizes: [],
           _productTypes: new Set(),
+          _filename: item._filename || null,
         };
       }
       map[key]._rawSizes.push(item);
@@ -491,7 +498,14 @@ export default function SetupPriceSection() {
                   {pagedGroups.map((group, idx) => (
                     <tr key={group._key} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#fff' : HC.surface2 }}>
                       <td style={tdCenter}>{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
-                      <td style={{ padding: '10px 8px', fontWeight: 700, color: HC.ink2 }}>{group.vendor_name || '—'}</td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <div style={{ fontWeight: 700, color: HC.ink2 }}>{group._displayName || group.vendor_name || '—'}</div>
+                        {group._filename && (
+                          <div title={group._filename} style={{ fontSize: 10, color: HC.muted, fontWeight: 500, marginTop: 3, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            📄 {group._filename}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '10px 8px', fontWeight: 600, color: group.vendor_type === 'Best Seller' ? '#D4A017' : HC.orange }}>
                         {group.vendor_type || '—'}{group.vendor_type === 'Best Seller' && <span style={{ marginLeft: 4, fontSize: 11 }}>⭐</span>}
                       </td>
