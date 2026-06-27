@@ -23,9 +23,8 @@ const TD = (idx, extra = {}) => ({
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
-// ── Project visibility helper ─────────────────────────────────────────────────
+// ── Project visibility helpers ────────────────────────────────────────────────
 // Trả về project key từ tên file, hoặc null nếu không có ký hiệu (= hiện cho tất cả).
-// P.xxx → chỉ project đó; không có P.xxx → share cho tất cả project.
 function extractFileProject(filename) {
   if (!filename) return null;
   const fn = filename.toLowerCase();
@@ -33,7 +32,20 @@ function extractFileProject(filename) {
   if (fn.includes('p.happy')) return 'happy';
   if (fn.includes('p.creative')) return 'creative';
   if (fn.includes('p.global')) return 'global';
-  return null; // không có ký hiệu P.xxx → hiện cho tất cả
+  return null;
+}
+
+// Lấy project string của user hiện tại từ localStorage.
+// Ưu tiên: user.project → user.name → user.seller_name (để không cần re-login)
+function getCurrentUserProject() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    const role = (u.role || '').toLowerCase().replace(/[-_\s]/g, '');
+    // Admin và Staff B luôn thấy tất cả — không lọc theo project
+    if (role === 'admin' || role === 'staffb' || role === 'vendor') return { skip: true };
+    const key = (u.project || u.name || u.seller_name || '').trim().toLowerCase();
+    return { skip: false, key };
+  } catch { return { skip: false, key: '' }; }
 }
 
 // ── Section 1 Table ──────────────────────────────────────────────────────────
@@ -1000,12 +1012,10 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   // libraryFiles = rawFiles đã filter theo product (chỉ trong readOnly + mode all)
   const libraryFiles = useMemo(() => {
     if (!readOnly || mode !== 'all') return rawFiles;
-    // Nếu user có project → project-based filter sẽ xử lý trong displayFiles,
+    // Nếu user có project (hoặc role admin) → project-based filter xử lý trong displayFiles,
     // không cần filter theo vendor được assign vào sản phẩm.
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
-      if ((u.project || '').trim()) return rawFiles;
-    } catch {}
+    const { skip, key: userProjectKey } = getCurrentUserProject();
+    if (skip || userProjectKey) return rawFiles;
     try {
       const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
       const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
@@ -1091,19 +1101,16 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         file.title?.toLowerCase().includes(q)
       );
     }
-    // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B luôn thấy tất cả)
+    // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B/Admin thấy tất cả)
     if (readOnly) {
-      try {
-        const u = JSON.parse(localStorage.getItem('user') || '{}');
-        const userProject = (u.project || '').trim().toLowerCase();
-        if (userProject) {
-          files = files.filter(file => {
-            const fp = extractFileProject(file.filename);
-            if (!fp) return true; // global → hiện cho tất cả
-            return userProject.includes(fp) || fp.includes(userProject);
-          });
-        }
-      } catch {}
+      const { skip, key: userProjectKey } = getCurrentUserProject();
+      if (!skip && userProjectKey) {
+        files = files.filter(file => {
+          const fp = extractFileProject(file.filename);
+          if (!fp) return true; // không có P.xxx → hiện cho tất cả project
+          return userProjectKey.includes(fp) || fp.includes(userProjectKey);
+        });
+      }
     }
     // File mới upload nhất lên đầu
     return [...files].sort((a, b) => {
