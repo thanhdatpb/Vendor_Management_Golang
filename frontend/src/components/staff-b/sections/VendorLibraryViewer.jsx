@@ -23,6 +23,19 @@ const TD = (idx, extra = {}) => ({
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
+// ── Project visibility helper ─────────────────────────────────────────────────
+// Trả về project key từ tên file, hoặc null nếu không có ký hiệu (= hiện cho tất cả).
+// P.xxx → chỉ project đó; không có P.xxx → share cho tất cả project.
+function extractFileProject(filename) {
+  if (!filename) return null;
+  const fn = filename.toLowerCase();
+  if (fn.includes('p.hapify84')) return 'hapify84';
+  if (fn.includes('p.happy')) return 'happy';
+  if (fn.includes('p.creative')) return 'creative';
+  if (fn.includes('p.global')) return 'global';
+  return null; // không có ký hiệu P.xxx → hiện cho tất cả
+}
+
 // ── Section 1 Table ──────────────────────────────────────────────────────────
 function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode }) {
   const [editIdx, setEditIdx] = useState(-1);
@@ -1071,6 +1084,20 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         file.filename?.toLowerCase().includes(q) ||
         file.title?.toLowerCase().includes(q)
       );
+    }
+    // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B luôn thấy tất cả)
+    if (readOnly) {
+      try {
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        const userProject = (u.project || '').trim().toLowerCase();
+        if (userProject) {
+          files = files.filter(file => {
+            const fp = extractFileProject(file.filename);
+            if (!fp) return true; // global → hiện cho tất cả
+            return userProject.includes(fp) || fp.includes(userProject);
+          });
+        }
+      } catch {}
     }
     // File mới upload nhất lên đầu
     return [...files].sort((a, b) => {
