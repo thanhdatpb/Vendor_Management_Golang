@@ -33,11 +33,13 @@ class AuthController extends BaseApiController {
         return $this->success([
             'token' => $token,
             'user'  => [
-                'id'     => $user->id,
-                'name'   => $user->name,
-                'email'  => $user->email,
-                'role'   => $user->role,
-                'avatar' => $user->avatar,
+                'id'          => $user->id,
+                'name'        => $user->name,
+                'email'       => $user->email,
+                'role'        => $user->role,
+                'avatar'      => $user->avatar,
+                'project'     => $user->project,
+                'seller_name' => $user->seller_name,
             ],
         ], 'Đăng nhập thành công');
     }
