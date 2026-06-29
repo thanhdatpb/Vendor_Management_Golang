@@ -20,6 +20,19 @@ use App\Http\Controllers\UserController;
 */
 
 // =========================
+// TEMP DEBUG — xóa sau khi xác nhận OK
+// =========================
+Route::get('/debug-config', function () {
+    return response()->json([
+        'has_config_cache'  => file_exists(base_path('bootstrap/cache/config.php')),
+        'config_client_id'  => config('services.google.client_id')  ? 'SET' : 'EMPTY',
+        'config_secret'     => config('services.google.client_secret') ? 'SET' : 'EMPTY',
+        'config_redirect'   => config('services.google.redirect') ?: 'EMPTY',
+        'env_client_id'     => env('GOOGLE_CLIENT_ID') ? 'SET' : 'EMPTY',
+    ]);
+});
+
+// =========================
 // ONE-TIME MIGRATE (delete after use)
 // =========================
 Route::get('/run-migrate-vendor-library-9a2f1b4e', function () {
