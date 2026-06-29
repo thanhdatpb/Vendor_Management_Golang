@@ -259,7 +259,7 @@ export default function StaffDashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', flexShrink: 0 }}><ShopOutlined /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(user?.name === 'Vendor' ? 'Vendor' : user?.name) || 'Vendor'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.full_name || user?.name || 'Vendor'}</div>
                   <div style={{ fontSize: 10, color: DARK.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}><ShopOutlined style={{ fontSize: 9, color: HC.orange }} /><span>Vendor Account</span></div>
                 </div>
               </div>
@@ -322,7 +322,7 @@ function StaffBCollapsedUser({ user, logout }) {
           <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.55)', minWidth: 165 }}>
             <div style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', border: '6px solid transparent', borderRightColor: '#0f172a' }} />
             <div style={{ padding: '4px 6px 10px', borderBottom: `1px solid ${DARK_LOCAL.border}` }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif" }}>{(user?.name === 'Vendor' ? 'Vendor' : user?.name) || 'Vendor'}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif" }}>{user?.full_name || user?.name || 'Vendor'}</div>
               <div style={{ fontSize: 10, color: DARK_LOCAL.textMuted, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}><ShopOutlined style={{ fontSize: 9, color: '#f97316' }} /><span>Vendor Account</span></div>
             </div>
             <button onClick={(e) => { e.stopPropagation(); logout(); }}

@@ -13,14 +13,6 @@ export function AuthProvider({ children }) {
 
     if (savedUser && token) {
       const parsedUser = JSON.parse(savedUser);
-      // Đảm bảo role được chuẩn hóa
-      if (parsedUser.role) {
-        // Chuyển đổi staff_a -> staffa nếu cần cho các kiểm tra
-        const normalizedRole = parsedUser.role === "staff_a" ? "staffa" :
-          parsedUser.role === "staff_b" ? "staffb" :
-            parsedUser.role;
-        parsedUser.role = normalizedRole;
-      }
       setUser(parsedUser);
     }
 
@@ -56,22 +48,9 @@ export function AuthProvider({ children }) {
         throw new Error("Invalid response structure: missing user or token");
       }
 
-      // CHUẨN HÓA ROLE: chuyển staff_a -> staffa, staff_b -> staffb
-      if (userData.role) {
-        console.log("Original role from server:", userData.role);
-
-        // Chuyển đổi role để đồng bộ với các kiểm tra trong app
-        const normalizedRole = userData.role === "staff_a" ? "staffa" :
-          userData.role === "staff_b" ? "staffb" :
-            userData.role;
-        userData.role = normalizedRole;
-        console.log("Normalized role:", userData.role);
-      }
-
-      // ← THÊM: Đảm bảo seller_name được lưu
+      // Đảm bảo seller_name được map sang sellerName
       if (userData.seller_name) {
-        console.log("Seller name from server:", userData.seller_name);
-        userData.sellerName = userData.seller_name;  // ← Thêm trường sellerName cho dễ dùng
+        userData.sellerName = userData.seller_name;
       }
 
       localStorage.setItem("auth_token", token);
@@ -108,10 +87,9 @@ export function AuthProvider({ children }) {
         login,
         logout,
         isAdmin: userRole === "admin",
-        isStaff: userRole === "staffa", // Đã được chuẩn hóa
-        isStaffC: userRole === "staffb", // Đã được chuẩn hóa
+        isStaff: userRole === "seller" || userRole === "staffa",
+        isStaffC: userRole === "vendor" || userRole === "staffb",
         isAuthenticated: !!user,
-        // ← THÊM: Lấy sellerName từ user
         sellerName: user?.sellerName || user?.seller_name || null,
       }}
     >

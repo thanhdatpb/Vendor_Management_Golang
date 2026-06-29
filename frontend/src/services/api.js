@@ -400,4 +400,15 @@ export const authApi = {
 };
 
 
+// ===============================
+// ADMIN — NHÂN SỰ API
+// ===============================
+export const adminUserApi = {
+  list:         ()            => api.get("/admin/users"),
+  create:       (data)        => api.post("/admin/users", data),
+  update:       (id, data)    => api.patch(`/admin/users/${id}`, data),
+  toggleStatus: (id)          => api.patch(`/admin/users/${id}/status`),
+};
+
+
 export default api;

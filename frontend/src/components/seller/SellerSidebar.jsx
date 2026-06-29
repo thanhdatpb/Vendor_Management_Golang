@@ -105,7 +105,8 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
 function CollapsedUserItem({ user, logout }) {
   const [hovered, setHovered] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const displayName = user?.sellerName || user?.seller_name || user?.name || 'Seller';
+  const displayName = user?.project || user?.name || 'Seller';
+  const personName  = user?.full_name || user?.sellerName || user?.seller_name || '';
 
   return (
     <div style={{ position: 'relative', marginBottom: 4 }}>
@@ -162,7 +163,7 @@ function CollapsedUserItem({ user, logout }) {
                 display: 'flex', alignItems: 'center', gap: 4,
               }}>
                 <UserOutlined style={{ fontSize: 9, color: HC.orange }} />
-                <span>Seller Account</span>
+                <span>{personName || 'Seller Account'}</span>
               </div>
             </div>
             <button
@@ -220,7 +221,8 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
     return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
   };
 
-  const displayName = user?.sellerName || user?.seller_name || user?.name || 'Seller';
+  const displayName = user?.project || user?.name || 'Seller';
+  const personName  = user?.full_name || user?.sellerName || user?.seller_name || '';
 
   return (
     <div style={{
@@ -311,7 +313,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
                 display: 'flex', alignItems: 'center', gap: 4, marginTop: 2,
               }}>
                 <UserOutlined style={{ fontSize: 9, color: HC.orange }} />
-                <span>Seller Account</span>
+                <span>{personName || 'Seller Account'}</span>
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChartOutlined, ShopOutlined } from '@ant-design/icons';
+import { PieChartOutlined, ShopOutlined, TeamOutlined } from '@ant-design/icons';
 
 export const HC = {
   orange: '#F5A623', orangeDark: '#E09415', orangeDeep: '#C47F10',
@@ -21,11 +21,13 @@ export const STATUS_CFG = {
 export const MENU = [
   { id: 'overview', icon: <PieChartOutlined />, label: 'Tổng Quan', desc: 'Overview & Analytics' },
   { id: 'vendors', icon: <ShopOutlined />, label: 'Thư Viện Vendor', desc: 'Vendor Library' },
+  { id: 'staff', icon: <TeamOutlined />, label: 'Quản Lý Nhân Sự', desc: 'Staff Management' },
 ];
 
 export const PAGE_TITLES = {
   overview: 'Overview — Tổng Quan',
   vendors: 'Vendors — Thư Viện Vendor',
+  staff: 'Quản Lý Nhân Sự',
 };
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || "";

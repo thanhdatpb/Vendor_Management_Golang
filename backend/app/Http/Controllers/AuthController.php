@@ -40,16 +40,18 @@ class AuthController extends Controller
         // Tạo token Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Trả response cho frontend (THÊM seller_name)
         return response()->json([
             'message' => 'Login success',
             'token' => $token,
             'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'seller_name' => $user->seller_name  // ← THÊM DÒNG NÀY
+                'id'          => $user->id,
+                'name'        => $user->name,
+                'full_name'   => $user->full_name,
+                'email'       => $user->email,
+                'role'        => $user->role,
+                'project'     => $user->project,
+                'seller_name' => $user->seller_name,
+                'avatar_url'  => $user->avatar_url,
             ]
         ]);
     }
@@ -79,11 +81,14 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
-                'seller_name' => $user->seller_name  // ← THÊM DÒNG NÀY
+                'id'          => $user->id,
+                'name'        => $user->name,
+                'full_name'   => $user->full_name,
+                'email'       => $user->email,
+                'role'        => $user->role,
+                'project'     => $user->project,
+                'seller_name' => $user->seller_name,
+                'avatar_url'  => $user->avatar_url,
             ]
         ]);
     }

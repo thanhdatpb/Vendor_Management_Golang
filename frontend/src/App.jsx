@@ -1,6 +1,7 @@
-﻿import { Routes, Route, Navigate } from "react-router-dom"; // thêm Navigate
+﻿import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffADashboard from "./pages/StaffADashboard";
 import StaffBDashboard from "./pages/StaffBDashboard";
@@ -12,7 +13,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/login" element={<Navigate to="/" replace />} /> {/* thêm dòng này */}
+      <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
 
       <Route
         path="/admin"

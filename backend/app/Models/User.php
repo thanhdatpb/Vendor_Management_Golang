@@ -12,15 +12,17 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable {
     use HasApiTokens, HasFactory, Notifiable;
     protected $fillable = [
-        'name', 
-        'email', 
-        'password', 
-        'role', 
-        'avatar', 
+        'name',
+        'email',
+        'password',
+        'role',
+        'avatar',
         'is_active',
-        'seller_name',   
+        'seller_name',
         'full_name',
-        'project'      
+        'project',
+        'google_id',
+        'avatar_url',
     ];
     
     protected $hidden   = ['password', 'remember_token'];

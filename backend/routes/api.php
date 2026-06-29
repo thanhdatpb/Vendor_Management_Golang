@@ -5,6 +5,8 @@ use Illuminate\Http\Request;
 
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VendorController;
@@ -66,6 +68,10 @@ Route::get('/login', function() {
     ], 401);
 })->name('login');
 Route::post('/login', [AuthController::class, 'login']);
+
+// Google OAuth (stateless — no session needed)
+Route::get('/auth/google/redirect',  [SocialAuthController::class, 'redirect']);
+Route::get('/auth/google/callback',  [SocialAuthController::class, 'callback']);
 
 
 
@@ -281,5 +287,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/sellers', [UserController::class, 'getSellers']);
     Route::get('/users/{id}', [UserController::class, 'show']);
 
-    
+
+
+    // =========================
+    // ADMIN — NHÂN SỰ MANAGEMENT
+    // =========================
+
+    Route::middleware('admin')->group(function () {
+        Route::get('/admin/users',                   [AdminUserController::class, 'index']);
+        Route::post('/admin/users',                  [AdminUserController::class, 'store']);
+        Route::patch('/admin/users/{id}',            [AdminUserController::class, 'update']);
+        Route::patch('/admin/users/{id}/status',     [AdminUserController::class, 'toggleStatus']);
+    });
+
+
 });

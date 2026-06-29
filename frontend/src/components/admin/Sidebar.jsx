@@ -155,7 +155,7 @@ function CollapsedUserItem({ user, logout }) {
                 fontSize: 13, fontWeight: 700, color: '#f1f5f9',
                 fontFamily: "'Nunito',sans-serif",
               }}>
-                {(user?.name === 'Admin' ? 'CCO' : user?.name) || 'CCO'}
+                {user?.full_name || user?.name || 'Admin'}
               </div>
               <div style={{
                 fontSize: 10, color: DARK.textMuted, marginTop: 3,
@@ -306,7 +306,7 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
                 fontFamily: "'Nunito',sans-serif",
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               }}>
-                {(user?.name === 'Admin' ? 'CCO' : user?.name) || 'CCO'}
+                {user?.full_name || user?.name || 'Admin'}
               </div>
               <div style={{
                 fontSize: 10, color: DARK.textMuted,

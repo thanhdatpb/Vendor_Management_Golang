@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logoImg from "../assets/logo.png";
+
+const API_BASE = import.meta.env.VITE_API_URL || "";
+const GOOGLE_OAUTH_URL = `${API_BASE}/api/auth/google/redirect`;
+
+const OAUTH_ERROR_MESSAGES = {
+  account_not_found:  "Tài khoản Gmail này chưa được cấp phép. Vui lòng liên hệ Admin.",
+  account_disabled:   "Tài khoản của bạn đã bị khoá. Vui lòng liên hệ Admin.",
+  identity_mismatch:  "Gmail không khớp với tài khoản đã đăng ký. Vui lòng liên hệ Admin.",
+  email_not_verified: "Gmail của bạn chưa được Google xác minh.",
+  oauth_failed:       "Xác thực Google thất bại. Vui lòng thử lại.",
+};
 import {
   UserOutlined,
   LockOutlined,
@@ -15,21 +26,26 @@ import {
 export default function Login() {
   const { login, user: contextUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     if (contextUser) {
       const rawRole = typeof contextUser.role === "object" ? contextUser.role?.name : contextUser.role;
       const role = rawRole ? rawRole.toString().toLowerCase().replace(/[_\-\s]/g, "") : "";
-      
+
       if (role === "admin") navigate("/admin");
       else if (role === "staffa" || role === "staff" || role === "seller") navigate("/seller");
       else if (role === "staffb" || role === "vendor") navigate("/vendor");
     }
   }, [contextUser, navigate]);
 
+  // Đọc lỗi OAuth từ URL params (nếu redirect từ Google callback)
+  const oauthErrorKey = searchParams.get("error") || "";
+  const oauthErrorMsg = OAUTH_ERROR_MESSAGES[oauthErrorKey] || (oauthErrorKey ? decodeURIComponent(oauthErrorKey) : "");
+
   const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(oauthErrorMsg);
   const [focused, setFocused] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -438,6 +454,51 @@ export default function Login() {
                 </>
               )}
             </button>
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0 0" }}>
+            <div style={{ flex: 1, height: 1, background: ORANGE_MID }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#C4B49A", letterSpacing: "0.12em" }}>
+              HOẶC
+            </span>
+            <div style={{ flex: 1, height: 1, background: ORANGE_MID }} />
+          </div>
+
+          {/* Google Sign In */}
+          <div style={{ marginTop: 14 }}>
+            <button
+              className="hc-btn"
+              onClick={() => { window.location.href = GOOGLE_OAUTH_URL; }}
+              disabled={loading}
+              style={{
+                background: "#fff",
+                color: "#3c4043",
+                border: "1.5px solid #E8E0D5",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: loading ? "not-allowed" : "pointer",
+                gap: 10,
+              }}
+            >
+              {/* Google G logo */}
+              <svg width="18" height="18" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                <path fill="none" d="M0 0h48v48H0z"/>
+              </svg>
+              Đăng nhập bằng Google
+            </button>
+            <p style={{
+              textAlign: "center", marginTop: 10,
+              fontSize: 10, color: "#C4B49A",
+              fontFamily: "'Nunito Sans', sans-serif", fontWeight: 600,
+            }}>
+              Dành cho nhân sự — tài khoản phải được Admin cấp phép
+            </p>
           </div>
 
           {/* Footer */}
