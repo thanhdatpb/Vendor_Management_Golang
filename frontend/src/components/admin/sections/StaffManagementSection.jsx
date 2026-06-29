@@ -90,7 +90,7 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, onSave, onC
   const [form, setForm] = useState({
     email:     initialData?.email     || '',
     full_name: initialData?.full_name || '',
-    role:      initialData?.role      || fixedRole || 'seller',
+    role:      initialData?.role      || fixedRole || 'admin',
     project:   initialData?.project   || fixedProject || '',
   });
   const [errors, setErrors] = useState({});
