@@ -5,6 +5,21 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// Load server-specific env overrides from a file outside the git repo.
+// This file lives at ~/home/.env.server and is never overwritten by git deployments.
+// Path: 5 levels up from public/ → /home/<user>/
+$_serverEnvFile = dirname(__DIR__, 5) . '/.env.server';
+if (file_exists($_serverEnvFile)) {
+    foreach (parse_ini_file($_serverEnvFile) ?: [] as $_k => $_v) {
+        if (!array_key_exists($_k, $_ENV)) {
+            $_ENV[$_k] = $_v;
+            $_SERVER[$_k] = $_v;
+            putenv("$_k=$_v");
+        }
+    }
+}
+unset($_serverEnvFile, $_k, $_v);
+
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
