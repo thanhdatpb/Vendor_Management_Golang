@@ -28,16 +28,6 @@ foreach ($_envCandidates as $_serverEnvFile) {
 }
 unset($_envCandidates, $_serverEnvFile, $_k, $_v);
 
-// Debug endpoint — truy cập /api?envdebug=1 để kiểm tra
-if (isset($_GET['envdebug'])) {
-    $info = ['__DIR__' => __DIR__, 'candidates' => [], 'google_client_id' => getenv('GOOGLE_CLIENT_ID') ?: 'EMPTY'];
-    foreach ([dirname(__DIR__,5),dirname(__DIR__,4),dirname(__DIR__,3),dirname(__DIR__,2),dirname(__DIR__,1)] as $i => $d) {
-        $f = $d . '/.env.server';
-        $info['candidates'][] = ['path' => $f, 'exists' => @file_exists($f), 'readable' => @is_readable($f)];
-    }
-    die('<pre>' . json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . '</pre>');
-}
-
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
     require $maintenance;
