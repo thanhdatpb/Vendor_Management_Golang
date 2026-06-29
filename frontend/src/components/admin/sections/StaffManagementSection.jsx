@@ -101,7 +101,7 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, onSave, onC
     const e = {};
     if (mode === 'add') {
       if (!form.email.trim()) e.email = 'Email là bắt buộc';
-      else if (!/^[^\s@]+@gmail\.com$/i.test(form.email.trim())) e.email = 'Phải là địa chỉ @gmail.com';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'Email không hợp lệ';
     }
     if (!form.full_name.trim()) e.full_name = 'Tên đầy đủ là bắt buộc';
     if (form.role === 'seller' && !form.project) e.project = 'Project là bắt buộc';
@@ -141,7 +141,7 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, onSave, onC
       {mode === 'add' && (
         <FormField label="Gmail" error={errors.email}>
           <input
-            style={inputStyle} type="email" placeholder="happyc.ten@gmail.com"
+            style={inputStyle} type="email" placeholder="ten@gmail.com hoặc ten@happy-creative.vn"
             value={form.email} onChange={e => set('email', e.target.value)}
           />
         </FormField>

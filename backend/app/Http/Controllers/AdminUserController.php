@@ -44,7 +44,6 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'email'     => [
                 'required', 'email',
-                'regex:/@gmail\.com$/i',
                 Rule::unique('users', 'email'),
             ],
             'full_name' => 'required|string|max:255',
@@ -55,7 +54,6 @@ class AdminUserController extends Controller
                 Rule::in(self::$VALID_PROJECTS),
             ],
         ], [
-            'email.regex'    => 'Email phải là địa chỉ @gmail.com',
             'email.unique'   => 'Email này đã tồn tại trong hệ thống',
             'project.required_if' => 'Project là bắt buộc khi role là seller',
             'project.in'     => 'Project không hợp lệ',
