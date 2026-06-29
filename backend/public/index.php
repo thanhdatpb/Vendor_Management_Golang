@@ -6,19 +6,37 @@ use Illuminate\Http\Request;
 define('LARAVEL_START', microtime(true));
 
 // Load server-specific env overrides from a file outside the git repo.
-// This file lives at ~/home/.env.server and is never overwritten by git deployments.
-// Path: 5 levels up from public/ → /home/<user>/
-$_serverEnvFile = dirname(__DIR__, 5) . '/.env.server';
-if (file_exists($_serverEnvFile)) {
-    foreach (parse_ini_file($_serverEnvFile) ?: [] as $_k => $_v) {
-        if (!array_key_exists($_k, $_ENV)) {
-            $_ENV[$_k] = $_v;
-            $_SERVER[$_k] = $_v;
-            putenv("$_k=$_v");
+// Try multiple candidate paths to handle open_basedir restrictions.
+$_envCandidates = [
+    dirname(__DIR__, 5) . '/.env.server',  // /home/u.../
+    dirname(__DIR__, 4) . '/.env.server',  // /home/u.../domains/
+    dirname(__DIR__, 3) . '/.env.server',  // /home/u.../domains/domain.com/
+    dirname(__DIR__, 2) . '/.env.server',  // /home/.../public_html/
+    dirname(__DIR__, 1) . '/.env.server',  // backend/
+];
+foreach ($_envCandidates as $_serverEnvFile) {
+    if (@file_exists($_serverEnvFile) && @is_readable($_serverEnvFile)) {
+        foreach (@parse_ini_file($_serverEnvFile) ?: [] as $_k => $_v) {
+            if (!array_key_exists($_k, $_ENV)) {
+                $_ENV[$_k] = $_v;
+                $_SERVER[$_k] = $_v;
+                putenv("$_k=$_v");
+            }
         }
+        break;
     }
 }
-unset($_serverEnvFile, $_k, $_v);
+unset($_envCandidates, $_serverEnvFile, $_k, $_v);
+
+// Debug endpoint — truy cập /api?envdebug=1 để kiểm tra
+if (isset($_GET['envdebug'])) {
+    $info = ['__DIR__' => __DIR__, 'candidates' => [], 'google_client_id' => getenv('GOOGLE_CLIENT_ID') ?: 'EMPTY'];
+    foreach ([dirname(__DIR__,5),dirname(__DIR__,4),dirname(__DIR__,3),dirname(__DIR__,2),dirname(__DIR__,1)] as $i => $d) {
+        $f = $d . '/.env.server';
+        $info['candidates'][] = ['path' => $f, 'exists' => @file_exists($f), 'readable' => @is_readable($f)];
+    }
+    die('<pre>' . json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . '</pre>');
+}
 
 // Determine if the application is in maintenance mode...
 if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
