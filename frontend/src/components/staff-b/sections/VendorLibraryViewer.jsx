@@ -278,7 +278,8 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
 
   if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>;
 
-  const normStr = s => (s || '').toString().trim().toLowerCase();
+  // Strip parens/quotes/extra-spaces so "Canvas (1.5")" matches "Canvas 1.5""
+  const normStr = s => (s || '').toString().trim().toLowerCase().replace(/[()'"""'']/g, '').replace(/\s+/g, ' ').trim();
 
   // kyHieu → vendorName từ generalInfo
   const kyHieuToVendor = {};
