@@ -271,12 +271,102 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   );
 }
 
+// ── Add Row Form (hiển thị dạng card khi bảng trống) ────────────────────────
+function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) {
+  return (
+    <div style={{ border: `1.5px solid ${HC.orange}`, borderRadius: 10, padding: 16, marginTop: 8, background: '#fffbeb' }}>
+      <div style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, marginBottom: 14, fontFamily: "'Nunito',sans-serif" }}>➕ Dòng giá mới</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+        {[['Ký hiệu', 'kyHieu', 'A, B...'],['Product Type','productType','Loại sản phẩm...'],['Size','size','S/M/L...'],['Optional','optional','Optional...']].map(([lbl,key,ph]) => (
+          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lbl}</label>
+            <input type="text" placeholder={ph} value={addForm[key]} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))} style={{ padding: '6px 8px', fontSize: 11, borderRadius: 6, border: `1.5px solid ${HC.border}`, boxSizing: 'border-box', outline: 'none' }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+        {[['Pricing 1 (P1)','pricing1'],['Pricing 2 (P2)','pricing2']].map(([lbl,key]) => (
+          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 10, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lbl}</label>
+            <input type="number" step="0.01" placeholder="0.00" value={addForm[key]} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))} style={{ padding: '6px 8px', fontSize: 11, borderRadius: 6, border: `1.5px solid ${HC.border}`, boxSizing: 'border-box', textAlign: 'right', color: '#b45309', fontWeight: 700, outline: 'none' }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 14 }}>
+        {shipMethods.map(m => (
+          <div key={m.label} style={{ border: `1.5px solid ${m.bg}33`, borderRadius: 8, padding: '8px 8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontWeight: 800, fontSize: 10, color: m.bg, textAlign: 'center', textTransform: 'uppercase' }}>{m.label}</div>
+            {[['Price Ship', m.priceKey, HC.muted], ['Total (fulfill)', m.totalKey, HC.success]].map(([lbl, key, clr]) => (
+              <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <label style={{ fontSize: 9, fontWeight: 700, color: HC.muted, textTransform: 'uppercase' }}>{lbl}</label>
+                <input type="number" step="0.01" placeholder="0.00" value={addForm[key]} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))} style={{ padding: '5px 6px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', color: clr, fontWeight: 700, boxSizing: 'border-box', outline: 'none' }} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <button onClick={onCancel} style={{ padding: '7px 16px', borderRadius: 7, border: `1px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+        <button onClick={saveAddRow} style={{ padding: '7px 20px', borderRadius: 7, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>💾 Lưu dòng giá</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Section 2 Table ──────────────────────────────────────────────────────────
 function PricingTable({ rows, onSave, readOnly, generalInfo }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
+  const [addingRow, setAddingRow] = useState(false);
+  const [addForm, setAddForm] = useState(null);
 
-  if (!rows || rows.length === 0) return <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>;
+  const mkAddForm = () => ({
+    kyHieu: '', productType: '', size: '', optional: '',
+    pricing1: '', pricing2: '',
+    eco_price: '', eco_total: '',
+    ground_price: '', ground_total: '',
+    express_price: '', express_total: '',
+    twoday_price: '', twoday_total: '',
+    overnight_price: '', overnight_total: '',
+  });
+
+  const saveAddRow = () => {
+    const toNum = v => (v === '' || v === null || v === undefined) ? null : Number(v);
+    const newRow = {
+      id: `add_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      kyHieu: addForm.kyHieu,
+      productType: addForm.productType,
+      size: addForm.size,
+      optional: addForm.optional,
+      pricing1: toNum(addForm.pricing1), pricing2: toNum(addForm.pricing2),
+      eco_price: toNum(addForm.eco_price), eco_total: toNum(addForm.eco_total),
+      ground_price: toNum(addForm.ground_price), ground_total: toNum(addForm.ground_total),
+      express_price: toNum(addForm.express_price), express_total: toNum(addForm.express_total),
+      twoday_price: toNum(addForm.twoday_price), twoday_total: toNum(addForm.twoday_total),
+      overnight_price: toNum(addForm.overnight_price), overnight_total: toNum(addForm.overnight_total),
+    };
+    if (onSave) onSave([...(rows || []), newRow]);
+    setAddingRow(false);
+    setAddForm(null);
+  };
+
+  if (!rows || rows.length === 0) return (
+    <div>
+      <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>
+      {!readOnly && (
+        addingRow && addForm
+          ? <AddRowForm addForm={addForm} setAddForm={setAddForm} saveAddRow={saveAddRow} onCancel={() => { setAddingRow(false); setAddForm(null); }} shipMethods={[
+              { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total', bg: '#1d6b3a' },
+              { label: 'Ground', priceKey: 'ground_price', totalKey: 'ground_total', bg: HC.orangeDark },
+              { label: 'Express', priceKey: 'express_price', totalKey: 'express_total', bg: '#1e4fa0' },
+              { label: '2 Days', priceKey: 'twoday_price', totalKey: 'twoday_total', bg: '#7c3aed' },
+              { label: 'Overnight', priceKey: 'overnight_price', totalKey: 'overnight_total', bg: '#b91c1c' },
+            ]} />
+          : <button onClick={() => { setAddingRow(true); setAddForm(mkAddForm()); }} style={{ width: '100%', padding: '9px 0', marginTop: 8, borderRadius: 8, border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>➕ Thêm dòng size/giá</button>
+      )}
+    </div>
+  );
+
 
   // Strip parens/quotes/extra-spaces so "Canvas (1.5")" matches "Canvas 1.5""
   const normStr = s => (s || '').toString().trim().toLowerCase().replace(/[()'"""'']/g, '').replace(/\s+/g, ' ').trim();
@@ -480,8 +570,51 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
               </tr>
             );
           })}
+          {/* Dòng thêm mới inline */}
+          {!readOnly && addingRow && addForm && (
+            <tr style={{ background: '#fffbeb', outline: `2px solid ${HC.orange}` }}>
+              <td style={{ ...TD(processedRows.length), padding: '5px 6px' }}>
+                <input type="text" placeholder="Ký hiệu..." value={addForm.kyHieu} onChange={e => setAddForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.orange}`, boxSizing: 'border-box', fontWeight: 900, color: HC.orangeDark }} />
+              </td>
+              <td style={{ ...TD(processedRows.length), padding: '5px 6px' }}>
+                <input type="text" placeholder="Product Type..." value={addForm.productType} onChange={e => setAddForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+              </td>
+              <td style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'center' }}>
+                <input type="text" placeholder="S/M/L..." value={addForm.size} onChange={e => setAddForm(p => ({ ...p, size: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
+              </td>
+              <td style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'center' }}>
+                <input type="text" placeholder="..." value={addForm.optional} onChange={e => setAddForm(p => ({ ...p, optional: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
+              </td>
+              <td style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
+                <input type="number" step="0.01" placeholder="0.00" value={addForm.pricing1} onChange={e => setAddForm(p => ({ ...p, pricing1: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: '#b45309', fontWeight: 700 }} />
+              </td>
+              <td style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
+                <input type="number" step="0.01" placeholder="0.00" value={addForm.pricing2} onChange={e => setAddForm(p => ({ ...p, pricing2: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: '#b45309', fontWeight: 700 }} />
+              </td>
+              {shipMethods.map(m => [
+                <td key={`nadd-${m.label}-p`} style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
+                  <input type="number" step="0.01" placeholder="0.00" value={addForm[m.priceKey]} onChange={e => setAddForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                </td>,
+                <td key={`nadd-${m.label}-t`} style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
+                  <input type="number" step="0.01" placeholder="0.00" value={addForm[m.totalKey]} onChange={e => setAddForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
+                </td>,
+              ])}
+              <td style={{ ...TD(processedRows.length), textAlign: 'center', padding: '5px 6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <button onClick={saveAddRow} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
+                  <button onClick={() => { setAddingRow(false); setAddForm(null); }} style={{ padding: '4px 8px', borderRadius: 4, background: HC.muted, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Hủy</button>
+                </div>
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+      {!readOnly && !addingRow && (
+        <button
+          onClick={() => { setAddingRow(true); setAddForm(mkAddForm()); }}
+          style={{ width: '100%', marginTop: 8, padding: '9px 0', borderRadius: 8, border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+        >➕ Thêm dòng size/giá</button>
+      )}
     </div>
   );
 }
