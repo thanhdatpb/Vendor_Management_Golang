@@ -526,7 +526,10 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
   useEffect(() => {
     Promise.all([loadAllData(), loadPending()]);
-    const interval = setInterval(() => { loadAllData(); loadPending(); }, 15000);
+    const interval = setInterval(() => {
+      if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
+      loadAllData(); loadPending();
+    }, 45000);
     return () => clearInterval(interval);
   }, [loadAllData, loadPending]);
 

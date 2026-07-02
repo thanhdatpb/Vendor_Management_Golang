@@ -200,7 +200,14 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       .finally(() => setLoading(false));
   }, [selectedProductId, setSelectedProductId]);
 
-  useEffect(() => { loadProducts(); const id = setInterval(loadProducts, 30000); return () => clearInterval(id); }, [loadProducts]);
+  useEffect(() => {
+    loadProducts();
+    const id = setInterval(() => {
+      if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
+      loadProducts();
+    }, 60000);
+    return () => clearInterval(id);
+  }, [loadProducts]);
 
   useEffect(() => {
     if (selectedProductId && submittedProducts.length > 0 && processedProductIdRef.current !== selectedProductId) {

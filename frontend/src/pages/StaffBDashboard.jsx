@@ -159,7 +159,10 @@ export default function StaffDashboard() {
 
   useEffect(() => {
     loadRequestNotifications(); loadNewsNotifications();
-    const interval = setInterval(() => { loadRequestNotifications(); loadNewsNotifications(); }, 100000);
+    const interval = setInterval(() => {
+      if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
+      loadRequestNotifications(); loadNewsNotifications();
+    }, 120000);
     const handleStorageChange = (e) => { if (e.key === 'STAFF_A_NOTIFICATIONS') loadRequestNotifications(); };
     window.addEventListener('storage', handleStorageChange);
     return () => { clearInterval(interval); window.removeEventListener('storage', handleStorageChange); };
