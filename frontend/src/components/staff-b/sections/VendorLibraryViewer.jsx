@@ -580,7 +580,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                   {!readOnly ? (
                     <input
                       type="text"
-                      placeholder="Dán link template..."
+                      placeholder="Dán link"
                       defaultValue={r.linkTemplate || ''}
                       onBlur={e => {
                         const v = e.target.value.trim();
