@@ -318,7 +318,7 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
 }
 
 // ── Section 2 Table ──────────────────────────────────────────────────────────
-function PricingTable({ rows, onSave, readOnly, generalInfo, sellerLinkEdit }) {
+function PricingTable({ rows, onSave, readOnly, generalInfo }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
   const [addingRow, setAddingRow] = useState(false);
@@ -354,12 +354,6 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, sellerLinkEdit }) {
     if (onSave) onSave([...(rows || []), newRow]);
     setAddingRow(false);
     setAddForm(null);
-  };
-
-  const updateLinkTemplate = (idx, value) => {
-    const newRows = [...rows];
-    newRows[idx] = { ...newRows[idx], linkTemplate: value };
-    if (onSave) onSave(newRows);
   };
 
   if (!rows || rows.length === 0) return (
@@ -570,18 +564,6 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, sellerLinkEdit }) {
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
                     <input type="text" placeholder="Link Template..." value={editForm.linkTemplate} onChange={e => setEditForm(p => ({ ...p, linkTemplate: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
-                  ) : readOnly && sellerLinkEdit ? (
-                    <input
-                      type="text"
-                      placeholder="Dán link template..."
-                      defaultValue={r.linkTemplate || ''}
-                      onBlur={e => {
-                        const v = e.target.value.trim();
-                        if (v !== (r.linkTemplate || '')) updateLinkTemplate(i, v);
-                      }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
-                      style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.orangeMid}`, boxSizing: 'border-box' }}
-                    />
                   ) : (() => {
                     const link = r.linkTemplate || '';
                     return link
@@ -660,7 +642,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, sellerLinkEdit }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, sellerLinkEdit }) {
+function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
@@ -897,7 +879,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
             {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
-            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} sellerLinkEdit={sellerLinkEdit} />}
+            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
           </div>
         </div>
       )}
@@ -1177,7 +1159,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared, sellerLinkEdit = false }) {
+export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared }) {
   // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1615,7 +1597,6 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
                 toggleBestSeller={toggleBestSeller}
                 mode={mode}
                 highlighted={highlightFileId === entry.id}
-                sellerLinkEdit={sellerLinkEdit}
               />
             </div>
           ));

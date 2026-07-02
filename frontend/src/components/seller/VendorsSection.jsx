@@ -42,7 +42,6 @@ export default function VendorsSection({ highlightFileId, onHighlightCleared }) 
         mode={activeTab}
         highlightFileId={activeTab === 'all' ? highlightFileId : null}
         onHighlightCleared={onHighlightCleared}
-        sellerLinkEdit={true}
       />
     </div>
   );
