@@ -305,6 +305,10 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
           </div>
         ))}
       </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+        <label style={{ fontSize: 10, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Link Template</label>
+        <input type="text" placeholder="https://..." value={addForm.linkTemplate} onChange={e => setAddForm(p => ({ ...p, linkTemplate: e.target.value }))} style={{ padding: '6px 8px', fontSize: 11, borderRadius: 6, border: `1.5px solid ${HC.border}`, boxSizing: 'border-box', outline: 'none' }} />
+      </div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
         <button onClick={onCancel} style={{ padding: '7px 16px', borderRadius: 7, border: `1px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
         <button onClick={saveAddRow} style={{ padding: '7px 20px', borderRadius: 7, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>💾 Lưu dòng giá</button>
@@ -314,7 +318,7 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
 }
 
 // ── Section 2 Table ──────────────────────────────────────────────────────────
-function PricingTable({ rows, onSave, readOnly, generalInfo }) {
+function PricingTable({ rows, onSave, readOnly, generalInfo, sellerLinkEdit }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
   const [addingRow, setAddingRow] = useState(false);
@@ -328,6 +332,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
     express_price: '', express_total: '',
     twoday_price: '', twoday_total: '',
     overnight_price: '', overnight_total: '',
+    linkTemplate: '',
   });
 
   const saveAddRow = () => {
@@ -344,10 +349,17 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       express_price: toNum(addForm.express_price), express_total: toNum(addForm.express_total),
       twoday_price: toNum(addForm.twoday_price), twoday_total: toNum(addForm.twoday_total),
       overnight_price: toNum(addForm.overnight_price), overnight_total: toNum(addForm.overnight_total),
+      linkTemplate: addForm.linkTemplate,
     };
     if (onSave) onSave([...(rows || []), newRow]);
     setAddingRow(false);
     setAddForm(null);
+  };
+
+  const updateLinkTemplate = (idx, value) => {
+    const newRows = [...rows];
+    newRows[idx] = { ...newRows[idx], linkTemplate: value };
+    if (onSave) onSave(newRows);
   };
 
   if (!rows || rows.length === 0) return (
@@ -412,6 +424,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       twoday_total: row.twoday_total ?? '',
       overnight_price: row.overnight_price ?? '',
       overnight_total: row.overnight_total ?? '',
+      linkTemplate: row.linkTemplate || '',
     });
   };
 
@@ -436,6 +449,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       twoday_total: toNum(editForm.twoday_total),
       overnight_price: toNum(editForm.overnight_price),
       overnight_total: toNum(editForm.overnight_total),
+      linkTemplate: editForm.linkTemplate,
     };
     setEditIdx(-1);
     setEditForm(null);
@@ -470,6 +484,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
             {shipMethods.map((m, si) => (
               <th key={m.label} colSpan={2} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
             ))}
+            <th rowSpan={2} style={{ ...TH(), minWidth: 140, textAlign: 'left' }}>Link Template</th>
             {!readOnly && <th rowSpan={2} style={{ ...TH(), width: 60 }}>Thao tác</th>}
           </tr>
           <tr>
@@ -552,6 +567,28 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                     ) : fmt$(r[m.totalKey])}
                   </td>,
                 ])}
+                <td style={{ ...TD(i) }}>
+                  {isEditing ? (
+                    <input type="text" placeholder="Link Template..." value={editForm.linkTemplate} onChange={e => setEditForm(p => ({ ...p, linkTemplate: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                  ) : readOnly && sellerLinkEdit ? (
+                    <input
+                      type="text"
+                      placeholder="Dán link template..."
+                      defaultValue={r.linkTemplate || ''}
+                      onBlur={e => {
+                        const v = e.target.value.trim();
+                        if (v !== (r.linkTemplate || '')) updateLinkTemplate(i, v);
+                      }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                      style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.orangeMid}`, boxSizing: 'border-box' }}
+                    />
+                  ) : (() => {
+                    const link = r.linkTemplate || '';
+                    return link
+                      ? <a href={link} target="_blank" rel="noreferrer" title={link} style={{ color: HC.orangeDark, textDecoration: 'underline', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🔗 Template</a>
+                      : <span style={{ color: HC.muted2 }}>—</span>;
+                  })()}
+                </td>
                 {!readOnly && (
                   <td style={{ ...TD(i), textAlign: 'center' }}>
                     {isEditing ? (
@@ -599,6 +636,9 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                   <input type="number" step="0.01" placeholder="0.00" value={addForm[m.totalKey]} onChange={e => setAddForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
                 </td>,
               ])}
+              <td style={{ ...TD(processedRows.length), padding: '5px 6px' }}>
+                <input type="text" placeholder="Link Template..." value={addForm.linkTemplate} onChange={e => setAddForm(p => ({ ...p, linkTemplate: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+              </td>
               <td style={{ ...TD(processedRows.length), textAlign: 'center', padding: '5px 6px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <button onClick={saveAddRow} style={{ padding: '4px 8px', borderRadius: 4, background: HC.success, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}>Lưu</button>
@@ -620,7 +660,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted }) {
+function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, sellerLinkEdit }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
@@ -857,7 +897,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
             {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
-            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
+            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} sellerLinkEdit={sellerLinkEdit} />}
           </div>
         </div>
       )}
@@ -911,6 +951,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
     express_price: '', express_total: '',
     twoday_price: '', twoday_total: '',
     overnight_price: '', overnight_total: '',
+    linkTemplate: '',
   });
 
   const [generalRows, setGeneralRows] = useState([mkGeneral()]);
@@ -955,6 +996,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
       express_price: toNum(r.express_price), express_total: toNum(r.express_total),
       twoday_price: toNum(r.twoday_price), twoday_total: toNum(r.twoday_total),
       overnight_price: toNum(r.overnight_price), overnight_total: toNum(r.overnight_total),
+      linkTemplate: r.linkTemplate,
     }));
 
     onSave({
@@ -1099,6 +1141,9 @@ function ManualAddModal({ onClose, onSave, mode }) {
                     <FieldGroup label="Pricing 1 (P1)"><input type="number" step="0.01" placeholder="0.00" value={r.pricing1} onChange={e => updatePricing(r._key, 'pricing1', e.target.value)} style={inputSt({ textAlign: 'right', color: '#b45309', fontWeight: 700 })} /></FieldGroup>
                     <FieldGroup label="Pricing 2 (P2)"><input type="number" step="0.01" placeholder="0.00" value={r.pricing2} onChange={e => updatePricing(r._key, 'pricing2', e.target.value)} style={inputSt({ textAlign: 'right', color: '#b45309', fontWeight: 700 })} /></FieldGroup>
                   </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <FieldGroup label="Link Template"><input type="text" placeholder="https://..." value={r.linkTemplate} onChange={e => updatePricing(r._key, 'linkTemplate', e.target.value)} style={inputSt()} /></FieldGroup>
+                  </div>
                   <label style={labelSt}>Phí vận chuyển</label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
                     {shipMethods.map(m => (
@@ -1132,7 +1177,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared }) {
+export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared, sellerLinkEdit = false }) {
   // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1570,6 +1615,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
                 toggleBestSeller={toggleBestSeller}
                 mode={mode}
                 highlighted={highlightFileId === entry.id}
+                sellerLinkEdit={sellerLinkEdit}
               />
             </div>
           ));
