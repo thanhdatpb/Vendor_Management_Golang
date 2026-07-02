@@ -1257,8 +1257,10 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         file.title?.toLowerCase().includes(q)
       );
     }
-    // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B/Admin thấy tất cả)
-    if (readOnly) {
+    // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B/Admin thấy tất cả).
+    // Tab "New Arrivals" (new_products): vendor upload lên đây phải hiển thị cho TẤT CẢ
+    // project/seller, không lọc theo ký hiệu P.xxx trong tên file.
+    if (readOnly && mode !== 'new_products') {
       const { skip, key: userProjectKey } = getCurrentUserProject();
       if (!skip && userProjectKey) {
         files = files.filter(file => {
@@ -1427,7 +1429,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>
-            {(mode === 'bestseller' || mode === 'best_seller') ? 'Danh sách Vendor Best Seller' : mode === 'new_products' ? 'Sản phẩm mới' : 'Tổng quan Vendor & Sản phẩm'}
+            {(mode === 'bestseller' || mode === 'best_seller') ? 'Danh sách Vendor Best Seller' : mode === 'new_products' ? 'New Arrivals' : 'Tổng quan Vendor & Sản phẩm'}
           </div>
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
             {displayFiles.length} file

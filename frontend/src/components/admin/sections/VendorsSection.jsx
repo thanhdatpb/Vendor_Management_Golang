@@ -25,7 +25,7 @@ export default function VendorsSection() {
     <div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
         <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" />
-        <TabButton id="new_products" label="Sản phẩm mới" />
+        <TabButton id="new_products" label="New Arrivals" />
         <TabButton id="best_seller" label="Best Seller" />
       </div>
 
