@@ -48,6 +48,16 @@ function getCurrentUserProject() {
   } catch { return { skip: false, key: '' }; }
 }
 
+// Vendor role chỉ cần dán/sửa Link Template — không cần Thao tác (Sửa/Xóa cả dòng giá).
+function isCurrentUserVendor() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    const rawRole = typeof u.role === 'object' ? u.role?.name : u.role;
+    const role = (rawRole || '').toString().toLowerCase().replace(/[-_\s]/g, '');
+    return role === 'vendor';
+  } catch { return false; }
+}
+
 // ── Section 1 Table ──────────────────────────────────────────────────────────
 function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode }) {
   const [editIdx, setEditIdx] = useState(-1);
@@ -323,6 +333,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
   const [editForm, setEditForm] = useState(null);
   const [addingRow, setAddingRow] = useState(false);
   const [addForm, setAddForm] = useState(null);
+  const showActions = !readOnly && !isCurrentUserVendor();
 
   const mkAddForm = () => ({
     kyHieu: '', productType: '', size: '', optional: '',
@@ -482,8 +493,8 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
             {shipMethods.map((m, si) => (
               <th key={m.label} colSpan={2} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
             ))}
-            <th rowSpan={2} style={{ ...TH(), minWidth: 140, textAlign: 'left' }}>Link Template</th>
-            {!readOnly && <th rowSpan={2} style={{ ...TH(), width: 60 }}>Thao tác</th>}
+            <th rowSpan={2} style={{ ...TH(), minWidth: 110, textAlign: 'left' }}>Link Template</th>
+            {showActions && <th rowSpan={2} style={{ ...TH(), width: 60 }}>Thao tác</th>}
           </tr>
           <tr>
             <th style={{ ...TH(), minWidth: 80 }}>Size</th>
@@ -585,7 +596,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                       : <span style={{ color: HC.muted2 }}>—</span>;
                   })()}
                 </td>
-                {!readOnly && (
+                {showActions && (
                   <td style={{ ...TD(i), textAlign: 'center' }}>
                     {isEditing ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
