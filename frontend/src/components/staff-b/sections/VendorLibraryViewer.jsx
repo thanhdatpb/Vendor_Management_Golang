@@ -356,6 +356,12 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
     setAddForm(null);
   };
 
+  const updateLinkTemplate = (idx, value) => {
+    const newRows = [...rows];
+    newRows[idx] = { ...newRows[idx], linkTemplate: value };
+    if (onSave) onSave(newRows);
+  };
+
   if (!rows || rows.length === 0) return (
     <div>
       <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>
@@ -418,7 +424,6 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       twoday_total: row.twoday_total ?? '',
       overnight_price: row.overnight_price ?? '',
       overnight_total: row.overnight_total ?? '',
-      linkTemplate: row.linkTemplate || '',
     });
   };
 
@@ -443,7 +448,6 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       twoday_total: toNum(editForm.twoday_total),
       overnight_price: toNum(editForm.overnight_price),
       overnight_total: toNum(editForm.overnight_total),
-      linkTemplate: editForm.linkTemplate,
     };
     setEditIdx(-1);
     setEditForm(null);
@@ -562,8 +566,18 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                   </td>,
                 ])}
                 <td style={{ ...TD(i) }}>
-                  {isEditing ? (
-                    <input type="text" placeholder="Link Template..." value={editForm.linkTemplate} onChange={e => setEditForm(p => ({ ...p, linkTemplate: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                  {!readOnly ? (
+                    <input
+                      type="text"
+                      placeholder="Dán link template..."
+                      defaultValue={r.linkTemplate || ''}
+                      onBlur={e => {
+                        const v = e.target.value.trim();
+                        if (v !== (r.linkTemplate || '')) updateLinkTemplate(i, v);
+                      }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                      style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }}
+                    />
                   ) : (() => {
                     const link = r.linkTemplate || '';
                     return link
