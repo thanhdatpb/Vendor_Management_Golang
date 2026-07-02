@@ -3,9 +3,13 @@ const JSZip = require('jszip');
 const xlsx = require('xlsx');
 const path = require('path');
 
-async function extractExcel(filePath, outputFile) {
+async function extractExcel(filePath, outputFile, imageDir) {
     console.log(`Processing: ${filePath}`);
     const data = fs.readFileSync(filePath);
+
+    if (imageDir && !fs.existsSync(imageDir)) {
+        fs.mkdirSync(imageDir, { recursive: true });
+    }
 
     // Parse all cell data
     const workbook = xlsx.read(data, { type: 'buffer' });
@@ -155,18 +159,23 @@ async function extractExcel(filePath, outputFile) {
         if (isVendorKey(row[0])) {
             const vendorKey = String(row[0]).trim().toUpperCase();
 
-            // Image: look in columns 1 and 2 of that row
-            let imageBase64 = null;
+            // Image: look in columns 1 and 2 of that row.
+            // Written straight to disk here (instead of embedding base64 in the
+            // JSON) so PHP never has to hold/decode a giant base64 string.
+            let imageFilename = null;
             for (let c = 1; c <= 3; c++) {
                 if (imagesByCell[`${r},${c}`]) {
-                    imageBase64 = 'data:image/jpeg;base64,' + imagesByCell[`${r},${c}`].toString('base64');
+                    if (imageDir) {
+                        imageFilename = `vendor_${vendorKey}_${Date.now()}.jpg`;
+                        fs.writeFileSync(path.join(imageDir, imageFilename), imagesByCell[`${r},${c}`]);
+                    }
                     break;
                 }
             }
 
             vendorsMap[vendorKey] = {
                 name: vendorKey,
-                image_base64: imageBase64,
+                image_filename: imageFilename,
                 overview: str(row[sec1ColMap.chatLieu]),
                 avg_time_vendor: str(row[sec1ColMap.avgVendor]),
                 avg_time_actual: str(row[sec1ColMap.avgActual]),
@@ -189,7 +198,7 @@ async function extractExcel(filePath, outputFile) {
             if (isVendorKey(row[colKyHieu])) {
                 currentKey = String(row[colKyHieu]).trim().toUpperCase();
                 if (!vendorsMap[currentKey]) {
-                    vendorsMap[currentKey] = { name: currentKey, image_base64: null, overview: null, avg_time_vendor: null, avg_time_actual: null, notes: null, products: [] };
+                    vendorsMap[currentKey] = { name: currentKey, image_filename: null, overview: null, avg_time_vendor: null, avg_time_actual: null, notes: null, products: [] };
                 }
             }
 
@@ -230,7 +239,7 @@ async function extractExcel(filePath, outputFile) {
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
-    console.error('Usage: node extract_excel.cjs <input.xlsx> <output.json>');
+    console.error('Usage: node extract_excel.cjs <input.xlsx> <output.json> [imageDir]');
     process.exit(1);
 }
-extractExcel(args[0], args[1]).catch(console.error);
+extractExcel(args[0], args[1], args[2]).catch(console.error);

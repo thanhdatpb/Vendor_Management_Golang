@@ -13,7 +13,8 @@ class VendorImportController extends BaseApiController {
 
     public function import(Request $request) {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls'
+            // max is in kilobytes — caps memory used while parsing embedded vendor images
+            'file' => 'required|file|mimes:xlsx,xls|max:15360'
         ]);
 
         $file = $request->file('file');
@@ -21,10 +22,13 @@ class VendorImportController extends BaseApiController {
         $filePath = $file->storeAs('temp', $fileName);
         $absoluteFilePath = storage_path('app/' . $filePath);
         $absoluteJsonPath = storage_path('app/temp/' . time() . '_output.json');
+        $imageDir = storage_path('app/vendors');
 
-        // Run Node.js script to extract data
+        // Run Node.js script to extract data. Vendor images are written straight
+        // to $imageDir by the script so this JSON only ever holds filenames,
+        // never base64 image data.
         $nodeScript = base_path('extract_excel.cjs');
-        $process = new Process(['node', $nodeScript, $absoluteFilePath, $absoluteJsonPath]);
+        $process = new Process(['node', $nodeScript, $absoluteFilePath, $absoluteJsonPath, $imageDir]);
         $process->setTimeout(120);
 
         try {
@@ -52,30 +56,13 @@ class VendorImportController extends BaseApiController {
             $avgVendor     = $v['avg_time_vendor'] ?? null;
             $avgActual     = $v['avg_time_actual'] ?? null;
             $notes         = $v['notes'] ?? null;
-            $imageBase64   = $v['image_base64'] ?? null;
+            $imageFilename = $v['image_filename'] ?? null;
 
-            // Save image if provided (skip for now per user request, handle later)
-            $mediaUrl = null;
-            if ($imageBase64 && str_starts_with($imageBase64, 'data:image')) {
-                try {
-                    list($type, $data) = explode(';', $imageBase64);
-                    list(, $data)      = explode(',', $data);
-                    $data = base64_decode($data);
-
-                    $extension = str_contains($type, 'png') ? 'png' : 'jpg';
-                    $imageName = 'vendor_' . $vendorName . '_' . time() . '.' . $extension;
-
-                    $destinationPath = storage_path('app/vendors');
-                    if (!file_exists($destinationPath)) {
-                        mkdir($destinationPath, 0755, true);
-                    }
-                    file_put_contents($destinationPath . '/' . $imageName, $data);
-                    $mediaUrl = rtrim(env('APP_URL'), '/') . '/media.php?f=' . $imageName;
-                } catch (\Exception $e) {
-                    // Image save failed — skip silently
-                    $mediaUrl = null;
-                }
-            }
+            // Image was already written to $imageDir by extract_excel.cjs —
+            // just build the URL, no base64 decode needed here.
+            $mediaUrl = $imageFilename
+                ? rtrim(env('APP_URL'), '/') . '/media.php?f=' . $imageFilename
+                : null;
 
             // Common vendor-level fields (shared across all products of this vendor)
             $vendorCommon = [

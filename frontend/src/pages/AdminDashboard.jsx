@@ -230,8 +230,9 @@ export default function AdminDashboard() {
     Promise.all([loadRequestNotifications(), loadNewsNotifications(), loadPendingProducts()]);
 
     const interval = setInterval(() => {
+      if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
       Promise.all([loadPendingProducts(), loadRequestNotifications(), loadNewsNotifications()]);
-    }, 30000);
+    }, 60000);
 
     const handleStorageChange = (e) => {
       if (e.key === 'STAFF_A_NOTIFICATIONS') {
