@@ -4,7 +4,7 @@ import { fmtDate, getMediaUrls } from '../utils';
 import { Badge, CardHeader, InfoRow } from '../ui';
 import Lightbox from './Lightbox';
 
-export default function ProductViewerModal({ product, onClose }) {
+export default function ProductViewerModal({ product, onClose, onApprove, onReject }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const mediaUrls = getMediaUrls(product);
@@ -185,7 +185,13 @@ export default function ProductViewerModal({ product, onClose }) {
             </div>
           </div>
 
-          <div style={{ padding: '12px 20px', background: HC.surface, borderTop: `1.5px solid ${HC.border}`, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+          <div style={{ padding: '12px 20px', background: HC.surface, borderTop: `1.5px solid ${HC.border}`, display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+            {product.status === 'pending' && onReject && (
+              <button onClick={onReject} style={{ padding: '10px 24px', borderRadius: 10, background: '#fff', color: HC.danger, border: `1.5px solid ${HC.danger}`, cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Nunito',sans-serif" }}>Từ chối</button>
+            )}
+            {product.status === 'pending' && onApprove && (
+              <button onClick={() => onApprove(product)} style={{ padding: '10px 24px', borderRadius: 10, background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Nunito',sans-serif" }}>Duyệt</button>
+            )}
             <button onClick={onClose} style={{ padding: '10px 28px', borderRadius: 10, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Nunito',sans-serif", boxShadow: `0 4px 16px ${HC.orangeGlow}` }}>Đóng</button>
           </div>
         </div>

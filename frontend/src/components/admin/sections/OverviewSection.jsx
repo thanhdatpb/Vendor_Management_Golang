@@ -644,23 +644,25 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
               cols={TABLE_COLS}
               rows={pendingProducts
                 .slice((pendingPage - 1) * ITEMS_PER_PAGE, pendingPage * ITEMS_PER_PAGE)
-                .map((p, i) => [
-                  (pendingPage - 1) * ITEMS_PER_PAGE + i + 1,
-                  p.project || '—',
-                  <span
-                    onClick={() => handleViewProduct(p)}
-                    style={{ cursor: 'pointer', color: HC.orangeDark, fontWeight: 700, textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.textDecorationColor = HC.orangeDark)}
-                    onMouseLeave={e => (e.currentTarget.style.textDecorationColor = 'transparent')}
-                    title="Bấm để xem chi tiết sản phẩm"
-                  >
-                    {p.product_type || p.category || p.name || '—'}
-                  </span>,
-                  <MediaGallery mediaUrls={getMediaUrls(p)} />,
-                  fmtDate(p.created_at),
-                  fmtDate(p.deadline_date),
-                  <Badge status="pending" />,
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                .map((p, i) => {
+                  const cell = (content, extraStyle) => (
+                    <div
+                      onClick={() => handleViewProduct(p)}
+                      style={{ cursor: 'pointer', ...extraStyle }}
+                      title="Bấm để xem chi tiết sản phẩm"
+                    >
+                      {content}
+                    </div>
+                  );
+                  return [
+                    cell((pendingPage - 1) * ITEMS_PER_PAGE + i + 1),
+                    cell(p.project || '—'),
+                    cell(p.product_type || p.category || p.name || '—', { color: HC.orangeDark, fontWeight: 700 }),
+                    cell(<MediaGallery mediaUrls={getMediaUrls(p)} />),
+                    cell(fmtDate(p.created_at)),
+                    cell(fmtDate(p.deadline_date)),
+                    cell(<Badge status="pending" />),
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button
                       onClick={() => handleApprove(p)}
                       disabled={processingId === p.id}
@@ -692,7 +694,8 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
                       <CloseOutlined /> Từ chối
                     </button>
                   </div>,
-                ])}
+                  ];
+                })}
             />
             <Pagination
               currentPage={pendingPage}
@@ -715,7 +718,12 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         
       />
 
-      <ProductViewerModal product={viewProduct} onClose={() => setViewProduct(null)} />
+      <ProductViewerModal
+        product={viewProduct}
+        onClose={() => setViewProduct(null)}
+        onApprove={(p) => { setViewProduct(null); handleApprove(p); }}
+        onReject={() => { const p = viewProduct; setViewProduct(null); setRejectModal({ open: true, productId: p.id, reason: '' }); }}
+      />
 
       <RejectModal
         open={rejectModal.open}
