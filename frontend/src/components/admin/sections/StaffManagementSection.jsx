@@ -122,7 +122,7 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions
       if (!form.email.trim()) e.email = 'Email là bắt buộc';
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'Email không hợp lệ';
     }
-    if (!form.full_name.trim()) e.full_name = 'Tên đầy đủ là bắt buộc';
+    if (!form.full_name.trim()) e.full_name = 'Tên nhân sự là bắt buộc';
     if (roleNeedsProject && !fixedProject && !form.project) e.project = 'Project là bắt buộc';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -166,7 +166,7 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions
         </FormField>
       )}
 
-      <FormField label="Tên đầy đủ" error={errors.full_name}>
+      <FormField label="Tên nhân sự" error={errors.full_name}>
         <input
           style={inputStyle} type="text" placeholder="Nguyen Van A"
           value={form.full_name} onChange={e => set('full_name', e.target.value)}
@@ -270,7 +270,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
           <thead>
             <tr>
               <th style={thStyle}>Gmail</th>
-              <th style={thStyle}>Tên đầy đủ</th>
+              <th style={thStyle}>Tên nhân sự</th>
               {showRoleColumn && <th style={thStyle}>Role</th>}
               <th style={thStyle}>Trạng thái</th>
               <th style={{ ...thStyle, textAlign: 'right' }}>Thao tác</th>
