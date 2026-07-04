@@ -6,6 +6,7 @@
 
 # Documents tài liệu liên quan đến hệ thống
 documents/
+BACKEND_SCHEMA.md
 
 # VSCode settings
 .vscode/
