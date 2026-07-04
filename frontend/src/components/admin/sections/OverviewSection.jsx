@@ -5,7 +5,7 @@ import {
   CheckCircleOutlined, CloseCircleOutlined, CheckCircleFilled,
   WarningFilled, CloseCircleFilled, AimOutlined, FireOutlined,
   FormatPainterOutlined, SmileOutlined, GlobalOutlined, RocketOutlined,
-  ClockCircleOutlined, CheckOutlined, EyeOutlined, CloseOutlined, LoadingOutlined,
+  ClockCircleOutlined, CheckOutlined, CloseOutlined, LoadingOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import { HC, API_BASE_URL, ITEMS_PER_PAGE } from '../constants';
@@ -342,17 +342,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
             playNotificationBeep();
           }
 
-          if (newPending.length > oldCount) {
-            const newCount = newPending.length - oldCount;
-            const newestProducts = newPending.slice(0, newCount);
-            const projectNames = [...new Set(newestProducts.map(p => p.project || 'Không xác định'))];
-            setToast({
-              type: 'new_form',
-              title: 'Form mới từ Seller!',
-              message: `${newCount} form mới từ Project: ${projectNames.join(', ')}`,
-              duration: 5000
-            });
-          }
         }
 
         pendingCountRef.current = newPending.length;
@@ -535,26 +524,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
   const TABLE_COLS = ['STT', 'Project', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];
 
-  const viewBtn = (p) => (
-    <button
-      onClick={() => handleViewProduct(p)}
-      disabled={loadingProductId === p.id}
-      className="hc-btn-secondary"
-      style={{
-        padding: '5px 12px',
-        fontSize: 11,
-        borderRadius: 7,
-        opacity: loadingProductId === p.id ? 0.6 : 1,
-        cursor: loadingProductId === p.id ? 'wait' : 'pointer',
-        fontFamily: "'Nunito',sans-serif",
-      }}
-    >
-      {loadingProductId === p.id
-        ? <><LoadingOutlined spin style={{ fontSize: 12 }} /> Đang tải...</>
-        : <><EyeOutlined /> Xem</>}
-    </button>
-  );
-
   const sHdr = { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' };
   const h3S = { fontSize: 15, fontWeight: 900, color: HC.ink, margin: 0, fontFamily: "'Nunito',sans-serif" };
   const refreshBtn = fn => (
@@ -678,13 +647,20 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
                 .map((p, i) => [
                   (pendingPage - 1) * ITEMS_PER_PAGE + i + 1,
                   p.project || '—',
-                  p.product_type || p.category || p.name || '—',
+                  <span
+                    onClick={() => handleViewProduct(p)}
+                    style={{ cursor: 'pointer', color: HC.orangeDark, fontWeight: 700, textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'text-decoration-color 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.textDecorationColor = HC.orangeDark)}
+                    onMouseLeave={e => (e.currentTarget.style.textDecorationColor = 'transparent')}
+                    title="Bấm để xem chi tiết sản phẩm"
+                  >
+                    {p.product_type || p.category || p.name || '—'}
+                  </span>,
                   <MediaGallery mediaUrls={getMediaUrls(p)} />,
                   fmtDate(p.created_at),
                   fmtDate(p.deadline_date),
                   <Badge status="pending" />,
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {viewBtn(p)}
                     <button
                       onClick={() => handleApprove(p)}
                       disabled={processingId === p.id}
