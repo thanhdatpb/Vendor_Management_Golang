@@ -36,6 +36,8 @@ export default function Login() {
       if (role === "admin") navigate("/admin");
       else if (role === "staffa" || role === "staff" || role === "seller") navigate("/seller");
       else if (role === "staffb" || role === "vendor") navigate("/vendor");
+      else if (role === "csf") navigate("/csf");
+      else if (role === "pd") navigate("/pd");
     }
   }, [contextUser, navigate]);
 
@@ -76,6 +78,10 @@ export default function Login() {
         navigate("/seller");
       } else if (role === "staffb" || role === "vendor") {
         navigate("/vendor");
+      } else if (role === "csf") {
+        navigate("/csf");
+      } else if (role === "pd") {
+        navigate("/pd");
       } else {
         navigate("/");
       }

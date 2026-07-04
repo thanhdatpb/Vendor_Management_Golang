@@ -18,7 +18,7 @@ class AdminUserController extends Controller
     public function index(Request $request)
     {
         $users = User::select('id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at')
-            ->orderByRaw("FIELD(role, 'admin', 'vendor', 'seller')")
+            ->orderByRaw("FIELD(role, 'admin', 'vendor', 'csf', 'seller', 'pd')")
             ->orderBy('project')
             ->orderBy('full_name')
             ->get()
@@ -47,24 +47,26 @@ class AdminUserController extends Controller
                 Rule::unique('users', 'email'),
             ],
             'full_name' => 'required|string|max:255',
-            'role'      => ['required', Rule::in(['admin', 'vendor', 'seller'])],
+            'role'      => ['required', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf'])],
             'project'   => [
-                Rule::requiredIf($request->role === 'seller'),
+                Rule::requiredIf(in_array($request->role, ['seller', 'pd'])),
                 'nullable',
                 Rule::in(self::$VALID_PROJECTS),
             ],
         ], [
             'email.unique'   => 'Email này đã tồn tại trong hệ thống',
-            'project.required_if' => 'Project là bắt buộc khi role là seller',
+            'project.required_if' => 'Project là bắt buộc khi role là seller hoặc PD',
             'project.in'     => 'Project không hợp lệ',
         ]);
+
+        $needsProject = in_array($validated['role'], ['seller', 'pd']);
 
         $user = User::create([
             'email'     => strtolower(trim($validated['email'])),
             'full_name' => $validated['full_name'],
             'name'      => $validated['full_name'],
             'role'      => $validated['role'],
-            'project'   => $validated['role'] === 'seller' ? $validated['project'] : null,
+            'project'   => $needsProject ? $validated['project'] : null,
             'is_active' => true,
             'password'  => null,
         ]);
@@ -95,11 +97,12 @@ class AdminUserController extends Controller
 
         $validated = $request->validate([
             'full_name' => 'sometimes|string|max:255',
-            'role'      => ['sometimes', Rule::in(['admin', 'vendor', 'seller'])],
+            'role'      => ['sometimes', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf'])],
             'project'   => ['nullable', Rule::in(array_merge(self::$VALID_PROJECTS, [null]))],
         ]);
 
         $newRole = $validated['role'] ?? $user->role;
+        $newRoleNeedsProject = in_array($newRole, ['seller', 'pd']);
 
         // Nếu hạ role admin → kiểm tra vẫn còn ít nhất 1 admin active khác
         if ($user->role === 'admin' && $newRole !== 'admin') {
@@ -121,7 +124,7 @@ class AdminUserController extends Controller
             'full_name' => $validated['full_name'] ?? $user->full_name,
             'name'      => $validated['full_name'] ?? $user->name,
             'role'      => $newRole,
-            'project'   => $newRole === 'seller'
+            'project'   => $newRoleNeedsProject
                 ? ($validated['project'] ?? $user->project)
                 : null,
         ]);

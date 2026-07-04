@@ -7,6 +7,7 @@ import { adminUserApi } from '../../../services/api';
 const PROJECTS = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
 const TABS = [
   ...PROJECTS.map(p => ({ key: p, label: p.replace(' Project', ''), type: 'seller' })),
+  { key: '__csf__', label: 'CSF', type: 'csf' },
   { key: '__admin_vendor__', label: 'Admin & Vendor', type: 'admin_vendor' },
 ];
 
@@ -14,7 +15,22 @@ const ROLE_BADGE = {
   admin:  { bg: '#FEF3DC', color: HC.orangeDark, label: 'Admin' },
   vendor: { bg: '#E8F4FF', color: '#1d4ed8',     label: 'Vendor' },
   seller: { bg: '#ECFDF5', color: '#065f46',      label: 'Seller' },
+  pd:     { bg: '#F3E8FF', color: '#7e22ce',      label: 'PD' },
+  csf:    { bg: '#FCE7F3', color: '#be185d',      label: 'CSF' },
 };
+
+// Role options theo từng loại tab, dùng cho select trong modal Thêm/Sửa nhân sự
+const ROLE_OPTIONS_BY_TAB = {
+  admin_vendor: [{ value: 'admin', label: 'Admin' }, { value: 'vendor', label: 'Vendor' }],
+  seller:       [{ value: 'seller', label: 'Seller' }, { value: 'pd', label: 'PD' }],
+};
+
+// Suy ra loại tab tương ứng với 1 role hiện có (dùng khi Sửa nhân sự)
+function tabTypeForRole(role) {
+  if (role === 'seller' || role === 'pd') return 'seller';
+  if (role === 'csf') return 'csf';
+  return 'admin_vendor';
+}
 
 // ─── Shared styles ────────────────────────────
 const card = {
@@ -86,16 +102,19 @@ const inputStyle = {
 };
 
 // ─── Add / Edit Modal ─────────────────────────
-function UserFormModal({ mode, initialData, fixedProject, fixedRole, onSave, onClose, saving, serverError }) {
+function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions, onSave, onClose, saving, serverError }) {
   const [form, setForm] = useState({
     email:     initialData?.email     || '',
     full_name: initialData?.full_name || '',
-    role:      initialData?.role      || fixedRole || 'admin',
+    role:      initialData?.role      || fixedRole || roleOptions?.[0]?.value || 'admin',
     project:   initialData?.project   || fixedProject || '',
   });
   const [errors, setErrors] = useState({});
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const effectiveRole = fixedRole || form.role;
+  const roleNeedsProject = ['seller', 'pd'].includes(effectiveRole);
 
   const validate = () => {
     const e = {};
@@ -104,7 +123,7 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, onSave, onC
       else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'Email không hợp lệ';
     }
     if (!form.full_name.trim()) e.full_name = 'Tên đầy đủ là bắt buộc';
-    if (form.role === 'seller' && !form.project) e.project = 'Project là bắt buộc';
+    if (roleNeedsProject && !fixedProject && !form.project) e.project = 'Project là bắt buộc';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -114,12 +133,12 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, onSave, onC
     onSave({
       email:     form.email.trim().toLowerCase(),
       full_name: form.full_name.trim(),
-      role:      fixedRole || form.role,
-      project:   (fixedRole || form.role) === 'seller' ? (fixedProject || form.project) : null,
+      role:      effectiveRole,
+      project:   roleNeedsProject ? (fixedProject || form.project) : null,
     });
   };
 
-  const isAdminRole = (fixedRole || form.role) === 'admin';
+  const isAdminRole = effectiveRole === 'admin';
 
   return (
     <Modal title={mode === 'add' ? 'Thêm nhân sự mới' : 'Sửa thông tin'} onClose={onClose}>
@@ -154,19 +173,18 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, onSave, onC
         />
       </FormField>
 
-      {!fixedRole && (
+      {!fixedRole && roleOptions && (
         <FormField label="Role" error={errors.role}>
           <select
             style={{ ...inputStyle, cursor: 'pointer' }}
             value={form.role} onChange={e => set('role', e.target.value)}
           >
-            <option value="admin">Admin</option>
-            <option value="vendor">Vendor</option>
+            {roleOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
         </FormField>
       )}
 
-      {(fixedRole || form.role) === 'seller' && !fixedProject && (
+      {roleNeedsProject && !fixedProject && (
         <FormField label="Project" error={errors.project}>
           <select
             style={{ ...inputStyle, cursor: 'pointer' }}
@@ -234,6 +252,8 @@ function ConfirmModal({ user, onConfirm, onClose, saving }) {
 
 // ─── User table ───────────────────────────────
 function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
+  const showRoleColumn = tabType === 'admin_vendor' || tabType === 'seller';
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 0', color: HC.muted }}>
@@ -251,7 +271,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
             <tr>
               <th style={thStyle}>Gmail</th>
               <th style={thStyle}>Tên đầy đủ</th>
-              {tabType === 'admin_vendor' && <th style={thStyle}>Role</th>}
+              {showRoleColumn && <th style={thStyle}>Role</th>}
               <th style={thStyle}>Trạng thái</th>
               <th style={{ ...thStyle, textAlign: 'right' }}>Thao tác</th>
             </tr>
@@ -259,7 +279,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={tabType === 'admin_vendor' ? 5 : 4} style={{ ...tdStyle, textAlign: 'center', color: HC.muted, padding: '48px 16px' }}>
+                <td colSpan={showRoleColumn ? 5 : 4} style={{ ...tdStyle, textAlign: 'center', color: HC.muted, padding: '48px 16px' }}>
                   Chưa có nhân sự nào trong nhóm này
                 </td>
               </tr>
@@ -283,7 +303,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
                       <span style={{ fontWeight: 600, color: HC.ink }}>{u.full_name || '—'}</span>
                     </div>
                   </td>
-                  {tabType === 'admin_vendor' && (
+                  {showRoleColumn && (
                     <td style={tdStyle}>
                       <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: ROLE_BADGE[u.role]?.bg, color: ROLE_BADGE[u.role]?.color }}>
                         {ROLE_BADGE[u.role]?.label || u.role}
@@ -324,6 +344,14 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
   );
 }
 
+// Trả về danh sách user thuộc 1 tab (project tab gồm cả Seller lẫn PD)
+function usersForTab(tab, users) {
+  if (!tab) return [];
+  if (tab.type === 'admin_vendor') return users.filter(u => u.role === 'admin' || u.role === 'vendor');
+  if (tab.type === 'csf') return users.filter(u => u.role === 'csf');
+  return users.filter(u => u.project === tab.key && (u.role === 'seller' || u.role === 'pd'));
+}
+
 // ─── Main section ─────────────────────────────
 export default function StaffManagementSection() {
   const [users, setUsers] = useState([]);
@@ -352,9 +380,7 @@ export default function StaffManagementSection() {
 
   const currentTab = TABS.find(t => t.key === activeTab);
 
-  const visibleUsers = currentTab?.type === 'admin_vendor'
-    ? users.filter(u => u.role === 'admin' || u.role === 'vendor')
-    : users.filter(u => u.project === activeTab && u.role === 'seller');
+  const visibleUsers = usersForTab(currentTab, users);
 
   // ── Handlers ──────────────────────────────
   const handleAdd = async (data) => {
@@ -401,9 +427,11 @@ export default function StaffManagementSection() {
   // ── Derive add config from current tab ────
   const openAdd = () => {
     if (currentTab.type === 'seller') {
-      setAddModal({ fixedProject: currentTab.key, fixedRole: 'seller' });
+      setAddModal({ fixedProject: currentTab.key, fixedRole: null, roleOptions: ROLE_OPTIONS_BY_TAB.seller });
+    } else if (currentTab.type === 'csf') {
+      setAddModal({ fixedProject: null, fixedRole: 'csf', roleOptions: null });
     } else {
-      setAddModal({ fixedProject: null, fixedRole: null });
+      setAddModal({ fixedProject: null, fixedRole: null, roleOptions: ROLE_OPTIONS_BY_TAB.admin_vendor });
     }
     setServerError('');
   };
@@ -433,9 +461,7 @@ export default function StaffManagementSection() {
       <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
         {TABS.map(tab => {
           const isActive = activeTab === tab.key;
-          const count = tab.type === 'admin_vendor'
-            ? users.filter(u => u.role === 'admin' || u.role === 'vendor').length
-            : users.filter(u => u.project === tab.key && u.role === 'seller').length;
+          const count = usersForTab(tab, users).length;
           return (
             <button
               key={tab.key}
@@ -476,6 +502,7 @@ export default function StaffManagementSection() {
           mode="add"
           fixedProject={addModal.fixedProject}
           fixedRole={addModal.fixedRole}
+          roleOptions={addModal.roleOptions}
           onSave={handleAdd}
           onClose={() => setAddModal(null)}
           saving={saving}
@@ -484,18 +511,25 @@ export default function StaffManagementSection() {
       )}
 
       {/* Edit modal */}
-      {editModal && (
-        <UserFormModal
-          mode="edit"
-          initialData={editModal}
-          fixedProject={editModal.role === 'seller' ? editModal.project : null}
-          fixedRole={editModal.role === 'seller' ? 'seller' : null}
-          onSave={handleEdit}
-          onClose={() => setEditModal(null)}
-          saving={saving}
-          serverError={serverError}
-        />
-      )}
+      {editModal && (() => {
+        const editTabType = tabTypeForRole(editModal.role);
+        const editFixedProject = editTabType === 'seller' ? editModal.project : null;
+        const editFixedRole = editTabType === 'csf' ? 'csf' : null;
+        const editRoleOptions = editTabType === 'csf' ? null : ROLE_OPTIONS_BY_TAB[editTabType];
+        return (
+          <UserFormModal
+            mode="edit"
+            initialData={editModal}
+            fixedProject={editFixedProject}
+            fixedRole={editFixedRole}
+            roleOptions={editRoleOptions}
+            onSave={handleEdit}
+            onClose={() => setEditModal(null)}
+            saving={saving}
+            serverError={serverError}
+          />
+        );
+      })()}
 
       {/* Confirm lock/unlock modal */}
       {confirmModal && (

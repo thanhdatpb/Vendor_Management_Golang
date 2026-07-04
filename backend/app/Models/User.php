@@ -54,6 +54,20 @@ class User extends Authenticatable {
     public function isStaffB(): bool {
         return $this->role === 'staff_b';
     }
+
+    /**
+     * Kiểm tra user có phải PD (Product Design) không
+     */
+    public function isPd(): bool {
+        return $this->role === 'pd';
+    }
+
+    /**
+     * Kiểm tra user có phải CSF (Customer Service & Fulfillment) không
+     */
+    public function isCsf(): bool {
+        return $this->role === 'csf';
+    }
     
     /**
      * Trích xuất tên seller từ email

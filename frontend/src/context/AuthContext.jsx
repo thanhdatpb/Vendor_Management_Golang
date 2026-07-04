@@ -89,6 +89,8 @@ export function AuthProvider({ children }) {
         isAdmin: userRole === "admin",
         isStaff: userRole === "seller" || userRole === "staffa",
         isStaffC: userRole === "vendor" || userRole === "staffb",
+        isCSF: userRole === "csf",
+        isPD: userRole === "pd",
         isAuthenticated: !!user,
         sellerName: user?.sellerName || user?.seller_name || null,
       }}

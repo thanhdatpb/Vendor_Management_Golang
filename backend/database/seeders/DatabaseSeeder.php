@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder {
     public function run(): void {
         $this->call([
             UserSeeder::class,
+            CsfPdUserSeeder::class,
             CustomerSeeder::class,
             VendorSeeder::class,
             ProductSeeder::class,

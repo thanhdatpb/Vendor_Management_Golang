@@ -5,6 +5,8 @@ import AuthCallback from "./pages/AuthCallback";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffADashboard from "./pages/StaffADashboard";
 import StaffBDashboard from "./pages/StaffBDashboard";
+import CsfDashboard from "./pages/CsfDashboard";
+import PdDashboard from "./pages/PdDashboard";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -44,6 +46,28 @@ export default function App() {
           <ProtectedRoute>
             <RoleRoute allow={["staffb", "vendor"]}>
               <StaffBDashboard />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/csf"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["csf"]}>
+              <CsfDashboard />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pd"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["pd"]}>
+              <PdDashboard />
             </RoleRoute>
           </ProtectedRoute>
         }
