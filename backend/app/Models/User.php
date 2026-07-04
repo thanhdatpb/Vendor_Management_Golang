@@ -35,8 +35,8 @@ class User extends Authenticatable {
         return $this->role === 'admin'; 
     }
     
-    public function isStaff(): bool { 
-        return in_array($this->role, ['staff', 'staff_a', 'staff_b']);
+    public function isStaff(): bool {
+        return in_array($this->role, ['staff', 'staff_a', 'staff_b', 'seller']);
     }
     
     // ← THÊM CÁC HÀM NÀY (phía dưới)

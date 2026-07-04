@@ -328,7 +328,7 @@ public function update(Request $request, $id)
         $role = strtolower($user->role ?? '');
         if (!$isAdmin && !$isStaff) {
             $isAdmin = in_array($role, ['admin', 'super_admin']);
-            $isStaff = in_array($role, ['staff', 'staff_a', 'staff_b', 'staff-a', 'staff-b', 'staffa', 'staffb']);
+            $isStaff = in_array($role, ['staff', 'staff_a', 'staff_b', 'staff-a', 'staff-b', 'staffa', 'staffb', 'seller']);
         }
 
         $isVendor = in_array($role, ['vendor', 'staffb', 'staff_b', 'staff-b']);
