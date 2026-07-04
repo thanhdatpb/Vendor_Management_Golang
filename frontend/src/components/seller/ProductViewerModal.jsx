@@ -346,7 +346,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
             {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
-            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface, height: 220 }}>
+            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
               {/* Media */}
               <div style={{ width: 240, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: displayUrls.length ? 'pointer' : 'default' }}>
@@ -387,23 +387,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     </div>
                   )}
                 </div>
-                {/* Thumbnail strip */}
-                {displayUrls.length > 1 && (
-                  <div style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.4)', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                    {displayUrls.map((url, idx) => (
-                      <div key={idx} onClick={() => { setCurrentMediaIndex(idx); setImgError(false); }} style={{ width: 38, height: 38, borderRadius: 5, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${currentMediaIndex === idx ? HC.orange : 'rgba(255,255,255,0.15)'}`, flexShrink: 0, transition: 'border-color 0.15s' }}>
-                        {/\.(mp4|mov|webm)$/i.test(url)
-                          ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
-                          : <ThumbnailImg src={url} />
-                        }
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Product Info — compact */}
-              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 16px', background: '#f8fafc' }}>
+              <div style={{ flex: 1, overflowX: 'hidden', padding: '10px 16px', background: '#f8fafc' }}>
                 {/* Header row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
