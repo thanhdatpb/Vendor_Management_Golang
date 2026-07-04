@@ -15,6 +15,8 @@
     "antd": "^6.3.3",
     "axios": "^1.13.6",
     "chart.js": "^4.5.1",
+    "laravel-echo": "^2.3.7",
+    "pusher-js": "^8.5.0",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",

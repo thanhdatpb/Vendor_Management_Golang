@@ -4,6 +4,7 @@ import { lsGet, lsSet, fmtDate, getMediaUrls } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/StaffBUI';
 import VendorViewerModal from '../components/VendorViewerModal';
 import { productApi } from '../../../services/api';
+import { subscribeProductChanges } from '../../../services/echo';
 import { SearchOutlined } from '@ant-design/icons';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -202,11 +203,16 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
   useEffect(() => {
     loadProducts();
+
+    // Real-time qua Pusher — có sản phẩm mới được Admin duyệt là load lại ngay.
+    const unsubscribe = subscribeProductChanges(() => { loadProducts(); });
+
+    // Polling giữ làm lưới an toàn, giãn tần suất vì real-time đã lo phần chính.
     const id = setInterval(() => {
       if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
       loadProducts();
-    }, 60000);
-    return () => clearInterval(id);
+    }, 120000);
+    return () => { clearInterval(id); unsubscribe(); };
   }, [loadProducts]);
 
   useEffect(() => {

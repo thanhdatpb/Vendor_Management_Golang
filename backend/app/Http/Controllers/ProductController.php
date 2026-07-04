@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use App\Events\ProductChanged;
 
 class ProductController extends Controller
 {
@@ -185,6 +186,7 @@ public function store(Request $request)
     $product = $this->addMediaUrlsToProduct($product);
 
     $this->clearProductsCache();
+    broadcast(new ProductChanged($product, 'created'));
 
     return response()->json($product, 201);
 }
@@ -304,6 +306,7 @@ public function update(Request $request, $id)
     $product = $this->addMediaUrlsToProduct($product);
 
     $this->clearProductsCache();
+    broadcast(new ProductChanged($product, 'updated'));
 
     return response()->json($product);
 }
@@ -363,6 +366,7 @@ public function update(Request $request, $id)
         $product->delete();
 
         $this->clearProductsCache();
+        broadcast(new ProductChanged($product, 'deleted'));
 
         return response()->json(['message' => 'Product deleted successfully']);
     }
@@ -381,6 +385,7 @@ public function update(Request $request, $id)
         $product->save();
 
         $this->clearProductsCache();
+        broadcast(new ProductChanged($product, 'submitted'));
 
         NotificationService::sendToRole(
             'admin',
@@ -452,6 +457,7 @@ public function pendingApprovals()
         }
 
         $this->clearProductsCache();
+        broadcast(new ProductChanged($product, $isApproved ? 'approved' : 'rejected'));
 
         return response()->json(['message' => $isApproved ? 'Product approved' : 'Product rejected']);
     }
@@ -477,6 +483,7 @@ public function pendingApprovals()
         }
 
         $this->clearProductsCache();
+        broadcast(new ProductChanged($product, 'rejected'));
 
         return response()->json(['message' => 'Product rejected']);
     }

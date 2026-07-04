@@ -3,6 +3,7 @@ import { HC, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
 import { playNotificationBeep } from '../audio';
 import { productApi } from '../../../services/api';
+import { subscribeProductChanges } from '../../../services/echo';
 import { pushNotif } from '../../../utils/notifUtils';
 import { EmptyState, Table, Badge, MediaGallery, Pagination, Spinner } from '../ui';
 import ProductViewerModal from '../modals/ProductViewerModal';
@@ -309,11 +310,19 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
   }, [loadPending, loadAllProducts]);
 
   useEffect(() => {
-    const id = setInterval(() => {
+    // Real-time qua Pusher — cập nhật ngay khi có thay đổi, không cần F5.
+    const unsubscribe = subscribeProductChanges(() => {
       loadPending();
       loadAllProducts();
-    }, 15000);
-    return () => clearInterval(id);
+    });
+
+    // Polling giữ làm lưới an toàn, giãn tần suất vì real-time đã lo phần chính.
+    const id = setInterval(() => {
+      if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
+      loadPending();
+      loadAllProducts();
+    }, 120000);
+    return () => { clearInterval(id); unsubscribe(); };
   }, [loadPending, loadAllProducts]);
 
   const TABLE_COLS = ['STT', 'Project', 'Seller Name', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];

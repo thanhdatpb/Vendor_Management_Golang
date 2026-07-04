@@ -12,6 +12,7 @@ import { HC, API_BASE_URL, ITEMS_PER_PAGE } from '../constants';
 import { normalizeList, normalizeProduct, getMediaUrls, fmtDate } from '../utils';
 import { playNotificationBeep } from '../audio';
 import { productApi } from '../../../services/api';
+import { subscribeProductChanges } from '../../../services/echo';
 import { pushNotif } from '../../../utils/notifUtils';
 import { Spinner, Table, Badge, MediaGallery, Pagination } from '../ui';
 import AppToast from '../../shared/AppToast';
@@ -515,11 +516,20 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
   useEffect(() => {
     Promise.all([loadAllData(), loadPending()]);
+
+    // Pusher đẩy real-time khi có thay đổi ở tab/tài khoản khác — không cần F5.
+    const unsubscribe = subscribeProductChanges(() => {
+      loadAllData(); loadPending();
+    });
+
+    // Polling giữ lại làm lưới an toàn (phòng khi mất kết nối Pusher), tần suất thấp hơn
+    // vì giờ real-time đã lo phần chính.
     const interval = setInterval(() => {
       if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
       loadAllData(); loadPending();
-    }, 45000);
-    return () => clearInterval(interval);
+    }, 120000);
+
+    return () => { clearInterval(interval); unsubscribe(); };
   }, [loadAllData, loadPending]);
 
   const TABLE_COLS = ['STT', 'Project', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];

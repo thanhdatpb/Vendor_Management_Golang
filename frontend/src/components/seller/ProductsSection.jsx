@@ -10,6 +10,7 @@ import { lsGet, fmtDate, fmtDateTime, getMediaUrls, getMediaUrl, exportProductsT
 import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../utils/productExcel';
 import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field } from './SellerUI';
 import { productApi } from '../../services/api';
+import { subscribeProductChanges } from '../../services/echo';
 import ProductViewerModal from './ProductViewerModal';
 
 function ThumbnailCell({ src }) {
@@ -442,7 +443,13 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     return { ...p, product_type_links: links, product_video_links: videoLinks, media_urls: p.media_urls || (p.media_url ? [p.media_url] : []) };
   };
 
-  useEffect(() => { loadProducts(); }, [loadProducts]);
+  useEffect(() => {
+    loadProducts();
+    // Real-time: khi Admin duyệt/từ chối, hoặc chính mình sửa từ tab/thiết bị khác,
+    // danh sách tự cập nhật ngay — không cần F5.
+    const unsubscribe = subscribeProductChanges(() => { loadProducts(); });
+    return unsubscribe;
+  }, [loadProducts]);
 
   const showToast = (type, title, message, duration = 3000) => {
     setToast({ type, title, message, duration });

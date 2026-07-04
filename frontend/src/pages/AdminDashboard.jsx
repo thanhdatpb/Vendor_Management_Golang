@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { productApi, notificationApi } from '../services/api';
+import { subscribeProductChanges } from '../services/echo';
 import { HC, PAGE_TITLES } from '../components/admin/constants';
 import { normalizeList } from '../components/admin/utils';
 import Sidebar from '../components/admin/Sidebar';
@@ -229,10 +230,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     Promise.all([loadRequestNotifications(), loadNewsNotifications(), loadPendingProducts()]);
 
+    // Real-time qua Pusher — badge/số lượng chờ duyệt cập nhật ngay, không cần F5.
+    const unsubscribePusher = subscribeProductChanges(() => { loadPendingProducts(); });
+
     const interval = setInterval(() => {
       if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
       Promise.all([loadPendingProducts(), loadRequestNotifications(), loadNewsNotifications()]);
-    }, 60000);
+    }, 120000);
 
     const handleStorageChange = (e) => {
       if (e.key === 'STAFF_A_NOTIFICATIONS') {
@@ -257,6 +261,7 @@ export default function AdminDashboard() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('newStaffNews', handleCustomNewsEvent);
       clearInterval(interval);
+      unsubscribePusher();
     };
   }, [loadRequestNotifications, loadNewsNotifications, loadPendingProducts]);
 
