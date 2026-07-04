@@ -6,13 +6,30 @@ Production: [vendorhub.viehana.com](https://vendorhub.viehana.com)
 
 ---
 
+## Vai trò & Luồng nghiệp vụ
+
+Hệ thống có 5 vai trò:
+
+| Vai trò | Mô tả |
+|---|---|
+| **Admin** | Duyệt/từ chối Product Request, quản lý nhân sự & phân quyền, xem toàn bộ dữ liệu. |
+| **Seller / Staff A** | Tạo yêu cầu sản phẩm (Product Request), duyệt vendor do Staff B đề xuất, thiết lập giá bán. |
+| **Vendor / Staff B** | Tiếp nhận Request, quản lý Thư viện Vendor (import Excel), gán vendor phù hợp cho từng sản phẩm. |
+| **CSF** *(Customer Service & Fulfillment)* | Chỉ xem (read-only) Thư viện Vendor — **không thấy giá**. Xem được cả 4 project (Happy / Creative / Global / Hapify84) cùng lúc. |
+| **PD** *(Product Design)* | Chỉ xem (read-only) Thư viện Vendor — **không thấy giá**. Chỉ xem được project mà tài khoản được gán. |
+
+CSF/PD dùng chung dữ liệu Thư viện Vendor với Seller/Staff B nhưng hiển thị gộp "Thông tin chung về phôi" + cột **Link Template** vào 1 bảng duy nhất, ẩn hoàn toàn mọi trường giá (Target Cost, Economy/Express/Overnight Price...).
+
+---
+
 ## Tính năng chính
 
-- **Phân quyền 3 vai trò**: Admin (CCO), Seller / Staff A (Kinh doanh), Vendor / Staff B (Vận hành).
 - **Quản lý Product Request**: Staff A tạo yêu cầu sản phẩm, Admin duyệt, Staff B tiếp nhận và xử lý.
-- **Thư viện Vendor**: Import danh sách vendor từ file Excel (định dạng Happy Creative), xem thông tin phôi và bảng giá.
+- **Thư viện Vendor**: Import danh sách vendor từ file Excel (định dạng Happy Creative), xem thông tin phôi và bảng giá theo từng project.
 - **Gán Vendor cho sản phẩm**: Staff B gán vendor phù hợp, Seller xem và ra quyết định đặt Sample.
-- **Thiết lập giá**: Cấu hình Target Cost, Economy / Express / Overnight Price theo từng vendor.
+- **Thiết lập giá**: Cấu hình Target Cost, Economy / Express / Overnight Price và Link Template theo từng vendor.
+- **Tra cứu read-only cho CSF/PD**: Xem Thư viện Vendor không kèm giá, đúng phạm vi project được phân quyền.
+- **Quản lý nhân sự (Admin)**: Thêm/sửa/khoá tài khoản theo từng project, phân role Seller/PD/CSF/Admin/Vendor.
 - **Hệ thống thông báo**: Cross-role notifications (Admin → Staff B, Staff B → Staff A, Seller → Staff B).
 - **Xuất dữ liệu**: Export danh sách sản phẩm và vendor ra file Excel.
 
@@ -21,22 +38,23 @@ Production: [vendorhub.viehana.com](https://vendorhub.viehana.com)
 ## Tech Stack
 
 ### Frontend
-- **Framework**: React.js + Vite
-- **Styling**: Inline CSS — Design System nội bộ (`HC.orange`, `HC.surface`, gradient, glassmorphism)
-- **Icons**: Ant Design Icons
+- **Framework**: React 19 + Vite
+- **UI**: Ant Design + Ant Design Icons, Chart.js (`react-chartjs-2`)
+- **Styling**: Inline CSS — Design System nội bộ (`HC.orange`, `HC.surface`, gradient, glassmorphism). Không dùng Tailwind/CSS framework.
 - **HTTP**: Axios
 - **Excel**: SheetJS (XLSX)
-- **Routing**: React Router DOM
+- **Routing**: React Router DOM v7
 
 ### Backend
-- **Framework**: Laravel 11
-- **Auth**: Laravel Sanctum
+- **Framework**: Laravel 12
+- **Auth**: Laravel Sanctum (token) + Laravel Socialite (Google OAuth)
 - **Database**: MySQL 8.0
 - **Storage**: Local Disk (Symlink)
 
 ### Infrastructure
-- **Hosting**: Hostinger (auto-deploy từ GitHub branch `main`)
-- **Docker**: MySQL + phpMyAdmin (môi trường dev local)
+- **Hosting**: Hostinger — backend Laravel deploy qua Git (branch `main`), Document Root trỏ vào `backend/public`.
+- **Frontend build**: build tĩnh (`vite build`) — **không tự động rebuild khi push code nguồn**, xem lưu ý ở mục Triển khai bên dưới.
+- **Docker**: MySQL + phpMyAdmin (môi trường dev local).
 
 ---
 
@@ -44,8 +62,9 @@ Production: [vendorhub.viehana.com](https://vendorhub.viehana.com)
 
 ```
 /
-├── backend/           # Laravel 11 API
-├── frontend/          # React + Vite
+├── backend/           # Laravel 12 API
+├── frontend/          # React + Vite (mã nguồn .jsx)
+│   └── dist/          # Build tĩnh đã build sẵn — đây là thứ thực sự được serve ở production
 ├── docker-compose.yml # MySQL & phpMyAdmin local
 ├── BACKEND_SCHEMA.md  # Schema & endpoint spec cho các API cần implement
 └── .gitignore
@@ -88,11 +107,15 @@ npm run dev
 
 ## Tài khoản mặc định
 
+Tất cả tài khoản seed sẵn đều dùng chung mật khẩu `Happyc123@`.
+
 | Vai trò | Username |
 |---|---|
 | Admin | `happyc.admin` |
 | Vendor / Staff B | `happyc.vendor` |
-| Seller / Staff A | `happyc.seller.happy` · `happyc.seller.creative` · `happyc.seller.global` · `happyc.seller.pilot` |
+| Seller / Staff A | `happyc.seller.happy` · `happyc.seller.creative` · `happyc.seller.global` · `happyc.seller.pilot` · `hc.hapify84` |
+| PD | `hc.pd.happy` · `hc.pd.creative` · `hc.pd.global` · `hc.pd.hapify84` |
+| CSF | `hc.csf` |
 
 ---
 
@@ -106,11 +129,12 @@ php artisan config:cache
 php artisan migrate --force
 ```
 
-**Frontend** — build và upload thư mục `dist`:
+**Frontend** — build và deploy thư mục `dist`:
 ```bash
 cd frontend
 npm run build
-# Copy nội dung dist/ vào public_html hoặc deploy riêng
 ```
+
+> ⚠️ **Lưu ý quan trọng**: `frontend/dist` là bản build **tĩnh, đã commit sẵn vào git** và chính là thứ được serve ở production — nó **không tự rebuild khi bạn push code `.jsx`**. Sau bất kỳ thay đổi nào ở `frontend/src`, phải chạy `npm run build` rồi commit lại `frontend/dist` (hoặc upload thủ công) thì thay đổi mới thực sự lên production. Chỉ sửa source mà quên bước này là nguyên nhân phổ biến nhất khiến "code đã merge nhưng giao diện chưa đổi".
 
 Auto-deploy được cấu hình qua Hostinger GIT (branch `main`).
