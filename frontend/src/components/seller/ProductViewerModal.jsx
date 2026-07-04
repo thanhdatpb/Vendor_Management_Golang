@@ -436,18 +436,30 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   </div>
                 </div>
 
-                {/* Row 2: specs + reviews inline */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr 1.2fr 1.2fr', gap: 6, marginBottom: 6 }}>
+                {/* Row 2: specs compact */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr 1fr', gap: 6, marginBottom: 6 }}>
                   {[
                     { label: 'Chất liệu', value: product.material },
                     { label: 'Vùng In', value: product.print_area },
                     { label: 'Đặc tính KT', value: product.other_specs },
+                    { label: 'Packing', value: product.packaging_links },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value || ''}>{value || '—'}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Row 2b: reviews — full wrapped text */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                  {[
                     { label: 'Good Review', value: product.good_review, color: '#166534', bg: '#f0fdf4', bc: '#bbf7d0' },
                     { label: 'Bad Review', value: product.bad_review, color: '#991b1b', bg: '#fef2f2', bc: '#fecaca' },
                   ].map(({ label, value, color, bg, bc }) => (
-                    <div key={label} style={{ background: bg || '#fff', border: `1px solid ${bc || '#e5e7eb'}`, borderRadius: 8, padding: '7px 11px' }}>
-                      <div style={{ fontSize: 9, color: color || '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: color || HC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value || ''}>{value || '—'}</div>
+                    <div key={label} style={{ background: bg, border: `1px solid ${bc}`, borderRadius: 8, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color, lineHeight: 1.4 }}>{value || '—'}</div>
                     </div>
                   ))}
                 </div>
