@@ -24,11 +24,11 @@ class NotificationService
 
     /**
      * Gửi thông báo đến tất cả user có role nhất định
-     * VD: role = 'admin', 'staff_a', 'staff_b'
+     * VD: role = 'admin', 'seller', 'vendor'. Có thể truyền mảng để gộp cả tên role cũ/mới.
      */
-    public static function sendToRole(string $role, string $type, string $title, string $body, ?array $data = null): void
+    public static function sendToRole(string|array $role, string $type, string $title, string $body, ?array $data = null): void
     {
-        $users = User::where('role', $role)->get();
+        $users = User::whereIn('role', (array) $role)->get();
         foreach ($users as $user) {
             self::send($user->id, $type, $title, $body, $data);
         }

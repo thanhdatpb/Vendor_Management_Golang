@@ -4,7 +4,7 @@ import { lsGet, lsSet, getMediaUrls, fmtDate } from '../utils/helpers';
 import { pushNotif } from '../../../utils/notifUtils';
 import PriceComparisonMatrix from './PriceComparisonMatrix';
 import Lightbox from './Lightbox';
-import { BestSellerBadge } from '../ui/StaffBUI';
+import { BestSellerBadge } from '../ui/VendorUI';
 
 const parseAssignedVendors = (raw) => {
   if (!raw) return [];

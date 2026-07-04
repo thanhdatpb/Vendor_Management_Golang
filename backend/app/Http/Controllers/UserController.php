@@ -32,7 +32,7 @@ class UserController extends Controller
     
     public function getSellers(Request $request)
     {
-        $query = User::where('role', 'staff_a');
+        $query = User::whereIn('role', ['staff_a', 'seller']);
         
         if ($request->has('project')) {
             $query->where('project', $request->project);

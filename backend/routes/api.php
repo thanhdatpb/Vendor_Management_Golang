@@ -178,9 +178,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Staff B gửi feedback về sản phẩm
     Route::post('/products/{id}/feedback', [ProductController::class, 'sendFeedback']);
     Route::put('/products/{id}/deadline', [ProductController::class, 'updateDeadline']);
-    // Staff B gán vendor list cho sản phẩm — chỉ staff_b được phép
+    // Vendor (tên cũ: Staff B) gán vendor list cho sản phẩm
     Route::post('/products/{id}/assign-vendors', [ProductController::class, 'assignVendors'])
-        ->middleware('role:staff_b');
+        ->middleware('role:staff_b,vendor');
 
 
     // =========================

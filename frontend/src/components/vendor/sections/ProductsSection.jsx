@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
 import { lsGet, lsSet, fmtDate, getMediaUrls } from '../utils/helpers';
-import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/StaffBUI';
+import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/VendorUI';
 import VendorViewerModal from '../components/VendorViewerModal';
 import { productApi } from '../../../services/api';
 import { subscribeProductChanges } from '../../../services/echo';

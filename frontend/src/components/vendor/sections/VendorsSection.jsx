@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 import { vendorApi, productApi } from '../../../services/api';
 import { HC, LS_PRODUCT_VENDORS, VENDOR_TYPES, VENDOR_PAGE_SIZE } from '../utils/constants';
 import { lsGet, lsSet, parseVendorExcel, buildVendorPayload, VENDOR_TYPE_LIST, normalizeVendorType } from '../utils/helpers';
-import { Spinner, EmptyState, BestSellerBadge } from '../ui/StaffBUI';
+import { Spinner, EmptyState, BestSellerBadge } from '../ui/VendorUI';
 import { SearchOutlined } from '@ant-design/icons';
 import VendorLibraryViewer from './VendorLibraryViewer';
 import AppToast from '../../shared/AppToast';

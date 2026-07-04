@@ -3,8 +3,8 @@
 import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 import AdminDashboard from "./pages/AdminDashboard";
-import StaffADashboard from "./pages/StaffADashboard";
-import StaffBDashboard from "./pages/StaffBDashboard";
+import SellerDashboard from "./pages/SellerDashboard";
+import VendorDashboard from "./pages/VendorDashboard";
 import CsfDashboard from "./pages/CsfDashboard";
 import PdDashboard from "./pages/PdDashboard";
 
@@ -34,7 +34,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <RoleRoute allow={["staffa", "staff", "seller"]}>
-              <StaffADashboard />
+              <SellerDashboard />
             </RoleRoute>
           </ProtectedRoute>
         }
@@ -45,7 +45,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <RoleRoute allow={["staffb", "vendor"]}>
-              <StaffBDashboard />
+              <VendorDashboard />
             </RoleRoute>
           </ProtectedRoute>
         }

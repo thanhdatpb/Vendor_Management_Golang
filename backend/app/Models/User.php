@@ -36,23 +36,21 @@ class User extends Authenticatable {
     }
     
     public function isStaff(): bool {
-        return in_array($this->role, ['staff', 'staff_a', 'staff_b', 'seller']);
+        return $this->role === 'staff' || $this->isSeller() || $this->isVendor();
     }
-    
-    // ← THÊM CÁC HÀM NÀY (phía dưới)
-    
+
     /**
-     * Kiểm tra user có phải Staff A (Seller) không
+     * Kiểm tra user có phải Seller (tên cũ: Staff A) không
      */
-    public function isStaffA(): bool {
-        return $this->role === 'staff_a';
+    public function isSeller(): bool {
+        return in_array($this->role, ['seller', 'staff_a']);
     }
-    
+
     /**
-     * Kiểm tra user có phải Staff B không
+     * Kiểm tra user có phải Vendor (tên cũ: Staff B) không
      */
-    public function isStaffB(): bool {
-        return $this->role === 'staff_b';
+    public function isVendor(): bool {
+        return in_array($this->role, ['vendor', 'staff_b']);
     }
 
     /**

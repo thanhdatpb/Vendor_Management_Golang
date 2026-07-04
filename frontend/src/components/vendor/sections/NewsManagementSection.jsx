@@ -3,7 +3,7 @@ import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ProfileOutlin
 import { HC } from '../utils/constants';
 import AppToast from '../../shared/AppToast';
 import { playNotificationSound } from '../utils/helpers';
-import { Spinner, EmptyState, Pagination } from '../ui/StaffBUI';
+import { Spinner, EmptyState, Pagination } from '../ui/VendorUI';
 import NewsModalComponent from '../components/NewsModalComponent';
 import { pushNotif, pushNotifMulti } from '../../../utils/notifUtils';
 

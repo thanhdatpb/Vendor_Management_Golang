@@ -2,7 +2,7 @@
 //  VENDORS SECTION — Thư Viện File
 // ════════════════════════════════════════════════════════
 import React, { useState, useEffect } from 'react';
-import VendorLibraryViewer from '../staff-b/sections/VendorLibraryViewer';
+import VendorLibraryViewer from '../vendor/sections/VendorLibraryViewer';
 import { HC } from '../../constants/sellerTheme';
 
 export default function VendorsSection({ highlightFileId, onHighlightCleared }) {

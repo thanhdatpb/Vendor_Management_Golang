@@ -76,8 +76,8 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  // Lấy role đã chuẩn hóa
-  const userRole = user?.role;
+  // Lấy role đã chuẩn hóa (bỏ dấu _/-, chữ thường) để khớp cả tên role cũ (staff_a/staff_b) và mới (seller/vendor)
+  const userRole = (user?.role || "").toLowerCase().replace(/[_\-\s]/g, "");
 
   return (
     <AuthContext.Provider

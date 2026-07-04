@@ -35,7 +35,7 @@ function formatTime(timestamp) {
   } catch { return ''; }
 }
 
-export default function StaffBNotificationCenter({
+export default function VendorNotificationCenter({
   requestNotifications,
   newsNotifications,
   markRequestAsRead,

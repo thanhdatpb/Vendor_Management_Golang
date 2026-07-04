@@ -3,12 +3,12 @@ import { LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
 
-import { HCLogo } from '../components/staff-b/ui/StaffBUI';
-import StaffBNotificationCenter from '../components/staff-b/components/StaffBNotificationCenter';
-import NewsManagementSection from '../components/staff-b/sections/NewsManagementSection';
-import ProductsSection from '../components/staff-b/sections/ProductsSection';
-import VendorsSection from '../components/staff-b/sections/VendorsSection';
-import { HC, MENU, PAGE_TITLES } from '../components/staff-b/utils/constants';
+import { HCLogo } from '../components/vendor/ui/VendorUI';
+import VendorNotificationCenter from '../components/vendor/components/VendorNotificationCenter';
+import NewsManagementSection from '../components/vendor/sections/NewsManagementSection';
+import ProductsSection from '../components/vendor/sections/ProductsSection';
+import VendorsSection from '../components/vendor/sections/VendorsSection';
+import { HC, MENU, PAGE_TITLES } from '../components/vendor/utils/constants';
 
 const DARK = {
   bg:          'var(--hc-dark-bg)',
@@ -23,7 +23,7 @@ const DARK = {
   cardBg:      'var(--hc-dark-bg-hover)',
 };
 
-export default function StaffDashboard() {
+export default function VendorDashboard() {
   const { user, logout } = useAuth();
   const [lastActiveTime, setLastActiveTime] = useState(() => localStorage.getItem(`LAST_ACTIVE_${user?.role || 'staffb'}`) || Date.now().toString());
 
@@ -185,7 +185,7 @@ export default function StaffDashboard() {
   };
 
   // ── Tooltip Nav Item helper ──────────────────────────────
-  function StaffBNavItem({ item, isActive, isCollapsed, onClick }) {
+  function VendorNavItem({ item, isActive, isCollapsed, onClick }) {
     const [hov, setHov] = useState(false);
     return (
       <div
@@ -238,8 +238,8 @@ export default function StaffDashboard() {
         ::-webkit-scrollbar-track{background:${HC.cream};border-radius:10px;}
         ::-webkit-scrollbar-thumb{background:${HC.orangeMid};border-radius:10px;}
         ::-webkit-scrollbar-thumb:hover{background:${HC.orange};}
-        @keyframes staffb-pulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.5);}50%{box-shadow:0 0 0 4px rgba(74,222,128,0);}}
-        @keyframes staffb-fadein{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
+        @keyframes vendor-pulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.5);}50%{box-shadow:0 0 0 4px rgba(74,222,128,0);}}
+        @keyframes vendor-fadein{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
       `}</style>
       <div style={{ display: 'flex', height: '100vh', background: HC.orangePale, fontFamily: "'Nunito Sans',sans-serif", color: HC.ink, overflow: 'hidden' }}>
         {/* ── Sidebar ── */}
@@ -250,7 +250,7 @@ export default function StaffDashboard() {
               <HCLogo size={24} color={HC.orange} />
             </div>
             {sidebarOpen && (
-              <div style={{ animation: 'staffb-fadein 0.25s ease' }}>
+              <div style={{ animation: 'vendor-fadein 0.25s ease' }}>
                 <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: 14.5, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em' }}>Happy Creative LLC</div>
                 <div style={{ color: HC.orange, fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, textTransform: 'uppercase', marginTop: 3, opacity: 0.85 }}>Vendor Management</div>
               </div>
@@ -258,7 +258,7 @@ export default function StaffDashboard() {
           </div>
           {/* User section */}
           {sidebarOpen ? (
-            <div onClick={() => setShowLogout(v => !v)} style={{ margin: '14px 12px', padding: '12px 14px', borderRadius: 12, background: DARK.cardBg, border: `1px solid ${showLogout ? 'rgba(249,115,22,0.3)' : DARK.border}`, animation: 'staffb-fadein 0.25s ease', flexShrink: 0, cursor: 'pointer', transition: 'border-color 0.18s ease' }}>
+            <div onClick={() => setShowLogout(v => !v)} style={{ margin: '14px 12px', padding: '12px 14px', borderRadius: 12, background: DARK.cardBg, border: `1px solid ${showLogout ? 'rgba(249,115,22,0.3)' : DARK.border}`, animation: 'vendor-fadein 0.25s ease', flexShrink: 0, cursor: 'pointer', transition: 'border-color 0.18s ease' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', flexShrink: 0 }}><ShopOutlined /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -267,23 +267,23 @@ export default function StaffDashboard() {
                 </div>
               </div>
               <div style={{ fontSize: 10, color: '#4ade80', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${DARK.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'staffb-pulse 2.5s ease-in-out infinite', flexShrink: 0 }} />
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'vendor-pulse 2.5s ease-in-out infinite', flexShrink: 0 }} />
                 <span style={{ fontWeight: 600 }}>Online · {formatLastActive(lastActiveTime)}</span>
               </div>
               {showLogout && (
-                <div onClick={(e) => { e.stopPropagation(); logout(); }} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', cursor: 'pointer', animation: 'staffb-fadein 0.15s ease' }}>
+                <div onClick={(e) => { e.stopPropagation(); logout(); }} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', cursor: 'pointer', animation: 'vendor-fadein 0.15s ease' }}>
                   <LogoutOutlined style={{ fontSize: 12 }} />
                   <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif" }}>Đăng xuất</span>
                 </div>
               )}
             </div>
           ) : (
-            <StaffBCollapsedUser user={user} logout={logout} />
+            <VendorCollapsedUser user={user} logout={logout} />
           )}
           {/* Nav */}
           <nav style={{ flex: 1, padding: sidebarOpen ? '4px 10px' : '4px 8px', overflowY: 'auto', overflowX: 'visible', scrollbarWidth: 'none' }}>
             {MENU.map(item => (
-              <StaffBNavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
+              <VendorNavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
             ))}
           </nav>
         </div>
@@ -295,7 +295,7 @@ export default function StaffDashboard() {
               {active === 'library' && filterProductType && <span style={{ padding: '2px 10px', borderRadius: 999, background: HC.orangeLight, border: `1.5px solid ${HC.orange}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>🔍 {filterProductType}</span>}
             </div>
             <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <StaffBNotificationCenter requestNotifications={requestNotifications} newsNotifications={newsNotifications} markRequestAsRead={markRequestAsRead} markNewsAsRead={markNewsAsRead} onRequestClick={handleRequestClick} onNewsClick={handleNewsClick} />
+            <VendorNotificationCenter requestNotifications={requestNotifications} newsNotifications={newsNotifications} markRequestAsRead={markRequestAsRead} markNewsAsRead={markNewsAsRead} onRequestClick={handleRequestClick} onNewsClick={handleNewsClick} />
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>{renderSection()}</div>
         </div>
@@ -304,7 +304,7 @@ export default function StaffDashboard() {
   );
 }
 
-function StaffBCollapsedUser({ user, logout }) {
+function VendorCollapsedUser({ user, logout }) {
   const [hovered, setHovered] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const DARK_LOCAL = {

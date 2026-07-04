@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import VendorLibraryViewer from '../../staff-b/sections/VendorLibraryViewer';
+import VendorLibraryViewer from '../../vendor/sections/VendorLibraryViewer';
 import { HC } from '../constants';
 
 export default function VendorsSection() {

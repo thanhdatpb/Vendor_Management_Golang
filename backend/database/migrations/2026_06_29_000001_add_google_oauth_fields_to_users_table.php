@@ -14,7 +14,9 @@ return new class extends Migration
         });
 
         // Make password nullable (sellers login via Google only)
-        \DB::statement('ALTER TABLE users MODIFY password VARCHAR(255) NULL');
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('password')->nullable()->change();
+        });
     }
 
     public function down(): void
@@ -24,6 +26,8 @@ return new class extends Migration
             $table->dropColumn(['google_id', 'avatar_url']);
         });
 
-        \DB::statement('ALTER TABLE users MODIFY password VARCHAR(255) NOT NULL');
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('password')->nullable(false)->change();
+        });
     }
 };

@@ -24,21 +24,21 @@ class UserSeeder extends Seeder {
         );
         $this->command->info('✅ Admin: happyc.admin / Happyc123@');
 
-        // ========== 2. TÀI KHOẢN STAFF B (VENDOR) ==========
+        // ========== 2. TÀI KHOẢN VENDOR (TÊN CŨ: STAFF B) ==========
         User::updateOrCreate(
             ['email' => 'happyc.vendor'],
             [
                 'name'       => 'Uyên Hồ',
                 'password'   => Hash::make('Happyc123@'),
-                'role'       => 'staff_b',
+                'role'       => 'vendor',
                 'seller_name'=> null,
                 'full_name'  => 'Uyên Hồ',
                 'is_active'  => true,
             ]
         );
-        $this->command->info('✅ Staff B: happyc.vendor / Happyc123@');
+        $this->command->info('✅ Vendor: happyc.vendor / Happyc123@');
 
-        // ========== 3. DANH SÁCH TÀI KHOẢN STAFF A (SELLER) ==========
+        // ========== 3. DANH SÁCH TÀI KHOẢN SELLER (TÊN CŨ: STAFF A) ==========
         $staffAccounts = [
             ['email' => 'happyc.seller.happy',    'name' => 'Happy Project',    'project' => 'Happy Project'],
             ['email' => 'happyc.seller.creative', 'name' => 'Creative Project', 'project' => 'Creative Project'],
@@ -53,7 +53,7 @@ class UserSeeder extends Seeder {
                 [
                     'name'       => $account['name'],
                     'password'   => Hash::make('Happyc123@'),
-                    'role'       => 'staff_a',
+                    'role'       => 'seller',
                     'seller_name'=> $account['name'],
                     'full_name'  => $account['name'],
                     'project'    => $account['project'],
@@ -67,8 +67,8 @@ class UserSeeder extends Seeder {
         $this->command->info("📋 DANH SÁCH TÀI KHOẢN (TẤT CẢ ĐỀU CÓ MẬT KHẨU: Happyc123@)");
         $this->command->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         $this->command->info("🔴 Admin:     happyc.admin");
-        $this->command->info("🟡 Staff B:   happyc.vendor");
-        $this->command->info("🟢 Staff A:   5 sellers:");
+        $this->command->info("🟡 Vendor:    happyc.vendor");
+        $this->command->info("🟢 Seller:    5 sellers:");
         $this->command->info("   - happyc.seller.creative");
         $this->command->info("   - happyc.seller.happy");
         $this->command->info("   - happyc.seller.pilot");

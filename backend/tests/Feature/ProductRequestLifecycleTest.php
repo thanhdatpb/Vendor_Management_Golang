@@ -11,9 +11,9 @@ use Tests\TestCase;
  * Integration test: toàn bộ vòng đời "Product Request" qua 3 role.
  *
  * Roles:
- *  - seller  (role = staff_a) : tạo request, xem vendor đã gán
- *  - admin   (role = admin)   : duyệt / từ chối
- *  - vendor  (role = staff_b) : gán vendor (phôi) từ thư viện
+ *  - seller  (role = seller) : tạo request, xem vendor đã gán
+ *  - admin   (role = admin)  : duyệt / từ chối
+ *  - vendor  (role = vendor) : gán vendor (phôi) từ thư viện
  *
  * ────────────────────────────────────────────
  * LƯU Ý RESPONSE FORMAT (quan trọng):
@@ -109,9 +109,9 @@ class ProductRequestLifecycleTest extends TestCase
 
     public function test_happy_path_full_lifecycle(): void
     {
-        $seller = $this->makeUser('staff_a');
+        $seller = $this->makeUser('seller');
         $admin  = $this->makeUser('admin');
-        $vendor = $this->makeUser('staff_b');
+        $vendor = $this->makeUser('vendor');
 
         // Step 1: Seller tạo request → draft
         $created   = $this->createDraftProduct($seller, ['total_cost' => 12.00]);
@@ -180,9 +180,9 @@ class ProductRequestLifecycleTest extends TestCase
     /** Vendor gọi approve → 403 (Admin middleware hoạt động đúng) */
     public function test_vendor_cannot_approve_product(): void
     {
-        $seller = $this->makeUser('staff_a', '1');
+        $seller = $this->makeUser('seller', '1');
         $admin  = $this->makeUser('admin',   '1');
-        $vendor = $this->makeUser('staff_b', '1');
+        $vendor = $this->makeUser('vendor', '1');
 
         $created   = $this->createDraftProduct($seller);
         $productId = $created['id'];
@@ -204,9 +204,9 @@ class ProductRequestLifecycleTest extends TestCase
      */
     public function test_seller_cannot_call_assign_vendors(): void
     {
-        $seller      = $this->makeUser('staff_a', '2');
+        $seller      = $this->makeUser('seller', '2');
         $admin       = $this->makeUser('admin',   '2');
-        $otherSeller = $this->makeUser('staff_a', '2b');
+        $otherSeller = $this->makeUser('seller', '2b');
 
         $created   = $this->createDraftProduct($seller);
         $productId = $created['id'];
@@ -227,7 +227,7 @@ class ProductRequestLifecycleTest extends TestCase
      */
     public function test_admin_cannot_call_assign_vendors(): void
     {
-        $seller = $this->makeUser('staff_a', '3');
+        $seller = $this->makeUser('seller', '3');
         $admin  = $this->makeUser('admin',   '3');
 
         $created   = $this->createDraftProduct($seller);
@@ -245,7 +245,7 @@ class ProductRequestLifecycleTest extends TestCase
     /** Seller gọi approve → 403 (Admin middleware hoạt động đúng) */
     public function test_seller_cannot_approve(): void
     {
-        $seller = $this->makeUser('staff_a', '4');
+        $seller = $this->makeUser('seller', '4');
 
         $created   = $this->createDraftProduct($seller);
         $productId = $created['id'];
@@ -268,8 +268,8 @@ class ProductRequestLifecycleTest extends TestCase
      */
     public function test_cannot_assign_vendor_to_pending_product(): void
     {
-        $seller = $this->makeUser('staff_a', '5');
-        $vendor = $this->makeUser('staff_b', '5');
+        $seller = $this->makeUser('seller', '5');
+        $vendor = $this->makeUser('vendor', '5');
 
         $created   = $this->createDraftProduct($seller);
         $productId = $created['id'];
@@ -298,8 +298,8 @@ class ProductRequestLifecycleTest extends TestCase
      */
     public function test_cannot_assign_vendor_to_draft_product(): void
     {
-        $seller = $this->makeUser('staff_a', '6');
-        $vendor = $this->makeUser('staff_b', '6');
+        $seller = $this->makeUser('seller', '6');
+        $vendor = $this->makeUser('vendor', '6');
 
         $created   = $this->createDraftProduct($seller);
         $productId = $created['id'];
@@ -318,7 +318,7 @@ class ProductRequestLifecycleTest extends TestCase
      */
     public function test_seller_sees_only_approved_products_in_approved_list(): void
     {
-        $seller = $this->makeUser('staff_a', '7');
+        $seller = $this->makeUser('seller', '7');
         $admin  = $this->makeUser('admin',   '7');
 
         $draftProduct = $this->createDraftProduct($seller, ['product_type' => 'DRAFT_PRODUCT']);
@@ -344,9 +344,9 @@ class ProductRequestLifecycleTest extends TestCase
 
     public function test_multiple_vendors_assigned_and_read_correctly(): void
     {
-        $seller = $this->makeUser('staff_a', '8');
+        $seller = $this->makeUser('seller', '8');
         $admin  = $this->makeUser('admin',   '8');
-        $vendor = $this->makeUser('staff_b', '8');
+        $vendor = $this->makeUser('vendor', '8');
 
         $created   = $this->createDraftProduct($seller, ['total_cost' => 15.00]);
         $productId = $created['id'];
@@ -401,9 +401,9 @@ class ProductRequestLifecycleTest extends TestCase
 
     public function test_price_delta_vs_target_cost(): void
     {
-        $seller = $this->makeUser('staff_a', '9');
+        $seller = $this->makeUser('seller', '9');
         $admin  = $this->makeUser('admin',   '9');
-        $vendor = $this->makeUser('staff_b', '9');
+        $vendor = $this->makeUser('vendor', '9');
 
         $targetCost = 12.00;
         $created    = $this->createDraftProduct($seller, ['total_cost' => $targetCost]);
@@ -454,9 +454,9 @@ class ProductRequestLifecycleTest extends TestCase
      */
     public function test_cannot_assign_vendor_to_rejected_product(): void
     {
-        $seller = $this->makeUser('staff_a', '10');
+        $seller = $this->makeUser('seller', '10');
         $admin  = $this->makeUser('admin',   '10');
-        $vendor = $this->makeUser('staff_b', '10');
+        $vendor = $this->makeUser('vendor', '10');
 
         $created   = $this->createDraftProduct($seller);
         $productId = $created['id'];
@@ -487,7 +487,7 @@ class ProductRequestLifecycleTest extends TestCase
     /** Reject lưu đúng rejection_reason và reviewer */
     public function test_rejected_product_preserves_rejection_reason(): void
     {
-        $seller = $this->makeUser('staff_a', '11');
+        $seller = $this->makeUser('seller', '11');
         $admin  = $this->makeUser('admin',   '11');
 
         $created   = $this->createDraftProduct($seller);
@@ -512,9 +512,9 @@ class ProductRequestLifecycleTest extends TestCase
 
     public function test_assign_vendors_replaces_not_appends(): void
     {
-        $seller = $this->makeUser('staff_a', '12');
+        $seller = $this->makeUser('seller', '12');
         $admin  = $this->makeUser('admin',   '12');
-        $vendor = $this->makeUser('staff_b', '12');
+        $vendor = $this->makeUser('vendor', '12');
 
         $created   = $this->createDraftProduct($seller);
         $productId = $created['id'];
@@ -562,7 +562,7 @@ class ProductRequestLifecycleTest extends TestCase
      */
     public function test_unauthenticated_cannot_submit(): void
     {
-        $seller  = $this->makeUser('staff_a', '13');
+        $seller  = $this->makeUser('seller', '13');
         // Tạo product thẳng vào DB, không qua HTTP (tránh actingAs leaking)
         $product = Product::create([
             'product_type' => 'AOP',
