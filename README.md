@@ -105,20 +105,6 @@ npm run dev
 
 ---
 
-## Tài khoản mặc định
-
-Tất cả tài khoản seed sẵn đều dùng chung mật khẩu `Happyc123@`.
-
-| Vai trò | Username |
-|---|---|
-| Admin | `happyc.admin` |
-| Vendor / Staff B | `happyc.vendor` |
-| Seller / Staff A | `happyc.seller.happy` · `happyc.seller.creative` · `happyc.seller.global` · `happyc.seller.pilot` · `hc.hapify84` |
-| PD | `hc.pd.happy` · `hc.pd.creative` · `hc.pd.global` · `hc.pd.hapify84` |
-| CSF | `hc.csf` |
-
----
-
 ## Triển khai (Production)
 
 **Backend** — trỏ Document Root vào `backend/public`:
