@@ -111,6 +111,14 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
     onSave(newRows);
   };
 
+  // Trạng thái đặt Sample — chỉ role Vendor được đổi, các role khác chỉ xem
+  const isVendorUser = isCurrentUserVendor();
+  const setSampleStatus = (idx, status) => {
+    const newRows = [...rows];
+    newRows[idx] = { ...newRows[idx], sampleStatus: status };
+    onSave(newRows);
+  };
+
   // Chỉ hiện cột Ký Hiệu khi Staff B (không readOnly) hoặc có ít nhất 1 row có kyHieu
   const showKyHieu = !readOnly || rows.some(r => r.kyHieu);
 
@@ -141,7 +149,8 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
           <th style={{ ...TH(), width: '7%', textAlign: 'left' }}>Chi tiết Size</th>
           <th style={{ ...TH(), width: '10%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
           <th style={{ ...TH(), width: '8%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
-          <th style={{ ...TH(), width: '16%', textAlign: 'left' }}>Notes</th>
+          <th style={{ ...TH(), width: '13%', textAlign: 'left' }}>Notes</th>
+          <th style={{ ...TH(), width: '9%', textAlign: 'center' }}>Trạng thái đặt Sample</th>
           <th style={{ ...TH(), width: '8%', textAlign: 'left' }}>Link Folder</th>
           {!readOnly && <th style={{ ...TH(), width: '5%' }}>Thao tác</th>}
         </tr>
@@ -246,6 +255,27 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                 {isEditing ? (
                   <textarea rows={3} placeholder="Ghi chú..." value={editForm.notes} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box', resize: 'vertical' }} />
                 ) : fmtNA(r.notes)}
+              </td>
+              <td style={{ ...TD(i), textAlign: 'center' }}>
+                {(() => {
+                  const hasSample = r.sampleStatus === 'has_sample';
+                  const label = hasSample ? 'Đã có sample' : 'Chưa có sample';
+                  const badgeStyle = {
+                    padding: '4px 10px', borderRadius: 99, fontSize: 10.5, fontWeight: 800, whiteSpace: 'nowrap', display: 'inline-block',
+                    background: hasSample ? '#dcfce7' : '#fef3c7',
+                    color: hasSample ? '#166534' : '#92400e',
+                    border: `1.5px solid ${hasSample ? '#86efac' : '#fcd34d'}`,
+                  };
+                  return isVendorUser ? (
+                    <button
+                      onClick={() => setSampleStatus(i, hasSample ? 'no_sample' : 'has_sample')}
+                      title="Click để đổi trạng thái"
+                      style={{ ...badgeStyle, cursor: 'pointer' }}
+                    >{label}</button>
+                  ) : (
+                    <span style={badgeStyle}>{label}</span>
+                  );
+                })()}
               </td>
               <td style={{ ...TD(i) }}>
                 {isEditing ? (
@@ -1306,7 +1336,9 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       const q = searchQuery.trim().toLowerCase();
       files = files.filter(file =>
         file.filename?.toLowerCase().includes(q) ||
-        file.title?.toLowerCase().includes(q)
+        file.title?.toLowerCase().includes(q) ||
+        (file.generalInfo || []).some(r => (r.productType || '').toLowerCase().includes(q)) ||
+        (file.pricing || []).some(r => (r.productType || '').toLowerCase().includes(q))
       );
     }
     // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B/Admin thấy tất cả).
