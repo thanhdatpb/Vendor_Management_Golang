@@ -58,8 +58,21 @@ function isCurrentUserVendor() {
   } catch { return false; }
 }
 
+// Hợp nhất generalInfo theo id: giữ nguyên toàn bộ dòng của bản gốc, thay dòng nào
+// có bản chỉnh sửa tương ứng (khớp id), và thêm dòng hoàn toàn mới nếu có.
+// Dùng để KHÔNG mất dòng đang bị ẩn khi lưu từ một view đã lọc dòng (VD: tab Best
+// Seller chỉ hiển thị các dòng best-seller). generalInfo chỉ được sửa tại chỗ,
+// không có thao tác xóa dòng, nên việc giữ lại dòng bị ẩn là an toàn.
+function mergeGeneralInfoById(rawRows = [], viewRows = []) {
+  const viewById = new Map((viewRows || []).filter(r => r && r.id != null).map(r => [r.id, r]));
+  const rawIds = new Set((rawRows || []).map(r => r?.id));
+  const merged = (rawRows || []).map(r => (r && viewById.has(r.id) ? viewById.get(r.id) : r));
+  const additions = (viewRows || []).filter(r => !r || r.id == null || !rawIds.has(r.id));
+  return [...merged, ...additions];
+}
+
 // ── Section 1 Table ──────────────────────────────────────────────────────────
-function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode }) {
+function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, onSampleStatusChange }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
 
@@ -111,13 +124,10 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
     onSave(newRows);
   };
 
-  // Trạng thái đặt Sample — chỉ role Vendor được đổi, các role khác chỉ xem
+  // Trạng thái đặt Sample — chỉ role Vendor được đổi, các role khác chỉ xem.
+  // Lưu qua endpoint riêng (nhẹ) thay vì ghi đè cả blob thư viện.
   const isVendorUser = isCurrentUserVendor();
-  const setSampleStatus = (idx, status) => {
-    const newRows = [...rows];
-    newRows[idx] = { ...newRows[idx], sampleStatus: status };
-    onSave(newRows);
-  };
+  const canToggleSample = isVendorUser && typeof onSampleStatusChange === 'function';
 
   // Chỉ hiện cột Ký Hiệu khi Staff B (không readOnly) hoặc có ít nhất 1 row có kyHieu
   const showKyHieu = !readOnly || rows.some(r => r.kyHieu);
@@ -266,9 +276,9 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                     color: hasSample ? '#166534' : '#92400e',
                     border: `1.5px solid ${hasSample ? '#86efac' : '#fcd34d'}`,
                   };
-                  return isVendorUser ? (
+                  return canToggleSample ? (
                     <button
-                      onClick={() => setSampleStatus(i, hasSample ? 'no_sample' : 'has_sample')}
+                      onClick={() => onSampleStatusChange(r.id, hasSample ? 'no_sample' : 'has_sample')}
                       title="Click để đổi trạng thái"
                       style={{ ...badgeStyle, cursor: 'pointer' }}
                     >{label}</button>
@@ -697,7 +707,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted }) {
+function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, onSampleStatusChange }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
@@ -933,7 +943,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
-            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} />}
+            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} onSampleStatusChange={onSampleStatusChange} />}
             {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
           </div>
         </div>
@@ -1481,9 +1491,32 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   };
 
   const handleUpdateEntry = async (updatedEntry) => {
-    const updated = libraryFiles.map(e => e.id === updatedEntry.id ? updatedEntry : e);
-    await saveLibrary(updated);
-    showToast('success', '💾 Đã lưu thay đổi');
+    // Ở các tab lọc dòng (VD: Best Seller chỉ hiện dòng best-seller), generalInfo
+    // truyền lên đây chỉ là tập ĐÃ LỌC. Ghi đè nguyên file bằng tập này sẽ xóa mất
+    // các dòng đang bị ẩn → hợp nhất theo id với bản gốc (rawFiles) trước khi lưu.
+    const rawEntry = rawFiles.find(e => e.id === updatedEntry.id);
+    const merged = rawEntry
+      ? { ...updatedEntry, generalInfo: mergeGeneralInfoById(rawEntry.generalInfo, updatedEntry.generalInfo) }
+      : updatedEntry;
+    const updated = rawFiles.map(e => e.id === merged.id ? merged : e);
+    const saved = await saveLibrary(updated);
+    if (saved) showToast('success', '💾 Đã lưu thay đổi');
+  };
+
+  // Toggle trạng thái Sample: cập nhật lạc quan trong bộ nhớ (badge đổi ngay),
+  // gọi endpoint nhẹ chỉ sửa 1 field trên server; lỗi thì hoàn tác lại.
+  const handleSampleStatusChange = async (rowId, status) => {
+    const applyStatus = (s) => setRawFiles(prev => prev.map(f => ({
+      ...f,
+      generalInfo: (f.generalInfo || []).map(r => (r.id === rowId ? { ...r, sampleStatus: s } : r)),
+    })));
+    applyStatus(status);
+    try {
+      await vendorLibraryApi.setSampleStatus(rowId, status);
+    } catch (err) {
+      applyStatus(status === 'has_sample' ? 'no_sample' : 'has_sample');
+      showToast('error', `Không lưu được trạng thái sample: ${err?.response?.data?.message || err.message || 'lỗi kết nối'}`);
+    }
   };
 
   const handleManualAdd = async (entry) => {
@@ -1654,6 +1687,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
                 toggleBestSeller={toggleBestSeller}
                 mode={mode}
                 highlighted={highlightFileId === entry.id}
+                onSampleStatusChange={handleSampleStatusChange}
               />
             </div>
           ));

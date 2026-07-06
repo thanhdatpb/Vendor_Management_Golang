@@ -51,6 +51,62 @@ class VendorLibraryController extends Controller
         return response()->json(['message' => 'Library saved successfully']);
     }
 
+    /**
+     * Cập nhật riêng trạng thái đặt Sample của MỘT dòng generalInfo theo id.
+     * Chỉ đọc–sửa–ghi đúng 1 field trên server, không nhận cả blob từ client
+     * → payload nhỏ, tránh việc client gửi bản cũ ghi đè thay đổi đồng thời.
+     */
+    public function updateSampleStatus(Request $request)
+    {
+        $validated = $request->validate([
+            'rowId'        => ['required'],
+            'sampleStatus' => ['required', 'in:has_sample,no_sample'],
+        ]);
+
+        $rowId  = (string) $validated['rowId'];
+        $status = $validated['sampleStatus'];
+
+        $row = $this->getRow();
+        if (!$row) {
+            return response()->json(['message' => 'Thư viện trống, không thể cập nhật.'], 404);
+        }
+
+        $data = json_decode($row->data, true);
+        if (!is_array($data)) {
+            return response()->json(['message' => 'Dữ liệu thư viện không hợp lệ.'], 422);
+        }
+
+        $found = false;
+        foreach ($data as &$file) {
+            if (empty($file['generalInfo']) || !is_array($file['generalInfo'])) {
+                continue;
+            }
+            foreach ($file['generalInfo'] as &$gr) {
+                if (isset($gr['id']) && (string) $gr['id'] === $rowId) {
+                    $gr['sampleStatus'] = $status;
+                    $found = true;
+                }
+            }
+            unset($gr);
+        }
+        unset($file);
+
+        if (!$found) {
+            return response()->json(['message' => 'Không tìm thấy dòng cần cập nhật.'], 404);
+        }
+
+        DB::table('vendor_library')->where('id', $row->id)->update([
+            'data'       => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message'      => 'Đã cập nhật trạng thái sample.',
+            'rowId'        => $rowId,
+            'sampleStatus' => $status,
+        ]);
+    }
+
     public function restoreBackup()
     {
         // Backup không còn dùng file — trả về dữ liệu hiện tại từ DB

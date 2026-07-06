@@ -215,6 +215,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/vendor-library', [VendorLibraryController::class, 'getLibrary']);
     Route::post('/vendor-library', [VendorLibraryController::class, 'saveLibrary']);
+    // Cập nhật nhẹ 1 field trạng thái Sample — chỉ Vendor (tên cũ: Staff B) được phép
+    Route::post('/vendor-library/sample-status', [VendorLibraryController::class, 'updateSampleStatus'])
+        ->middleware('role:staff_b,vendor');
     Route::post('/vendor-library/restore-backup', [VendorLibraryController::class, 'restoreBackup']);
 
     Route::get('/vendors',             [VendorController::class, 'index']);

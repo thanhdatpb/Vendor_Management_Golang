@@ -341,6 +341,9 @@ export const vendorApi = {
 export const vendorLibraryApi = {
   get: (mode = 'all') => api.get(`/vendor-library?mode=${mode}`),
   save: (data, mode = 'all') => api.post(`/vendor-library?mode=${mode}`, data),
+  // Cập nhật nhẹ trạng thái Sample của 1 dòng generalInfo (không gửi cả blob)
+  setSampleStatus: (rowId, sampleStatus) =>
+    api.post('/vendor-library/sample-status', { rowId, sampleStatus }),
   restoreBackup: () => api.post('/vendor-library/restore-backup'),
 };
 
