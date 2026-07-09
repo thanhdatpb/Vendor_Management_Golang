@@ -424,11 +424,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 </div>
 
                 {/* Row 2: specs compact */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr 1fr', gap: 6, marginBottom: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 6 }}>
                   {[
                     { label: 'Chất liệu', value: product.material },
                     { label: 'Vùng In', value: product.print_area },
-                    { label: 'Đặc tính KT', value: product.other_specs },
                     { label: 'Packing', value: product.packaging_links },
                   ].map(({ label, value }) => (
                     <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 11px' }}>
@@ -436,6 +435,12 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                       <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value || ''}>{value || '—'}</div>
                     </div>
                   ))}
+                </div>
+
+                {/* Row 2a: Đặc tính KT — nội dung có thể dài, cho xuống dòng đầy đủ */}
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 11px', marginBottom: 6 }}>
+                  <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Đặc tính KT</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, lineHeight: 1.4 }}>{product.other_specs || '—'}</div>
                 </div>
 
                 {/* Row 2b: reviews — full wrapped text */}
