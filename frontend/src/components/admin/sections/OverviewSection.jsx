@@ -83,7 +83,7 @@ const PROJECT_META = {
   'Creative Project': { icon: <FormatPainterOutlined />, color: '#F5A623' },
   'Happy Project':    { icon: <SmileOutlined />, color: '#10B981' },
   'Global Project':   { icon: <GlobalOutlined />, color: '#3B82F6' },
-  'Pilot Project':    { icon: <RocketOutlined />, color: '#A855F7' },
+  'Hapify84 Project': { icon: <RocketOutlined />, color: '#A855F7' },
 };
 
 function ProjectCard({ project, stats, onClick, onStatusClick }) {
@@ -200,7 +200,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     'Happy Project':    { approved: 0, rejected: 0, total: 0 },
     'Creative Project': { approved: 0, rejected: 0, total: 0 },
     'Global Project':   { approved: 0, rejected: 0, total: 0 },
-    'Pilot Project':    { approved: 0, rejected: 0, total: 0 },
+    'Hapify84 Project': { approved: 0, rejected: 0, total: 0 },
   });
 
   const [pendingProducts, setPendingProducts] = useState([]);
@@ -259,7 +259,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     const approved = products.filter(p => p.status === 'approved').length;
     const rejected = products.filter(p => p.status === 'rejected' || p.status === 'reject').length;
     setFormStats({ pending, approved, rejected, total: products.length });
-    const projects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
+    const projects = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
     const ps = {};
     projects.forEach(proj => {
       const pp = products.filter(p => {
@@ -560,7 +560,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
   if (loading) return <Spinner />;
 
-  const filteredProjects = ['Happy Project', 'Creative Project', 'Global Project', 'Pilot Project'];
+  const filteredProjects = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
 
   return (
     <div style={{ fontFamily: "'Nunito Sans',sans-serif", maxWidth: 1440, margin: '0 auto' }}>

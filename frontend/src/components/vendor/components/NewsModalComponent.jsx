@@ -235,11 +235,11 @@ const NewsModalComponent = React.memo(({
                   </label>
                   <label style={{
                     display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
-                    borderRadius: 10, background: isSelected('Pilot Project') ? HC.orangeLight : 'transparent',
-                    border: `1px solid ${isSelected('Pilot Project') ? HC.orange : HC.border}`,
+                    borderRadius: 10, background: isSelected('Hapify84 Project') ? HC.orangeLight : 'transparent',
+                    border: `1px solid ${isSelected('Hapify84 Project') ? HC.orange : HC.border}`,
                   }}>
-                    <input type="checkbox" checked={isSelected('Pilot Project')} onChange={() => handleTargetChange('Pilot Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
-                    <span style={{ fontSize: 13 }}>Pilot Project</span>
+                    <input type="checkbox" checked={isSelected('Hapify84 Project')} onChange={() => handleTargetChange('Hapify84 Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                    <span style={{ fontSize: 13 }}>Hapify84 Project</span>
                   </label>
                 </>
               )}

@@ -11,10 +11,10 @@ class CsfPdUserSeeder extends Seeder {
 
         // ========== TÀI KHOẢN PD (Product Design) — mỗi PD gắn 1 project ==========
         $pdAccounts = [
-            ['email' => 'hc.pd.happy',    'name' => 'PD Happy Project',    'project' => 'Happy Project'],
-            ['email' => 'hc.pd.creative', 'name' => 'PD Creative Project', 'project' => 'Creative Project'],
-            ['email' => 'hc.pd.global',   'name' => 'PD Global Project',   'project' => 'Global Project'],
-            ['email' => 'hc.pd.hapify84', 'name' => 'PD Hapify84 Project', 'project' => 'Hapify84 Project'],
+            ['email' => 'hc.happy.pd',    'name' => 'PD Happy Project',    'project' => 'Happy Project'],
+            ['email' => 'hc.creative.pd', 'name' => 'PD Creative Project', 'project' => 'Creative Project'],
+            ['email' => 'hc.global.pd',   'name' => 'PD Global Project',   'project' => 'Global Project'],
+            ['email' => 'hc.hapify84.pd', 'name' => 'PD Hapify84 Project', 'project' => 'Hapify84 Project'],
         ];
 
         foreach ($pdAccounts as $account) {

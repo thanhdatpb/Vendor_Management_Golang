@@ -7,8 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 use App\Models\Vendor;
-use App\Models\OrderItem;
-use App\Models\InventoryLog;
 
 class Product extends Model
 {
@@ -66,18 +64,6 @@ protected $casts = [
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
-    }
-
-    // Các đơn hàng chứa sản phẩm
-    public function orderItems()
-    {
-        return $this->hasMany(OrderItem::class);
-    }
-
-    // Log tồn kho
-    public function inventoryLogs()
-    {
-        return $this->hasMany(InventoryLog::class);
     }
 
     // Quan hệ với User - người tạo sản phẩm

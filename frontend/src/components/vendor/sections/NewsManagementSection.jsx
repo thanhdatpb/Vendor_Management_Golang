@@ -219,14 +219,14 @@ export default function NewsManagementSection() {
       case 'Creative Project': return '🎨 Creative Project';
       case 'Happy Project': return '😊 Happy Project';
       case 'Global Project': return '🌍 Global Project';
-      case 'Pilot Project': return '🚀 Pilot Project';
+      case 'Hapify84 Project': return '🚀 Hapify84 Project';
       default: return target || '—';
     }
   };
 
   const getTargetColor = (target) => {
     if (Array.isArray(target)) return '#8b5cf6';
-    if (['Creative Project', 'Happy Project', 'Global Project', 'Pilot Project'].includes(target)) {
+    if (['Creative Project', 'Happy Project', 'Global Project', 'Hapify84 Project'].includes(target)) {
       return '#8b5cf6'; // purple for projects
     }
     switch (target) {

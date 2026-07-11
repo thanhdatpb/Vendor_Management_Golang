@@ -87,7 +87,7 @@ export const normalizeProduct = (p) => {
   }
   let project = p.project;
   if (project === 'Global Deputy Project') {
-    project = 'Pilot Project';
+    project = 'Hapify84 Project';
   }
   return {
     ...p,

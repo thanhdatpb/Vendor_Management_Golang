@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder {
     public function run(): void {
-        
+
         // ========== 1. TÀI KHOẢN ADMIN ==========
         User::updateOrCreate(
-            ['email' => 'happyc.admin'],
+            ['email' => 'hc.thinhnguyen'],
             [
                 'name'       => 'Admin',
                 'password'   => Hash::make('Happyc123@'),
@@ -22,11 +22,11 @@ class UserSeeder extends Seeder {
                 'is_active'  => true,
             ]
         );
-        $this->command->info('✅ Admin: happyc.admin / Happyc123@');
+        $this->command->info('✅ Admin: hc.thinhnguyen / Happyc123@');
 
         // ========== 2. TÀI KHOẢN VENDOR (TÊN CŨ: STAFF B) ==========
         User::updateOrCreate(
-            ['email' => 'happyc.vendor'],
+            ['email' => 'hc.uyenho'],
             [
                 'name'       => 'Uyên Hồ',
                 'password'   => Hash::make('Happyc123@'),
@@ -36,15 +36,14 @@ class UserSeeder extends Seeder {
                 'is_active'  => true,
             ]
         );
-        $this->command->info('✅ Vendor: happyc.vendor / Happyc123@');
+        $this->command->info('✅ Vendor: hc.uyenho / Happyc123@');
 
         // ========== 3. DANH SÁCH TÀI KHOẢN SELLER (TÊN CŨ: STAFF A) ==========
         $staffAccounts = [
-            ['email' => 'happyc.seller.happy',    'name' => 'Happy Project',    'project' => 'Happy Project'],
-            ['email' => 'happyc.seller.creative', 'name' => 'Creative Project', 'project' => 'Creative Project'],
-            ['email' => 'happyc.seller.global',   'name' => 'Global Project',   'project' => 'Global Project'],
-            ['email' => 'happyc.seller.pilot',    'name' => 'Pilot Project',    'project' => 'Pilot Project'],
-            ['email' => 'hc.hapify84',            'name' => 'Hapify84 Project', 'project' => 'Hapify84 Project'],
+            ['email' => 'hc.happy',    'name' => 'Happy Project',    'project' => 'Happy Project'],
+            ['email' => 'hc.creative', 'name' => 'Creative Project', 'project' => 'Creative Project'],
+            ['email' => 'hc.global',   'name' => 'Global Project',   'project' => 'Global Project'],
+            ['email' => 'hc.hapify84', 'name' => 'Hapify84 Project', 'project' => 'Hapify84 Project'],
         ];
 
         foreach ($staffAccounts as $account) {
@@ -66,13 +65,12 @@ class UserSeeder extends Seeder {
         $this->command->info("\n🎉 UserSeeder completed!");
         $this->command->info("📋 DANH SÁCH TÀI KHOẢN (TẤT CẢ ĐỀU CÓ MẬT KHẨU: Happyc123@)");
         $this->command->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        $this->command->info("🔴 Admin:     happyc.admin");
-        $this->command->info("🟡 Vendor:    happyc.vendor");
-        $this->command->info("🟢 Seller:    5 sellers:");
-        $this->command->info("   - happyc.seller.creative");
-        $this->command->info("   - happyc.seller.happy");
-        $this->command->info("   - happyc.seller.pilot");
-        $this->command->info("   - happyc.seller.global");
+        $this->command->info("🔴 Admin:     hc.thinhnguyen");
+        $this->command->info("🟡 Vendor:    hc.uyenho");
+        $this->command->info("🟢 Seller:    4 sellers:");
+        $this->command->info("   - hc.happy");
+        $this->command->info("   - hc.creative");
+        $this->command->info("   - hc.global");
         $this->command->info("   - hc.hapify84");
         $this->command->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }

@@ -250,65 +250,11 @@ export const productApi = {
 
 
 // ===============================
-// CUSTOMER API
-// ===============================
-export const customerApi = {
-  list: (params) => api.get("/customers", { params }),
-};
-
-
-// ===============================
 // ANALYTICS API
 // ===============================
 export const analyticsApi = {
-  revenue: (period = "month") => api.get(`/analytics/revenue?period=${period}`),
-  topProducts: () => api.get("/analytics/top-products"),
   conversion: () => api.get("/analytics/conversion"),
   profit: () => api.get("/analytics/profit"),
-};
-
-
-// ===============================
-// DASHBOARD API
-// ===============================
-export const dashboardApi = {
-  overview: () => api.get("/dashboard/overview"),
-  stats: () => api.get("/dashboard/stats"),
-};
-
-
-// ===============================
-// INVENTORY API
-// ===============================
-export const inventoryApi = {
-  list: () => api.get("/inventory"),
-  lowStock: () => api.get("/inventory/low-stock"),
-  importStock: (data) => api.post("/inventory/import", data),
-};
-
-
-// ===============================
-// ORDER API
-// ===============================
-export const orderApi = {
-  list: (params) => api.get("/orders", { params }),
-  getById: (id) => api.get(`/orders/${id}`),
-  create: (data) => api.post("/orders", data),
-  update: (id, data) => api.put(`/orders/${id}`, data),
-  delete: (id) => api.delete(`/orders/${id}`),
-};
-
-
-// ===============================
-// PAYMENT API
-// ===============================
-export const paymentApi = {
-  list: () => api.get("/payments"),
-  getById: (id) => api.get(`/payments/${id}`),
-  create: (data) => api.post("/payments", data),
-  update: (id, data) => api.put(`/payments/${id}`, data),
-  refund: (id) => api.post(`/payments/${id}/refund`),
-  delete: (id) => api.delete(`/payments/${id}`),
 };
 
 
