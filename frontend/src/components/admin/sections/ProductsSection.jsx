@@ -91,26 +91,10 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
     }
   }, [loadingProductId]);
 
-  // 🔔 CHỈ TẠO THÔNG BÁO CHO FORM MỚI (KHÔNG BAO GỒM DUYỆT/TỪ CHỐI)
-  const createNewFormNotification = useCallback((product) => {
-    const projectName = product.project || 'Không xác định';
-    const sellerName = getSellerName(product);
-
-    return {
-      id: `form_${product.id}_${Date.now()}`,
-      type: 'new_form',
-      icon: '📋',
-      title: `Yêu cầu duyệt sản phẩm mới`,
-      message: `Seller của project ${projectName} vừa gửi form request mới.`,
-      product_id: product.id,
-      product_type: product.product_type,
-      project: projectName,
-      seller_name: sellerName,
-      timestamp: product.created_at || new Date().toISOString(),
-      read: false,
-    };
-  }, [getSellerName]);
-
+  // Thông báo "Yêu cầu duyệt sản phẩm mới" giờ được backend tạo 1 lần duy nhất khi
+  // Seller submit (NotificationService trong ProductController::submit). Ở đây chỉ
+  // theo dõi form mới để phát âm thanh + hiện toast, không tự tạo thêm thông báo nữa
+  // (tránh trùng lặp 2 thông báo cho 1 form request).
   const loadPending = useCallback(() => {
     return productApi.pendingApprovals()
       .then(r => {
@@ -119,48 +103,20 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
 
         setPendingProducts(newPending);
 
-        // 🔔 CHỈ TẠO THÔNG BÁO CHO FORM MỚI (type: 'new_form')
-        const existingNotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
+        const newlySeen = newPending.filter(p => !notifiedProductIds.current.has(p.id));
+        newlySeen.forEach(p => notifiedProductIds.current.add(p.id));
 
-        // Lọc để chỉ giữ lại thông báo type 'new_form' (xóa các loại khác)
-        const filteredNotifs = existingNotifs.filter(n => n.type === 'new_form');
-        let hasNew = false;
-
-        newPending.forEach(product => {
-          const alreadyNotified = filteredNotifs.some(
-            n => String(n.product_id) === String(product.id) && n.type === 'new_form'
-          );
-          if (!alreadyNotified && !notifiedProductIds.current.has(product.id)) {
-            notifiedProductIds.current.add(product.id);
-            const newNotification = createNewFormNotification(product);
-            filteredNotifs.unshift(newNotification);
-            hasNew = true;
-          }
-        });
-
-        if (hasNew) {
-          // Chỉ lưu các thông báo type 'new_form'
-          localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(filteredNotifs.slice(0, 100)));
-          window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_A_NOTIFICATIONS' }));
+        if (oldCount > 0 && newlySeen.length > 0) {
+          playNotificationBeep();
           window.dispatchEvent(new CustomEvent('pendingProductsUpdated', { detail: newPending }));
 
-          // Phát âm thanh khi có form mới
-          if (oldCount > 0 && newPending.length > oldCount) {
-            playNotificationBeep();
-          }
-
-          // Hiển thị toast cho form mới
-          if (newPending.length > oldCount) {
-            const newCount = newPending.length - oldCount;
-            const newestProducts = newPending.slice(0, newCount);
-            const projectNames = [...new Set(newestProducts.map(p => p.project || 'Không xác định'))];
-            setToast({
-              type: 'new_form',
-              title: 'Form mới từ Seller!',
-              message: `${newCount} form mới từ Project: ${projectNames.join(', ')}`,
-              duration: 5000
-            });
-          }
+          const projectNames = [...new Set(newlySeen.map(p => p.project || 'Không xác định'))];
+          setToast({
+            type: 'new_form',
+            title: 'Form mới từ Seller!',
+            message: `${newlySeen.length} form mới từ Project: ${projectNames.join(', ')}`,
+            duration: 5000
+          });
         }
 
         pendingCountRef.current = newPending.length;
@@ -169,7 +125,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
         console.error('Lỗi load pending:', err);
         setPendingProducts([]);
       });
-  }, [createNewFormNotification]);
+  }, []);
 
   // 🗑️ XÓA HÀM sendNotificationToStaffB (Admin không cần gửi thông báo duyệt/từ chối nữa)
   // Chỉ giữ lại chức năng approve/reject API

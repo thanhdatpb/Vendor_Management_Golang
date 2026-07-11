@@ -61,11 +61,16 @@ export default function AdminDashboard() {
   const loadRequestNotifications = useCallback(() => {
     const requests = [];
 
-    // 1. Từ API (new_form / pending từ EventServiceProvider)
+    // 1. Từ API (new_form)
     notificationApi.list()
       .then(r => {
         const apiNotifs = r.data?.data || [];
         apiNotifs.forEach(n => {
+          // Type 'pending' là thông báo trùng lặp cũ (trước khi gộp về 1 thông báo
+          // "new_form" duy nhất mỗi form request) — bỏ qua để không hiện song song
+          // với thông báo "new_form" của cùng 1 form.
+          if (n.type === 'pending') return;
+
           const productId = n.data?.product_id || n.product_id || null;
           const productType = n.data?.product_type || n.product_type || '';
           const sellerName = n.data?.seller_name || n.seller_name || '';

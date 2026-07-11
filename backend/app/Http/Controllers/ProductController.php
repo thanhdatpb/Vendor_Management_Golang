@@ -387,11 +387,20 @@ public function update(Request $request, $id)
         $this->clearProductsCache();
         broadcast(new ProductChanged($product, 'submitted'));
 
+        $creator = $product->creator;
+        $projectName = $creator?->project ?? 'Không xác định';
+
         NotificationService::sendToRole(
             'admin',
-            'pending',
-            '📋 Sản phẩm mới chờ duyệt',
-            "Sản phẩm \"{$product->product_type}\" đang chờ Admin phê duyệt."
+            'new_form',
+            'Yêu cầu duyệt sản phẩm mới',
+            "Seller của project {$projectName} vừa gửi form request mới.",
+            [
+                'product_id'   => (int) $product->id,
+                'product_type' => $product->product_type,
+                'project'      => $projectName,
+                'seller_name'  => $creator?->seller_name ?? $creator?->name ?? null,
+            ]
         );
 
         return response()->json(['message' => 'Gửi Form cho Admin thành công']);

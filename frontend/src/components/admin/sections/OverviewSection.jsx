@@ -293,25 +293,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     }
   }, [computeStats]);
 
-  const createNewFormNotification = useCallback((product) => {
-    const projectName = product.project || 'Không xác định';
-    const sellerName = getSellerName(product);
-
-    return {
-      id: `form_${product.id}_${Date.now()}`,
-      type: 'new_form',
-      icon: '📋',
-      title: `Yêu cầu duyệt sản phẩm mới`,
-      message: `Seller của project ${projectName} vừa gửi form request mới.`,
-      product_id: product.id,
-      product_type: product.product_type,
-      project: projectName,
-      seller_name: sellerName,
-      timestamp: product.created_at || new Date().toISOString(),
-      read: false,
-    };
-  }, [getSellerName]);
-
   const loadPending = useCallback(() => {
     return productApi.pendingApprovals()
       .then(r => {
@@ -320,31 +301,16 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
 
         setPendingProducts(newPending);
 
-        const existingNotifs = JSON.parse(localStorage.getItem('STAFF_A_NOTIFICATIONS') || '[]');
-        const filteredNotifs = existingNotifs.filter(n => n.type === 'new_form');
-        let hasNew = false;
+        // Thông báo "Yêu cầu duyệt sản phẩm mới" giờ được backend tạo 1 lần duy nhất
+        // khi Seller submit (NotificationService trong ProductController::submit),
+        // nên ở đây chỉ theo dõi để phát âm thanh, không tự tạo thêm thông báo nữa
+        // (tránh trùng lặp 2 thông báo cho 1 form request).
+        const newlySeen = newPending.filter(p => !notifiedProductIds.current.has(p.id));
+        newlySeen.forEach(p => notifiedProductIds.current.add(p.id));
 
-        newPending.forEach(product => {
-          const alreadyNotified = filteredNotifs.some(
-            n => String(n.product_id) === String(product.id) && n.type === 'new_form'
-          );
-          if (!alreadyNotified && !notifiedProductIds.current.has(product.id)) {
-            notifiedProductIds.current.add(product.id);
-            const newNotification = createNewFormNotification(product);
-            filteredNotifs.unshift(newNotification);
-            hasNew = true;
-          }
-        });
-
-        if (hasNew) {
-          localStorage.setItem('STAFF_A_NOTIFICATIONS', JSON.stringify(filteredNotifs.slice(0, 100)));
-          window.dispatchEvent(new StorageEvent('storage', { key: 'STAFF_A_NOTIFICATIONS' }));
+        if (oldCount > 0 && newlySeen.length > 0) {
+          playNotificationBeep();
           window.dispatchEvent(new CustomEvent('pendingProductsUpdated', { detail: newPending }));
-
-          if (oldCount > 0 && newPending.length > oldCount) {
-            playNotificationBeep();
-          }
-
         }
 
         pendingCountRef.current = newPending.length;
@@ -353,7 +319,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         console.error('Lỗi load pending:', err);
         setPendingProducts([]);
       });
-  }, [createNewFormNotification]);
+  }, []);
 
   const handleApprove = async (product) => {
     if (processingId === product.id) return;
