@@ -13,6 +13,13 @@ class NotificationController extends Controller
     // GET /api/notifications
     public function index()
     {
+        // Dọn thông báo "Chờ duyệt" (type=pending) — loại cũ, trùng với "Yêu cầu duyệt
+        // sản phẩm mới" (type=new_form) cho cùng 1 form request. Không còn được tạo mới
+        // từ ProductController::submit(), nên xóa hẳn các bản ghi cũ còn sót lại.
+        Notification::where('user_id', Auth::id())
+            ->where('type', 'pending')
+            ->delete();
+
         $notifications = Notification::where('user_id', Auth::id())
             ->latest()
             ->take(50)
