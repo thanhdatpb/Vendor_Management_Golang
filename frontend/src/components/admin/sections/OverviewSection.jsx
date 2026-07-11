@@ -90,7 +90,7 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
   const [hovered, setHovered] = useState(false);
   const meta = PROJECT_META[project] || { icon: <FolderOpenOutlined />, color: '#6B7280' };
   const approvalRate = stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0;
-  const pending = stats.total - stats.approved - stats.rejected;
+  const pending = stats.pending ?? 0;
 
   const rowStyle = { 
     cursor: 'pointer', 
@@ -197,10 +197,10 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const [modalInitialStatus, setModalInitialStatus] = useState('all');
   const [formStats, setFormStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
   const [projectStats, setProjectStats] = useState({
-    'Happy Project':    { approved: 0, rejected: 0, total: 0 },
-    'Creative Project': { approved: 0, rejected: 0, total: 0 },
-    'Global Project':   { approved: 0, rejected: 0, total: 0 },
-    'Hapify84 Project': { approved: 0, rejected: 0, total: 0 },
+    'Happy Project':    { approved: 0, rejected: 0, pending: 0, total: 0 },
+    'Creative Project': { approved: 0, rejected: 0, pending: 0, total: 0 },
+    'Global Project':   { approved: 0, rejected: 0, pending: 0, total: 0 },
+    'Hapify84 Project': { approved: 0, rejected: 0, pending: 0, total: 0 },
   });
 
   const [pendingProducts, setPendingProducts] = useState([]);
@@ -270,7 +270,9 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       ps[proj] = {
         approved: pp.filter(p => p.status === 'approved').length,
         rejected: pp.filter(p => p.status === 'rejected' || p.status === 'reject').length,
-        total: pp.length,
+        pending:  pp.filter(p => p.status === 'pending').length,
+        // Không tính Draft (chưa submit tới Admin) vào tổng số form
+        total: pp.filter(p => p.status !== 'draft').length,
       };
     });
     setProjectStats(ps);
