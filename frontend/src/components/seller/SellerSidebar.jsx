@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { HC } from '../../constants/sellerTheme';
 import { HCLogo, MENU } from './SellerUI';
+import useIsMobile from '../../hooks/useIsMobile';
 
 const DARK = {
   bg:           'var(--hc-dark-bg)',
@@ -216,6 +217,20 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
 
   useEffect(() => { if (!sidebarOpen) setShowLogout(false); }, [sidebarOpen]);
 
+  const isMobile = useIsMobile();
+
+  // Khóa scroll body khi drawer mobile đang mở
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [isMobile, sidebarOpen]);
+
+  // Drawer mobile không có trạng thái "thu gọn" — luôn hiện đầy đủ nhãn khi mở
+  const showExpanded = isMobile ? true : sidebarOpen;
+
   const formatLastActive = (ts) => {
     const d = new Date(Number(ts));
     return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
@@ -225,26 +240,40 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
   const personName  = user?.full_name || user?.sellerName || user?.seller_name || '';
 
   return (
-    <div style={{
-      width: sidebarOpen ? 260 : 68,
-      background: DARK.bg,
-      display: 'flex', flexDirection: 'column',
-      transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      overflow: 'visible', position: 'relative',
-      boxShadow: '4px 0 24px rgba(0,0,0,0.25)',
-      borderRight: `1px solid ${DARK.border}`,
-      zIndex: 100, flexShrink: 0,
-    }}>
-      {/* Logo — click to collapse/expand */}
+    <>
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 199 }}
+        />
+      )}
+      <div style={{
+        ...(isMobile ? {
+          position: 'fixed', top: 0, left: 0, height: '100vh', width: 284,
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 200,
+        } : {
+          width: sidebarOpen ? 260 : 68,
+          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          position: 'relative', zIndex: 100, flexShrink: 0,
+        }),
+        background: DARK.bg,
+        display: 'flex', flexDirection: 'column',
+        overflow: 'visible',
+        boxShadow: '4px 0 24px rgba(0,0,0,0.25)',
+        borderRight: `1px solid ${DARK.border}`,
+      }}>
+      {/* Logo — click to collapse/expand (desktop) */}
       <div
         onClick={() => setSidebarOpen(!sidebarOpen)}
         onMouseEnter={() => setLogoHovered(true)}
         onMouseLeave={() => setLogoHovered(false)}
         style={{
-          padding: sidebarOpen ? '22px 18px' : '22px 12px',
+          padding: showExpanded ? '22px 18px' : '22px 12px',
           borderBottom: `1px solid ${DARK.border}`,
           display: 'flex', alignItems: 'center', gap: 12,
-          justifyContent: sidebarOpen ? 'flex-start' : 'center',
+          justifyContent: showExpanded ? 'flex-start' : 'center',
           flexShrink: 0, cursor: 'pointer',
           background: logoHovered ? DARK.bgHover : 'transparent',
           transition: 'background 0.18s ease',
@@ -259,7 +288,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
         }}>
           <HCLogo size={24} color={HC.orange} />
         </div>
-        {sidebarOpen && (
+        {showExpanded && (
           <div style={{ animation: 'seller-fade-in 0.25s ease' }}>
             <div style={{
               color: '#f1f5f9', fontWeight: 800, fontSize: 14.5,
@@ -278,7 +307,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
       </div>
 
       {/* User section */}
-      {sidebarOpen ? (
+      {showExpanded ? (
         /* Expanded: user card — click to toggle logout */
         <div
           onClick={() => setShowLogout(v => !v)}
@@ -357,7 +386,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
 
       {/* Navigation */}
       <nav style={{
-        flex: 1, padding: sidebarOpen ? '4px 10px' : '4px 8px',
+        flex: 1, padding: showExpanded ? '4px 10px' : '4px 8px',
         overflowY: 'auto', overflowX: 'visible', scrollbarWidth: 'none',
       }}>
         <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
@@ -366,8 +395,8 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
             key={item.id}
             item={item}
             isActive={active === item.id}
-            isCollapsed={!sidebarOpen}
-            onClick={() => setActive(item.id)}
+            isCollapsed={!showExpanded}
+            onClick={() => { setActive(item.id); if (isMobile) setSidebarOpen(false); }}
           />
         ))}
       </nav>
@@ -388,6 +417,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
         }
         nav::-webkit-scrollbar { display: none; }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }

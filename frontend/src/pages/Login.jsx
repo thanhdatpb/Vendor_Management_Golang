@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logoImg from "../assets/logo.png";
+import useIsMobile from "../hooks/useIsMobile";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 const GOOGLE_OAUTH_URL = `${API_BASE}/api/auth/google/redirect`;
@@ -27,6 +28,7 @@ export default function Login() {
   const { login, user: contextUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (contextUser) {
@@ -237,45 +239,50 @@ export default function Login() {
         background: `radial-gradient(ellipse at 60% 40%, ${ORANGE_MID} 0%, #FFF8EE 45%, #FFFBF4 100%)`,
         position: "relative",
         overflow: "hidden",
+        padding: isMobile ? "20px" : 0,
       }}>
 
         {/* Decorative background circles */}
-        <div style={{
-          position: "absolute", top: -100, left: -100,
-          width: 360, height: 360, borderRadius: "50%",
-          border: `32px solid ${ORANGE}18`,
-          animation: "spinSlow 30s linear infinite",
-          pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "absolute", bottom: -80, right: -80,
-          width: 280, height: 280, borderRadius: "50%",
-          border: `24px solid ${ORANGE}14`,
-          animation: "spinSlow 22s linear infinite reverse",
-          pointerEvents: "none",
-        }} />
-        <div style={{
-          position: "absolute", top: "20%", right: "6%",
-          width: 120, height: 120, borderRadius: "50%",
-          border: `16px solid ${ORANGE}10`,
-          animation: "spinSlow 18s linear infinite",
-          pointerEvents: "none",
-        }} />
-        <div className="hc-float-b" style={{
-          position: "absolute", top: "12%", right: "8%",
-          width: 52, height: 52, borderRadius: "50%",
-          background: `${ORANGE}28`, pointerEvents: "none",
-        }} />
-        <div className="hc-float-a" style={{
-          position: "absolute", bottom: "14%", left: "7%",
-          width: 36, height: 36, borderRadius: "50%",
-          background: `${ORANGE}38`, pointerEvents: "none",
-        }} />
-        <div className="hc-float-b" style={{
-          position: "absolute", bottom: "30%", right: "12%",
-          width: 20, height: 20, borderRadius: "50%",
-          background: `${ORANGE}50`, pointerEvents: "none",
-        }} />
+        {!isMobile && (
+          <>
+            <div style={{
+              position: "absolute", top: -100, left: -100,
+              width: 360, height: 360, borderRadius: "50%",
+              border: `32px solid ${ORANGE}18`,
+              animation: "spinSlow 30s linear infinite",
+              pointerEvents: "none",
+            }} />
+            <div style={{
+              position: "absolute", bottom: -80, right: -80,
+              width: 280, height: 280, borderRadius: "50%",
+              border: `24px solid ${ORANGE}14`,
+              animation: "spinSlow 22s linear infinite reverse",
+              pointerEvents: "none",
+            }} />
+            <div style={{
+              position: "absolute", top: "20%", right: "6%",
+              width: 120, height: 120, borderRadius: "50%",
+              border: `16px solid ${ORANGE}10`,
+              animation: "spinSlow 18s linear infinite",
+              pointerEvents: "none",
+            }} />
+            <div className="hc-float-b" style={{
+              position: "absolute", top: "12%", right: "8%",
+              width: 52, height: 52, borderRadius: "50%",
+              background: `${ORANGE}28`, pointerEvents: "none",
+            }} />
+            <div className="hc-float-a" style={{
+              position: "absolute", bottom: "14%", left: "7%",
+              width: 36, height: 36, borderRadius: "50%",
+              background: `${ORANGE}38`, pointerEvents: "none",
+            }} />
+            <div className="hc-float-b" style={{
+              position: "absolute", bottom: "30%", right: "12%",
+              width: 20, height: 20, borderRadius: "50%",
+              background: `${ORANGE}50`, pointerEvents: "none",
+            }} />
+          </>
+        )}
 
         {/* ── Login Card ── */}
         <div className="hc-card" style={{
@@ -283,10 +290,10 @@ export default function Login() {
           maxWidth: 440,
           background: "rgba(255, 253, 249, 0.95)",
           backdropFilter: "blur(16px)",
-          borderRadius: 28,
+          borderRadius: isMobile ? 20 : 28,
           border: `1.5px solid ${ORANGE_MID}`,
           boxShadow: `0 12px 56px rgba(245,166,35,0.18), 0 2px 16px rgba(0,0,0,0.06)`,
-          padding: "44px 40px 36px",
+          padding: isMobile ? "34px 26px 26px" : "44px 40px 36px",
           position: "relative",
           zIndex: 1,
         }}>

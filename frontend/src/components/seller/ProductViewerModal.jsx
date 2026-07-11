@@ -7,6 +7,7 @@ import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_A_SELECTIONS, LS_B_SELECTIONS, LS_PR
 import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, getProductLinks, toImageEmbedUrl } from '../../utils/sellerHelpers';
 import { pushNotif } from '../../utils/notifUtils';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
+import useIsMobile from '../../hooks/useIsMobile';
 
 function ThumbnailImg({ src }) {
   const [err, setErr] = useState(false);
@@ -15,6 +16,7 @@ function ThumbnailImg({ src }) {
 }
 
 export default function ProductViewerModal({ product, productVendors, onClose, getStatus, onViewVendorLibrary }) {
+  const isMobile = useIsMobile();
   // Ưu tiên dùng assigned_vendors từ API, fallback về localStorage
   const [vendors, setVendors] = useState(() => product?.assigned_vendors || productVendors[product?.id] || []);
   const [selections, setSelections] = useState(() => lsGet(LS_A_SELECTIONS, {})[product?.id] || {});
@@ -328,27 +330,39 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999, backdropFilter: 'blur(2px)', padding: '16px' }}>
-        <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 1400, height: '92vh', background: HC.orangePale, borderRadius: 20, boxShadow: '0 32px 80px rgba(26,15,0,0.25)', border: `1.5px solid ${HC.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div onClick={isMobile ? undefined : onClose} style={{ position: 'fixed', inset: 0, background: isMobile ? HC.orangePale : 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', zIndex: 999, backdropFilter: isMobile ? 'none' : 'blur(2px)', padding: isMobile ? 0 : '16px' }}>
+        <div onClick={e => e.stopPropagation()} style={isMobile
+          ? { width: '100%', height: '100%', background: HC.orangePale, overflow: 'hidden', display: 'flex', flexDirection: 'column' }
+          : { width: '100%', maxWidth: 1400, height: '92vh', background: HC.orangePale, borderRadius: 20, boxShadow: '0 32px 80px rgba(26,15,0,0.25)', border: `1.5px solid ${HC.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
           {/* Header */}
-          <div style={{ padding: '13px 20px', background: 'linear-gradient(135deg,#f59e0b 0%,#d97706 100%)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <div style={{ width: 4, height: 22, borderRadius: 99, background: 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Chi tiết sản phẩm</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>
+          <div style={{ padding: isMobile ? '10px 12px' : '13px 20px', background: 'linear-gradient(135deg,#f59e0b 0%,#d97706 100%)', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, flexShrink: 0 }}>
+            {isMobile ? (
+              <button onClick={onClose} aria-label="Quay lại" style={{ width: 44, height: 44, borderRadius: 10, border: 'none', background: 'rgba(255,255,255,0.15)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                <LeftOutlined style={{ fontSize: 17 }} />
+              </button>
+            ) : (
+              <div style={{ width: 4, height: 22, borderRadius: 99, background: 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito',sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {isMobile ? (product.product_type || `#${product.id}`) : 'Chi tiết sản phẩm'}
+              </div>
+              {!isMobile && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>}
             </div>
             <Badge status={getStatus(product)} />
-            {selectedCount > 0 && <span style={{ padding: '3px 12px', borderRadius: 999, background: 'rgba(22,163,74,0.25)', border: '1px solid rgba(22,163,74,0.5)', color: '#4ade80', fontSize: 11, fontWeight: 800 }}>✓ Đã chọn {selectedCount} nhà cung cấp</span>}
-            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.15)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, transition: 'background 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}>✕</button>
+            {!isMobile && selectedCount > 0 && <span style={{ padding: '3px 12px', borderRadius: 999, background: 'rgba(22,163,74,0.25)', border: '1px solid rgba(22,163,74,0.5)', color: '#4ade80', fontSize: 11, fontWeight: 800 }}>✓ Đã chọn {selectedCount} nhà cung cấp</span>}
+            {!isMobile && (
+              <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.15)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, transition: 'background 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.28)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}>✕</button>
+            )}
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: isMobile ? 'auto' : 'hidden' }}>
 
             {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
-            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
               {/* Media */}
-              <div style={{ width: 240, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
+              <div style={isMobile ? { width: '100%', height: 170, flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' } : { width: 240, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: displayUrls.length ? 'pointer' : 'default' }}>
                   {displayUrls.length > 0 ? (
                     imgError ? (
@@ -369,14 +383,14 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   )}
                   {displayUrls.length > 1 && (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p > 0 ? p - 1 : displayUrls.length - 1); }} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p > 0 ? p - 1 : displayUrls.length - 1); }} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
                         <LeftOutlined />
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p < displayUrls.length - 1 ? p + 1 : 0); }} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentMediaIndex(p => p < displayUrls.length - 1 ? p + 1 : 0); }} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: isMobile ? 44 : 32, height: isMobile ? 44 : 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10 }}>
                         <RightOutlined />
                       </button>
                       <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(0,0,0,0.65)', borderRadius: 20, padding: '3px 9px', fontSize: 10, color: '#fff', fontWeight: 700 }}>
-                        {currentMediaIndex + 1} / {displayUrls.length}
+                        {isMobile ? `+${displayUrls.length} ảnh` : `${currentMediaIndex + 1} / ${displayUrls.length}`}
                       </div>
                     </>
                   )}
@@ -406,7 +420,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 </div>
 
                 {/* Row 1: key metrics */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1.2fr', gap: 6, marginBottom: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1.2fr', gap: 6, marginBottom: 6 }}>
                   <div style={{ background: HC.orangePale, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '7px 11px' }}>
                     <div style={{ fontSize: 9, color: HC.orangeDark, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Product Type</div>
                     <div style={{ fontSize: 13, fontWeight: 900, color: HC.orangeDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.product_type || '—'}</div>
@@ -424,7 +438,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 </div>
 
                 {/* Row 2: specs compact */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 6, marginBottom: 6 }}>
                   {[
                     { label: 'Chất liệu', value: product.material },
                     { label: 'Vùng In', value: product.print_area },
@@ -444,7 +458,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 </div>
 
                 {/* Row 2b: reviews — full wrapped text */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 6, marginBottom: 6 }}>
                   {[
                     { label: 'Good Review', value: product.good_review, color: '#166534', bg: '#f0fdf4', bc: '#bbf7d0' },
                     { label: 'Bad Review', value: product.bad_review, color: '#991b1b', bg: '#fef2f2', bc: '#fecaca' },
@@ -503,9 +517,9 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
 
 
             {/* BOTTOM SECTION: Vendor Comparison */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f8fafc' }}>
+            <div style={{ flex: isMobile ? 'none' : 1, display: 'flex', flexDirection: 'column', overflow: isMobile ? 'visible' : 'hidden', background: '#f8fafc' }}>
               {/* Section bar */}
-              <div style={{ padding: '8px 20px', background: '#fff', borderBottom: `1.5px solid ${HC.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ padding: isMobile ? '8px 14px' : '8px 20px', background: '#fff', borderBottom: `1.5px solid ${HC.border}`, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ width: 3, height: 14, borderRadius: 2, background: HC.orange }} />
                 <span style={{ fontWeight: 800, fontSize: 11, color: HC.ink, textTransform: 'uppercase', letterSpacing: '0.07em' }}>So sánh nhà phân phối</span>
                 {vendors.length > 0 && (() => {
@@ -519,7 +533,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 )}
               </div>
 
-              <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
+              <div style={{ flex: isMobile ? 'none' : 1, overflow: isMobile ? 'visible' : 'auto', padding: isMobile ? '10px 14px' : '12px 20px' }}>
                 {vendors.length === 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '52px 40px', background: HC.surface, borderRadius: 14, border: `1px solid ${HC.border}` }}>
                     <div style={{ width: 48, height: 48, borderRadius: 12, background: HC.cream, border: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
@@ -810,13 +824,20 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
           </div>
 
           {/* Footer */}
-          <div style={{ padding: '12px 20px', background: HC.surface, borderTop: `1.5px solid ${HC.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-            <div style={{ fontSize: 12, color: HC.muted }}>
-              {selectedCount > 0 && <span style={{ color: HC.success, fontWeight: 800 }}>✓ Đã chọn {selectedCount} vendor</span>}
-            </div>
+          <div style={{
+            padding: isMobile ? '10px 14px' : '12px 20px', background: HC.surface, borderTop: `1.5px solid ${HC.border}`,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0,
+            position: isMobile ? 'sticky' : 'static', bottom: 0, zIndex: 2,
+          }}>
+            {!isMobile && (
+              <div style={{ fontSize: 12, color: HC.muted }}>
+                {selectedCount > 0 && <span style={{ color: HC.success, fontWeight: 800 }}>✓ Đã chọn {selectedCount} vendor</span>}
+              </div>
+            )}
             <button onClick={onClose} style={{
-              padding: '8px 24px', borderRadius: 10, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
-              color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13
+              padding: isMobile ? '13px 24px' : '8px 24px', borderRadius: 10, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+              color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13,
+              width: isMobile ? '100%' : 'auto', minHeight: isMobile ? 44 : 'auto',
             }}>Đóng</button>
           </div>
         </div>

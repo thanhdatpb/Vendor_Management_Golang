@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
 
 import { HC } from '../constants/sellerTheme';
+import useIsMobile from '../hooks/useIsMobile';
 import SellerSidebar from '../components/seller/SellerSidebar';
 import SellerNotificationCenter from '../components/seller/SellerNotificationCenter';
 import ProductsSection from '../components/seller/ProductsSection';
@@ -18,8 +19,9 @@ import SetupPriceSection from '../components/seller/SetupPriceSection';
 // ══════════════════════════════════════════════════════════
 export default function SellerDashboard() {
   const { user, logout } = useAuth();
+  const isMobile = useIsMobile();
   const [active, setActive] = useState('products');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => !window.matchMedia('(max-width:767px)').matches);
   const [requestNotifications, setRequestNotifications] = useState([]);
   const [newsNotifications, setNewsNotifications] = useState([]);
   const [highlightedProductId, setHighlightedProductId] = useState(null);
@@ -262,17 +264,29 @@ export default function SellerDashboard() {
       <div style={{ display: 'flex', height: '100vh', background: `linear-gradient(135deg, ${HC.orangePale} 0%, ${HC.cream} 100%)`, fontFamily: "'Nunito Sans',sans-serif", color: HC.ink, overflow: 'hidden' }}>
         <SellerSidebar active={active} setActive={setActive} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} user={user} logout={logout} />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
           {/* Topbar */}
-          <div style={{ height: 72, background: `linear-gradient(135deg, ${HC.surface}, ${HC.surface2})`, borderBottom: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', gap: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 4, height: 32, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
-              <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em' }}>
+          <div style={{ height: 72, background: `linear-gradient(135deg, ${HC.surface}, ${HC.surface2})`, borderBottom: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 14px' : '0 32px', gap: 12, boxShadow: '0 2px 12px rgba(0,0,0,0.02)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16, minWidth: 0 }}>
+              {isMobile ? (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  aria-label="Mở menu"
+                  style={{ width: 42, height: 42, borderRadius: 12, background: '#fff', border: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={HC.ink2} strokeWidth="2.2" strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                </button>
+              ) : (
+                <div style={{ width: 4, height: 32, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
+              )}
+              <div style={{ color: HC.ink, fontWeight: 900, fontSize: isMobile ? 15 : 16, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {PAGE_TITLES[active]}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
+              {!isMobile && (
+                <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              )}
               <SellerNotificationCenter
                 requestNotifications={requestNotifications}
                 newsNotifications={newsNotifications}
@@ -285,7 +299,7 @@ export default function SellerDashboard() {
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? 14 : 32 }}>
             {renderSection()}
           </div>
         </div>

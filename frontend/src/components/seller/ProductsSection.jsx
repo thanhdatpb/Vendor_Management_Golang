@@ -12,6 +12,7 @@ import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field } from
 import { productApi } from '../../services/api';
 import { subscribeProductChanges } from '../../services/echo';
 import ProductViewerModal from './ProductViewerModal';
+import useIsMobile from '../../hooks/useIsMobile';
 
 function ThumbnailCell({ src }) {
   const [broken, setBroken] = useState(false);
@@ -47,6 +48,7 @@ function LinkPreviewImg({ src }) {
 
 export default function ProductsSection({ highlightedProductId, onHighlightCleared, onViewVendorLibrary }) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [viewProduct, setViewProduct] = useState(null);
   const [submittedProducts, setSubmittedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -732,21 +734,23 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <span style={{ fontSize: 15 }}>{exporting ? '⟳' : '↓'}</span>
             {exporting ? 'Đang xuất...' : selectedIds.size > 0 ? `Export Excel (${selectedIds.size})` : 'Export Excel'}
           </button>
-          <button
-            onClick={openCreateModal}
-            style={{
-              padding: '8px 16px', borderRadius: 10,
-              background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
-              color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 800,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
-              boxShadow: '0 3px 10px rgba(245,166,35,0.35)',
-              transition: 'transform 0.15s,box-shadow 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(245,166,35,0.4)'; }}
-          >
-            <PlusOutlined style={{ fontSize: 14 }} /> Request sản phẩm mới
-          </button>
+          {!isMobile && (
+            <button
+              onClick={openCreateModal}
+              style={{
+                padding: '8px 16px', borderRadius: 10,
+                background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+                color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 800,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+                boxShadow: '0 3px 10px rgba(245,166,35,0.35)',
+                transition: 'transform 0.15s,box-shadow 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow='0 6px 20px rgba(245,166,35,0.5)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 14px rgba(245,166,35,0.4)'; }}
+            >
+              <PlusOutlined style={{ fontSize: 14 }} /> Request sản phẩm mới
+            </button>
+          )}
         </div>
       </div>
 
@@ -772,31 +776,154 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             onBlur={e => { e.target.style.borderColor = HC.border; e.target.style.boxShadow = 'none'; }}
           />
         </div>
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          style={{ flex: '0 0 180px', padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2, fontWeight: 600, color: HC.ink2, cursor: 'pointer' }}
-        >
-          <option value="">Tất cả trạng thái</option>
-          <option value="pending">Pending — Chờ duyệt</option>
-          <option value="approved">Approved — Đã duyệt</option>
-          <option value="reject">Rejected — Từ chối</option>
-        </select>
+        {isMobile ? (
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', width: '100%', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
+            {[
+              { v: '', label: 'Tất cả' },
+              { v: 'pending', label: 'Pending' },
+              { v: 'approved', label: 'Approved' },
+              { v: 'reject', label: 'Rejected' },
+            ].map(opt => {
+              const active = filterStatus === opt.v;
+              return (
+                <button
+                  key={opt.v || 'all'}
+                  onClick={() => setFilterStatus(opt.v)}
+                  style={{
+                    flex: '0 0 auto', padding: '8px 16px', borderRadius: 999,
+                    border: `1.5px solid ${active ? HC.orange : HC.border}`,
+                    background: active ? HC.orange : '#fff',
+                    color: active ? '#fff' : HC.ink2,
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                    minHeight: 44,
+                  }}
+                >{opt.label}</button>
+              );
+            })}
+          </div>
+        ) : (
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            style={{ flex: '0 0 180px', padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2, fontWeight: 600, color: HC.ink2, cursor: 'pointer' }}
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="pending">Pending — Chờ duyệt</option>
+            <option value="approved">Approved — Đã duyệt</option>
+            <option value="reject">Rejected — Từ chối</option>
+          </select>
+        )}
         {hasFilter && (
           <button
             onClick={() => { setSearch(''); setFilterStatus(''); }}
             style={{ padding: '8px 14px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >✕ Xóa bộ lọc</button>
         )}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: HC.muted, fontWeight: 700 }}>
+        <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: HC.muted, fontWeight: 700 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: HC.orange, display: 'inline-block' }} />
           {filteredProducts.length} / {submittedProducts.length} sản phẩm
         </div>
       </div>
 
-      {/* ── Table ── */}
+      {/* ── Table / Card List ── */}
       {filteredProducts.length === 0 ? (
         <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào. Hãy tạo request đầu tiên!' : 'Không tìm thấy kết quả phù hợp'} />
+      ) : isMobile ? (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pagedProducts.map((p, i) => {
+              const mediaUrls = getMediaUrls(p);
+              const status = getStatus(p);
+              const isDraft = status === 'draft';
+              const isRejected = status === 'reject';
+              const sMeta = statusMeta[status] || statusMeta.draft;
+              const dt = fmtDateTime(p.created_at);
+              const reason = p.rejection_reason || p.reason;
+              return (
+                <div
+                  key={p.id || i}
+                  onClick={() => handleViewProduct(p)}
+                  style={{
+                    background: isRejected ? '#fff8f8' : '#fff',
+                    border: `1.5px solid ${isRejected ? '#fecaca' : HC.border}`,
+                    borderRadius: 16, padding: 14, cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <ThumbnailCell src={mediaUrls[0]} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ fontWeight: 800, color: HC.ink, fontSize: 14, lineHeight: 1.3 }}>{p.product_type || '—'}</div>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                          padding: '3px 9px', borderRadius: 999,
+                          background: sMeta.bg, border: `1px solid ${sMeta.border}`, color: sMeta.color,
+                          fontWeight: 700, fontSize: 10, whiteSpace: 'nowrap',
+                        }}>
+                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: sMeta.dot, display: 'inline-block' }} />
+                          {sMeta.label}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 14, marginTop: 6, flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ngày tạo</div>
+                          <div style={{ fontSize: 12, color: HC.ink2, fontWeight: 700 }}>{dt ? dt.date : '—'}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deadline</div>
+                          <div style={{ fontSize: 12, color: HC.ink2, fontWeight: 700 }}>{p.deadline_date ? fmtDate(p.deadline_date) : '—'}</div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 8 }}>{renderVendorBadge(p)}</div>
+                    </div>
+                  </div>
+
+                  {isRejected && reason && (
+                    <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 12, color: HC.danger, fontWeight: 600, lineHeight: 1.4 }}>
+                      {reason}
+                    </div>
+                  )}
+
+                  {(isDraft || isRejected) && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }} onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleSendToAdmin(p.id)}
+                        disabled={processingId === p.id}
+                        style={{ flex: 1, minHeight: 44, borderRadius: 10, border: '1.5px solid #bbf7d0', background: processingId === p.id ? '#d1fae5' : '#ecfdf5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, color: '#065f46', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+                      >
+                        <SendOutlined style={{ fontSize: 12 }} />
+                        {processingId === p.id ? '...' : 'Submit'}
+                      </button>
+                      <button
+                        onClick={() => openEditModal(p)}
+                        style={{ flex: 1, minHeight: 44, borderRadius: 10, border: `1.5px solid ${HC.orangeMid}`, background: HC.orangeLight, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: HC.orangeDark, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+                      >
+                        <EditOutlined style={{ fontSize: 12 }} />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        disabled={processingId === p.id}
+                        style={{ flex: 1, minHeight: 44, borderRadius: 10, border: '1.5px solid #fecaca', background: processingId === p.id ? '#fee2e2' : '#fff5f5', cursor: processingId === p.id ? 'wait' : 'pointer', fontSize: 12, fontWeight: 700, color: HC.danger, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+                      >
+                        <DeleteOutlined style={{ fontSize: 12 }} />
+                        {processingId === p.id ? '...' : 'Delete'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredProducts.length}
+            onPageChange={setCurrentPage}
+            itemsPerPage={20}
+          />
+        </>
       ) : (
         <>
           <div style={{ overflowX: 'auto', borderRadius: 16, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
@@ -1005,13 +1132,32 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         </>
       )}
 
+      {/* FAB — tạo request mới (mobile) */}
+      {isMobile && (
+        <button
+          onClick={openCreateModal}
+          aria-label="Request sản phẩm mới"
+          style={{
+            position: 'fixed', right: 18, bottom: 18, width: 58, height: 58, borderRadius: '50%',
+            background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
+            color: '#fff', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 6px 20px rgba(245,166,35,0.5)', zIndex: 150,
+          }}
+        >
+          <PlusOutlined style={{ fontSize: 22 }} />
+        </button>
+      )}
+
       {/* MODAL TẠO/SỬA SẢN PHẨM */}
       {showFormModal && (
-        <div onClick={closeModal} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 900, maxHeight: '85vh', overflowY: 'auto', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong, border: `1.5px solid ${HC.border}` }}>
+        <div onClick={isMobile ? undefined : closeModal} style={{ position: 'fixed', inset: 0, background: isMobile ? HC.surface : 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', zIndex: 1000, backdropFilter: isMobile ? 'none' : 'blur(2px)', padding: isMobile ? 0 : 16 }}>
+          <div onClick={e => e.stopPropagation()} style={isMobile
+            ? { width: '100%', height: '100%', overflowY: 'auto', background: HC.surface }
+            : { width: '100%', maxWidth: 900, maxHeight: '85vh', overflowY: 'auto', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong, border: `1.5px solid ${HC.border}` }}>
 
             {/* Modal Header */}
-            <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: isMobile ? 0 : '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: isMobile ? 'sticky' : 'static', top: 0, zIndex: 2 }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
                   {isEditing ? '✏️ Chỉnh sửa sản phẩm' : (() => {
@@ -1178,7 +1324,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <Field label="1.4 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
                   <input type="text" placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ ...inp, borderColor: formErrors.production_time ? HC.danger : HC.border }} />
                 </Field>
@@ -1192,7 +1338,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
               <div style={{ marginBottom: 16 }}>
                 <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>2. Đặc tính kỹ thuật (Mô tả về đặc tính Product Type)</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                   <Field label="2.1 Chất liệu (Ví dụ: 100% cotton)" required error={formErrors.material}>
                     <input type="text" placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ ...inp, borderColor: formErrors.material ? HC.danger : HC.border }} />
                   </Field>
@@ -1213,7 +1359,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 </Field>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <Field label="2.4 Good Review" required error={formErrors.good_review}>
                   <textarea
                     placeholder="Câu trả lời của bạn"
@@ -1244,7 +1390,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>3. Packaging & đóng gói (Yêu cầu về đóng gói)</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                   <Field label="3.1 Packaging (Ví dụ: Mỗi sản phẩm được đóng gói hộp xốp)" required error={formErrors.packaging_links}>
                     <input
                       type="text"
