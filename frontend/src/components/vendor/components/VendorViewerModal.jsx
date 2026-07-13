@@ -240,7 +240,7 @@ export default function VendorViewerModal({ product, onClose }) {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
             {/* ── TOP: Image + Compact Product Info ── */}
-            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface, height: 220 }}>
+            <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
 
               {/* Image panel */}
               <div style={{ width: 240, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
@@ -268,7 +268,7 @@ export default function VendorViewerModal({ product, onClose }) {
               </div>
 
               {/* Product info — compact mini cards */}
-              <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 16px', background: '#f8fafc' }}>
+              <div style={{ flex: 1, overflowX: 'hidden', padding: '10px 16px', background: '#f8fafc' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <div style={{ width: 3, height: 13, borderRadius: 2, background: HC.orange, flexShrink: 0 }} />
