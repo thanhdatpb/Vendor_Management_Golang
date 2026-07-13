@@ -265,15 +265,6 @@ export default function VendorViewerModal({ product, onClose }) {
                     </>
                   )}
                 </div>
-                {mediaUrls.length > 1 && (
-                  <div style={{ padding: '6px 8px', background: 'rgba(0,0,0,0.4)', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                    {mediaUrls.map((url, idx) => (
-                      <div key={idx} onClick={() => setCurrentMediaIndex(idx)} style={{ width: 38, height: 38, borderRadius: 5, overflow: 'hidden', cursor: 'pointer', border: `2px solid ${currentMediaIndex === idx ? HC.orange : 'rgba(255,255,255,0.15)'}`, flexShrink: 0, transition: 'border-color 0.15s' }}>
-                        {/\.(mp4|mov|webm)$/i.test(url) ? <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted /> : <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Product info — compact mini cards */}
@@ -309,35 +300,81 @@ export default function VendorViewerModal({ product, onClose }) {
                   </div>
                 </div>
 
-                {/* Row 2: specs + reviews */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.4fr 1.2fr 1.2fr', gap: 6, marginBottom: 6 }}>
+                {/* Row 2: specs compact */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 6 }}>
                   {[
                     { label: 'Chất liệu', value: product.material },
                     { label: 'Vùng In', value: product.print_area },
-                    { label: 'Đặc tính KT', value: product.other_specs },
-                    { label: 'Good Review', value: product.good_review, color: '#166534', bg: '#f0fdf4', bc: '#bbf7d0' },
-                    { label: 'Bad Review', value: product.bad_review, color: '#991b1b', bg: '#fef2f2', bc: '#fecaca' },
-                  ].map(({ label, value, color, bg, bc }) => (
-                    <div key={label} style={{ background: bg || '#fff', border: `1px solid ${bc || '#e5e7eb'}`, borderRadius: 8, padding: '7px 11px' }}>
-                      <div style={{ fontSize: 9, color: color || '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: color || HC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value || ''}>{value || '—'}</div>
+                    { label: 'Packing', value: product.packaging_links || 'Bao bì' },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value || ''}>{value || '—'}</div>
                     </div>
                   ))}
                 </div>
 
-                {/* Row 3: ref links */}
-                {parsedLinks.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Links</span>
-                    {parsedLinks.map((link, idx) => (
-                      <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                        style={{ fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                      >Link {idx + 1}</a>
-                    ))}
-                  </div>
-                )}
+                {/* Row 2a: Đặc tính KT — nội dung có thể dài, cho xuống dòng đầy đủ */}
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 11px', marginBottom: 6 }}>
+                  <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Đặc tính KT</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, lineHeight: 1.4 }}>{product.other_specs || '—'}</div>
+                </div>
+
+                {/* Row 2b: reviews — full wrapped text */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                  {[
+                    { label: 'Good Review', value: product.good_review, color: '#166534', bg: '#f0fdf4', bc: '#bbf7d0' },
+                    { label: 'Bad Review', value: product.bad_review, color: '#991b1b', bg: '#fef2f2', bc: '#fecaca' },
+                  ].map(({ label, value, color, bg, bc }) => (
+                    <div key={label} style={{ background: bg, border: `1px solid ${bc}`, borderRadius: 8, padding: '7px 11px' }}>
+                      <div style={{ fontSize: 9, color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color, lineHeight: 1.4 }}>{value || '—'}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Row 3 & 4: links + video — always visible */}
+                {(() => {
+                  let vLinks = [];
+                  if (product.product_video_links && Array.isArray(product.product_video_links)) {
+                    vLinks = product.product_video_links;
+                  } else if (typeof product.product_video_links === 'string') {
+                    try { vLinks = JSON.parse(product.product_video_links); } catch { vLinks = [product.product_video_links]; }
+                  }
+                  vLinks = vLinks.filter(Boolean);
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      {/* Ref links */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, minWidth: 38 }}>Links</span>
+                        {parsedLinks.length > 0
+                          ? parsedLinks.map((link, idx) => (
+                              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                style={{ fontSize: 10, fontWeight: 700, color: HC.orange, textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
+                              >Link {idx + 1}</a>
+                            ))
+                          : <span style={{ fontSize: 10, color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
+                        }
+                      </div>
+                      {/* Video links */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 9, color: HC.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, minWidth: 38 }}>Video</span>
+                        {vLinks.length > 0
+                          ? vLinks.map((link, idx) => (
+                              <a key={idx} href={link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', padding: '2px 10px', borderRadius: 5, background: '#f5f3ff', border: '1px solid #ddd6fe', transition: 'background 0.15s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
+                                onMouseEnter={e => { e.currentTarget.style.background = '#ede9fe'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#f5f3ff'; }}
+                              >▶ Video {idx + 1}</a>
+                            ))
+                          : <span style={{ fontSize: 10, color: '#cbd5e1', fontStyle: 'italic' }}>—</span>
+                        }
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
