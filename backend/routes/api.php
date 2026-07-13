@@ -145,6 +145,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/vendor-library/sample-status', [VendorLibraryController::class, 'updateSampleStatus'])
         ->middleware('role:staff_b,vendor');
     Route::post('/vendor-library/restore-backup', [VendorLibraryController::class, 'restoreBackup']);
+    // Upload hàng loạt ảnh trích xuất từ Excel (ảnh nhúng trực tiếp vào ô) khi import
+    Route::post('/vendor-library/upload-images', [VendorLibraryController::class, 'uploadImages'])
+        ->middleware('role:staff_b,vendor');
 
     Route::get('/vendors',             [VendorController::class, 'index']);
     Route::post('/vendors',            [VendorController::class, 'store']);

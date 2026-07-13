@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class VendorLibraryController extends Controller
 {
@@ -105,6 +106,27 @@ class VendorLibraryController extends Controller
             'rowId'        => $rowId,
             'sampleStatus' => $status,
         ]);
+    }
+
+    /**
+     * Nhận hàng loạt ảnh trích xuất từ file Excel (ảnh nhúng trực tiếp vào ô,
+     * không phải URL/formula =IMAGE()) và lưu vào disk public, trả về URL thật
+     * cho từng ảnh — client dùng key gửi lên để map ngược ảnh vào đúng dòng.
+     */
+    public function uploadImages(Request $request)
+    {
+        $request->validate([
+            'images'   => 'required|array|min:1|max:200',
+            'images.*' => 'required|file|max:10240|mimetypes:image/jpeg,image/png,image/webp,image/gif',
+        ]);
+
+        $urls = [];
+        foreach ($request->file('images') as $key => $file) {
+            $path = $file->store('vendor-library', 'public');
+            $urls[$key] = Storage::url($path);
+        }
+
+        return response()->json(['urls' => $urls]);
     }
 
     public function restoreBackup()

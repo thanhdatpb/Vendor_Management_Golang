@@ -333,7 +333,7 @@ export async function parseHappyCreativeLibrary(file) {
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true, cellFormula: true });
 
@@ -458,6 +458,9 @@ export async function parseHappyCreativeLibrary(file) {
 
         // ── Parse Section 1 — Thông tin chung về phôi ────────────────────────
         const generalInfo = [];
+        // Excel row (0-based, cùng hệ tọa độ với anchor ảnh nhúng) của từng entry —
+        // dùng để map ảnh nhúng trực tiếp vào ô (Insert Picture) về đúng dòng vendor.
+        const entryExcelRows = [];
 
         // Khởi tạo cột mặc định
         let col_kyHieu = 0, col_imagesStart = 1;
@@ -577,6 +580,7 @@ export async function parseHappyCreativeLibrary(file) {
               notes: cellStr(row[col_notes]),
               linkFolder: cellStr(row[col_linkFolder]),
             });
+            entryExcelRows.push(r);
           }
         }
 
@@ -749,6 +753,15 @@ export async function parseHappyCreativeLibrary(file) {
           }
         });
 
+        // Ảnh chèn trực tiếp vào ô (Insert Picture) không nằm trong cell.f / cell.v nên
+        // XLSX không đọc được ở bước trên — trích riêng từ cấu trúc ZIP của file .xlsx
+        // rồi upload lên server để lấy URL thật. Lỗi ở bước này không chặn import.
+        try {
+          await attachEmbeddedImages(e.target.result, sheetName, generalInfo, entryExcelRows);
+        } catch (err) {
+          console.warn('Không trích được ảnh nhúng trong Excel:', err);
+        }
+
         resolve({ title, generalInfo, pricing });
       } catch (err) {
         reject(new Error('Lỗi đọc file thư viện: ' + err.message));
@@ -756,5 +769,197 @@ export async function parseHappyCreativeLibrary(file) {
     };
     reader.onerror = () => reject(new Error('Không thể đọc file'));
     reader.readAsArrayBuffer(file);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Trích ảnh chèn trực tiếp vào ô Excel (Insert Picture — không phải công thức
+//  =IMAGE("url") hay text URL). File .xlsx thực chất là 1 file ZIP: ảnh nhị phân
+//  nằm ở xl/media/*, còn vị trí (dòng/cột) mỗi ảnh được neo vào thì nằm trong
+//  xl/drawings/drawingN.xml. Không có 2 file này thì XLSX.js (SheetJS bản free)
+//  hoàn toàn không đọc được — đây chính là lý do ảnh dán trực tiếp không hiện.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const RELS_NS = '*'; // wildcard namespace — chấp nhận mọi prefix Excel export ra
+const NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+function resolveZipPath(baseDir, relTarget) {
+  const parts = baseDir.split('/').filter(Boolean);
+  for (const part of relTarget.split('/')) {
+    if (part === '..') parts.pop();
+    else if (part === '.' || part === '') continue;
+    else parts.push(part);
+  }
+  return parts.join('/');
+}
+
+function parseXml(text) {
+  return new DOMParser().parseFromString(text, 'application/xml');
+}
+
+async function readZipXml(zip, path) {
+  const entry = zip.file(path);
+  if (!entry) return null;
+  const text = await entry.async('string');
+  return parseXml(text);
+}
+
+function getRelId(el) {
+  return el.getAttribute('r:id') || el.getAttributeNS(NS_R, 'id');
+}
+
+function getRelEmbed(el) {
+  return el.getAttribute('r:embed') || el.getAttributeNS(NS_R, 'embed');
+}
+
+/** Tìm đường dẫn xl/worksheets/sheetN.xml tương ứng với tên sheet */
+async function findSheetXmlPath(zip, sheetName) {
+  const wbDoc = await readZipXml(zip, 'xl/workbook.xml');
+  const relsDoc = await readZipXml(zip, 'xl/_rels/workbook.xml.rels');
+  if (!wbDoc || !relsDoc) return null;
+
+  const sheetEl = Array.from(wbDoc.getElementsByTagNameNS(RELS_NS, 'sheet'))
+    .find((s) => s.getAttribute('name') === sheetName);
+  if (!sheetEl) return null;
+
+  const rId = getRelId(sheetEl);
+  if (!rId) return null;
+
+  const relEl = Array.from(relsDoc.getElementsByTagNameNS(RELS_NS, 'Relationship'))
+    .find((r) => r.getAttribute('Id') === rId);
+  if (!relEl) return null;
+
+  return resolveZipPath('xl', relEl.getAttribute('Target') || '');
+}
+
+/** Tìm đường dẫn xl/drawings/drawingN.xml được sheet tham chiếu tới */
+async function findDrawingPath(zip, sheetXmlPath) {
+  const parts = sheetXmlPath.split('/');
+  const fileName = parts.pop();
+  const dir = parts.join('/');
+  const relsDoc = await readZipXml(zip, `${dir}/_rels/${fileName}.rels`);
+  if (!relsDoc) return null;
+
+  const drawingRel = Array.from(relsDoc.getElementsByTagNameNS(RELS_NS, 'Relationship'))
+    .find((r) => (r.getAttribute('Type') || '').includes('/drawing'));
+  if (!drawingRel) return null;
+
+  return resolveZipPath(dir, drawingRel.getAttribute('Target') || '');
+}
+
+/** Đọc drawingN.xml → danh sách { row, col, mediaPath } cho từng ảnh neo trong sheet */
+async function findImageAnchors(zip, drawingPath) {
+  const doc = await readZipXml(zip, drawingPath);
+  if (!doc) return [];
+
+  const parts = drawingPath.split('/');
+  const fileName = parts.pop();
+  const dir = parts.join('/');
+  const relsDoc = await readZipXml(zip, `${dir}/_rels/${fileName}.rels`);
+
+  const ridToMedia = {};
+  if (relsDoc) {
+    Array.from(relsDoc.getElementsByTagNameNS(RELS_NS, 'Relationship')).forEach((r) => {
+      ridToMedia[r.getAttribute('Id')] = resolveZipPath(dir, r.getAttribute('Target') || '');
+    });
+  }
+
+  const anchorEls = [
+    ...Array.from(doc.getElementsByTagNameNS(RELS_NS, 'twoCellAnchor')),
+    ...Array.from(doc.getElementsByTagNameNS(RELS_NS, 'oneCellAnchor')),
+  ];
+
+  const anchors = [];
+  anchorEls.forEach((anchorEl) => {
+    const fromEl = anchorEl.getElementsByTagNameNS(RELS_NS, 'from')[0];
+    const blipEl = anchorEl.getElementsByTagNameNS(RELS_NS, 'blip')[0];
+    if (!fromEl || !blipEl) return;
+
+    const colEl = fromEl.getElementsByTagNameNS(RELS_NS, 'col')[0];
+    const rowEl = fromEl.getElementsByTagNameNS(RELS_NS, 'row')[0];
+    const col = colEl ? parseInt(colEl.textContent, 10) : 0;
+    const row = rowEl ? parseInt(rowEl.textContent, 10) : 0;
+
+    const rId = getRelEmbed(blipEl);
+    const mediaPath = rId ? ridToMedia[rId] : null;
+    if (!mediaPath || !Number.isFinite(row)) return;
+
+    anchors.push({ row, col, mediaPath });
+  });
+
+  return anchors;
+}
+
+const SUPPORTED_IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+
+/** Trả về [{ row, col, blob, ext }] cho mọi ảnh nhúng trực tiếp trong 1 sheet */
+async function extractEmbeddedVendorImages(arrayBuffer, sheetName) {
+  const JSZipModule = await import('jszip');
+  const JSZip = JSZipModule.default ?? JSZipModule;
+  const zip = await JSZip.loadAsync(arrayBuffer);
+
+  const sheetXmlPath = await findSheetXmlPath(zip, sheetName);
+  if (!sheetXmlPath) return [];
+  const drawingPath = await findDrawingPath(zip, sheetXmlPath);
+  if (!drawingPath) return [];
+  const anchors = await findImageAnchors(zip, drawingPath);
+  if (anchors.length === 0) return [];
+
+  const results = [];
+  for (const anchor of anchors) {
+    const ext = (anchor.mediaPath.split('.').pop() || '').toLowerCase();
+    if (!SUPPORTED_IMAGE_EXT.includes(ext)) continue; // bỏ qua .emf/.wmf — trình duyệt không hiển thị được
+    const mediaEntry = zip.file(anchor.mediaPath);
+    if (!mediaEntry) continue;
+    const blob = await mediaEntry.async('blob');
+    results.push({ row: anchor.row, col: anchor.col, blob, ext });
+  }
+  return results;
+}
+
+/**
+ * Trích + upload ảnh nhúng trực tiếp trong Excel, rồi gắn URL vào đúng dòng
+ * generalInfo (khớp theo excel row gần nhất ≤ row neo của ảnh). Sửa trực tiếp
+ * (mutate) mảng generalInfo truyền vào.
+ */
+async function attachEmbeddedImages(arrayBuffer, sheetName, generalInfo, entryExcelRows) {
+  const embedded = await extractEmbeddedVendorImages(arrayBuffer, sheetName);
+  if (embedded.length === 0) return;
+
+  const { vendorLibraryApi } = await import('../services/api');
+
+  const formData = new FormData();
+  embedded.forEach((img, idx) => {
+    formData.append(`images[${idx}]`, img.blob, `embedded_${idx}.${img.ext}`);
+  });
+
+  const res = await vendorLibraryApi.uploadImages(formData);
+  const urls = res.data?.urls || {};
+
+  // Nhóm theo dòng generalInfo gần nhất (excelRow lớn nhất mà vẫn ≤ row neo ảnh),
+  // sắp theo cột để giữ đúng thứ tự trái → phải như trong Excel.
+  embedded.forEach((img, idx) => {
+    const url = urls[idx];
+    if (!url) return;
+
+    let bestI = -1;
+    for (let i = 0; i < entryExcelRows.length; i++) {
+      if (entryExcelRows[i] <= img.row && (bestI === -1 || entryExcelRows[i] > entryExcelRows[bestI])) {
+        bestI = i;
+      }
+    }
+    if (bestI === -1) return;
+
+    const entry = generalInfo[bestI];
+    if (!entry.images) entry.images = [];
+    if (entry.images.length < 6) entry.images.push({ url, col: img.col });
+  });
+
+  generalInfo.forEach((entry) => {
+    if (!entry.images || entry.images.length === 0) return;
+    entry.images = entry.images
+      .map((v) => (typeof v === 'string' ? { url: v, col: -1 } : v))
+      .sort((a, b) => a.col - b.col)
+      .map((v) => v.url);
   });
 }

@@ -291,6 +291,10 @@ export const vendorLibraryApi = {
   setSampleStatus: (rowId, sampleStatus) =>
     api.post('/vendor-library/sample-status', { rowId, sampleStatus }),
   restoreBackup: () => api.post('/vendor-library/restore-backup'),
+  // Upload hàng loạt ảnh trích xuất từ Excel (ảnh nhúng trực tiếp vào ô) khi import
+  uploadImages: (formData) => api.post('/vendor-library/upload-images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
 };
 
 
