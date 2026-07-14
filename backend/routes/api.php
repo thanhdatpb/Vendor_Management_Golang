@@ -12,6 +12,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\Api\VendorImportController;
 use App\Http\Controllers\Api\VendorLibraryController;
+use App\Http\Controllers\Api\PriceSheetController;
 use App\Http\Controllers\UserController;
 /*
 |--------------------------------------------------------------------------
@@ -148,6 +149,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Upload hàng loạt ảnh trích xuất từ Excel (ảnh nhúng trực tiếp vào ô) khi import
     Route::post('/vendor-library/upload-images', [VendorLibraryController::class, 'uploadImages'])
         ->middleware('role:staff_b,vendor');
+
+    // =========================
+    // PRICE SHEETS (Bảng tính giá) — lưu server, chia sẻ theo project
+    // =========================
+    Route::get('/price-sheets',         [PriceSheetController::class, 'index']);
+    Route::post('/price-sheets',        [PriceSheetController::class, 'upsert']);
+    Route::delete('/price-sheets/{id}', [PriceSheetController::class, 'destroy']);
 
     Route::get('/vendors',             [VendorController::class, 'index']);
     Route::post('/vendors',            [VendorController::class, 'store']);

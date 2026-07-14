@@ -342,6 +342,15 @@ export const priceSetupApi = {
   save: (data) => api.post("/vendor-price-setups", data),
 };
 
+// ===============================
+// PRICE SHEETS (Bảng tính giá) — lưu server, đồng bộ mọi máy theo project
+// ===============================
+export const priceSheetApi = {
+  list:   ()      => api.get("/price-sheets"),
+  save:   (sheet) => api.post("/price-sheets", sheet),
+  remove: (id)    => api.delete(`/price-sheets/${id}`),
+};
+
 
 // ===============================
 // AUTH API
