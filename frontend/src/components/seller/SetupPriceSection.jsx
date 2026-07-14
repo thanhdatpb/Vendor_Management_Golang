@@ -1,16 +1,20 @@
 // ════════════════════════════════════════════════════════
-//  SETUP PRICE SECTION — Grouped by Vendor Name
+//  SETUP PRICE SECTION — Danh sách "Bảng tính giá"
+//  Thay việc tính giá qua Google Sheet: mỗi bảng = 1 listing.
+//  Seller tự gom Product Type từ Thư viện Vendor vào một bảng.
 // ════════════════════════════════════════════════════════
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { HC } from '../../constants/sellerTheme';
 import AppToast from '../shared/AppToast';
-import { LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE } from '../../constants/sellerTheme';
-import { lsGet } from '../../utils/sellerHelpers';
 import { Pagination } from './SellerUI';
-import { inp } from './SellerUI';
 import { vendorLibraryApi } from '../../services/api';
+import { summarizeSheet, usd, pct, makeSheet, makeProductType, makeSize } from '../../utils/pricingEngine';
+import PriceSheetWorkspace, { exportSheetToExcel } from './PriceSheetWorkspace';
 
-// ── Project filter helpers (mirror VendorLibraryViewer) ──────────────────────
+const LS_SHEETS = 'PRICE_SHEETS_V1';
+const ITEMS_PER_PAGE = 10;
+
+// ── Project filter helpers (mirror VendorLibraryViewer) ──
 function _extractFileProject(filename) {
   if (!filename) return null;
   const fn = filename.toLowerCase();
@@ -24,753 +28,300 @@ function _getUserProjectKey() {
   try {
     const u = JSON.parse(localStorage.getItem('user') || '{}');
     const role = (u.role || '').toLowerCase().replace(/[-_\s]/g, '');
-    if (role === 'admin' || role === 'staffb' || role === 'vendor') return { skip: true };
+    if (role === 'admin' || role === 'staffb' || role === 'vendor') return { skip: true, key: '' };
     return { skip: false, key: (u.project || u.name || u.seller_name || '').trim().toLowerCase() };
   } catch { return { skip: false, key: '' }; }
 }
 
-const LS_PRICE_KEY = 'STAFF_PRICE_LIST_V3';
-const LS_VENDOR_SETUP_KEY = 'VENDOR_PRICE_SETUPS_BY_VENDOR_V1';
-
-// Style helpers
-const thBase = { padding: '10px 8px', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'center' };
-const thLeft = { ...thBase, textAlign: 'left' };
-const tdCenter = { padding: '10px 8px', textAlign: 'center', fontWeight: 600 };
-const tdComp = { padding: '6px 7px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', fontSize: 11 };
-const inputCell = { ...inp, padding: '5px 7px', fontSize: 11, textAlign: 'right' };
-
-const mkRow = () => ({
-  id: Date.now() + Math.random(),
-  product_type: '',
-  size_label: '',
-  for_adult_kid: '',
-  for_type_size: '',
-  item_cost: '',
-  shipping_cost: '0',
-});
-
-const computeRow = (row, g) => {
-  const base    = parseFloat(g.gia_hien_thi) || 0;
-  const custom  = parseFloat(g.custom_design_price) || 0;
-  const ship    = parseFloat(g.ship_price) || 0;
-  const cpct    = parseFloat(g.coupon_pct) || 0;
-  const ak      = parseFloat(row.for_adult_kid) || 0;
-  const ts      = parseFloat(row.for_type_size) || 0;
-  const ic      = parseFloat(row.item_cost) || 0;
-  const sc      = parseFloat(row.shipping_cost) || 0;
-
-  const total_size   = base + ak + ts;
-  const total_price  = total_size + custom + ship;
-  const total_cost   = ic + sc;
-  const coupon_amt   = cpct / 100 * (total_price - ship);
-  const after_price  = total_price - coupon_amt;
-  const coupon_fee   = cpct > 0 ? 0.025 * (total_price - ship - coupon_amt) : 0;
-  const amz_fee      = 0.17 * after_price;
-  const profit       = total_price - coupon_amt - coupon_fee - amz_fee - total_cost;
-  const profit_ratio  = total_cost > 0 ? profit / total_cost * 100 : 0;
-  const profit_margin = total_price > 0 ? profit / total_price * 100 : 0;
-
-  return { ...row, total_size, total_price, total_cost, coupon_amt, after_price, coupon_fee, amz_fee, profit, profit_ratio, profit_margin };
-};
+const loadAllSheets = () => { try { return JSON.parse(localStorage.getItem(LS_SHEETS) || '[]'); } catch { return []; } };
+const persistAllSheets = (list) => localStorage.setItem(LS_SHEETS, JSON.stringify(list));
 
 export default function SetupPriceSection() {
-  const [assignedPriceList, setAssignedPriceList] = useState([]);
-  const [libraryPriceList, setLibraryPriceList]   = useState([]);
-  const [search, setSearch]                   = useState('');
-  const [filterProductType, setFilterProductType] = useState('');
-  const [currentPage, setCurrentPage]         = useState(1);
-  const [toast, setToast]                     = useState(null);
-  const [approvedVendors, setApprovedVendors] = useState([]);
-  const [componentError, setComponentError]   = useState(null);
-  const isInitializedRef = useRef(false);
-  const ITEMS_PER_PAGE = 10;
+  const [allSheets, setAllSheets] = useState(loadAllSheets);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [toast, setToast] = useState(null);
+  const [workspaceSheet, setWorkspaceSheet] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const initRef = useRef(false);
 
-  // Modal
-  const [showSetupModal, setShowSetupModal]       = useState(false);
-  const [selectedGroup, setSelectedGroup]         = useState(null);
-  const [globalSettings, setGlobalSettings]       = useState({
-    gia_hien_thi: '', custom_design_price: '', ship_price: '', coupon_pct: 10, shipping_method: 'economy'
-  });
-  const [sizeRows, setSizeRows] = useState([mkRow()]);
+  const { skip, key: projectKey } = _getUserProjectKey();
 
-  // ── Load vendors from project-filtered library ────────────
-  const loadLibraryVendors = useCallback(async () => {
-    try {
-      const res = await vendorLibraryApi.get('all');
-      const allFiles = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
-      const { skip, key: userProjectKey } = _getUserProjectKey();
-      const filteredFiles = (skip || !userProjectKey) ? [] : allFiles.filter(file => {
-        const fp = _extractFileProject(file.filename);
-        if (!fp) return true;
-        return userProjectKey.includes(fp) || fp.includes(userProjectKey);
-      });
-      const normStr = s => (s || '').toString().trim().toLowerCase();
-      const items = [];
-      filteredFiles.forEach(file => {
-        const generalInfo = Array.isArray(file.generalInfo) ? file.generalInfo : [];
-        const pricing = Array.isArray(file.pricing) ? file.pricing : [];
-        const kyHieuToVendor = {};
-        const ptToVendor = {};
-        generalInfo.forEach(g => {
-          if (g.kyHieu && g.vendorName) kyHieuToVendor[g.kyHieu] = g.vendorName;
-          if (g.productType && g.vendorName) ptToVendor[normStr(g.productType)] = g.vendorName;
-        });
-        const untaggedVendorNames = [...new Set(generalInfo.filter(g => !g.kyHieu && g.vendorName).map(g => g.vendorName))];
-        const untaggedFallback = untaggedVendorNames.length === 1 ? untaggedVendorNames[0] : '';
-        const uniqueVendorNames = [...new Set(generalInfo.map(g => g.vendorName).filter(Boolean))];
-        let lastKy = '';
-        pricing.forEach(p => {
-          const pk = (p.kyHieu || '').trim();
-          if (pk) lastKy = pk;
-          const effKy = pk || lastKy;
-          let vendorName = effKy ? (kyHieuToVendor[effKy] || effKy) : '';
-          if (!vendorName) {
-            const rpt = normStr(p.productType);
-            if (rpt && ptToVendor[rpt]) vendorName = ptToVendor[rpt];
-            if (!vendorName) {
-              const mk = Object.keys(ptToVendor).find(k => k.includes(rpt) || rpt.includes(k));
-              if (mk) vendorName = ptToVendor[mk];
-            }
-          }
-          if (!vendorName) vendorName = untaggedFallback || (uniqueVendorNames.length === 1 ? uniqueVendorNames[0] : '');
-          if (!vendorName) return;
-          items.push({
-            id: `lib_${file.id}_${p.id || Math.random()}`,
-            vendor_id: `lib_${effKy || vendorName}_${file.id}`,
-            vendor_name: vendorName,
-            vendor_type: p.productType || '',
-            product_type: p.productType || '',
-            size: p.size || '',
-            pricing1: parseFloat(p.pricing1) || 0,
-            pricing2: parseFloat(p.pricing2) || 0,
-            eco_price: parseFloat(p.eco_price) || 0,
-            eco_total: parseFloat(p.eco_total) || 0,
-            ground_price: parseFloat(p.ground_price) || 0,
-            ground_total: parseFloat(p.ground_total) || 0,
-            express_price: parseFloat(p.express_price) || 0,
-            express_total: parseFloat(p.express_total) || 0,
-            twoday_price: parseFloat(p.twoday_price) || 0,
-            twoday_total: parseFloat(p.twoday_total) || 0,
-            overnight_price: parseFloat(p.overnight_price) || 0,
-            overnight_total: parseFloat(p.overnight_total) || 0,
-            source: 'library',
-            _fileId: file.id,
-            _filename: (file.filename || '').replace(/\.[^.]+$/, ''),
-          });
-        });
-      });
-      setLibraryPriceList(items);
-    } catch (err) {
-      console.error('loadLibraryVendors error:', err);
-    }
-  }, []);
-
-  // ── Grouped vendors (by vendor_name) ─────────────────────
-  const groupedVendors = useMemo(() => {
-    // Merge library vendors + assigned vendors; library rows deduplicated by vendor+size+productType
-    const assignedKeys = new Set(assignedPriceList.map(i => `${i.vendor_name}|${i.size}|${i.product_type}`));
-    const combinedList = [
-      ...assignedPriceList,
-      ...libraryPriceList.filter(i => !assignedKeys.has(`${i.vendor_name}|${i.size}|${i.product_type}`)),
-    ];
-    const map = {};
-    combinedList.forEach(item => {
-      // Library items: separate by file so same vendor name in different files = different rows
-      const baseName = (item.vendor_name || item.vendor_type || 'unknown').trim();
-      const key = item.source === 'library' && item._fileId
-        ? `${baseName}__lib_${item._fileId}`
-        : baseName;
-      if (!map[key]) {
-        map[key] = {
-          ...item,
-          _key: key,
-          _displayName: baseName,
-          _rawSizes: [],
-          _productTypes: new Set(),
-          _filename: item._filename || null,
-        };
-      }
-      map[key]._rawSizes.push(item);
-      if (item.product_type) map[key]._productTypes.add(item.product_type);
-    });
-    const allSetups = JSON.parse(localStorage.getItem(LS_VENDOR_SETUP_KEY) || '{}');
-    return Object.values(map).map(group => {
-      const saved = allSetups[group._key];
-      const computedSizes = saved?.sizes?.length
-        ? saved.sizes.map(r => computeRow(r, saved))
-        : [];
-      const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
-      // Collect unique size labels from raw data
-      const uniqueSizeLabels = [...new Set(group._rawSizes.map(s => s.size).filter(Boolean))];
-      return {
-        ...group,
-        _productTypeList: [...group._productTypes],
-        _uniqueSizeLabels: uniqueSizeLabels,
-        _saved: saved || null,
-        _computedSizes: computedSizes,
-        _avgProfit:  avg(computedSizes.map(r => r.profit)),
-        _avgMargin:  avg(computedSizes.map(r => r.profit_margin)),
-        _minPrice:   computedSizes.length ? Math.min(...computedSizes.map(r => r.total_price)) : null,
-        _maxPrice:   computedSizes.length ? Math.max(...computedSizes.map(r => r.total_price)) : null,
-      };
-    });
-  }, [assignedPriceList, libraryPriceList]);
-
-  const filteredGroups = useMemo(() => groupedVendors.filter(g => {
-    const q = search.toLowerCase();
-    const matchSearch = !search
-      || (g.vendor_name || '').toLowerCase().includes(q)
-      || g._productTypeList.some(pt => pt.toLowerCase().includes(q));
-    const matchFilter = !filterProductType
-      || g._productTypeList.some(pt => pt.toLowerCase().includes(filterProductType.toLowerCase()));
-    return matchSearch && matchFilter;
-  }), [groupedVendors, search, filterProductType]);
-
-  // Collect all unique product types across all groups for the filter dropdown
-  const productTypes = useMemo(() => {
-    const all = groupedVendors.flatMap(g => g._productTypeList);
-    return [...new Set(all)].filter(Boolean);
-  }, [groupedVendors]);
-  const totalPages    = Math.ceil(filteredGroups.length / ITEMS_PER_PAGE);
-  const pagedGroups   = filteredGroups.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-  // ── Data loading (unchanged logic) ───────────────────────
-  const generatePriceListFromApprovedVendors = useCallback((vendors) => {
-    if (!vendors || vendors.length === 0) return;
-    const savedSetups = JSON.parse(localStorage.getItem('VENDOR_PRICE_SETUPS') || '[]');
-    const newPriceList = vendors.map((vendor, idx) => {
-      const gia_hien_thi = (parseFloat(vendor.pricing1) || 0) + (parseFloat(vendor.pricing2) || 0);
-      const gia_customsize = vendor.size?.trim() ? 5 : 0;
-      let gia_ship = parseFloat(vendor.eco_price) || parseFloat(vendor.fast_price) || parseFloat(vendor.express_price) || parseFloat(vendor.overnight_price) || 0;
-      const existingSetup = savedSetups.find(s => s.vendor_id === vendor.id && s.product_type === vendor.product_type);
-      if (existingSetup) {
-        return {
-          ...existingSetup,
-          eco_price: vendor.eco_price || 0, eco_total: vendor.eco_total || 0,
-          fast_price: vendor.fast_price || 0, fast_total: vendor.fast_total || 0,
-          express_price: vendor.express_price || 0, express_total: vendor.express_total || 0,
-          overnight_price: vendor.overnight_price || 0, overnight_total: vendor.overnight_total || 0,
-          pricing1: vendor.pricing1 || 0, pricing2: vendor.pricing2 || 0,
-          vendor_name: vendor.name || vendor.vendor_name || vendor.vendor_type,
-          vendor_type: vendor.vendor_type, product_type: vendor.product_type,
-          size: existingSetup.size || vendor.size,
-          gia_hien_thi: existingSetup.total_display_price || gia_hien_thi,
-          gia_customsize: existingSetup.total_customize_price || gia_customsize,
-          gia_ship: existingSetup.total_ship_min || gia_ship,
-          approved_at: vendor.approvedAt, source: 'assigned',
-        };
-      }
-      return {
-        id: Date.now() + idx + Math.random(),
-        vendor_id: vendor.id, productId: vendor.productId,
-        vendor_name: vendor.name || vendor.vendor_name || vendor.vendor_type || 'Unknown',
-        vendor_type: vendor.vendor_type || '',
-        product_type: vendor.productType || vendor.product_type || '',
-        size: vendor.size || '', approved_at: vendor.approvedAt,
-        gia_hien_thi, gia_customsize, gia_ship,
-        coupon_percent: 0, coupon_fee: 0,
-        total_price: gia_hien_thi + gia_customsize + gia_ship,
-        profit: 0, profit_margin: 0,
-        eco_price: vendor.eco_price || 0, eco_total: vendor.eco_total || 0,
-        fast_price: vendor.fast_price || 0, fast_total: vendor.fast_total || 0,
-        express_price: vendor.express_price || 0, express_total: vendor.express_total || 0,
-        overnight_price: vendor.overnight_price || 0, overnight_total: vendor.overnight_total || 0,
-        pricing1: vendor.pricing1 || 0, pricing2: vendor.pricing2 || 0,
-        source: 'assigned',
-      };
-    });
-    const unique = newPriceList.filter((item, i, self) =>
-      i === self.findIndex(t => String(t.productId) === String(item.productId) && String(t.vendor_id) === String(item.vendor_id) && t.size === item.size && t.product_type === item.product_type)
-    );
-    setAssignedPriceList(unique);
-    if (unique.length > 0) localStorage.setItem(LS_PRICE_KEY, JSON.stringify(unique));
-  }, []);
-
-  const loadApprovedVendors = useCallback(() => {
-    try {
-      const vendors = [];
-      const currentProductVendors = lsGet(LS_PRODUCT_VENDORS, {});
-      if (typeof currentProductVendors !== 'object' || !currentProductVendors) return;
-      const currentAFR = lsGet(LS_A_FEEDBACK_RESPONSE, {});
-      Object.entries(currentProductVendors).forEach(([productId, vendorList]) => {
-        if (!Array.isArray(vendorList)) return;
-        vendorList.forEach((vendor, idx) => {
-          if (!vendor) return;
-          const key = vendor.id ? String(vendor.id) : `idx_${idx}`;
-          vendors.push({
-            ...vendor, productId, productType: vendor.product_type,
-            approvedAt: currentAFR[productId]?.[key]?.respondedAt || new Date().toISOString(),
-            vendorKey: key, source: 'assigned',
-          });
-        });
-      });
-      if (vendors.length > 0) { setApprovedVendors(vendors); generatePriceListFromApprovedVendors(vendors); }
-      else { setApprovedVendors([]); setAssignedPriceList([]); }
-    } catch (err) { console.error('loadApprovedVendors error:', err); setComponentError(err.message); }
-  }, [generatePriceListFromApprovedVendors]);
-
-  useEffect(() => {
-    if (!isInitializedRef.current) {
-      isInitializedRef.current = true;
-      loadApprovedVendors();
-      loadLibraryVendors();
-    }
-    const sync = () => loadApprovedVendors();
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, [loadApprovedVendors, loadLibraryVendors]);
-
-  // ── Modal handlers ────────────────────────────────────────
-  const handleOpenSetupModal = (group) => {
-    setSelectedGroup(group);
-    const saved = group._saved;
-    if (saved?.sizes?.length) {
-      setGlobalSettings({
-        gia_hien_thi: String(saved.gia_hien_thi ?? ''),
-        custom_design_price: String(saved.custom_design_price ?? ''),
-        ship_price: String(saved.ship_price ?? ''),
-        coupon_pct: saved.coupon_pct ?? 10,
-        shipping_method: saved.shipping_method || 'economy',
-      });
-      setSizeRows(saved.sizes.map(s => ({
-        id: s.id || Date.now() + Math.random(),
-        product_type: s.product_type || '',
-        size_label: s.size_label || '',
-        for_adult_kid: s.for_adult_kid ?? '',
-        for_type_size: s.for_type_size ?? '',
-        item_cost: s.item_cost ?? '',
-        shipping_cost: s.shipping_cost ?? '0',
-      })));
-    } else {
-      // Derive default global values from first raw size entry
-      const first = group._rawSizes[0] || {};
-      const base = (parseFloat(first.pricing1) || 0) + (parseFloat(first.pricing2) || 0);
-      const ship = parseFloat(first.eco_price) || parseFloat(first.fast_price) || 0;
-      setGlobalSettings({
-        gia_hien_thi: base > 0 ? String(base) : '',
-        custom_design_price: '',
-        ship_price: ship > 0 ? String(ship) : '',
-        coupon_pct: 10,
-        shipping_method: 'economy',
-      });
-      // Pre-populate one row per unique (size, product_type) combo from all raw entries
-      const seen = new Set();
-      const initRows = (group._rawSizes || [])
-        .filter(s => {
-          const key = `${(s.size || '').trim()}|${(s.product_type || '').trim()}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
-        .map(s => {
-          const shapeMatch = (s.product_type || '').match(/\(Shape:\s*([^)]+)\)/i);
-          const shape = shapeMatch ? shapeMatch[1].trim() : '';
-          const sizeLabel = shape ? `${s.size || ''} (${shape})` : (s.size || '');
-          return {
-            ...mkRow(),
-            product_type: s.product_type || '',
-            size_label: sizeLabel,
-            item_cost: s.eco_total ? String(parseFloat(s.eco_total) || '') : '',
-            shipping_cost: '0',
-          };
-        });
-      setSizeRows(initRows.length ? initRows : [mkRow()]);
-    }
-    setShowSetupModal(true);
-  };
-
-  const handleSaveSetupPrice = () => {
-    const allSetups = JSON.parse(localStorage.getItem(LS_VENDOR_SETUP_KEY) || '{}');
-    allSetups[selectedGroup._key] = {
-      vendor_id: selectedGroup.vendor_id,
-      vendor_name: selectedGroup.vendor_name,
-      vendor_type: selectedGroup.vendor_type,
-      product_type: selectedGroup.product_type,
-      productId: selectedGroup.productId,
-      gia_hien_thi: parseFloat(globalSettings.gia_hien_thi) || 0,
-      custom_design_price: parseFloat(globalSettings.custom_design_price) || 0,
-      ship_price: parseFloat(globalSettings.ship_price) || 0,
-      coupon_pct: parseFloat(globalSettings.coupon_pct) || 0,
-      shipping_method: globalSettings.shipping_method,
-      sizes: sizeRows.map(r => ({
-        id: r.id, product_type: r.product_type || '', size_label: r.size_label,
-        for_adult_kid: parseFloat(r.for_adult_kid) || 0,
-        for_type_size: parseFloat(r.for_type_size) || 0,
-        item_cost: parseFloat(r.item_cost) || 0,
-        shipping_cost: parseFloat(r.shipping_cost) || 0,
-      })),
-      updated_at: new Date().toISOString(),
-    };
-    localStorage.setItem(LS_VENDOR_SETUP_KEY, JSON.stringify(allSetups));
-    setAssignedPriceList(prev => [...prev]); // trigger groupedVendors recompute
-    showToastMsg('success', 'Lưu thành công', `Đã lưu ${sizeRows.length} size cho ${selectedGroup.vendor_name || selectedGroup.vendor_type}`);
-    setShowSetupModal(false);
-    setSelectedGroup(null);
-  };
-
-  const handleDeleteGroup = (group) => {
-    const label = group.vendor_name || group.vendor_type || 'Vendor';
-    if (!window.confirm(`Xóa "${label}" (${group.product_type || '—'}) khỏi danh sách giá?`)) return;
-    const allSetups = JSON.parse(localStorage.getItem(LS_VENDOR_SETUP_KEY) || '{}');
-    delete allSetups[group._key];
-    localStorage.setItem(LS_VENDOR_SETUP_KEY, JSON.stringify(allSetups));
-    const legacy = JSON.parse(localStorage.getItem('VENDOR_PRICE_SETUPS') || '[]');
-    localStorage.setItem('VENDOR_PRICE_SETUPS', JSON.stringify(legacy.filter(s => !(String(s.vendor_id) === String(group.vendor_id) && s.product_type === group.product_type))));
-    setAssignedPriceList(prev => prev.filter(p => !(String(p.vendor_id) === String(group.vendor_id) && p.product_type === group.product_type)));
-    showToastMsg('success', 'Đã xóa', `Đã xóa "${label}"`);
-  };
-
-  const updateRow = (idx, field, val) => setSizeRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
-  const addRow    = () => setSizeRows(prev => [...prev, mkRow()]);
-  const removeRow = (idx) => setSizeRows(prev => prev.filter((_, i) => i !== idx));
-
-  const showToastMsg = (type, title, message, duration = 3000) => {
+  const showToast = useCallback((type, title, message, duration = 3000) => {
     setToast({ type, title, message, duration });
     setTimeout(() => setToast(null), duration);
+  }, []);
+
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+    setAllSheets(loadAllSheets());
+  }, []);
+
+  // Sheets thuộc project của user
+  const sheets = useMemo(() => {
+    const mine = skip ? allSheets : allSheets.filter((s) => !s.project || !projectKey || s.project === projectKey || projectKey.includes(s.project) || s.project.includes(projectKey));
+    return mine;
+  }, [allSheets, skip, projectKey]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sheets;
+    return sheets.filter((s) =>
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.vendorRef || '').toLowerCase().includes(q) ||
+      (s.productTypes || []).some((pt) => (pt.name || '').toLowerCase().includes(q))
+    );
+  }, [sheets, search]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  // ── CRUD ──
+  const commitSheet = (updated) => {
+    setAllSheets((prev) => {
+      const exists = prev.some((s) => s.id === updated.id);
+      const next = exists ? prev.map((s) => (s.id === updated.id ? updated : s)) : [updated, ...prev];
+      persistAllSheets(next);
+      return next;
+    });
   };
 
-  if (componentError) return (
-    <div style={{ padding: 40, textAlign: 'center', color: HC.danger }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-      <div style={{ fontWeight: 700 }}>Có lỗi xảy ra</div>
-      <div style={{ fontSize: 13, marginTop: 8, color: HC.muted }}>{componentError}</div>
-      <button onClick={() => window.location.reload()} style={{ marginTop: 20, padding: '8px 20px', borderRadius: 8, background: HC.orange, color: '#fff', border: 'none', cursor: 'pointer' }}>Tải lại trang</button>
-    </div>
-  );
+  const handleCreate = (sheet) => {
+    commitSheet(sheet);
+    setShowCreate(false);
+    setWorkspaceSheet(sheet);
+  };
 
-  const computedRows = sizeRows.map(r => computeRow(r, globalSettings));
-  const gBase   = parseFloat(globalSettings.gia_hien_thi) || 0;
-  const gCustom = parseFloat(globalSettings.custom_design_price) || 0;
-  const gShip   = parseFloat(globalSettings.ship_price) || 0;
-  const gCpct   = parseFloat(globalSettings.coupon_pct) || 0;
+  const handleSaveWorkspace = (updated) => {
+    commitSheet(updated);
+    setWorkspaceSheet(updated); // giữ mở với dữ liệu mới
+  };
+
+  const handleDelete = (sheet) => {
+    if (!window.confirm(`Xoá bảng tính giá "${sheet.name}"?`)) return;
+    setAllSheets((prev) => { const next = prev.filter((s) => s.id !== sheet.id); persistAllSheets(next); return next; });
+    showToast('success', 'Đã xoá', sheet.name);
+  };
 
   return (
     <div>
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
-      {/* ── Main grouped table ── */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-          <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})`, flexShrink: 0 }} />
-          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Vendor từ Thư Viện</div>
-          <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filteredGroups.length} vendor</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Tìm vendor / product..." value={search}
-              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 200 }} />
-            <select value={filterProductType} onChange={e => { setFilterProductType(e.target.value); setCurrentPage(1); }}
-              style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: filterProductType ? HC.orangeDark : HC.muted, outline: 'none', cursor: 'pointer' }}>
-              <option value="">Tất cả Product Type</option>
-              {productTypes.map(pt => <option key={pt} value={pt}>{pt}</option>)}
-            </select>
-            {(search || filterProductType) && (
-              <button onClick={() => { setSearch(''); setFilterProductType(''); setCurrentPage(1); }}
-                style={{ padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>
-                Xóa lọc
-              </button>
-            )}
-          </div>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})` }} />
+        <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Bảng tính giá</div>
+        <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filtered.length} bảng</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="text" placeholder="Tìm bảng / vendor / product..." value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{ padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 220 }} />
+          <button onClick={() => setShowCreate(true)}
+            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+            ＋ Tạo bảng tính giá
+          </button>
         </div>
+      </div>
 
-        {filteredGroups.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 12, border: `1px solid ${HC.border}` }}>
-            <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.5 }}>🏪</div>
-            <div style={{ fontWeight: 600, color: HC.muted }}>Chưa có vendor nào trong thư viện</div>
-          </div>
-        ) : (
-          <>
-            <div style={{ borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: `0 4px 12px rgba(0,0,0,0.05)`, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12 }}>
+      {filtered.length === 0 ? (
+        <div style={{ padding: 48, textAlign: 'center', background: HC.surface, borderRadius: 14, border: `1px solid ${HC.border}` }}>
+          <div style={{ fontSize: 42, marginBottom: 12, opacity: 0.5 }}>🧮</div>
+          <div style={{ fontWeight: 700, color: HC.ink2, marginBottom: 6 }}>Chưa có bảng tính giá nào</div>
+          <div style={{ fontSize: 13, color: HC.muted, marginBottom: 18 }}>Tạo bảng để tính giá trực tiếp trong hệ thống — thay cho Google Sheet.</div>
+          <button onClick={() => setShowCreate(true)} style={{ padding: '9px 20px', borderRadius: 9, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 }}>＋ Tạo bảng tính giá đầu tiên</button>
+        </div>
+      ) : (
+        <>
+          <div style={{ borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12, minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>
-                    <th style={thBase}>STT</th>
-                    <th style={thLeft}>Vendor Name</th>
-                    <th style={thLeft}>Vendor Type</th>
-                    <th style={thLeft}>Product Type</th>
-                    <th style={thBase}>Số Size</th>
-                    <th style={thBase}>Price Range</th>
-                    <th style={thBase}>Avg Profit</th>
-                    <th style={thBase}>Avg Margin</th>
-                    <th style={{ ...thBase, minWidth: 130 }}>Thao tác</th>
+                    {['#', 'Bảng tính giá', 'Vendor', 'Product Type', 'Size', 'Khoảng giá', 'Avg Margin', 'Cập nhật', 'Thao tác'].map((h, i) => (
+                      <th key={h} style={{ padding: '10px 10px', color: '#fff', fontWeight: 700, textAlign: i === 0 || i > 3 ? 'center' : 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {pagedGroups.map((group, idx) => (
-                    <tr key={group._key} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#fff' : HC.surface2 }}>
-                      <td style={tdCenter}>{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
-                      <td style={{ padding: '10px 8px' }}>
-                        <div style={{ fontWeight: 700, color: HC.ink2 }}>{group._displayName || group.vendor_name || '—'}</div>
-                        {group._filename && (
-                          <div title={group._filename} style={{ fontSize: 10, color: HC.muted, fontWeight: 500, marginTop: 3, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            📄 {group._filename}
+                  {paged.map((sheet, idx) => {
+                    const sum = summarizeSheet(sheet);
+                    const pts = sheet.productTypes || [];
+                    return (
+                      <tr key={sheet.id} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#fff' : HC.surface2 }}>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>{(page - 1) * ITEMS_PER_PAGE + idx + 1}</td>
+                        <td style={{ padding: '10px' }}>
+                          <div style={{ fontWeight: 800, color: HC.ink2 }}>{sheet.name || '—'}</div>
+                          {sheet._sourceFile && <div style={{ fontSize: 10, color: HC.muted, marginTop: 2 }}>📄 {sheet._sourceFile}</div>}
+                        </td>
+                        <td style={{ padding: '10px', fontWeight: 600, color: HC.orange }}>{sheet.vendorRef || '—'}</td>
+                        <td style={{ padding: '8px 10px', maxWidth: 240 }}>
+                          {pts.length === 0 ? <span style={{ color: HC.muted, fontSize: 11 }}>—</span> : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {pts.slice(0, 3).map((pt) => <span key={pt.id} style={chip}>{pt.name || '—'}</span>)}
+                              {pts.length > 3 && <span style={{ ...chip, background: HC.orangeLight, color: HC.orangeDark, borderColor: HC.orangeMid }}>+{pts.length - 3}</span>}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <span style={{ padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontWeight: 700, fontSize: 11 }}>{sum.count} size</span>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 700, color: HC.ink2, fontVariantNumeric: 'tabular-nums' }}>
+                          {sum.minPrice != null ? (sum.minPrice === sum.maxPrice ? usd(sum.minPrice) : `${usd(sum.minPrice)} – ${usd(sum.maxPrice)}`) : <span style={{ color: HC.muted }}>—</span>}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: sum.avgMargin != null ? (sum.avgMargin > 25 ? HC.success : HC.warning) : HC.muted }}>
+                          {sum.avgMargin != null ? pct(sum.avgMargin, 1) : '—'}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontSize: 11, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>
+                          {sheet.updatedAt ? new Date(sheet.updatedAt).toLocaleDateString('vi-VN') : '—'}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                            <button onClick={() => setWorkspaceSheet(sheet)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>Mở bảng</button>
+                            <button onClick={() => exportSheetToExcel(sheet, showToast)} title="Export Excel" style={{ padding: '5px 9px', borderRadius: 6, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>⬇</button>
+                            <button onClick={() => handleDelete(sheet)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Xoá</button>
                           </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '10px 8px', fontWeight: 600, color: group.vendor_type === 'Best Seller' ? '#D4A017' : HC.orange }}>
-                        {group.vendor_type || '—'}{group.vendor_type === 'Best Seller' && <span style={{ marginLeft: 4, fontSize: 11 }}>⭐</span>}
-                      </td>
-                      {/* Product Types — capped at 3 visible chips + overflow badge */}
-                      <td style={{ padding: '8px 10px', maxWidth: 220 }}>
-                        {group._productTypeList.length === 0
-                          ? <span style={{ color: HC.muted, fontSize: 11 }}>—</span>
-                          : (() => {
-                              const visible = group._productTypeList.slice(0, 3);
-                              const rest = group._productTypeList.length - 3;
-                              return (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-                                  {visible.map(pt => (
-                                    <span key={pt} title={pt} style={{ padding: '2px 8px', borderRadius: 10, background: HC.surface2, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.ink2, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }}>{pt}</span>
-                                  ))}
-                                  {rest > 0 && (
-                                    <span title={group._productTypeList.slice(3).join(', ')} style={{ padding: '2px 8px', borderRadius: 10, background: HC.orangeLight, color: HC.orangeDark, fontSize: 10, fontWeight: 700, cursor: 'default', whiteSpace: 'nowrap' }}>+{rest}</span>
-                                  )}
-                                </div>
-                              );
-                            })()
-                        }
-                      </td>
-                      {/* Số Size — count of unique sizes from raw data + setup badge */}
-                      <td style={tdCenter}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                          <span style={{ padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontWeight: 700, fontSize: 11 }}>
-                            {group._rawSizes.length} size
-                          </span>
-                          {group._computedSizes.length > 0
-                            ? <span style={{ fontSize: 10, color: HC.success, fontWeight: 600 }}>✓ Đã setup</span>
-                            : <span style={{ fontSize: 10, color: HC.muted }}>Chưa setup</span>}
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 600, color: HC.ink2 }}>
-                        {group._minPrice != null
-                          ? (group._minPrice === group._maxPrice ? `$${group._minPrice.toFixed(2)}` : `$${group._minPrice.toFixed(2)} – $${group._maxPrice.toFixed(2)}`)
-                          : <span style={{ color: HC.muted, fontSize: 11 }}>—</span>}
-                      </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: group._avgProfit != null ? (group._avgProfit > 0 ? HC.success : HC.danger) : HC.muted }}>
-                        {group._avgProfit != null ? `$${group._avgProfit.toFixed(2)}` : '—'}
-                      </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: group._avgMargin != null ? (group._avgMargin > 20 ? HC.success : HC.warning) : HC.muted }}>
-                        {group._avgMargin != null ? `${group._avgMargin.toFixed(1)}%` : '—'}
-                      </td>
-                      <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                          <button onClick={() => handleOpenSetupModal(group)}
-                            style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
-                            Setup giá
-                          </button>
-                          <button onClick={() => handleDeleteGroup(group)}
-                            style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>
-                            Xóa
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-            {totalPages > 1 && (
-              <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredGroups.length} onPageChange={setCurrentPage} itemsPerPage={ITEMS_PER_PAGE} />
-            )}
-          </>
-        )}
-      </div>
+          </div>
+          {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} totalItems={filtered.length} onPageChange={setPage} itemsPerPage={ITEMS_PER_PAGE} />}
+        </>
+      )}
 
-      {/* ── Setup Modal ── */}
-      {showSetupModal && selectedGroup && (
-        <div onClick={() => setShowSetupModal(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, backdropFilter: 'blur(3px)', padding: '8px 0' }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ width: '100vw', maxWidth: '100vw', height: '100vh', maxHeight: '100vh', display: 'flex', flexDirection: 'column', background: HC.surface, borderRadius: 0, boxShadow: HC.shadowStrong, overflow: 'hidden' }}>
+      {showCreate && (
+        <CreateSheetModal projectKey={skip ? '' : projectKey} skip={skip} onClose={() => setShowCreate(false)} onCreate={handleCreate} showToast={showToast} />
+      )}
 
-            {/* Header */}
-            <div style={{ padding: '14px 24px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: 16 }}>⚙️ Setup Giá Bán — {selectedGroup.vendor_name || selectedGroup.vendor_type}</div>
-                  <div style={{ fontSize: 11, opacity: 0.9, marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span>{selectedGroup.vendor_type}</span>
-                    <span style={{ opacity: 0.5 }}>·</span>
-                    <span>{selectedGroup._rawSizes.length} size</span>
-                    {selectedGroup._productTypeList.length > 0 && (
-                      <>
-                        <span style={{ opacity: 0.5 }}>·</span>
-                        <span>Products: {selectedGroup._productTypeList.join(', ')}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <button onClick={() => setShowSetupModal(false)}
-                  style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: 8, cursor: 'pointer', fontSize: 16 }}>✕</button>
-              </div>
-            </div>
+      {workspaceSheet && (
+        <PriceSheetWorkspace sheet={workspaceSheet} onSave={handleSaveWorkspace} onClose={() => setWorkspaceSheet(null)} showToast={showToast} />
+      )}
+    </div>
+  );
+}
 
-            {/* Global Settings */}
-            <div style={{ padding: '16px 24px', borderBottom: `1px solid ${HC.border}`, background: HC.surface2, flexShrink: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 12, color: HC.muted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>⚙️ Cài đặt chung — áp dụng cho tất cả size</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-                {[
-                  { label: '💰 Giá hiển thị cơ bản ($)', key: 'gia_hien_thi', placeholder: '7.99' },
-                  { label: '🎨 Custom Design Push ($)', key: 'custom_design_price', placeholder: '14.99' },
-                  { label: '🚚 Ship Price ($)', key: 'ship_price', placeholder: '7.99' },
-                  { label: '🎫 Coupon (%)', key: 'coupon_pct', placeholder: '10' },
-                ].map(({ label, key, placeholder }) => (
-                  <div key={key}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: HC.muted, display: 'block', marginBottom: 4 }}>{label}</label>
-                    <input type="number" step="0.01" placeholder={placeholder} value={globalSettings[key]}
-                      onChange={e => setGlobalSettings(p => ({ ...p, [key]: e.target.value }))}
-                      style={{ ...inp, padding: '8px 10px', fontSize: 12 }} />
-                  </div>
-                ))}
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: HC.muted, display: 'block', marginBottom: 4 }}>📦 Phương thức vận chuyển</label>
-                  <select value={globalSettings.shipping_method}
-                    onChange={e => setGlobalSettings(p => ({ ...p, shipping_method: e.target.value }))}
-                    style={{ ...inp, padding: '8px 10px', fontSize: 12, cursor: 'pointer' }}>
-                    <option value="economy">Economy</option>
-                    <option value="fast">Ground/Fast</option>
-                    <option value="express">Express</option>
-                    <option value="overnight">Overnight</option>
-                  </select>
-                </div>
-              </div>
-              {/* Preview formula */}
-              <div style={{ marginTop: 10, padding: '8px 14px', background: HC.orangeLight, borderRadius: 8, border: `1px solid ${HC.orangeMid}`, fontSize: 11, color: HC.orangeDark, fontWeight: 600 }}>
-                💡 Công thức: Total Price = Giá hiển thị + For Adult/Kid + For Type+Size + Custom Push + Ship &nbsp;|&nbsp; Base = ${gBase.toFixed(2)}, Custom = ${gCustom.toFixed(2)}, Ship = ${gShip.toFixed(2)}, Coupon = {gCpct}%
-              </div>
-            </div>
+const chip = { padding: '2px 8px', borderRadius: 10, background: HC.surface2, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.ink2, whiteSpace: 'nowrap', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' };
 
-            {/* Size Table */}
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '14px 24px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 13, color: HC.ink }}>
-                  📊 Bảng tính giá theo Size
-                  <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11 }}>{sizeRows.length} size</span>
-                </div>
-                <button onClick={addRow}
-                  style={{ padding: '7px 16px', borderRadius: 8, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-                  + Thêm Size
-                </button>
-              </div>
+// ════════════════════════════════════════════════════════
+//  Create modal — gom Product Type từ Thư viện Vendor
+// ════════════════════════════════════════════════════════
+function CreateSheetModal({ projectKey, skip, onClose, onCreate, showToast }) {
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [libItems, setLibItems] = useState([]);
+  const [picked, setPicked] = useState({}); // key -> item
+  const [q, setQ] = useState('');
 
-              <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: '0 24px 12px' }}>
-                <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '100%', minWidth: 1200 }}>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                    {/* Group headers */}
-                    <tr>
-                      <th colSpan={6} style={{ padding: '6px 8px', background: `${HC.orange}22`, color: HC.orangeDark, fontWeight: 800, fontSize: 11, textAlign: 'center', border: `1px solid ${HC.orangeMid}`, borderBottom: 'none' }}>
-                        ✏️ Nhập liệu
-                      </th>
-                      <th style={{ width: 8, background: 'transparent', border: 'none' }} />
-                      <th colSpan={11} style={{ padding: '6px 8px', background: '#f0fdf4', color: '#065f46', fontWeight: 800, fontSize: 11, textAlign: 'center', border: '1px solid #bbf7d0', borderBottom: 'none' }}>
-                        📐 Tính toán tự động
-                      </th>
-                      <th style={{ background: 'transparent', border: 'none' }} />
-                    </tr>
-                    {/* Column headers */}
-                    <tr style={{ background: HC.surface2 }}>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 130, fontSize: 11 }}>Product Type</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 80, fontSize: 11 }}>Size</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 75, fontSize: 11 }}>Adult/Kid ($)</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 75, fontSize: 11 }}>Type+Size ($)</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 75, fontSize: 11 }}>Item Cost ($)</th>
-                      <th style={{ ...thBase, background: HC.orangeDark, color: '#fff', border: `1px solid ${HC.orangeMid}`, minWidth: 75, fontSize: 11 }}>Ship Cost ($)</th>
-                      <th style={{ width: 8, background: HC.border, border: 'none' }} />
-                      {[
-                        'Total Size ($)', 'Custom Push ($)', 'Ship Price ($)', 'Total Price ($)',
-                        'Total Cost ($)', `Coupon (${gCpct}%)`, 'Coupon Fee', 'AMZ Fee (17%)',
-                        'Profit ($)', '% Profit/Cost', 'Profit Margin',
-                      ].map(h => (
-                        <th key={h} style={{ padding: '8px 6px', background: '#ecfdf5', color: '#065f46', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap', border: '1px solid #bbf7d0', fontSize: 10, minWidth: h === 'Total Price ($)' ? 78 : 65 }}>
-                          {h}
-                        </th>
-                      ))}
-                      <th style={{ padding: '8px 6px', background: HC.surface2, color: HC.muted, fontWeight: 700, textAlign: 'center', border: `1px solid ${HC.border}`, width: 36 }}>Xóa</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {computedRows.map((row, idx) => (
-                      <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                        {/* Product Type — static */}
-                        <td style={{ padding: '6px 8px', border: `1px solid ${HC.border}`, fontWeight: 600, color: HC.ink2, fontSize: 11, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.product_type}>
-                          {row.product_type || <span style={{ color: HC.muted }}>—</span>}
-                        </td>
-                        {/* Size label */}
-                        <td style={{ padding: '4px 4px', border: `1px solid ${HC.border}` }}>
-                          <input type="text" value={row.size_label} onChange={e => updateRow(idx, 'size_label', e.target.value)}
-                            placeholder="Men S" style={{ ...inputCell, width: '100%', textAlign: 'left', boxSizing: 'border-box' }} />
-                        </td>
-                        {/* For Adult/Kid */}
-                        <td style={{ padding: '4px 4px', border: `1px solid ${HC.border}` }}>
-                          <input type="number" step="0.01" value={row.for_adult_kid} onChange={e => updateRow(idx, 'for_adult_kid', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
-                        </td>
-                        {/* For Type+Size */}
-                        <td style={{ padding: '4px 4px', border: `1px solid ${HC.border}` }}>
-                          <input type="number" step="0.01" value={row.for_type_size} onChange={e => updateRow(idx, 'for_type_size', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
-                        </td>
-                        {/* Item Cost */}
-                        <td style={{ padding: '4px 4px', border: `1px solid ${HC.border}` }}>
-                          <input type="number" step="0.01" value={row.item_cost} onChange={e => updateRow(idx, 'item_cost', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
-                        </td>
-                        {/* Ship Cost */}
-                        <td style={{ padding: '4px 4px', border: `1px solid ${HC.border}` }}>
-                          <input type="number" step="0.01" value={row.shipping_cost} onChange={e => updateRow(idx, 'shipping_cost', e.target.value)}
-                            placeholder="0" style={{ ...inputCell, width: '100%', boxSizing: 'border-box' }} />
-                        </td>
-                        {/* Separator */}
-                        <td style={{ width: 8, background: HC.border, padding: 0 }} />
-                        {/* Total Size */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.orangeDark }}>${row.total_size.toFixed(2)}</td>
-                        {/* Custom Push */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.muted }}>${gCustom.toFixed(2)}</td>
-                        {/* Ship Price */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.muted }}>${gShip.toFixed(2)}</td>
-                        {/* Total Price */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', fontWeight: 800, fontSize: 12, color: HC.success, background: '#f0fdf4' }}>${row.total_price.toFixed(2)}</td>
-                        {/* Total Cost */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0' }}>${row.total_cost.toFixed(2)}</td>
-                        {/* Coupon */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.warning }}>-${row.coupon_amt.toFixed(3)}</td>
-                        {/* Coupon Fee */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: '#d97706' }}>${row.coupon_fee.toFixed(4)}</td>
-                        {/* AMZ Fee */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: HC.orangeDark }}>${row.amz_fee.toFixed(3)}</td>
-                        {/* Profit */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', fontWeight: 800, fontSize: 12, color: row.profit > 0 ? HC.success : HC.danger }}>${row.profit.toFixed(2)}</td>
-                        {/* Profit Ratio */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: row.profit_ratio > 40 ? HC.success : HC.warning }}>{row.profit_ratio.toFixed(1)}%</td>
-                        {/* Profit Margin */}
-                        <td style={{ ...tdComp, border: '1px solid #bbf7d0', color: row.profit_margin > 20 ? HC.success : HC.warning }}>{row.profit_margin.toFixed(1)}%</td>
-                        {/* Delete */}
-                        <td style={{ padding: '4px 4px', textAlign: 'center', border: `1px solid ${HC.border}` }}>
-                          <button onClick={() => removeRow(idx)} disabled={sizeRows.length <= 1}
-                            style={{ width: 26, height: 26, borderRadius: 6, background: sizeRows.length <= 1 ? HC.surface2 : '#fee2e2', border: '1px solid #fecaca', color: sizeRows.length <= 1 ? HC.muted : HC.danger, cursor: sizeRows.length <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await vendorLibraryApi.get('all');
+        const files = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+        const filtered = (skip || !projectKey) ? files : files.filter((f) => {
+          const fp = _extractFileProject(f.filename);
+          return !fp || projectKey.includes(fp) || fp.includes(projectKey);
+        });
+        const items = [];
+        filtered.forEach((file) => {
+          const pricing = Array.isArray(file.pricing) ? file.pricing : [];
+          const byPT = {};
+          pricing.forEach((p) => {
+            const pt = (p.productType || '').trim();
+            if (!pt) return;
+            if (!byPT[pt]) byPT[pt] = { productType: pt, vendor: (p.kyHieu || '').trim(), sizes: new Set() };
+            if (p.size && String(p.size).trim() && p.size !== 'N/A') byPT[pt].sizes.add(String(p.size).trim());
+          });
+          Object.values(byPT).forEach((v) => items.push({
+            key: `${file.id}::${v.productType}`,
+            productType: v.productType,
+            vendor: v.vendor,
+            filename: (file.filename || '').replace(/\.[^.]+$/, ''),
+            sizes: [...v.sizes],
+          }));
+        });
+        if (alive) { setLibItems(items); setLoading(false); }
+      } catch (err) {
+        console.error('load library for create', err);
+        if (alive) { setLibItems([]); setLoading(false); }
+      }
+    })();
+    return () => { alive = false; };
+  }, [projectKey, skip]);
 
-            {/* Footer */}
-            <div style={{ padding: '14px 24px', borderTop: `1px solid ${HC.border}`, display: 'flex', gap: 12, justifyContent: 'flex-end', background: HC.surface2, flexShrink: 0 }}>
-              <button onClick={() => setShowSetupModal(false)}
-                style={{ padding: '10px 20px', borderRadius: 10, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontWeight: 700 }}>
-                Hủy
-              </button>
-              <button onClick={handleSaveSetupPrice}
-                style={{ padding: '10px 28px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
-                Lưu Setup Giá
-              </button>
-            </div>
+  const shown = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return libItems;
+    return libItems.filter((i) => i.productType.toLowerCase().includes(s) || (i.vendor || '').toLowerCase().includes(s) || i.filename.toLowerCase().includes(s));
+  }, [libItems, q]);
+
+  const toggle = (item) => setPicked((p) => { const n = { ...p }; if (n[item.key]) delete n[item.key]; else n[item.key] = item; return n; });
+
+  const create = (fromLibrary) => {
+    const nm = name.trim() || 'Bảng tính giá mới';
+    const sheet = makeSheet(nm, skip ? '' : projectKey);
+    if (fromLibrary) {
+      const items = Object.values(picked);
+      if (items.length === 0) { showToast('error', 'Chưa chọn', 'Chọn ít nhất một Product Type để gom vào bảng.'); return; }
+      sheet.productTypes = items.map((it) => {
+        const pt = makeProductType(it.productType);
+        pt.sizes = it.sizes.length ? it.sizes.map((lbl) => makeSize(lbl)) : [makeSize()];
+        return pt;
+      });
+      const vendors = [...new Set(items.map((i) => i.vendor).filter(Boolean))];
+      sheet.vendorRef = vendors.join(', ');
+      sheet._sourceFile = [...new Set(items.map((i) => i.filename))].slice(0, 1)[0] || '';
+    }
+    onCreate(sheet);
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,0,0.55)', backdropFilter: 'blur(3px)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(640px, 96vw)', maxHeight: '90vh', background: HC.surface, borderRadius: 16, boxShadow: HC.shadowStrong, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '14px 20px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDeep})`, color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontWeight: 800, fontSize: 15 }}>＋ Tạo bảng tính giá</div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: 30, height: 30, borderRadius: 8, cursor: 'pointer' }}>✕</button>
+        </div>
+
+        <div style={{ padding: 20, overflowY: 'auto' }}>
+          <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '.05em' }}>Tên bảng (= listing)</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="VD: Legend Shirt (Hawaap22)" autoFocus
+            style={{ width: '100%', boxSizing: 'border-box', marginTop: 6, marginBottom: 18, padding: '10px 12px', borderRadius: 9, border: `1.5px solid ${HC.border}`, fontSize: 14, fontWeight: 600, color: HC.ink, outline: 'none' }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '.05em' }}>Gom Product Type từ thư viện</label>
+            <span style={{ fontSize: 11, color: HC.orangeDark, fontWeight: 700 }}>{Object.keys(picked).length} đã chọn</span>
+          </div>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Lọc product type / vendor..."
+            style={{ width: '100%', boxSizing: 'border-box', marginBottom: 10, padding: '8px 11px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, outline: 'none' }} />
+
+          <div style={{ border: `1px solid ${HC.border}`, borderRadius: 10, maxHeight: 260, overflowY: 'auto', background: HC.surface2 }}>
+            {loading ? <div style={{ padding: 30, textAlign: 'center', color: HC.muted }}>Đang tải thư viện…</div>
+              : shown.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: HC.muted, fontSize: 13 }}>Không có product type nào trong thư viện của bạn. Vẫn có thể tạo bảng trống.</div>
+                : shown.map((it) => {
+                  const on = !!picked[it.key];
+                  return (
+                    <div key={it.key} onClick={() => toggle(it)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: `1px solid ${HC.border}`, cursor: 'pointer', background: on ? HC.orangeLight : 'transparent' }}>
+                      <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${on ? HC.orange : HC.borderStrong}`, background: on ? HC.orange : HC.surface, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, flexShrink: 0 }}>{on ? '✓' : ''}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 13 }}>{it.productType}</div>
+                        <div style={{ fontSize: 10.5, color: HC.muted }}>{it.vendor && `${it.vendor} · `}{it.sizes.length} size · 📄 {it.filename}</div>
+                      </div>
+                    </div>
+                  );
+                })}
           </div>
         </div>
-      )}
+
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${HC.border}`, background: HC.surface2, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={() => create(false)} style={{ padding: '9px 16px', borderRadius: 9, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.brown, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>Tạo bảng trống</button>
+          <button onClick={() => create(true)} style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>Tạo từ thư viện ({Object.keys(picked).length})</button>
+        </div>
+      </div>
     </div>
   );
 }
