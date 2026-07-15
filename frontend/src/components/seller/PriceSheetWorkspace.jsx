@@ -373,7 +373,11 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
   }, [dragIds, onUpdateSize, pt.id]);
 
   return (
-    <div style={{ border: `1px solid ${HC.border}`, borderRadius: 14, background: HC.surface, boxShadow: HC.shadow, overflow: 'hidden' }}>
+    // flexShrink:0 bắt buộc: card là flex-item của body (flex column). Vì card có
+    // overflow:hidden nên min-size auto = 0 → nếu không khoá, card bị co lại cho vừa
+    // khung thay vì tràn ra, khiến body không bao giờ cuộn được. Đây là nguyên nhân
+    // thật khiến không cuộn xem hết size.
+    <div style={{ flexShrink: 0, border: `1px solid ${HC.border}`, borderRadius: 14, background: HC.surface, boxShadow: HC.shadow, overflow: 'hidden' }}>
       {/* header */}
       <div style={{ padding: '12px 16px', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <span style={{ fontSize: 15 }}>📊</span>
