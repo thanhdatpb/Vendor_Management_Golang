@@ -33,6 +33,7 @@ export const pct = (v, digits = 2) => `${(Number(v) || 0).toFixed(digits)}%`;
 // ─── Price Setting mặc định (khớp sheet mẫu CREATIVE_Hawaap22) ─────────────
 export const DEFAULT_SETTINGS = {
   price: 9.95,
+  quantity: '',
   shipPerOrder: 4.95,
   shipPerItem: 2.0,
   couponUsd: 0,
@@ -45,6 +46,7 @@ export const DEFAULT_SETTINGS = {
 // Khai báo các trường Price Setting → UI render theo đây (thêm phí = thêm dòng)
 export const SETTING_FIELDS = [
   { key: 'price', label: 'Price', unit: '$', icon: '💵' },
+  { key: 'quantity', label: 'Quantity', unit: 'pcs', icon: '🔢', tooltip: 'Số lượng sản phẩm dự kiến của bảng giá này — chỉ để ghi chú tham khảo, không ảnh hưởng công thức tính giá.' },
   { key: 'shipPerOrder', label: 'Ship / Order', unit: '$', icon: '📦' },
   { key: 'shipPerItem', label: 'Ship / Item', unit: '$', icon: '📦' },
   { key: 'couponUsd', label: 'Coupon', unit: '$', icon: '🎫' },
