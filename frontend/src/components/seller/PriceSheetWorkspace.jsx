@@ -190,7 +190,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <button onClick={() => setShowHistory(true)} style={ghostBtn}>🕘 Lịch sử ({sheet.history?.length || 0})</button>
+            <button onClick={() => setShowHistory(true)} style={ghostBtn}>🕘 Lịch sử tính giá ({sheet.history?.length || 0})</button>
             <button onClick={() => exportSheetToExcel(draftSheet, showToast)} style={ghostBtn}>⬇ Export Excel</button>
             <button onClick={onClose} style={{ ...ghostBtn, width: 34, padding: 0, fontSize: 15 }}>✕</button>
           </div>
@@ -251,7 +251,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
             </div>
           )}
           <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 10, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontWeight: 700 }}>Hủy</button>
-          <button onClick={handleSave} style={{ padding: '9px 26px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#0f6b31)`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 }}>💾 Lưu bảng tính giá</button>
+          <button onClick={handleSave} style={{ padding: '9px 26px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#0f6b31)`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 }}> Lưu bảng tính giá</button>
         </div>
       </div>
 
@@ -424,7 +424,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 880, fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
-              <th colSpan={2 + customs.length + (libEntry ? 0 : 1)} style={{ ...th, background: IN.head, textAlign: 'left', paddingLeft: 12, borderTopLeftRadius: 0 }}>✏️ Nhập tay</th>
+              <th colSpan={2 + customs.length + (libEntry ? 0 : 1)} style={{ ...th, background: IN.head, textAlign: 'left', paddingLeft: 12, borderTopLeftRadius: 0 }}> Thông tin giá cần nhập</th>
               <th colSpan={5 + (libEntry ? 1 : 0)} style={{ ...th, background: AUTO.head, textAlign: 'left', paddingLeft: 12, fontSize: 12 }}>📐 Giá tính được</th>
               <th style={{ ...th, background: HC.surface2, color: HC.muted, width: 40 }}></th>
             </tr>
