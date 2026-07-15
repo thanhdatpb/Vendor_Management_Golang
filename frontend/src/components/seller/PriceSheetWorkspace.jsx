@@ -431,7 +431,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
             <tr>
               <th colSpan={2 + customs.length + (libEntry ? 0 : 1)} style={{ ...th, background: IN.head, textAlign: 'left', paddingLeft: 12, borderTopLeftRadius: 0 }}> Thông tin giá cần nhập</th>
               <th colSpan={5 + (libEntry ? 1 : 0)} style={{ ...th, background: AUTO.head, textAlign: 'left', paddingLeft: 12, fontSize: 12 }}>📐 Giá tính được</th>
-              <th style={{ ...th, background: HC.surface2, color: HC.muted, width: 40 }}></th>
+              {!libEntry && <th style={{ ...th, background: HC.surface2, color: HC.muted, width: 40 }}></th>}
             </tr>
             <tr>
               <th style={{ ...th, background: IN.head, textAlign: 'left', minWidth: 60 }}>Size</th>
@@ -453,7 +453,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
               <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>Profit</th>
               <th style={{ ...th, background: AUTO.head, minWidth: 60 }}>Margin</th>
               <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>After Promo</th>
-              <th style={{ ...th, background: HC.surface2, color: HC.muted }}>Xoá</th>
+              {!libEntry && <th style={{ ...th, background: HC.surface2, color: HC.muted }}>Xoá</th>}
             </tr>
           </thead>
           <tbody>
@@ -505,12 +505,14 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
                 <td style={{ ...tdAuto, background: AUTO.bgStrong, fontWeight: 800, color: calc.margin >= 25 ? AUTO.total : calc.margin >= 0 ? HC.warning : HC.danger }}>{pct(calc.margin, 1)}</td>
                 <td style={{ ...tdAuto, background: AUTO.bg, fontWeight: 700, color: calc.marginAfter >= 25 ? AUTO.total : calc.marginAfter >= 0 ? HC.warning : HC.danger }}>{pct(calc.marginAfter, 1)}</td>
 
-                <td style={{ padding: '5px 6px', textAlign: 'center', borderBottom: `1px solid ${HC.border}` }}>
-                  {!sz.isLib && (
-                    <button onClick={() => onRemoveSize(pt.id, sz.id)} disabled={(pt.sizes?.length || 0) <= 1}
-                      style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #fbcfcf', background: (pt.sizes?.length || 0) <= 1 ? HC.surface2 : '#fef2f2', color: (pt.sizes?.length || 0) <= 1 ? HC.muted2 : HC.danger, cursor: (pt.sizes?.length || 0) <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>✕</button>
-                  )}
-                </td>
+                {!libEntry && (
+                  <td style={{ padding: '5px 6px', textAlign: 'center', borderBottom: `1px solid ${HC.border}` }}>
+                    {!sz.isLib && (
+                      <button onClick={() => onRemoveSize(pt.id, sz.id)} disabled={(pt.sizes?.length || 0) <= 1}
+                        style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #fbcfcf', background: (pt.sizes?.length || 0) <= 1 ? HC.surface2 : '#fef2f2', color: (pt.sizes?.length || 0) <= 1 ? HC.muted2 : HC.danger, cursor: (pt.sizes?.length || 0) <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>✕</button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
