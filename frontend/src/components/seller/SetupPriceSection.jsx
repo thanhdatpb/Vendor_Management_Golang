@@ -43,7 +43,6 @@ export default function SetupPriceSection() {
   const [toast, setToast] = useState(null);
   const [workspaceSheet, setWorkspaceSheet] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [offline, setOffline] = useState(false);
   const initRef = useRef(false);
 
   const { skip, key: projectKey } = _getUserProjectKey();
@@ -65,10 +64,8 @@ export default function SetupPriceSection() {
         if (!alive) return;
         setAllSheets(server);
         persistAllSheets(server);
-        setOffline(false);
       } catch (err) {
         console.warn('Không tải được bảng tính giá từ server, dùng cache local:', err);
-        if (alive) setOffline(true);
       }
     })();
     return () => { alive = false; };
@@ -103,11 +100,9 @@ export default function SetupPriceSection() {
     });
     // Đồng bộ lên server để mọi máy trong project thấy được
     priceSheetApi.save(updated)
-      .then(() => setOffline(false))
       .catch((err) => {
         console.warn('Lưu bảng tính giá lên server thất bại:', err);
-        setOffline(true);
-        showToast('error', 'Chưa đồng bộ server', 'Đã lưu tạm ở máy này. Kiểm tra kết nối / đăng nhập rồi lưu lại.', 4500);
+        showToast('error', 'Lưu thất bại', 'Đã lưu tạm ở máy này. Kiểm tra kết nối / đăng nhập rồi lưu lại.', 4500);
       });
   };
 
@@ -127,7 +122,6 @@ export default function SetupPriceSection() {
     setAllSheets((prev) => { const next = prev.filter((s) => s.id !== sheet.id); persistAllSheets(next); return next; });
     priceSheetApi.remove(sheet.id).catch((err) => {
       console.warn('Xoá trên server thất bại:', err);
-      setOffline(true);
     });
     showToast('success', 'Đã xoá', sheet.name);
   };
@@ -141,9 +135,6 @@ export default function SetupPriceSection() {
         <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})` }} />
         <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Bảng tính giá</div>
         <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filtered.length} bảng</span>
-        {offline
-          ? <span title="Chưa đồng bộ được với server — đang dùng dữ liệu tạm trên máy này" style={{ padding: '2px 10px', borderRadius: 20, background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 700, border: '1px solid #fbcfcf' }}>⚠ Chưa đồng bộ server</span>
-          : <span title="Đã đồng bộ với server — các máy khác cùng project sẽ thấy" style={{ padding: '2px 10px', borderRadius: 20, background: '#ecfdf5', color: HC.success, fontSize: 11, fontWeight: 700, border: '1px solid #bbf0cc' }}>☁ Đồng bộ server</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <input type="text" placeholder="Tìm bảng / vendor / product..." value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
