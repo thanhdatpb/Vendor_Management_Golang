@@ -2,7 +2,7 @@
 //  PRICE SHEET WORKSPACE — bản số hoá của Google Sheet tính giá
 //  Price Setting → Product Type (Phôi) → Size → Customize Info → kết quả
 // ════════════════════════════════════════════════════════
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { HC } from '../../constants/sellerTheme';
 import {
   computeSizeRow, summarizeSheet, num, usd, pct,
@@ -340,27 +340,51 @@ function distributeSizeAddValues(pt, entries, startSizeId, onUpdateSize) {
 // ════════════════════════════════════════════════════════
 function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize, onUpdateSize, onRemoveSize, onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize }) {
   const customs = pt.customizeInfos || [];
-  const rows = (pt.sizes || []).map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) }));
-  const [showPasteArea, setShowPasteArea] = useState(false);
-  const [pasteText, setPasteText] = useState('');
+  const sizes = pt.sizes || [];
+  const rows = sizes.map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) }));
 
-  const pastePreview = useMemo(() => parsePastedPrices(pasteText), [pasteText]);
+  // ── Kéo dọc qua các ô "Giá Size" để xoá nhanh (giống bôi đen + Delete trên sheet) ──
+  const dragStartIdx = useRef(null);
+  const [dragIds, setDragIds] = useState(null); // Set<id> đang được kéo chọn để xoá
 
-  const applyBulkPaste = () => {
-    const entries = parsePastedPrices(pasteText);
-    if (!entries.length) return;
-    distributeSizeAddValues(pt, entries, null, onUpdateSize);
-    setPasteText('');
-    setShowPasteArea(false);
+  const onPriceMouseDown = (idx) => { dragStartIdx.current = idx; };
+  const onPriceMouseEnter = (idx, e) => {
+    if (dragStartIdx.current == null) return;
+    if (e.buttons !== 1) { dragStartIdx.current = null; setDragIds(null); return; }
+    const a = Math.min(dragStartIdx.current, idx);
+    const b = Math.max(dragStartIdx.current, idx);
+    const ids = new Set();
+    for (let k = a; k <= b; k++) if (sizes[k]) ids.add(sizes[k].id);
+    setDragIds(ids);
+    // rời khỏi ô đang gõ để cảm giác như đang chọn vùng trên sheet
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    window.getSelection?.()?.removeAllRanges?.();
   };
+
+  useEffect(() => {
+    const finish = () => {
+      if (dragIds && dragIds.size) dragIds.forEach((id) => onUpdateSize(pt.id, id, { sizeAdd: '' }));
+      dragStartIdx.current = null;
+      setDragIds(null);
+    };
+    window.addEventListener('mouseup', finish);
+    return () => window.removeEventListener('mouseup', finish);
+  }, [dragIds, onUpdateSize, pt.id]);
 
   return (
     <div style={{ border: `1px solid ${HC.border}`, borderRadius: 14, background: HC.surface, boxShadow: HC.shadow, overflow: 'hidden' }}>
       {/* header */}
       <div style={{ padding: '12px 16px', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <span style={{ fontSize: 15 }}>📊</span>
-        <input value={pt.name} onChange={(e) => onPT(pt.id, { name: e.target.value })} placeholder="Tên Product Type (VD: T-shirt)"
-          style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', outline: 'none', background: HC.surface, minWidth: 180 }} />
+        {libEntry ? (
+          <div title="Tên Product Type lấy từ thư viện vendor — không chỉnh sửa"
+            style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', background: HC.surface2, minWidth: 180, display: 'flex', alignItems: 'center', gap: 6, cursor: 'default' }}>
+            <span style={{ fontSize: 12, opacity: 0.75 }}>📚</span>{pt.name}
+          </div>
+        ) : (
+          <input value={pt.name} onChange={(e) => onPT(pt.id, { name: e.target.value })} placeholder="Tên Product Type (VD: T-shirt)"
+            style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', outline: 'none', background: HC.surface, minWidth: 180 }} />
+        )}
         
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 10px' }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>Price ($)</span>
@@ -389,46 +413,14 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {!libEntry && <button onClick={() => onAddSize(pt.id)} style={miniBtn}>＋ Thêm Size</button>}
-          <button onClick={() => setShowPasteArea(v => !v)} title="Dán hàng loạt giá size từ clipboard (mỗi dòng = 1 size)" style={{ ...miniBtn, color: '#0369a1', borderColor: '#bae6fd', background: '#f0f9ff' }}>📋 Paste giá size</button>
           <button onClick={() => onAddCustomize(pt.id)} style={{ ...miniBtn, color: VIO.ink, borderColor: VIO.line, background: VIO.bg }}>＋ Add Customize Info</button>
           <button onClick={() => onRemovePT(pt.id)} style={{ ...miniBtn, color: HC.danger, borderColor: '#fbcfcf', background: '#fef2f2' }}>🗑</button>
         </div>
       </div>
 
-      {/* bulk-paste panel */}
-      {showPasteArea && (
-        <div style={{ padding: '10px 16px', background: '#f0f9ff', borderBottom: `1px solid #bae6fd`, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>
-              📋 Dán vùng giá Size từ sheet — hỗ trợ cả 1 cột giá lẫn 2 cột (Size + Giá), mỗi size 1 dòng
-              <span style={{ marginLeft: 8, fontWeight: 400, opacity: 0.8 }}>Size hiện có: {(pt.sizes || []).map(s => s.label).join(' → ')}</span>
-            </div>
-            <textarea
-              autoFocus
-              rows={Math.min(Math.max((pt.sizes || []).length + 1, 4), 12)}
-              placeholder={`Dán trực tiếp từ Google Sheet / Excel, ví dụ:\nS\t9.99\nM\t10.99\nL\t11.99\n\nHoặc chỉ dán cột giá:\n9.99\n10.99\n11.99`}
-              value={pasteText}
-              onChange={(e) => setPasteText(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, padding: '8px 10px', borderRadius: 6, border: '1px solid #bae6fd', resize: 'vertical', outline: 'none' }}
-            />
-            <div style={{ fontSize: 11, color: pastePreview.length ? '#0369a1' : '#94a3b8', marginTop: 4, fontWeight: 600 }}>
-              {pastePreview.length > 0
-                ? `Phát hiện ${pastePreview.length} giá — sẽ áp cho ${Math.min(pastePreview.length, (pt.sizes || []).length)}/${(pt.sizes || []).length} size`
-                : 'Chưa phát hiện giá nào để áp dụng'}
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <button onClick={applyBulkPaste} disabled={!pastePreview.length}
-              style={{ ...miniBtn, fontSize: 11, background: pastePreview.length ? '#0369a1' : HC.surface2, color: pastePreview.length ? '#fff' : HC.muted2, border: 'none', cursor: pastePreview.length ? 'pointer' : 'not-allowed' }}>
-              ✓ Áp dụng
-            </button>
-            <button onClick={() => { setShowPasteArea(false); setPasteText(''); }} style={{ ...miniBtn, fontSize: 11 }}>Đóng</button>
-          </div>
-        </div>
-      )}
-
-      {/* table */}
-      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'min(620px, 62vh)' }}>
+      {/* table — không giới hạn chiều cao: 1 product type hiện đầy đủ,
+          nhiều product type thì cuộn chung ở khung ngoài như 1 sheet */}
+      <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 880, fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
@@ -467,7 +459,8 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
                     readOnly={sz.isLib}
                     style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: sz.isLib ? HC.surface2 : HC.surface, color: sz.isLib ? HC.muted2 : HC.ink2 }} />
                 </td>
-                <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
+                <td onMouseDown={() => onPriceMouseDown(i)} onMouseEnter={(e) => onPriceMouseEnter(i, e)}
+                  style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}`, background: dragIds?.has(sz.id) ? '#e0f2fe' : undefined, userSelect: dragIds ? 'none' : undefined }}>
                   <input type="number" step="0.01" value={sz.sizeAdd}
                     onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })}
                     onWheel={(e) => e.target.blur()}
@@ -479,7 +472,8 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
                         distributeSizeAddValues(pt, entries, sz.id, onUpdateSize);
                       }
                     }}
-                    placeholder="0" style={cellInput} />
+                    title="Kéo dọc qua nhiều ô để xoá nhanh (như bôi đen trên sheet). Dán nhiều giá cùng lúc cũng được."
+                    placeholder="0" style={{ ...cellInput, ...(dragIds?.has(sz.id) ? { background: '#e0f2fe', borderColor: '#7dd3fc' } : {}) }} />
                 </td>
                 {customs.map((ci) => (
                   <td key={ci.id} style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}`, background: VIO.bg }}>
