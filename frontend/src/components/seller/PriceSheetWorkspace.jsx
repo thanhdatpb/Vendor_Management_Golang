@@ -198,7 +198,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
 
         {/* ── Price Setting ── */}
         <div style={{ padding: '14px 22px', background: VIO.bg, borderBottom: `1px solid ${VIO.line}`, flexShrink: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: VIO.ink, marginBottom: 10 }}>⚙️ Price Setting — áp cho cả bảng</div>
+          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: VIO.ink, marginBottom: 10 }}>⚙️ Price Setting</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(96px,1fr))', gap: 10 }}>
             {SETTING_FIELDS.map((f) => (
               <label key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }} title={f.tooltip || ''}>
@@ -212,7 +212,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
 
         {/* ── Chọn hiển thị Product Type ── */}
         <div style={{ padding: '10px 22px', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, flexShrink: 0, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', color: HC.muted, marginRight: 2 }}>Hiển thị Product Type</span>
+          <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', color: HC.muted, marginRight: 2 }}>Product Type</span>
           {productTypes.map((pt) => (
             <button key={pt.id} onClick={() => toggleShown(pt.id)}
               style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 13px', borderRadius: 9, cursor: 'pointer',
@@ -363,7 +363,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
           style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', outline: 'none', background: HC.surface, minWidth: 180 }} />
         
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 10px' }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>Phôi ($)</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}> Price ($)</span>
           <input type="number" step="0.01" value={pt.phoi ?? ''} onChange={(e) => onPT(pt.id, { phoi: e.target.value })} onWheel={(e) => e.target.blur()} placeholder="0"
             style={{ width: 72, textAlign: 'right', border: `1px solid ${HC.orangeMid}`, borderRadius: 6, padding: '4px 7px', fontSize: 12, fontWeight: 700, color: HC.orangeDeep, background: HC.surface, outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
         </div>
@@ -383,7 +383,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
         </div>
 
         <span style={{ fontSize: 11, fontWeight: 700, color: libEntry ? AUTO.ink : HC.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {libEntry ? '📚 Từ thư viện' : '✏️ Nhập tay'}
+          {libEntry ? '📚 Từ thư viện vendor' : 'Thông tin giá nhập vào'}
           <span style={{ padding: '2px 6px', background: libEntry ? AUTO.bgStrong : HC.surface2, borderRadius: 10 }}>{pt.sizes?.length || 0} size</span>
         </span>
 
@@ -433,7 +433,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
               <th colSpan={2 + customs.length + (libEntry ? 0 : 1)} style={{ ...th, background: IN.head, textAlign: 'left', paddingLeft: 12, borderTopLeftRadius: 0 }}>✏️ Nhập tay</th>
-              <th colSpan={5 + (libEntry ? 1 : 0)} style={{ ...th, background: AUTO.head, textAlign: 'left', paddingLeft: 12, fontSize: 12 }}>📐 Tự động tính</th>
+              <th colSpan={5 + (libEntry ? 1 : 0)} style={{ ...th, background: AUTO.head, textAlign: 'left', paddingLeft: 12, fontSize: 12 }}>📐 Giá tính được</th>
               <th style={{ ...th, background: HC.surface2, color: HC.muted, width: 40 }}></th>
             </tr>
             <tr>
