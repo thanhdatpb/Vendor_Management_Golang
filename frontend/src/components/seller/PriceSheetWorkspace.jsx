@@ -36,7 +36,7 @@ export async function exportSheetToExcel(sheet, showToast) {
     const s = sheet.settings || {};
     const aoa = [];
     aoa.push(['Price Setting']);
-    aoa.push(['Price', s.price, 'Ship/Order', s.shipPerOrder, 'Ship/Item', s.shipPerItem]);
+    aoa.push(['Price', s.price, 'Quantity', s.quantity, 'Ship/Order', s.shipPerOrder, 'Ship/Item', s.shipPerItem]);
     aoa.push(['Coupon ($)', s.couponUsd, 'Coupon (%)', s.couponPct]);
     aoa.push(['Variable Fee (%)', s.variableFeePct, 'AMZ Fee (%)', s.amzFeePct, 'ImportTax/item', s.importTax]);
     aoa.push([]);
@@ -199,11 +199,12 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
         {/* ── Price Setting ── */}
         <div style={{ padding: '14px 22px', background: VIO.bg, borderBottom: `1px solid ${VIO.line}`, flexShrink: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: VIO.ink, marginBottom: 10 }}>⚙️ Price Setting</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(96px,1fr))', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, minmax(90px,1fr))', gap: 10 }}>
             {SETTING_FIELDS.map((f) => (
               <label key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }} title={f.tooltip || ''}>
                 <span style={{ fontSize: 10, fontWeight: 750, color: HC.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.icon} {f.label} ({f.unit})</span>
-                <input type="number" step="0.01" value={settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)} onWheel={(e) => e.target.blur()} placeholder={f.key === 'importTax' ? '0' : ''}
+                <input type="number" step={f.key === 'quantity' ? '1' : '0.01'} min={f.key === 'quantity' ? '0' : undefined}
+                  value={settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)} onWheel={(e) => e.target.blur()} placeholder={f.key === 'importTax' ? '0' : ''}
                   style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: HC.surface, ...(f.key === 'importTax' && (settings[f.key] == null || settings[f.key] === 0) ? { opacity: 0.6 } : {}) }} />
               </label>
             ))}
