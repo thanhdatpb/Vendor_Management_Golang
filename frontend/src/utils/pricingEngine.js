@@ -39,7 +39,7 @@ export const DEFAULT_SETTINGS = {
   couponPct: 0,
   variableFeePct: 2.75,
   amzFeePct: 17,
-  importTax: 1.15,
+  importTax: 0,
 };
 
 // Khai báo các trường Price Setting → UI render theo đây (thêm phí = thêm dòng)
@@ -51,7 +51,7 @@ export const SETTING_FIELDS = [
   { key: 'couponPct', label: 'Coupon', unit: '%', icon: '🎫' },
   { key: 'variableFeePct', label: 'Variable Fee', unit: '%', icon: '⚙️' },
   { key: 'amzFeePct', label: 'AMZ Fee', unit: '%', icon: '🅰' },
-  { key: 'importTax', label: 'ImportTax / item', unit: '$', icon: '🏷' },
+  { key: 'importTax', label: 'ImportTax / item', unit: '$', icon: '🏷', tooltip: 'Thuế nhập khẩu / sản phẩm khi hàng nhập kho. Nếu không áp dụng, hãy nhập 0.' },
 ];
 
 /**
