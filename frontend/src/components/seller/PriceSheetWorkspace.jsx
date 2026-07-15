@@ -2,12 +2,13 @@
 //  PRICE SHEET WORKSPACE — bản số hoá của Google Sheet tính giá
 //  Price Setting → Product Type (Phôi) → Size → Customize Info → kết quả
 // ════════════════════════════════════════════════════════
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { HC } from '../../constants/sellerTheme';
 import {
   computeSizeRow, summarizeSheet, num, usd, pct,
   SETTING_FIELDS, makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
+import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, SHIP_METHODS } from '../../utils/vendorLibraryIndex';
 
 // ─── Palette phụ (tinh chỉnh cho dễ nhìn) ────────────────
 const AUTO = {
@@ -85,11 +86,26 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     }))
   );
   const [showHistory, setShowHistory] = useState(false);
+  const [libIndex, setLibIndex] = useState(null);
+  const [showCustomizeDialog, setShowCustomizeDialog] = useState(null); // ptId
 
-  const draftSheet = useMemo(
-    () => ({ ...sheet, name, settings, productTypes }),
-    [sheet, name, settings, productTypes]
-  );
+  useEffect(() => {
+    loadVendorLibraryIndex(sheet.project || '', !sheet.project).then(setLibIndex).catch(console.error);
+  }, [sheet.project]);
+
+  const draftSheet = useMemo(() => {
+    const computedPTs = productTypes.map((pt) => {
+      const libEntry = findLibraryEntry(libIndex, pt.name);
+      if (!libEntry) return pt;
+      const sizes = libEntry.sizes.map((label) => {
+        const existing = (pt.sizes || []).find((s) => s.label === label);
+        const itemCost = getLibraryTotal(libEntry, label, pt.shipMethod) || '';
+        return { ...(existing || makeSize(label, '')), label, itemCost, isLib: true };
+      });
+      return { ...pt, sizes };
+    });
+    return { ...sheet, name, settings, productTypes: computedPTs };
+  }, [sheet, name, settings, productTypes, libIndex]);
   const summary = useMemo(() => summarizeSheet(draftSheet), [draftSheet]);
 
   // ── mutations ──
@@ -109,8 +125,22 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   function patchPTSizes(ptId, fn) {
     setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, sizes: fn(pt.sizes || []) } : pt)));
   }
-  const addCustomize = (ptId) =>
-    setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, customizeInfos: [...(pt.customizeInfos || []), { id: uid('ci'), name: '' }] } : pt)));
+  const openAddCustomize = (ptId) => setShowCustomizeDialog(ptId);
+  const addCustomize = (ptId, name, defaultPrice) => {
+    const ciId = uid('ci');
+    setProductTypes((p) => p.map((pt) => {
+      if (pt.id !== ptId) return pt;
+      const newSizes = (pt.sizes || []).map(sz => ({
+        ...sz,
+        customize: { ...sz.customize, [ciId]: defaultPrice }
+      }));
+      return {
+        ...pt,
+        sizes: newSizes,
+        customizeInfos: [...(pt.customizeInfos || []), { id: ciId, name }]
+      };
+    }));
+  };
   const renameCustomize = (ptId, ciId, nm) =>
     setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, customizeInfos: pt.customizeInfos.map((c) => (c.id === ciId ? { ...c, name: nm } : c)) } : pt)));
   const removeCustomize = (ptId, ciId) =>
@@ -125,10 +155,10 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       savedAt: new Date().toISOString(),
       savedBy: (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').name || 'Seller'; } catch { return 'Seller'; } })(),
       avgMargin: summary.avgMargin, minPrice: summary.minPrice, maxPrice: summary.maxPrice, count: summary.count,
-      settings, productTypes,
+      settings: draftSheet.settings, productTypes: draftSheet.productTypes,
     };
     const history = [snap, ...(sheet.history || [])].slice(0, 20);
-    onSave({ ...sheet, name, settings, productTypes, history, updatedAt: new Date().toISOString() });
+    onSave({ ...draftSheet, history, updatedAt: new Date().toISOString() });
     showToast?.('success', 'Đã lưu', `${name} · phiên bản v${snap.version}`);
   };
 
@@ -169,10 +199,10 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: VIO.ink, marginBottom: 10 }}>⚙️ Price Setting — áp cho cả bảng</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(96px,1fr))', gap: 10 }}>
             {SETTING_FIELDS.map((f) => (
-              <label key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }} title={f.tooltip || ''}>
                 <span style={{ fontSize: 10, fontWeight: 750, color: HC.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.icon} {f.label} ({f.unit})</span>
-                <input type="number" step="0.01" value={settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)}
-                  style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: HC.surface }} />
+                <input type="number" step="0.01" value={settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)} placeholder={f.key === 'importTax' ? '0' : ''}
+                  style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: HC.surface, ...(f.key === 'importTax' && (settings[f.key] == null || settings[f.key] === 0) ? { opacity: 0.6 } : {}) }} />
               </label>
             ))}
           </div>
@@ -199,12 +229,15 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
           {shownPTs.length === 0 && (
             <div style={{ textAlign: 'center', color: HC.muted, padding: 50 }}>Chọn ít nhất một Product Type để hiển thị bảng tính giá.</div>
           )}
-          {shownPTs.map((pt) => (
-            <ProductTypeBlock key={pt.id} pt={pt} settings={settings}
-              onPT={patchPT} onRemovePT={removePT}
-              onAddSize={addSize} onUpdateSize={updateSize} onRemoveSize={removeSize} onUpdateCustomize={updateSizeCustomize}
-              onAddCustomize={addCustomize} onRenameCustomize={renameCustomize} onRemoveCustomize={removeCustomize} />
-          ))}
+          {draftSheet.productTypes.filter(pt => pt.shown).map((pt) => {
+            const libEntry = findLibraryEntry(libIndex, pt.name);
+            return (
+              <ProductTypeBlock key={pt.id} pt={pt} settings={settings} libEntry={libEntry}
+                onPT={patchPT} onRemovePT={removePT}
+                onAddSize={addSize} onUpdateSize={updateSize} onRemoveSize={removeSize} onUpdateCustomize={updateSizeCustomize}
+                onAddCustomize={openAddCustomize} onRenameCustomize={renameCustomize} onRemoveCustomize={removeCustomize} />
+            );
+          })}
         </div>
 
         {/* ── Footer ── */}
@@ -220,9 +253,15 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
         </div>
       </div>
 
-      {/* ── History panel ── */}
       {showHistory && (
         <HistoryPanel sheet={sheet} onClose={() => setShowHistory(false)} onRestore={restoreVersion} onExportVersion={(snap) => exportSheetToExcel({ ...sheet, name: `${sheet.name}_v${snap.version}`, settings: snap.settings, productTypes: snap.productTypes }, showToast)} />
+      )}
+
+      {showCustomizeDialog && (
+        <CustomizeInfoDialog onClose={() => setShowCustomizeDialog(null)} onConfirm={(name, defaultPrice) => {
+          addCustomize(showCustomizeDialog, name, defaultPrice);
+          setShowCustomizeDialog(null);
+        }} />
       )}
     </div>
   );
@@ -233,7 +272,10 @@ const ghostBtn = { background: 'rgba(255,255,255,0.18)', border: '1px solid rgba
 // ════════════════════════════════════════════════════════
 //  Một khối Product Type = tiêu đề (Phôi) + bảng size
 // ════════════════════════════════════════════════════════
-function ProductTypeBlock({ pt, settings, onPT, onRemovePT, onAddSize, onUpdateSize, onRemoveSize, onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize }) {
+// ════════════════════════════════════════════════════════
+//  Một khối Product Type = tiêu đề (Phôi) + bảng size
+// ════════════════════════════════════════════════════════
+function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize, onUpdateSize, onRemoveSize, onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize }) {
   const customs = pt.customizeInfos || [];
   const rows = (pt.sizes || []).map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) }));
 
@@ -244,46 +286,68 @@ function ProductTypeBlock({ pt, settings, onPT, onRemovePT, onAddSize, onUpdateS
         <span style={{ fontSize: 15 }}>📊</span>
         <input value={pt.name} onChange={(e) => onPT(pt.id, { name: e.target.value })} placeholder="Tên Product Type (VD: T-shirt)"
           style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', outline: 'none', background: HC.surface, minWidth: 180 }} />
+        
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 10px' }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>Phôi ($)</span>
           <input type="number" step="0.01" value={pt.phoi ?? ''} onChange={(e) => onPT(pt.id, { phoi: e.target.value })} placeholder="0"
             style={{ width: 72, textAlign: 'right', border: `1px solid ${HC.orangeMid}`, borderRadius: 6, padding: '4px 7px', fontSize: 12, fontWeight: 700, color: HC.orangeDeep, background: HC.surface, outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
         </div>
-        <span style={{ fontSize: 11, fontWeight: 700, color: HC.muted }}>{pt.sizes?.length || 0} size</span>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: HC.surface, border: `1px solid ${HC.borderStrong}`, borderRadius: 8, padding: '2px 4px' }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: HC.muted, padding: '0 4px' }}>Ship Method:</span>
+          {SHIP_METHODS.map(m => (
+            <button key={m.key} onClick={() => onPT(pt.id, { shipMethod: m.key })}
+              style={{
+                fontSize: 10.5, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', border: 'none',
+                background: pt.shipMethod === m.key ? `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` : 'transparent',
+                color: pt.shipMethod === m.key ? '#fff' : HC.muted
+              }}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <span style={{ fontSize: 11, fontWeight: 700, color: libEntry ? AUTO.ink : HC.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
+          {libEntry ? '📚 Từ thư viện' : '✏️ Nhập tay'}
+          <span style={{ padding: '2px 6px', background: libEntry ? AUTO.bgStrong : HC.surface2, borderRadius: 10 }}>{pt.sizes?.length || 0} size</span>
+        </span>
+
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button onClick={() => onAddSize(pt.id)} style={miniBtn}>＋ Thêm Size</button>
+          {!libEntry && <button onClick={() => onAddSize(pt.id)} style={miniBtn}>＋ Thêm Size</button>}
           <button onClick={() => onAddCustomize(pt.id)} style={{ ...miniBtn, color: VIO.ink, borderColor: VIO.line, background: VIO.bg }}>＋ Add Customize Info</button>
           <button onClick={() => onRemovePT(pt.id)} style={{ ...miniBtn, color: HC.danger, borderColor: '#fbcfcf', background: '#fef2f2' }}>🗑</button>
         </div>
       </div>
 
       {/* table */}
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', maxHeight: 400, overflowY: 'auto' }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 880, fontSize: 12 }}>
-          <thead>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
-              <th colSpan={2 + customs.length + 1} style={{ ...th, background: IN.head, textAlign: 'left', paddingLeft: 12, borderTopLeftRadius: 0 }}>✏️ Nhập tay</th>
-              <th colSpan={5} style={{ ...th, background: AUTO.head, textAlign: 'left', paddingLeft: 12 }}>📐 Tự động tính</th>
+              <th colSpan={2 + customs.length + (libEntry ? 0 : 1)} style={{ ...th, background: IN.head, textAlign: 'left', paddingLeft: 12, borderTopLeftRadius: 0 }}>✏️ Nhập tay</th>
+              <th colSpan={5 + (libEntry ? 1 : 0)} style={{ ...th, background: AUTO.head, textAlign: 'left', paddingLeft: 12, fontSize: 12 }}>📐 Tự động tính</th>
               <th style={{ ...th, background: HC.surface2, color: HC.muted, width: 40 }}></th>
             </tr>
             <tr>
-              <th style={{ ...th, background: IN.head, textAlign: 'left' }}>Size</th>
-              <th style={{ ...th, background: IN.head }}>Giá Size ($)</th>
+              <th style={{ ...th, background: IN.head, textAlign: 'left', minWidth: 60 }}>Size</th>
+              <th style={{ ...th, background: IN.head, minWidth: 70 }}>Giá Size ($)</th>
               {customs.map((ci) => (
-                <th key={ci.id} style={{ ...th, background: VIO.head, padding: '4px 5px' }}>
+                <th key={ci.id} style={{ ...th, background: VIO.head, padding: '4px 5px', minWidth: 92 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                     <input value={ci.name} onChange={(e) => onRenameCustomize(pt.id, ci.id, e.target.value)} placeholder="Tên (VD: Color: Black)"
-                      style={{ width: 92, fontSize: 10.5, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 5, padding: '3px 5px', outline: 'none' }} />
-                    <span onClick={() => onRemoveCustomize(pt.id, ci.id)} title="Xoá cột" style={{ cursor: 'pointer', fontSize: 12, opacity: 0.85 }}>✕</span>
+                      style={{ width: '100%', boxSizing: 'border-box', fontSize: 10.5, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 5, padding: '3px 5px', outline: 'none' }} />
+                    <span onClick={() => onRemoveCustomize(pt.id, ci.id)} title="Xoá cột" style={{ cursor: 'pointer', fontSize: 12, opacity: 0.85, flexShrink: 0 }}>✕</span>
                   </div>
                 </th>
               ))}
-              <th style={{ ...th, background: IN.head }}>Item Cost ($)</th>
-              <th style={{ ...th, background: AUTO.head, minWidth: 86 }}>Total Price</th>
-              <th style={{ ...th, background: AUTO.head }}>AMZ Fee</th>
-              <th style={{ ...th, background: AUTO.head }}>Profit</th>
-              <th style={{ ...th, background: AUTO.head }}>Margin</th>
-              <th style={{ ...th, background: AUTO.head }}>After Promo</th>
+              {!libEntry && <th style={{ ...th, background: IN.head, minWidth: 80 }}>Item Cost ($)</th>}
+              
+              {libEntry && <th style={{ ...th, background: AUTO.head, minWidth: 80, borderLeft: `2px solid ${AUTO.line}` }}>Ship Cost ($)</th>}
+              <th style={{ ...th, background: AUTO.head, minWidth: 90, borderLeft: libEntry ? 'none' : `2px solid ${AUTO.line}` }}>Total Price</th>
+              <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>AMZ Fee</th>
+              <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>Profit</th>
+              <th style={{ ...th, background: AUTO.head, minWidth: 60 }}>Margin</th>
+              <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>After Promo</th>
               <th style={{ ...th, background: HC.surface2, color: HC.muted }}>Xoá</th>
             </tr>
           </thead>
@@ -292,7 +356,8 @@ function ProductTypeBlock({ pt, settings, onPT, onRemovePT, onAddSize, onUpdateS
               <tr key={sz.id} style={{ background: i % 2 === 0 ? HC.surface : IN.bg }}>
                 <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
                   <input value={sz.label} onChange={(e) => onUpdateSize(pt.id, sz.id, { label: e.target.value })} placeholder="S / M / L…"
-                    style={{ ...cellInput, textAlign: 'left', fontWeight: 700 }} />
+                    readOnly={sz.isLib}
+                    style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: sz.isLib ? HC.surface2 : HC.surface, color: sz.isLib ? HC.muted2 : HC.ink2 }} />
                 </td>
                 <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
                   <input type="number" step="0.01" value={sz.sizeAdd} onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })} placeholder="0" style={cellInput} />
@@ -303,20 +368,30 @@ function ProductTypeBlock({ pt, settings, onPT, onRemovePT, onAddSize, onUpdateS
                       style={{ ...cellInput, borderColor: VIO.line }} />
                   </td>
                 ))}
-                <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
-                  <input type="number" step="0.01" value={sz.itemCost} onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })} placeholder="0" style={cellInput} />
-                </td>
+                
+                {!libEntry && (
+                  <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
+                    <input type="number" step="0.01" value={sz.itemCost} onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })} placeholder="0" style={cellInput} />
+                  </td>
+                )}
 
                 {/* ── Auto zone (nổi bật) ── */}
-                <td style={{ ...tdAuto, background: AUTO.bgStrong, fontWeight: 900, fontSize: 13.5, color: AUTO.total, borderLeft: `2px solid ${AUTO.line}` }}>{usd(calc.totalPrice)}</td>
+                {libEntry && (
+                  <td style={{ ...tdAuto, background: AUTO.bg, color: sz.itemCost ? AUTO.ink : HC.danger, borderLeft: `2px solid ${AUTO.line}`, fontWeight: 700 }}>
+                    {sz.itemCost ? usd(sz.itemCost) : '—'}
+                  </td>
+                )}
+                <td style={{ ...tdAuto, background: AUTO.bgStrong, fontWeight: 900, fontSize: 13.5, color: AUTO.total, borderLeft: libEntry ? 'none' : `2px solid ${AUTO.line}` }}>{usd(calc.totalPrice)}</td>
                 <td style={{ ...tdAuto, background: AUTO.bg, color: HC.muted }}>{usd(calc.amzFee)}</td>
                 <td style={{ ...tdAuto, background: AUTO.bg, fontWeight: 900, fontSize: 13, color: calc.profit >= 0 ? AUTO.total : HC.danger }}>{usd(calc.profit)}</td>
                 <td style={{ ...tdAuto, background: AUTO.bgStrong, fontWeight: 800, color: calc.margin >= 25 ? AUTO.total : calc.margin >= 0 ? HC.warning : HC.danger }}>{pct(calc.margin, 1)}</td>
                 <td style={{ ...tdAuto, background: AUTO.bg, fontWeight: 700, color: calc.marginAfter >= 25 ? AUTO.total : calc.marginAfter >= 0 ? HC.warning : HC.danger }}>{pct(calc.marginAfter, 1)}</td>
 
                 <td style={{ padding: '5px 6px', textAlign: 'center', borderBottom: `1px solid ${HC.border}` }}>
-                  <button onClick={() => onRemoveSize(pt.id, sz.id)} disabled={(pt.sizes?.length || 0) <= 1}
-                    style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #fbcfcf', background: (pt.sizes?.length || 0) <= 1 ? HC.surface2 : '#fef2f2', color: (pt.sizes?.length || 0) <= 1 ? HC.muted2 : HC.danger, cursor: (pt.sizes?.length || 0) <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>✕</button>
+                  {!sz.isLib && (
+                    <button onClick={() => onRemoveSize(pt.id, sz.id)} disabled={(pt.sizes?.length || 0) <= 1}
+                      style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #fbcfcf', background: (pt.sizes?.length || 0) <= 1 ? HC.surface2 : '#fef2f2', color: (pt.sizes?.length || 0) <= 1 ? HC.muted2 : HC.danger, cursor: (pt.sizes?.length || 0) <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>✕</button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -363,6 +438,33 @@ function HistoryPanel({ sheet, onClose, onRestore, onExportVersion }) {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  Customize Info Dialog
+// ════════════════════════════════════════════════════════
+function CustomizeInfoDialog({ onClose, onConfirm }) {
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,0,0.55)', backdropFilter: 'blur(3px)', zIndex: 2200, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 340, background: HC.surface, borderRadius: 14, boxShadow: HC.shadowStrong, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', background: `linear-gradient(135deg,#7C3AED,#6D28D9)`, color: '#fff', fontWeight: 800, fontSize: 14 }}>＋ Add Customize Info</div>
+        <div style={{ padding: 16 }}>
+          <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Tên cột (VD: Color, DTG...)</label>
+          <input autoFocus value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 6, border: `1px solid ${HC.border}`, marginBottom: 12 }} />
+          
+          <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Giá mặc định ($)</label>
+          <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 6, border: `1px solid ${HC.border}` }} placeholder="0.00" />
+        </div>
+        <div style={{ padding: '12px 16px', borderTop: `1px solid ${HC.border}`, background: HC.surface2, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={miniBtn}>Huỷ</button>
+          <button onClick={() => { if(name.trim()) onConfirm(name.trim(), price ? Number(price) : 0) }} style={{ ...miniBtn, background: '#7C3AED', color: '#fff', border: 'none' }}>Tạo cột</button>
         </div>
       </div>
     </div>
