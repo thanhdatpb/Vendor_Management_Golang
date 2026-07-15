@@ -363,7 +363,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
           style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', outline: 'none', background: HC.surface, minWidth: 180 }} />
         
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 10px' }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}> Price ($)</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>Price ($)</span>
           <input type="number" step="0.01" value={pt.phoi ?? ''} onChange={(e) => onPT(pt.id, { phoi: e.target.value })} onWheel={(e) => e.target.blur()} placeholder="0"
             style={{ width: 72, textAlign: 'right', border: `1px solid ${HC.orangeMid}`, borderRadius: 6, padding: '4px 7px', fontSize: 12, fontWeight: 700, color: HC.orangeDeep, background: HC.surface, outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
         </div>
