@@ -8,7 +8,7 @@ import {
   computeSizeRow, summarizeSheet, num, usd, pct,
   SETTING_FIELDS, makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
-import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, SHIP_METHODS } from '../../utils/vendorLibraryIndex';
+import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, SHIP_METHODS, normalizeKey } from '../../utils/vendorLibraryIndex';
 
 // ─── Palette phụ (tinh chỉnh cho dễ nhìn) ────────────────
 const AUTO = {
@@ -16,7 +16,9 @@ const AUTO = {
   bg: '#F3FCF7', bgStrong: '#E4F8EC', line: '#BFE9CF', total: '#0B7A43',
 };
 const VIO = { head: '#7C3AED', ink: '#6D28D9', bg: '#F7F3FF', line: '#E4D7FF' };
-const IN = { head: HC.orangeDark, line: HC.borderStrong, bg: '#FFFDF9' };
+// Nhạt hơn HC.orangeDark chủ đích — để phần "Tự động tính" (xanh) nổi bật hơn, đỡ rực
+const IN = { head: HC.brown, line: HC.borderStrong, bg: '#FFFDF9' };
+const SOFT_ACTIVE = `linear-gradient(135deg,${HC.orangeDark},${HC.brown})`;
 
 const cellInput = {
   width: '100%', boxSizing: 'border-box', padding: '6px 8px', fontSize: 12,
@@ -175,7 +177,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       <div onClick={(e) => e.stopPropagation()} style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: HC.cream, overflow: 'hidden' }}>
 
         {/* ── Header ── */}
-        <div style={{ padding: '12px 22px', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDeep})`, color: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ padding: '12px 22px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, color: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <span style={{ fontSize: 20 }}>💲</span>
             <div style={{ minWidth: 0 }}>
@@ -201,7 +203,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
             {SETTING_FIELDS.map((f) => (
               <label key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }} title={f.tooltip || ''}>
                 <span style={{ fontSize: 10, fontWeight: 750, color: HC.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.icon} {f.label} ({f.unit})</span>
-                <input type="number" step="0.01" value={settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)} placeholder={f.key === 'importTax' ? '0' : ''}
+                <input type="number" step="0.01" value={settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)} onWheel={(e) => e.target.blur()} placeholder={f.key === 'importTax' ? '0' : ''}
                   style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: HC.surface, ...(f.key === 'importTax' && (settings[f.key] == null || settings[f.key] === 0) ? { opacity: 0.6 } : {}) }} />
               </label>
             ))}
@@ -215,7 +217,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
             <button key={pt.id} onClick={() => toggleShown(pt.id)}
               style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 13px', borderRadius: 9, cursor: 'pointer',
                 border: `1.5px solid ${pt.shown ? 'transparent' : HC.borderStrong}`,
-                background: pt.shown ? `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` : HC.surface,
+                background: pt.shown ? SOFT_ACTIVE : HC.surface,
                 color: pt.shown ? '#fff' : HC.muted, whiteSpace: 'nowrap' }}>
               {pt.shown ? '☑' : '☐'} {pt.name || 'Chưa đặt tên'}
             </button>
@@ -225,7 +227,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
         </div>
 
         {/* ── Body: các product type xếp chồng ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 22px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
           {shownPTs.length === 0 && (
             <div style={{ textAlign: 'center', color: HC.muted, padding: 50 }}>Chọn ít nhất một Product Type để hiển thị bảng tính giá.</div>
           )}
@@ -269,9 +271,70 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
 
 const ghostBtn = { background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', height: 34, whiteSpace: 'nowrap' };
 
-// ════════════════════════════════════════════════════════
-//  Một khối Product Type = tiêu đề (Phôi) + bảng size
-// ════════════════════════════════════════════════════════
+// ─── Bulk paste giá size: hỗ trợ dán cả vùng nhiều cột từ sheet ──────────
+// (VD: chọn cả 2 cột "Size" + "Giá Size" trong Google Sheet rồi copy) — clipboard
+// khi đó là TSV: mỗi dòng 1 size, các cột cách nhau bằng TAB. Vẫn hỗ trợ dán
+// tay 1 dòng nhiều giá cách nhau bằng dấu phẩy như trước.
+function parsePastedPrices(rawText) {
+  const entries = [];
+  rawText.split(/\r\n|\r|\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    if (trimmed.includes('\t')) {
+      const cells = trimmed.split('\t').map((c) => c.trim()).filter((c) => c !== '');
+      if (cells.length >= 2) {
+        const price = cells[cells.length - 1];
+        if (/\d/.test(price)) entries.push({ label: cells[0], price });
+      } else if (cells.length === 1 && /\d/.test(cells[0])) {
+        entries.push({ price: cells[0] });
+      }
+    } else if (trimmed.includes(',')) {
+      trimmed.split(',').map((c) => c.trim()).filter((c) => c !== '' && /\d/.test(c))
+        .forEach((v) => entries.push({ price: v }));
+    } else if (/\d/.test(trimmed)) {
+      entries.push({ price: trimmed });
+    }
+  });
+  return entries;
+}
+
+// Áp entries vào các size của product type: ưu tiên khớp theo tên Size (label)
+// trước, phần còn lại gán tuần tự bắt đầu từ startSizeId (hoặc từ đầu bảng).
+function distributeSizeAddValues(pt, entries, startSizeId, onUpdateSize) {
+  const sizes = pt.sizes || [];
+  if (!sizes.length || !entries.length) return 0;
+  const usedIds = new Set();
+  const leftover = [];
+  let applied = 0;
+
+  entries.forEach((entry) => {
+    if (entry.label) {
+      const match = sizes.find((s) => !usedIds.has(s.id) && normalizeKey(s.label) === normalizeKey(entry.label));
+      if (match) {
+        usedIds.add(match.id);
+        onUpdateSize(pt.id, match.id, { sizeAdd: entry.price });
+        applied++;
+        return;
+      }
+    }
+    leftover.push(entry);
+  });
+
+  if (leftover.length) {
+    const startIdx = startSizeId ? Math.max(0, sizes.findIndex((s) => s.id === startSizeId)) : 0;
+    let cursor = startIdx;
+    for (const entry of leftover) {
+      while (cursor < sizes.length && usedIds.has(sizes[cursor].id)) cursor++;
+      if (cursor >= sizes.length) break;
+      onUpdateSize(pt.id, sizes[cursor].id, { sizeAdd: entry.price });
+      usedIds.add(sizes[cursor].id);
+      applied++;
+      cursor++;
+    }
+  }
+  return applied;
+}
+
 // ════════════════════════════════════════════════════════
 //  Một khối Product Type = tiêu đề (Phôi) + bảng size
 // ════════════════════════════════════════════════════════
@@ -279,14 +342,15 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
   const customs = pt.customizeInfos || [];
   const rows = (pt.sizes || []).map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) }));
   const [showPasteArea, setShowPasteArea] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
-  // Bulk paste: parse text pasted into the textarea (values separated by newline / tab / comma)
-  const handleBulkPaste = (rawText) => {
-    const vals = rawText.split(/[\n\t,]+/).map(v => v.trim()).filter(v => v !== '');
-    const sizes = pt.sizes || [];
-    vals.forEach((v, i) => {
-      if (i < sizes.length) onUpdateSize(pt.id, sizes[i].id, { sizeAdd: v });
-    });
+  const pastePreview = useMemo(() => parsePastedPrices(pasteText), [pasteText]);
+
+  const applyBulkPaste = () => {
+    const entries = parsePastedPrices(pasteText);
+    if (!entries.length) return;
+    distributeSizeAddValues(pt, entries, null, onUpdateSize);
+    setPasteText('');
     setShowPasteArea(false);
   };
 
@@ -300,7 +364,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
         
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 10px' }}>
           <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>Phôi ($)</span>
-          <input type="number" step="0.01" value={pt.phoi ?? ''} onChange={(e) => onPT(pt.id, { phoi: e.target.value })} placeholder="0"
+          <input type="number" step="0.01" value={pt.phoi ?? ''} onChange={(e) => onPT(pt.id, { phoi: e.target.value })} onWheel={(e) => e.target.blur()} placeholder="0"
             style={{ width: 72, textAlign: 'right', border: `1px solid ${HC.orangeMid}`, borderRadius: 6, padding: '4px 7px', fontSize: 12, fontWeight: 700, color: HC.orangeDeep, background: HC.surface, outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
         </div>
 
@@ -310,7 +374,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
             <button key={m.key} onClick={() => onPT(pt.id, { shipMethod: m.key })}
               style={{
                 fontSize: 10.5, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', border: 'none',
-                background: pt.shipMethod === m.key ? `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` : 'transparent',
+                background: pt.shipMethod === m.key ? SOFT_ACTIVE : 'transparent',
                 color: pt.shipMethod === m.key ? '#fff' : HC.muted
               }}>
               {m.label}
@@ -336,29 +400,35 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
         <div style={{ padding: '10px 16px', background: '#f0f9ff', borderBottom: `1px solid #bae6fd`, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>
-              📋 Dán danh sách giá Size — mỗi giá 1 dòng (hoặc cách nhau bằng tab, dấu phẩy)
-              <span style={{ marginLeft: 8, fontWeight: 400, opacity: 0.8 }}>Áp dụng theo thứ tự {(pt.sizes || []).map(s => s.label).join(' → ')}</span>
+              📋 Dán vùng giá Size từ sheet — hỗ trợ cả 1 cột giá lẫn 2 cột (Size + Giá), mỗi size 1 dòng
+              <span style={{ marginLeft: 8, fontWeight: 400, opacity: 0.8 }}>Size hiện có: {(pt.sizes || []).map(s => s.label).join(' → ')}</span>
             </div>
             <textarea
               autoFocus
-              rows={Math.min((pt.sizes || []).length + 1, 10)}
-              placeholder={`Ví dụ:\n9.99\n10.99\n11.99`}
+              rows={Math.min(Math.max((pt.sizes || []).length + 1, 4), 12)}
+              placeholder={`Dán trực tiếp từ Google Sheet / Excel, ví dụ:\nS\t9.99\nM\t10.99\nL\t11.99\n\nHoặc chỉ dán cột giá:\n9.99\n10.99\n11.99`}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
               style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, padding: '8px 10px', borderRadius: 6, border: '1px solid #bae6fd', resize: 'vertical', outline: 'none' }}
-              onPaste={(e) => {
-                e.preventDefault();
-                handleBulkPaste(e.clipboardData.getData('text'));
-              }}
             />
+            <div style={{ fontSize: 11, color: pastePreview.length ? '#0369a1' : '#94a3b8', marginTop: 4, fontWeight: 600 }}>
+              {pastePreview.length > 0
+                ? `Phát hiện ${pastePreview.length} giá — sẽ áp cho ${Math.min(pastePreview.length, (pt.sizes || []).length)}/${(pt.sizes || []).length} size`
+                : 'Chưa phát hiện giá nào để áp dụng'}
+            </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <button onClick={() => setShowPasteArea(false)} style={{ ...miniBtn, fontSize: 11 }}>Đóng</button>
-            <span style={{ fontSize: 10, color: '#64748b', maxWidth: 120 }}>Paste trực tiếp từ clipboard vào ô text là đủ</span>
+            <button onClick={applyBulkPaste} disabled={!pastePreview.length}
+              style={{ ...miniBtn, fontSize: 11, background: pastePreview.length ? '#0369a1' : HC.surface2, color: pastePreview.length ? '#fff' : HC.muted2, border: 'none', cursor: pastePreview.length ? 'pointer' : 'not-allowed' }}>
+              ✓ Áp dụng
+            </button>
+            <button onClick={() => { setShowPasteArea(false); setPasteText(''); }} style={{ ...miniBtn, fontSize: 11 }}>Đóng</button>
           </div>
         </div>
       )}
 
       {/* table */}
-      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'min(500px, 50vh)' }}>
+      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'min(620px, 62vh)' }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 880, fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
@@ -400,31 +470,27 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
                 <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
                   <input type="number" step="0.01" value={sz.sizeAdd}
                     onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })}
+                    onWheel={(e) => e.target.blur()}
                     onPaste={(e) => {
                       const raw = e.clipboardData.getData('text');
-                      const vals = raw.split(/[\n\t,]+/).map(v => v.trim()).filter(v => v !== '');
-                      if (vals.length > 1) {
+                      const entries = parsePastedPrices(raw);
+                      if (entries.length > 1) {
                         e.preventDefault();
-                        const sizes = pt.sizes || [];
-                        const startIdx = sizes.findIndex(s => s.id === sz.id);
-                        vals.forEach((v, j) => {
-                          const idx = startIdx + j;
-                          if (idx < sizes.length) onUpdateSize(pt.id, sizes[idx].id, { sizeAdd: v });
-                        });
+                        distributeSizeAddValues(pt, entries, sz.id, onUpdateSize);
                       }
                     }}
                     placeholder="0" style={cellInput} />
                 </td>
                 {customs.map((ci) => (
                   <td key={ci.id} style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}`, background: VIO.bg }}>
-                    <input type="number" step="0.01" value={sz.customize?.[ci.id] ?? ''} onChange={(e) => onUpdateCustomize(pt.id, sz.id, ci.id, e.target.value)} placeholder="0"
+                    <input type="number" step="0.01" value={sz.customize?.[ci.id] ?? ''} onChange={(e) => onUpdateCustomize(pt.id, sz.id, ci.id, e.target.value)} onWheel={(e) => e.target.blur()} placeholder="0"
                       style={{ ...cellInput, borderColor: VIO.line }} />
                   </td>
                 ))}
                 
                 {!libEntry && (
                   <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
-                    <input type="number" step="0.01" value={sz.itemCost} onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })} placeholder="0" style={cellInput} />
+                    <input type="number" step="0.01" value={sz.itemCost} onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })} onWheel={(e) => e.target.blur()} placeholder="0" style={cellInput} />
                   </td>
                 )}
 
@@ -513,7 +579,7 @@ function CustomizeInfoDialog({ onClose, onConfirm }) {
           <input autoFocus value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 6, border: `1px solid ${HC.border}`, marginBottom: 12 }} />
           
           <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Giá mặc định ($)</label>
-          <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 6, border: `1px solid ${HC.border}` }} placeholder="0.00" />
+          <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} onWheel={(e) => e.target.blur()} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 6, border: `1px solid ${HC.border}` }} placeholder="0.00" />
         </div>
         <div style={{ padding: '12px 16px', borderTop: `1px solid ${HC.border}`, background: HC.surface2, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={miniBtn}>Huỷ</button>
