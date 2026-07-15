@@ -278,6 +278,17 @@ const ghostBtn = { background: 'rgba(255,255,255,0.18)', border: '1px solid rgba
 function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize, onUpdateSize, onRemoveSize, onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize }) {
   const customs = pt.customizeInfos || [];
   const rows = (pt.sizes || []).map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) }));
+  const [showPasteArea, setShowPasteArea] = useState(false);
+
+  // Bulk paste: parse text pasted into the textarea (values separated by newline / tab / comma)
+  const handleBulkPaste = (rawText) => {
+    const vals = rawText.split(/[\n\t,]+/).map(v => v.trim()).filter(v => v !== '');
+    const sizes = pt.sizes || [];
+    vals.forEach((v, i) => {
+      if (i < sizes.length) onUpdateSize(pt.id, sizes[i].id, { sizeAdd: v });
+    });
+    setShowPasteArea(false);
+  };
 
   return (
     <div style={{ border: `1px solid ${HC.border}`, borderRadius: 14, background: HC.surface, boxShadow: HC.shadow, overflow: 'hidden' }}>
@@ -314,13 +325,40 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
 
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {!libEntry && <button onClick={() => onAddSize(pt.id)} style={miniBtn}>＋ Thêm Size</button>}
+          <button onClick={() => setShowPasteArea(v => !v)} title="Dán hàng loạt giá size từ clipboard (mỗi dòng = 1 size)" style={{ ...miniBtn, color: '#0369a1', borderColor: '#bae6fd', background: '#f0f9ff' }}>📋 Paste giá size</button>
           <button onClick={() => onAddCustomize(pt.id)} style={{ ...miniBtn, color: VIO.ink, borderColor: VIO.line, background: VIO.bg }}>＋ Add Customize Info</button>
           <button onClick={() => onRemovePT(pt.id)} style={{ ...miniBtn, color: HC.danger, borderColor: '#fbcfcf', background: '#fef2f2' }}>🗑</button>
         </div>
       </div>
 
+      {/* bulk-paste panel */}
+      {showPasteArea && (
+        <div style={{ padding: '10px 16px', background: '#f0f9ff', borderBottom: `1px solid #bae6fd`, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#0369a1', marginBottom: 4 }}>
+              📋 Dán danh sách giá Size — mỗi giá 1 dòng (hoặc cách nhau bằng tab, dấu phẩy)
+              <span style={{ marginLeft: 8, fontWeight: 400, opacity: 0.8 }}>Áp dụng theo thứ tự {(pt.sizes || []).map(s => s.label).join(' → ')}</span>
+            </div>
+            <textarea
+              autoFocus
+              rows={Math.min((pt.sizes || []).length + 1, 10)}
+              placeholder={`Ví dụ:\n9.99\n10.99\n11.99`}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'monospace', fontSize: 13, padding: '8px 10px', borderRadius: 6, border: '1px solid #bae6fd', resize: 'vertical', outline: 'none' }}
+              onPaste={(e) => {
+                e.preventDefault();
+                handleBulkPaste(e.clipboardData.getData('text'));
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <button onClick={() => setShowPasteArea(false)} style={{ ...miniBtn, fontSize: 11 }}>Đóng</button>
+            <span style={{ fontSize: 10, color: '#64748b', maxWidth: 120 }}>Paste trực tiếp từ clipboard vào ô text là đủ</span>
+          </div>
+        </div>
+      )}
+
       {/* table */}
-      <div style={{ overflowX: 'auto', maxHeight: 400, overflowY: 'auto' }}>
+      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'min(500px, 50vh)' }}>
         <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 880, fontSize: 12 }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <tr>
@@ -360,7 +398,22 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
                     style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: sz.isLib ? HC.surface2 : HC.surface, color: sz.isLib ? HC.muted2 : HC.ink2 }} />
                 </td>
                 <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
-                  <input type="number" step="0.01" value={sz.sizeAdd} onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })} placeholder="0" style={cellInput} />
+                  <input type="number" step="0.01" value={sz.sizeAdd}
+                    onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })}
+                    onPaste={(e) => {
+                      const raw = e.clipboardData.getData('text');
+                      const vals = raw.split(/[\n\t,]+/).map(v => v.trim()).filter(v => v !== '');
+                      if (vals.length > 1) {
+                        e.preventDefault();
+                        const sizes = pt.sizes || [];
+                        const startIdx = sizes.findIndex(s => s.id === sz.id);
+                        vals.forEach((v, j) => {
+                          const idx = startIdx + j;
+                          if (idx < sizes.length) onUpdateSize(pt.id, sizes[idx].id, { sizeAdd: v });
+                        });
+                      }
+                    }}
+                    placeholder="0" style={cellInput} />
                 </td>
                 {customs.map((ci) => (
                   <td key={ci.id} style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}`, background: VIO.bg }}>
