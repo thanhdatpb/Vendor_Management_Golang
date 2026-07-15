@@ -11,7 +11,6 @@ export const LS_B_SELECTIONS     = 'STAFF_B_SELECTIONS_V1';
 export const LS_SAMPLE_DECISIONS = 'SELLER_SAMPLE_DECISIONS_V1';
 export const LS_B_SUBMITTED_FEEDBACK = 'STAFF_B_SUBMITTED_FEEDBACK_V1';
 export const LS_A_FEEDBACK_RESPONSE  = 'STAFF_A_FEEDBACK_RESPONSE_V1';
-export const LS_PRICE_KEY = 'SELLER_PRICE_LIST_V1';
 
 // ─── Color Palette ──────────────────────────────────────
 export const HC = {

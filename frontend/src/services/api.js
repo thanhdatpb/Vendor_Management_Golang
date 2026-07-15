@@ -335,14 +335,6 @@ export const vendorSelectionApi = {
 };
 
 // ===============================
-// PRICE SETUP API
-// ===============================
-export const priceSetupApi = {
-  list: () => api.get("/vendor-price-setups"),
-  save: (data) => api.post("/vendor-price-setups", data),
-};
-
-// ===============================
 // PRICE SHEETS (Bảng tính giá) — lưu server, đồng bộ mọi máy theo project
 // ===============================
 export const priceSheetApi = {
