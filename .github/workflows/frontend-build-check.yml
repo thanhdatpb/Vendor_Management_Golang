@@ -1,0 +1,62 @@
+# ════════════════════════════════════════════════════════════════
+#  Frontend build check
+#  Mục đích: chặn từ gốc 2 sự cố đã từng xảy ra với frontend/dist
+#  (dist là bundle ĐÃ COMMIT và được serve trực tiếp ở production):
+#    1. Conflict marker sót lại trong dist  → SyntaxError → trắng trang
+#       (sự cố thật ngày 2026-07-16)
+#    2. Sửa src nhưng quên rebuild dist     → "merge rồi mà UI không đổi"
+# ════════════════════════════════════════════════════════════════
+name: Frontend build check
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── 1. FAIL nếu bundle dist chứa conflict marker ──────────────
+      # Marker luôn nằm ở ĐẦU DÒNG; bundle minified gần như 1 dòng duy nhất
+      # nên anchor ^ tránh false-positive với chuỗi "=======" trong code.
+      - name: Chặn conflict marker trong frontend/dist
+        run: |
+          if grep -rlnE '^(<{7} |={7}$|>{7} )' frontend/dist/; then
+            echo "::error::frontend/dist chứa conflict marker — bundle hỏng sẽ làm TRẮNG TRANG production. Tuyệt đối không resolve conflict thủ công trong dist: hãy resolve ở frontend/src rồi chạy lại 'npx vite build' để tái tạo dist."
+            exit 1
+          fi
+          echo "OK — dist sạch conflict marker."
+
+      # ── 2. Build thử source (fail nếu src không build được) ───────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cài dependency
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build source bằng Vite
+        working-directory: frontend
+        run: npx vite build
+
+      # ── 3. CẢNH BÁO nếu dist đã commit khác bản build mới ─────────
+      # Không fail (build có thể lệch nhẹ giữa môi trường) — chỉ nhắc
+      # khả năng quên rebuild dist sau khi sửa src.
+      - name: So sánh dist đã commit với bản build mới
+        run: |
+          if ! git diff --quiet -- frontend/dist; then
+            echo "::warning::frontend/dist trong nhánh này KHÁC với bản build mới từ source — có thể đã sửa src nhưng quên rebuild. Chạy 'cd frontend && npx vite build' rồi commit lại dist/."
+            git diff --stat -- frontend/dist
+          else
+            echo "OK — dist khớp với source."
+          fi

@@ -194,8 +194,8 @@ Route (api.php)
 │   ├── src/utils            # pricingEngine, vendorLibraryIndex, vendorExcel, productExcel
 │   ├── src/services         # api.js (Axios)
 │   └── dist/                # ⚠️ Build tĩnh đã commit — thứ THỰC SỰ chạy ở production
-├── docker-compose.yml       # MySQL & phpMyAdmin (dev local)
-└── BACKEND_SCHEMA.md         # Spec schema & endpoint
+├── .htaccess                # Rewrite rule cho hosting
+└── docker-compose.yml       # MySQL & phpMyAdmin (dev local)
 ```
 
 ---

@@ -11,6 +11,10 @@ BACKEND_SCHEMA.md
 # VSCode settings
 .vscode/
 
+# Binary / cert không commit vào git (dev tự cài Composer; CA bundle cấu hình qua php.ini)
+backend/composer.phar
+backend/cacert.pem
+
 # Temporary files
 read_excel.js
 excel_output.json
