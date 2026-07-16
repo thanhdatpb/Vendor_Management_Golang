@@ -567,17 +567,14 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
     try {
       await productApi.update(savedProductId, data);
-      try {
-        await productApi.sendToAdmin(savedProductId);
-      } catch (e) {
-        console.error('Auto send to admin failed:', e);
-      }
-      // Optimistic update: cập nhật local state ngay, không reload
+      // Chỉ lưu chỉnh sửa — KHÔNG tự gửi Admin ở đây, phải bấm "Submit" riêng mới gửi.
+      // Backend cũng luôn set lại status='draft' sau khi Seller sửa (kể cả khi sửa từ rejected),
+      // nên đồng bộ local state theo đúng trạng thái đó.
       setSubmittedProducts(prev => prev.map(p =>
-        p.id !== savedProductId ? p : { ...p, ...savedFormData, status: 'pending' }
+        p.id !== savedProductId ? p : { ...p, ...savedFormData, status: 'draft', rejection_reason: null, reason: null, reviewed_by: null, reviewed_at: null }
       ));
       closeModal();
-      showToast('success', 'Thành công!', 'Sản phẩm đã được lưu và gửi Admin.');
+      showToast('success', 'Thành công!', 'Đã lưu chỉnh sửa. Nhấn Submit để gửi cho Admin.');
     } catch (err) {
       showToast('error', 'Lỗi cập nhật!', err.response?.data?.message || err.message);
     } finally {
