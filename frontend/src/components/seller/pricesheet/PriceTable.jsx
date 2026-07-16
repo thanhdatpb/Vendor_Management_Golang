@@ -74,30 +74,15 @@ export function distributeSizeAddValues(pt, entries, startSizeId, onUpdateSize) 
 }
 
 // ─── Styles dùng chung ───────────────────────────────────
-// Header tier 1 — "Thông tin giá cần nhập" (nhạt, nền trắng)
-const thInputGroup = {
-  padding: '8px 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: '#6B7280', textAlign: 'left',
-  background: '#F9FAFB', borderBottom: `1px solid #E5E7EB`, whiteSpace: 'nowrap',
+const thTier1 = {
+  padding: '6px 12px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+  textTransform: 'uppercase', color: PS.textMuted, textAlign: 'left',
+  background: PS.bgSurface, borderBottom: `1px solid ${PS.border}`, whiteSpace: 'nowrap',
 };
-// Header tier 1 — "Giá tính được" (đậm, nền xanh lá)
-const thAutoGroup = {
-  padding: '8px 12px', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: '#fff', textAlign: 'left',
-  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-  borderBottom: `2px solid #065F46`, whiteSpace: 'nowrap',
-};
-// Header tier 2 — cột nhập
-const thTier2Input = {
+const thTier2 = {
   padding: '7px 10px', fontSize: 11, fontWeight: 650, letterSpacing: '0.05em',
-  textTransform: 'uppercase', color: '#4B5563', textAlign: 'right',
-  background: '#F3F4F6', borderBottom: `2px solid #D1D5DB`, whiteSpace: 'nowrap',
-};
-// Header tier 2 — cột tính được
-const thTier2Auto = {
-  padding: '7px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
-  textTransform: 'uppercase', color: '#065F46', textAlign: 'right',
-  background: '#D1FAE5', borderBottom: `2px solid #6EE7B7`, whiteSpace: 'nowrap',
+  textTransform: 'uppercase', color: PS.textSecondary, textAlign: 'right',
+  background: PS.bgSubtle, borderBottom: `1.5px solid ${PS.borderStrong}`, whiteSpace: 'nowrap',
 };
 
 function MarginCell({ value }) {
@@ -154,18 +139,18 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
     <div style={{ overflowX: 'auto' }}>
       <table className="ps-table" style={{ minWidth: 880 }}>
         <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-          {/* Tầng 1: nhóm cột — phân biệt rõ nhập vs tính */}
+          {/* Tầng 1: nhóm cột — chữ nhỏ, KHÔNG nền màu */}
           <tr>
-            <th colSpan={nInput} style={thInputGroup}>📝 Thông tin giá cần nhập</th>
-            <th colSpan={nAuto} style={{ ...thAutoGroup, borderLeft: '3px solid #065F46' }}>✅ Giá tính được</th>
-            {!libEntry && <th style={{ ...thInputGroup, width: 44 }} aria-label="Thao tác" />}
+            <th colSpan={nInput} style={thTier1}>Thông tin giá cần nhập</th>
+            <th colSpan={nAuto} className="ps-divider-l" style={thTier1}>Giá tính được</th>
+            {!libEntry && <th style={{ ...thTier1, width: 44 }} aria-label="Thao tác" />}
           </tr>
           {/* Tầng 2: tên cột */}
           <tr>
-            <th className="ps-sticky-col" style={{ ...thTier2Input, textAlign: 'left', minWidth: 76, zIndex: 3, left: 0, position: 'sticky' }}>Size</th>
-            <th style={{ ...thTier2Input, minWidth: 96 }}>Giá Size ($)</th>
+            <th className="ps-sticky-col" style={{ ...thTier2, textAlign: 'left', minWidth: 76, zIndex: 3, left: 0, position: 'sticky' }}>Size</th>
+            <th style={{ ...thTier2, minWidth: 96 }}>Giá Size ($)</th>
             {customs.map((ci) => (
-              <th key={ci.id} style={{ ...thTier2Input, minWidth: 100, padding: '4px 6px' }}>
+              <th key={ci.id} style={{ ...thTier2, minWidth: 100, padding: '4px 6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <input value={ci.name} onChange={(e) => onRenameCustomize(pt.id, ci.id, e.target.value)}
                     placeholder="Tên (VD: Color: Black)" aria-label="Tên cột customize"
@@ -175,37 +160,33 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                 </div>
               </th>
             ))}
-            {!libEntry && <th style={{ ...thTier2Input, minWidth: 90 }}>Item Cost ($)</th>}
+            {!libEntry && <th style={{ ...thTier2, minWidth: 90 }}>Item Cost ($)</th>}
 
-            {libEntry && <th style={{ ...thTier2Auto, minWidth: 90, borderLeft: '3px solid #065F46' }}>Ship Cost ($)</th>}
-            <th style={{ ...thTier2Auto, minWidth: 110, fontSize: 12, ...(!libEntry ? { borderLeft: '3px solid #065F46' } : {}) }}>Total Price</th>
-            <th style={{ ...thTier2Auto, minWidth: 80 }}>AMZ Fee</th>
-            <th style={{ ...thTier2Auto, minWidth: 84, fontSize: 12 }}>Profit</th>
-            <th style={{ ...thTier2Auto, minWidth: 84, fontSize: 12 }}>Margin</th>
-            <th style={{ ...thTier2Auto, minWidth: 96 }}>After Promo</th>
-            {!libEntry && <th style={{ ...thTier2Input, textAlign: 'center' }}>Xoá</th>}
+            {libEntry && <th className="ps-divider-l" style={{ ...thTier2, minWidth: 90 }}>Ship Cost ($)</th>}
+            <th className={libEntry ? undefined : 'ps-divider-l'} style={{ ...thTier2, minWidth: 96 }}>Total Price</th>
+            <th style={{ ...thTier2, minWidth: 80 }}>AMZ Fee</th>
+            <th style={{ ...thTier2, minWidth: 84 }}>Profit</th>
+            <th style={{ ...thTier2, minWidth: 84 }}>Margin</th>
+            <th style={{ ...thTier2, minWidth: 96 }}>After Promo</th>
+            {!libEntry && <th style={{ ...thTier2, textAlign: 'center' }}>Xoá</th>}
           </tr>
         </thead>
         <tbody>
           {rows.map(({ sz, calc }, i) => {
             const dragging = dragIds?.has(sz.id);
-            const isEven = i % 2 === 0;
-            // Nền cell nhập — trắng / xám rất nhạt
-            const inputBg = isEven ? '#FFFFFF' : '#F9FAFB';
-            // Nền cell tính được — xanh rất nhạt, zebra
-            const autoBg = isEven ? '#F0FDF4' : '#DCFCE7';
             return (
-              <tr key={sz.id}>
-                {/* Size — sticky trái */}
-                <td style={{ background: inputBg, borderBottom: '1px solid #E5E7EB', padding: '4px 6px', minWidth: 76, position: 'sticky', left: 0, zIndex: 2 }}>
+              <tr key={sz.id} className="ps-tr">
+                {/* Size — sticky trái, semibold */}
+                <td className="ps-cell ps-sticky-col" style={{ minWidth: 76 }}>
                   <input value={sz.label} onChange={(e) => onUpdateSize(pt.id, sz.id, { label: e.target.value })}
                     placeholder="S / M / L…" readOnly={sz.isLib} aria-label="Tên size"
                     className="ps-input" style={{ fontWeight: 650, padding: '5px 8px', fontSize: 12.5 }} />
                 </td>
 
-                {/* Giá Size */}
-                <td onMouseDown={() => onPriceMouseDown(i)} onMouseEnter={(e) => onPriceMouseEnter(i, e)}
-                  style={{ background: dragging ? '#EFF6FF' : inputBg, borderBottom: '1px solid #E5E7EB', padding: '4px 6px', userSelect: dragIds ? 'none' : undefined }}>
+                {/* Giá Size — Ô NHẬP NỔI BẬT NHẤT (spec §3.5) */}
+                <td className="ps-cell"
+                  onMouseDown={() => onPriceMouseDown(i)} onMouseEnter={(e) => onPriceMouseEnter(i, e)}
+                  style={{ userSelect: dragIds ? 'none' : undefined }}>
                   <input type="number" step="0.01" value={sz.sizeAdd} aria-label={`Giá size ${sz.label || i + 1}`}
                     onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })}
                     onWheel={(e) => e.target.blur()}
@@ -220,12 +201,12 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                     title="Kéo dọc qua nhiều ô để xoá nhanh (như bôi đen trên sheet). Dán nhiều giá cùng lúc cũng được."
                     placeholder="0"
                     className={`ps-input ps-input--num${num(sz.sizeAdd) < 0 ? ' ps-input--invalid' : ''}`}
-                    style={dragging ? { background: '#EFF6FF', borderColor: '#93C5FD' } : undefined} />
+                    style={dragging ? { background: PS.brandSubtle, borderColor: PS.brand } : undefined} />
                 </td>
 
                 {/* Customize inputs */}
                 {customs.map((ci) => (
-                  <td key={ci.id} style={{ background: inputBg, borderBottom: '1px solid #E5E7EB', padding: '4px 6px' }}>
+                  <td key={ci.id} className="ps-cell">
                     <input type="number" step="0.01" value={sz.customize?.[ci.id] ?? ''} aria-label={`${ci.name || 'Customize'} — size ${sz.label || i + 1}`}
                       onChange={(e) => onUpdateCustomize(pt.id, sz.id, ci.id, e.target.value)}
                       onWheel={(e) => e.target.blur()} placeholder="0"
@@ -235,7 +216,7 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
 
                 {/* Item Cost (nhập tay) */}
                 {!libEntry && (
-                  <td style={{ background: inputBg, borderBottom: '1px solid #E5E7EB', padding: '4px 6px' }}>
+                  <td className="ps-cell">
                     <input type="number" step="0.01" value={sz.itemCost} aria-label={`Item cost — size ${sz.label || i + 1}`}
                       onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })}
                       onWheel={(e) => e.target.blur()} placeholder="0"
@@ -243,60 +224,25 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                   </td>
                 )}
 
-                {/* ── Nhóm COMPUTED: nền xanh, nổi bật rõ ── */}
+                {/* ── Nhóm computed: nền subtle, chữ mảnh, KHÔNG nền màu đậm ── */}
                 {libEntry && (
-                  <td style={{
-                    background: autoBg, borderBottom: '1px solid #BBF7D0',
-                    borderLeft: '3px solid #6EE7B7',
-                    padding: '4px 10px', textAlign: 'right',
-                    fontVariantNumeric: 'tabular-nums', fontSize: 12,
-                    color: sz.itemCost ? '#065F46' : '#9CA3AF', cursor: sz.itemCost ? undefined : 'help',
-                    fontWeight: sz.itemCost ? 600 : 400,
-                  }} title={sz.itemCost ? undefined : shipEmptyHint}>
+                  <td className="ps-cell-auto ps-divider-l"
+                    title={sz.itemCost ? undefined : shipEmptyHint}
+                    style={sz.itemCost ? undefined : { color: PS.textMuted, cursor: 'help' }}>
                     {sz.itemCost ? usd(sz.itemCost) : '—'}
                   </td>
                 )}
+                <td className={`ps-cell-auto${libEntry ? '' : ' ps-divider-l'}`}
+                  style={{ fontWeight: 700, color: PS.text }}>{usd(calc.totalPrice)}</td>
+                <td className="ps-cell-auto" style={{ color: PS.textMuted }}>{usd(calc.amzFee)}</td>
+                <td className="ps-cell-auto"
+                  style={{ fontWeight: 650, color: calc.profit >= 0 ? PS.text : PS.negative }}>{usd(calc.profit)}</td>
+                <td className="ps-cell-auto"><MarginCell value={calc.margin} /></td>
+                <td className="ps-cell-auto"><MarginCell value={calc.marginAfter} /></td>
 
-                {/* Total Price — ô nổi bật nhất */}
-                <td style={{
-                  background: autoBg, borderBottom: '1px solid #BBF7D0',
-                  ...(!libEntry ? { borderLeft: '3px solid #6EE7B7' } : {}),
-                  padding: '4px 14px', textAlign: 'right',
-                  fontVariantNumeric: 'tabular-nums',
-                  fontSize: 15, fontWeight: 900, color: '#047857',
-                  letterSpacing: '-0.01em',
-                }}>{usd(calc.totalPrice)}</td>
-
-                {/* AMZ Fee */}
-                <td style={{
-                  background: autoBg, borderBottom: '1px solid #BBF7D0',
-                  padding: '4px 10px', textAlign: 'right',
-                  fontVariantNumeric: 'tabular-nums', fontSize: 12, color: '#6B7280',
-                }}>{usd(calc.amzFee)}</td>
-
-                {/* Profit */}
-                <td style={{
-                  background: autoBg, borderBottom: '1px solid #BBF7D0',
-                  padding: '4px 10px', textAlign: 'right',
-                  fontVariantNumeric: 'tabular-nums', fontSize: 13, fontWeight: 800,
-                  color: calc.profit >= 0 ? '#059669' : '#E11D48',
-                }}>{usd(calc.profit)}</td>
-
-                {/* Margin */}
-                <td style={{
-                  background: autoBg, borderBottom: '1px solid #BBF7D0',
-                  padding: '4px 10px', textAlign: 'right',
-                }}><MarginCell value={calc.margin} /></td>
-
-                {/* After Promo */}
-                <td style={{
-                  background: autoBg, borderBottom: '1px solid #BBF7D0',
-                  padding: '4px 10px', textAlign: 'right',
-                }}><MarginCell value={calc.marginAfter} /></td>
-
-                {/* Xoá size */}
+                {/* Xoá size (nhập tay) */}
                 {!libEntry && (
-                  <td style={{ background: inputBg, borderBottom: '1px solid #E5E7EB', padding: '4px 6px', textAlign: 'center' }}>
+                  <td className="ps-cell" style={{ textAlign: 'center' }}>
                     {!sz.isLib && (
                       <IconBtn variant="dangerghost" title="Xoá size"
                         disabled={(pt.sizes?.length || 0) <= 1}
