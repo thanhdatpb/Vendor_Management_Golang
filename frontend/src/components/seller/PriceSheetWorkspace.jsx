@@ -189,11 +189,11 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
 
         {/* ── Header ── */}
         <div style={{ padding: '12px 22px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, color: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
             <span style={{ fontSize: 20 }}></span>
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên bảng tính giá"
-                style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 800, fontSize: 15, borderRadius: 8, padding: '4px 10px', outline: 'none', maxWidth: 360 }} />
+                style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 800, fontSize: 15, borderRadius: 8, padding: '4px 10px', outline: 'none', width: `${Math.max(24, (name || '').length + 2)}ch`, maxWidth: '100%' }} />
               <div style={{ fontSize: 11, opacity: 0.9, marginTop: 3 }}>
                 {shownPTs.length}/{productTypes.length} product type hiển thị · {summary.count} size
                 {summary.avgMargin != null && <> · avg margin <b>{pct(summary.avgMargin, 1)}</b></>}
