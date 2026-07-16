@@ -11,7 +11,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   computeSizeRow, summarizeSheet, num, pct,
-  makeSize, makeProductType, uid,
+  makeSize, makeProductType, uid, DEFAULT_SETTINGS
 } from '../../utils/pricingEngine';
 import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, normalizeKey } from '../../utils/vendorLibraryIndex';
 
@@ -79,8 +79,9 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const [name, setName] = useState(sheet.name || '');
   // Quantity mặc định = 1; bảng cũ (tạo trước khi có Quantity) hiện trống → coi như 1.
   const [settings, setSettings] = useState(() => ({
+    ...DEFAULT_SETTINGS,
     ...sheet.settings,
-    quantity: num(sheet.settings?.quantity) > 0 ? sheet.settings.quantity : 1,
+    quantity: num(sheet.settings?.quantity) > 0 ? sheet.settings.quantity : DEFAULT_SETTINGS.quantity,
   }));
   const [productTypes, setProductTypes] = useState(() =>
     (sheet.productTypes?.length ? sheet.productTypes : [makeProductType('Product Type 1')]).map((pt) => ({
@@ -202,25 +203,61 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       }}>
         <PsStyles />
 
-        {/* ── Header — spec §3.1: nền trắng, border-bottom, meta badges ── */}
+        {/* ── Header — tên bảng tính nổi bật, gradient amber ── */}
         <div style={{
-          padding: '10px 20px', background: PS.bgSurface, borderBottom: `1px solid ${PS.border}`,
+          padding: '12px 20px',
+          background: `linear-gradient(135deg, ${PS.brand} 0%, ${PS.brandHover} 60%, ${PS.brandDeep} 100%)`,
+          borderBottom: `2px solid ${PS.brandDeep}`,
           flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          boxShadow: '0 2px 8px rgba(196,127,16,0.25)',
         }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên bảng tính giá"
-              aria-label="Tên bảng tính giá"
-              className="ps-input ps-input-ghost"
-              style={{ fontSize: 17, fontWeight: 700, padding: '4px 8px', marginLeft: -8, width: `${Math.max(24, (name || '').length + 2)}ch`, maxWidth: '100%' }} />
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-              <Badge>{shownPTs.length}/{productTypes.length} product type · {summary.count} size</Badge>
-              {summary.avgMargin != null && <Badge tone={mTone}>avg margin {pct(summary.avgMargin, 1)}</Badge>}
+          <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>📊</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên bảng tính giá"
+                aria-label="Tên bảng tính giá"
+                style={{
+                  fontSize: 20, fontWeight: 800, padding: '4px 10px', borderRadius: 8, outline: 'none',
+                  background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.35)',
+                  color: '#fff', width: `${Math.max(20, (name || '').length + 2)}ch`, maxWidth: '100%',
+                  letterSpacing: '-0.01em',
+                }} />
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 5, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+                  {shownPTs.length}/{productTypes.length} product type · {summary.count} size
+                </span>
+                {summary.avgMargin != null && (
+                  <span style={{
+                    fontSize: 12, fontWeight: 700, padding: '2px 10px', borderRadius: 999,
+                    background: 'rgba(255,255,255,0.22)', color: '#fff',
+                  }}>avg margin {pct(summary.avgMargin, 1)}</span>
+                )}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <Btn variant="ghost" onClick={() => setShowHistory(true)}>Lịch sử tính giá ({sheet.history?.length || 0})</Btn>
-            <Btn variant="outline" onClick={() => exportSheetToExcel(draftSheet, showToast)}>⬇ Export Excel</Btn>
-            <IconBtn title="Đóng" onClick={onClose}>✕</IconBtn>
+            <button type="button" onClick={() => setShowHistory(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 13px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.32)', color: '#fff',
+              }}>
+              🕘 Lịch sử tính giá ({sheet.history?.length || 0})
+            </button>
+            <button type="button" onClick={() => exportSheetToExcel(draftSheet, showToast)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 13px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700,
+                background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.32)', color: '#fff',
+              }}>
+              ⬇ Export Excel
+            </button>
+            <button type="button" onClick={onClose} aria-label="Đóng"
+              style={{
+                width: 34, height: 34, borderRadius: 8, cursor: 'pointer', fontSize: 16, fontWeight: 700,
+                background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.32)', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>✕</button>
           </div>
         </div>
 

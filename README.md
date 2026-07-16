@@ -1,6 +1,6 @@
 # HappyC-Hub Vendor Manager
 
-Hệ thống nội bộ **số hoá quy trình quản lý nhà cung cấp (Vendor) và thẩm định giá sản phẩm** cho **Happy Creative LLC** — một doanh nghiệp bán hàng trên Amazon/Etsy.
+Hệ thống nội bộ **số hoá quy trình quản lý nhà cung cấp (Vendor) và thẩm định giá sản phẩm** cho **Happy Creative LLC** 
 
 Production: [vendorhub.viehana.com](https://vendorhub.viehana.com)
 
@@ -8,7 +8,7 @@ Production: [vendorhub.viehana.com](https://vendorhub.viehana.com)
 
 ## 1. Mục tiêu dự án — Bài toán được giải quyết
 
-Trước khi chốt đơn vị sản xuất cho một sản phẩm, team nội bộ phải trao đổi qua lại rất nhiều giữa các phòng ban: Sales đề xuất sản phẩm, Operations tìm và đề xuất vendor, Seller thẩm định cấu trúc giá, còn Admin duyệt. Trước đây quy trình này chạy rời rạc trên **Excel + Google Sheet + chat tay**, dẫn tới:
+Trước khi chốt đơn vị sản xuất cho một sản phẩm, team nội bộ phải trao đổi qua lại rất nhiều giữa các phòng ban: Sales đề xuất sản phẩm, Operations tìm và đề xuất vendor, Seller thẩm định cấu trúc giá, còn Admin duyệt. Trước đây quy trình này chạy rời rạc trên **Excel + Google Sheet**, dẫn tới:
 
 - Bảng giá vendor mỗi người một bản, dễ lệch số, khó tra cứu lại.
 - Công thức tính giá bán (giá vốn → phí Amazon → coupon → lợi nhuận/margin) làm thủ công trên Google Sheet, dễ sai và khó chia sẻ.
