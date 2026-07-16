@@ -423,7 +423,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1.2fr', gap: 6, marginBottom: 6 }}>
                   <div style={{ background: HC.orangePale, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '7px 11px' }}>
                     <div style={{ fontSize: 9, color: HC.orangeDark, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Product Type</div>
-                    <div style={{ fontSize: 13, fontWeight: 900, color: HC.orangeDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{product.product_type || '—'}</div>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: HC.orangeDark, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.35 }}>{product.product_type || '—'}</div>
                   </div>
                   {[{ label: 'SX', value: product.production_time }, { label: 'Ship', value: product.shipping_time }].map(({ label, value }) => (
                     <div key={label} style={{ background: '#fff', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '7px 11px' }}>
@@ -446,7 +446,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                   ].map(({ label, value }) => (
                     <div key={label} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 11px' }}>
                       <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>{label}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={value || ''}>{value || '—'}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: HC.ink, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.4 }}>{value || '—'}</div>
                     </div>
                   ))}
                 </div>

@@ -1,6 +1,7 @@
 // ════════════════════════════════════════════════════════
 //  SELLER UI COMPONENTS — Shared small components
 // ════════════════════════════════════════════════════════
+import { useLayoutEffect, useRef } from 'react';
 import { AppstoreOutlined, ShopOutlined, DollarCircleOutlined } from '@ant-design/icons';
 import { HC, STATUS_CFG } from '../../constants/sellerTheme';
 import logoImg from '../../assets/logo.png';
@@ -28,6 +29,30 @@ export const inp = {
   fontSize: 13, color: HC.ink2, background: HC.surface2,
   outline: 'none', width: '100%', boxSizing: 'border-box',
 };
+
+// ─── Auto-grow text field ───────────────────────────────
+// Giữ nguyên khung (border/padding/font) như input 1 dòng, nhưng tự cao lên
+// theo nội dung khi text xuống dòng hoặc quá dài — không cần kéo tay.
+export function AutoGrowTextarea({ style, value, ...rest }) {
+  const ref = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      style={{ ...inp, resize: 'none', overflow: 'hidden', lineHeight: 1.4, fontFamily: 'inherit', ...style }}
+      {...rest}
+    />
+  );
+}
 
 // ─── Logo ────────────────────────────────────────────────
 export function HCLogo({ size = 32 }) {

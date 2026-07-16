@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
 import { lsGet, fmtDate, fmtDateTime, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
 import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../utils/productExcel';
-import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field } from './SellerUI';
+import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field, AutoGrowTextarea } from './SellerUI';
 import { productApi } from '../../services/api';
 import { subscribeProductChanges } from '../../services/echo';
 import ProductViewerModal from './ProductViewerModal';
@@ -1185,15 +1185,11 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <form onSubmit={isEditing ? handleUpdate : handleSubmit} style={{ padding: '24px' }}>
               <div style={{ marginBottom: 16 }}>
                 <Field label="1. Product Type (Ghi rõ tên Product Type - Ví dụ: AOP Sweatshirt)" required error={formErrors.product_type}>
-                  <input
-                    type="text"
+                  <AutoGrowTextarea
                     placeholder="Câu trả lời của bạn"
                     value={form.product_type}
                     onChange={fld('product_type')}
-                    style={{
-                      ...inp,
-                      borderColor: formErrors.product_type ? HC.danger : HC.border
-                    }}
+                    style={{ borderColor: formErrors.product_type ? HC.danger : HC.border }}
                   />
                 </Field>
               </div>
@@ -1326,13 +1322,13 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <Field label="1.4 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
-                  <input type="text" placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ ...inp, borderColor: formErrors.production_time ? HC.danger : HC.border }} />
+                  <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ borderColor: formErrors.production_time ? HC.danger : HC.border }} />
                 </Field>
                 <Field label="1.5 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
-                  <input type="text" placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ ...inp, borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
+                  <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
                 </Field>
-                <Field label="1.6 Total Cost (Bao gồm Base và Shipping cost)" required error={formErrors.total_cost}>
-                  <input type="text" placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ ...inp, borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
+                <Field label="1.6 Total Cost (Bao gồm Base và Shipping cost, Ví dụ: 100-150)" required error={formErrors.total_cost}>
+                  <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
                 </Field>
               </div>
 
@@ -1340,10 +1336,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>2. Đặc tính kỹ thuật (Mô tả về đặc tính Product Type)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                   <Field label="2.1 Chất liệu (Ví dụ: 100% cotton)" required error={formErrors.material}>
-                    <input type="text" placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ ...inp, borderColor: formErrors.material ? HC.danger : HC.border }} />
+                    <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ borderColor: formErrors.material ? HC.danger : HC.border }} />
                   </Field>
                   <Field label="2.2 Vùng In/Thiết kế (Ví dụ: 2 vùng in trước và sau)" required error={formErrors.print_area}>
-                    <input type="text" placeholder="Câu trả lời của bạn" value={form.print_area} onChange={fld('print_area')} style={{ ...inp, borderColor: formErrors.print_area ? HC.danger : HC.border }} />
+                    <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.print_area} onChange={fld('print_area')} style={{ borderColor: formErrors.print_area ? HC.danger : HC.border }} />
                   </Field>
                 </div>
               </div>
@@ -1392,27 +1388,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>3. Packaging & đóng gói (Yêu cầu về đóng gói)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                   <Field label="3.1 Packaging (Ví dụ: Mỗi sản phẩm được đóng gói hộp xốp)" required error={formErrors.packaging_links}>
-                    <input
-                      type="text"
+                    <AutoGrowTextarea
                       placeholder="Câu trả lời của bạn"
                       value={form.packaging_links}
                       onChange={fld('packaging_links')}
-                      style={{
-                        ...inp,
-                        borderColor: formErrors.packaging_links ? HC.danger : HC.border
-                      }}
+                      style={{ borderColor: formErrors.packaging_links ? HC.danger : HC.border }}
                     />
                   </Field>
                   <Field label="3.2 Other Packaging (Phụ kiện đi kèm - Ví dụ: Thank you card)" required error={formErrors.other_packaging}>
-                    <input
-                      type="text"
+                    <AutoGrowTextarea
                       placeholder="Câu trả lời của bạn"
                       value={form.other_packaging}
                       onChange={fld('other_packaging')}
-                      style={{
-                        ...inp,
-                        borderColor: formErrors.other_packaging ? HC.danger : HC.border
-                      }}
+                      style={{ borderColor: formErrors.other_packaging ? HC.danger : HC.border }}
                     />
                   </Field>
                 </div>
