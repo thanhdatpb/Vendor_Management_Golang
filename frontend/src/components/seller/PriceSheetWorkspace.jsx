@@ -8,7 +8,7 @@ import {
   computeSizeRow, summarizeSheet, num, usd, pct,
   SETTING_FIELDS, makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
-import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, SHIP_METHODS, normalizeKey } from '../../utils/vendorLibraryIndex';
+import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, SHIP_METHODS, normalizeKey, listLibraryProductTypes } from '../../utils/vendorLibraryIndex';
 
 // ─── Palette phụ (tinh chỉnh cho dễ nhìn) ────────────────
 const AUTO = {
@@ -94,6 +94,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const [showHistory, setShowHistory] = useState(false);
   const [libIndex, setLibIndex] = useState(null);
   const [showCustomizeDialog, setShowCustomizeDialog] = useState(null); // ptId
+  const [showAddPTDialog, setShowAddPTDialog] = useState(false);
 
   useEffect(() => {
     loadVendorLibraryIndex(sheet.project || '', !sheet.project).then(setLibIndex).catch(console.error);
@@ -119,6 +120,12 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const patchPT = (ptId, patch) => setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, ...patch } : pt)));
   const toggleShown = (ptId) => setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, shown: !pt.shown } : pt)));
   const addPT = () => setProductTypes((p) => [...p, makeProductType(`Product Type ${p.length + 1}`)]);
+  // Thêm product type bằng cách CHỌN từ thư viện vendor: dùng đúng tên trong thư viện
+  // → findLibraryEntry khớp chính xác, sizes + Item Cost tự nạp, tên khoá không sửa.
+  const addPTFromLibrary = (nameFromLib) => {
+    setProductTypes((p) => [...p, { ...makeProductType(nameFromLib), shown: true }]);
+    setShowAddPTDialog(false);
+  };
   const removePT = (ptId) => {
     if (!window.confirm('Xoá product type này khỏi bảng?')) return;
     setProductTypes((p) => p.filter((pt) => pt.id !== ptId));
@@ -227,7 +234,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
               {pt.shown ? '' : ''} {pt.name || 'Chưa đặt tên'}
             </button>
           ))}
-          <button onClick={addPT} style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 13px', borderRadius: 9, cursor: 'pointer', border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark }}>＋ Thêm Product Type</button>
+          <button onClick={() => setShowAddPTDialog(true)} style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 13px', borderRadius: 9, cursor: 'pointer', border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark }}>＋ Thêm Product Type</button>
           <span style={{ marginLeft: 'auto', fontSize: 11, color: HC.muted }}>Chọn 1, 2 hay nhiều — bảng xếp chồng như sheet</span>
         </div>
 
@@ -269,6 +276,16 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
           addCustomize(showCustomizeDialog, name, defaultPrice);
           setShowCustomizeDialog(null);
         }} />
+      )}
+
+      {showAddPTDialog && (
+        <AddProductTypeDialog
+          libIndex={libIndex}
+          existingKeys={new Set(productTypes.map((pt) => normalizeKey(pt.name)))}
+          onPick={addPTFromLibrary}
+          onManual={() => { addPT(); setShowAddPTDialog(false); }}
+          onClose={() => setShowAddPTDialog(false)}
+        />
       )}
     </div>
   );
@@ -589,6 +606,63 @@ function CustomizeInfoDialog({ onClose, onConfirm }) {
         <div style={{ padding: '12px 16px', borderTop: `1px solid ${HC.border}`, background: HC.surface2, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={miniBtn}>Huỷ</button>
           <button onClick={() => { if(name.trim()) onConfirm(name.trim(), price ? Number(price) : 0) }} style={{ ...miniBtn, background: '#7C3AED', color: '#fff', border: 'none' }}>Tạo cột</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════
+//  Dialog: chọn Product Type từ thư viện vendor (thay cho gõ tay)
+// ════════════════════════════════════════════════════════
+function AddProductTypeDialog({ libIndex, existingKeys, onPick, onManual, onClose }) {
+  const [q, setQ] = useState('');
+  const all = useMemo(() => listLibraryProductTypes(libIndex), [libIndex]);
+  const list = useMemo(() => {
+    const nq = normalizeKey(q);
+    return all.filter((it) =>
+      !existingKeys.has(normalizeKey(it.productType)) &&
+      (!nq || normalizeKey(it.productType).includes(nq) || normalizeKey(it.vendor).includes(nq))
+    );
+  }, [all, q, existingKeys]);
+  const loading = libIndex == null;
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,0,0.55)', backdropFilter: 'blur(3px)', zIndex: 2200, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '80vh', background: HC.surface, borderRadius: 14, boxShadow: HC.shadowStrong, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '12px 16px', background: AUTO.head, color: '#fff', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          📚 Chọn Product Type từ thư viện vendor
+        </div>
+        <div style={{ padding: '12px 16px 8px', flexShrink: 0 }}>
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm theo tên product type hoặc vendor…"
+            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${HC.border}`, outline: 'none', fontSize: 13 }} />
+        </div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 10px 8px' }}>
+          {loading && <div style={{ padding: 24, textAlign: 'center', color: HC.muted, fontSize: 13 }}>Đang tải thư viện…</div>}
+          {!loading && list.length === 0 && (
+            <div style={{ padding: 24, textAlign: 'center', color: HC.muted, fontSize: 13, lineHeight: 1.6 }}>
+              {all.length === 0
+                ? 'Thư viện vendor của project này chưa có Product Type nào. Bạn có thể "Nhập thủ công" bên dưới.'
+                : 'Không tìm thấy Product Type khớp — hoặc tất cả đã được thêm vào bảng.'}
+            </div>
+          )}
+          {!loading && list.map((it) => (
+            <button key={normalizeKey(it.productType)} onClick={() => onPick(it.productType)}
+              style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', margin: '4px 0', borderRadius: 10, border: `1px solid ${HC.border}`, background: HC.surface, cursor: 'pointer' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = AUTO.bg; e.currentTarget.style.borderColor = AUTO.line; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = HC.surface; e.currentTarget.style.borderColor = HC.border; }}>
+              <span style={{ fontSize: 16 }}>📦</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontWeight: 800, fontSize: 13.5, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.productType}</span>
+                {it.vendor && <span style={{ fontSize: 11, color: HC.muted }}>Vendor: {it.vendor}</span>}
+              </span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: AUTO.ink, background: AUTO.bgStrong, borderRadius: 10, padding: '2px 8px', whiteSpace: 'nowrap' }}>{it.sizeCount} size</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: '10px 16px', borderTop: `1px solid ${HC.border}`, background: HC.surface2, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <button onClick={onManual} style={{ ...miniBtn, borderStyle: 'dashed', color: HC.orangeDark, borderColor: HC.orangeMid, background: HC.orangeLight }}>✏️ Nhập thủ công</button>
+          <button onClick={onClose} style={miniBtn}>Huỷ</button>
         </div>
       </div>
     </div>

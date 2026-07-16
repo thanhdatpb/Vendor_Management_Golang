@@ -69,6 +69,14 @@ export async function loadVendorLibraryIndex(projectKey, skip) {
   return index;
 }
 
+/** Liệt kê Product Type có trong thư viện (đã lọc project) → cho picker chọn. */
+export function listLibraryProductTypes(index) {
+  if (!index) return [];
+  return Object.values(index)
+    .map((v) => ({ productType: v.productType, vendor: v.vendor, sizeCount: (v.sizes || []).length }))
+    .sort((a, b) => a.productType.localeCompare(b.productType, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
 /** Tìm entry thư viện theo tên Product Type — khớp đúng trước, mờ (substring) sau. */
 export function findLibraryEntry(index, productTypeName) {
   if (!index || !productTypeName) return null;
