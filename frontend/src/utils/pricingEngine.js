@@ -32,13 +32,13 @@ export const pct = (v, digits = 2) => `${(Number(v) || 0).toFixed(digits)}%`;
 
 // ─── Price Setting mặc định (khớp sheet mẫu CREATIVE_Hawaap22) ─────────────
 export const DEFAULT_SETTINGS = {
-  price: 9.95,
+  price: 0,
   quantity: 1,
-  shipPerOrder: 4.95,
-  shipPerItem: 2.0,
+  shipPerOrder: 0,
+  shipPerItem: 0,
   couponUsd: 0,
   couponPct: 0,
-  variableFeePct: 2.75,
+  variableFeePct: 0,
   amzFeePct: 17,
   importTax: 0,
 };
