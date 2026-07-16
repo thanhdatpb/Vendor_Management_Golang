@@ -1,34 +1,30 @@
 // ════════════════════════════════════════════════════════
 //  PRICE SHEET WORKSPACE — bản số hoá của Google Sheet tính giá
 //  Price Setting → Product Type (Phôi) → Size → Customize Info → kết quả
+//
+//  Redesign 2026-07: 1 hệ màu duy nhất (neutral + amber + semantic) —
+//  tokens tập trung ở pricesheet/tokens.js, UI tách component:
+//  PriceSettingPanel / ProductTypeCard / PriceTable / SummaryFooter /
+//  AddCustomizeInfoModal / AddProductTypeModal / HistoryPanel.
+//  LOGIC TÍNH GIÁ + STATE + API GIỮ NGUYÊN 100%.
 // ════════════════════════════════════════════════════════
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { HC } from '../../constants/sellerTheme';
 import {
-  computeSizeRow, summarizeSheet, num, usd, pct,
-  SETTING_FIELDS, makeSize, makeProductType, uid,
+  computeSizeRow, summarizeSheet, num, pct,
+  makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
-import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, SHIP_METHODS, normalizeKey, listLibraryProductTypes } from '../../utils/vendorLibraryIndex';
+import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, normalizeKey } from '../../utils/vendorLibraryIndex';
 
-// ─── Palette phụ (tinh chỉnh cho dễ nhìn) ────────────────
-const AUTO = {
-  head: 'linear-gradient(135deg,#12A45A,#0A7D43)', ink: '#0A6B3A',
-  bg: '#F3FCF7', bgStrong: '#E4F8EC', line: '#BFE9CF', total: '#0B7A43',
-};
-const VIO = { head: '#7C3AED', ink: '#6D28D9', bg: '#F7F3FF', line: '#E4D7FF' };
-// Nhạt hơn HC.orangeDark chủ đích — để phần "Tự động tính" (xanh) nổi bật hơn, đỡ rực
-const IN = { head: HC.brown, line: HC.borderStrong, bg: '#FFFDF9' };
-const SOFT_ACTIVE = `linear-gradient(135deg,${HC.orangeDark},${HC.brown})`;
+import { PS, marginTone } from './pricesheet/tokens';
+import { PsStyles, Btn, IconBtn, Badge, ConfirmDialog } from './pricesheet/primitives';
+import PriceSettingPanel from './pricesheet/PriceSettingPanel';
+import ProductTypeCard from './pricesheet/ProductTypeCard';
+import AddCustomizeInfoModal from './pricesheet/AddCustomizeInfoModal';
+import AddProductTypeModal from './pricesheet/AddProductTypeModal';
+import HistoryPanel from './pricesheet/HistoryPanel';
+import SummaryFooter from './pricesheet/SummaryFooter';
 
-const cellInput = {
-  width: '100%', boxSizing: 'border-box', padding: '6px 8px', fontSize: 12,
-  border: `1px solid ${HC.border}`, borderRadius: 6, background: HC.surface,
-  color: HC.ink2, textAlign: 'right', outline: 'none', fontVariantNumeric: 'tabular-nums',
-};
-const th = { padding: '8px 9px', color: '#fff', fontWeight: 800, fontSize: 11, whiteSpace: 'nowrap', textAlign: 'center' };
-const tdAuto = { padding: '7px 9px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 11.5, borderRight: `1px solid ${AUTO.line}` };
-
-// ═══ Export ra Excel (dùng lại xlsx đã có trong dự án) ═══
+// ═══ Export ra Excel (GIỮ NGUYÊN — dùng lại xlsx đã có trong dự án) ═══
 export async function exportSheetToExcel(sheet, showToast) {
   try {
     const xlsxMod = await import('xlsx');
@@ -95,6 +91,14 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const [libIndex, setLibIndex] = useState(null);
   const [showCustomizeDialog, setShowCustomizeDialog] = useState(null); // ptId
   const [showAddPTDialog, setShowAddPTDialog] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState(null); // snapshot
+  const [saving, setSaving] = useState(false);
+
+  // Dirty-check: so state người dùng sửa được với snapshot lúc mở / lúc lưu.
+  const snapshotOf = (n, st, pts) => JSON.stringify({ n, st, pts });
+  const savedSnapRef = useRef(null);
+  if (savedSnapRef.current == null) savedSnapRef.current = snapshotOf(name, settings, productTypes);
+  const dirty = snapshotOf(name, settings, productTypes) !== savedSnapRef.current;
 
   useEffect(() => {
     loadVendorLibraryIndex(sheet.project || '', !sheet.project).then(setLibIndex).catch(console.error);
@@ -115,7 +119,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   }, [sheet, name, settings, productTypes, libIndex]);
   const summary = useMemo(() => summarizeSheet(draftSheet), [draftSheet]);
 
-  // ── mutations ──
+  // ── mutations (GIỮ NGUYÊN) ──
   const setSetting = (k, v) => setSettings((p) => ({ ...p, [k]: v }));
   const patchPT = (ptId, patch) => setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, ...patch } : pt)));
   const toggleShown = (ptId) => setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, shown: !pt.shown } : pt)));
@@ -126,10 +130,8 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     setProductTypes((p) => [...p, { ...makeProductType(nameFromLib), shown: true }]);
     setShowAddPTDialog(false);
   };
-  const removePT = (ptId) => {
-    if (!window.confirm('Xoá product type này khỏi bảng?')) return;
-    setProductTypes((p) => p.filter((pt) => pt.id !== ptId));
-  };
+  // Confirm xoá đã chuyển vào ConfirmDialog trong ProductTypeCard
+  const removePT = (ptId) => setProductTypes((p) => p.filter((pt) => pt.id !== ptId));
   const addSize = (ptId) => patchPTSizes(ptId, (sizes) => [...sizes, makeSize()]);
   const removeSize = (ptId, szId) => patchPTSizes(ptId, (sizes) => (sizes.length <= 1 ? sizes : sizes.filter((s) => s.id !== szId)));
   const updateSize = (ptId, szId, patch) => patchPTSizes(ptId, (sizes) => sizes.map((s) => (s.id === szId ? { ...s, ...patch } : s)));
@@ -161,8 +163,8 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
 
   const shownPTs = productTypes.filter((pt) => pt.shown);
 
-  // ── save (append version snapshot) ──
-  const handleSave = () => {
+  // ── save (append version snapshot — GIỮ NGUYÊN, thêm saving state) ──
+  const handleSave = async () => {
     const snap = {
       version: (sheet.history?.length || 0) + 1,
       savedAt: new Date().toISOString(),
@@ -171,82 +173,101 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       settings: draftSheet.settings, productTypes: draftSheet.productTypes,
     };
     const history = [snap, ...(sheet.history || [])].slice(0, 20);
-    onSave({ ...draftSheet, history, updatedAt: new Date().toISOString() });
-    showToast?.('success', 'Đã lưu', `${name} · phiên bản v${snap.version}`);
+    setSaving(true);
+    try {
+      await Promise.resolve(onSave({ ...draftSheet, history, updatedAt: new Date().toISOString() }));
+      savedSnapRef.current = snapshotOf(name, settings, productTypes);
+      showToast?.('success', 'Đã lưu', `${name} · phiên bản v${snap.version}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const restoreVersion = (snap) => {
-    if (!window.confirm(`Khôi phục về phiên bản v${snap.version}? Các thay đổi chưa lưu sẽ mất.`)) return;
     setSettings({ ...snap.settings });
     setProductTypes(snap.productTypes.map((pt) => ({ ...pt, shown: pt.shown !== false })));
     setShowHistory(false);
     showToast?.('success', 'Đã khôi phục', `Về phiên bản v${snap.version}`);
   };
 
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,0,0.55)', backdropFilter: 'blur(3px)', zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: HC.cream, overflow: 'hidden' }}>
+  const mTone = marginTone(summary.avgMargin);
 
-        {/* ── Header ── */}
-        <div style={{ padding: '12px 22px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, color: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-            <span style={{ fontSize: 20 }}></span>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên bảng tính giá"
-                style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 800, fontSize: 15, borderRadius: 8, padding: '4px 10px', outline: 'none', width: `${Math.max(24, (name || '').length + 2)}ch`, maxWidth: '100%' }} />
-              <div style={{ fontSize: 11, opacity: 0.9, marginTop: 3 }}>
-                {shownPTs.length}/{productTypes.length} product type hiển thị · {summary.count} size
-                {summary.avgMargin != null && <> · avg margin <b>{pct(summary.avgMargin, 1)}</b></>}
-              </div>
+  return (
+    <div onClick={onClose} className="ps-overlay"
+      style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
+      <div onClick={(e) => e.stopPropagation()} className="ps-scope" style={{
+        width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column',
+        background: PS.bgApp, overflow: 'hidden', color: PS.text,
+        fontFamily: "-apple-system, 'Segoe UI', system-ui, Roboto, sans-serif",
+      }}>
+        <PsStyles />
+
+        {/* ── Header — spec §3.1: nền trắng, border-bottom, meta badges ── */}
+        <div style={{
+          padding: '10px 20px', background: PS.bgSurface, borderBottom: `1px solid ${PS.border}`,
+          flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên bảng tính giá"
+              aria-label="Tên bảng tính giá"
+              className="ps-input ps-input-ghost"
+              style={{ fontSize: 17, fontWeight: 700, padding: '4px 8px', marginLeft: -8, width: `${Math.max(24, (name || '').length + 2)}ch`, maxWidth: '100%' }} />
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+              <Badge>{shownPTs.length}/{productTypes.length} product type · {summary.count} size</Badge>
+              {summary.avgMargin != null && <Badge tone={mTone}>avg margin {pct(summary.avgMargin, 1)}</Badge>}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <button onClick={() => setShowHistory(true)} style={ghostBtn}>🕘 Lịch sử tính giá ({sheet.history?.length || 0})</button>
-            <button onClick={() => exportSheetToExcel(draftSheet, showToast)} style={ghostBtn}>⬇ Export Excel</button>
-            <button onClick={onClose} style={{ ...ghostBtn, width: 34, padding: 0, fontSize: 15 }}>✕</button>
+            <Btn variant="ghost" onClick={() => setShowHistory(true)}>Lịch sử tính giá ({sheet.history?.length || 0})</Btn>
+            <Btn variant="outline" onClick={() => exportSheetToExcel(draftSheet, showToast)}>⬇ Export Excel</Btn>
+            <IconBtn title="Đóng" onClick={onClose}>✕</IconBtn>
           </div>
         </div>
 
-        {/* ── Price Setting ── */}
-        <div style={{ padding: '14px 22px', background: VIO.bg, borderBottom: `1px solid ${VIO.line}`, flexShrink: 0 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: VIO.ink, marginBottom: 10 }}>⚙️ Price Setting</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, minmax(90px,1fr))', gap: 10 }}>
-            {SETTING_FIELDS.map((f) => (
-              <label key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }} title={f.tooltip || ''}>
-                <span style={{ fontSize: 10, fontWeight: 750, color: HC.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.icon} {f.label} ({f.unit})</span>
-                <input type="number" step={f.key === 'quantity' ? '1' : '0.01'} min={f.key === 'quantity' ? '0' : undefined}
-                  value={settings[f.key] ?? ''} onChange={(e) => setSetting(f.key, e.target.value)} onWheel={(e) => e.target.blur()} placeholder={f.key === 'importTax' ? '0' : ''}
-                  style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: HC.surface, ...(f.key === 'importTax' && (settings[f.key] == null || settings[f.key] === 0) ? { opacity: 0.6 } : {}) }} />
-              </label>
-            ))}
-          </div>
-        </div>
+        {/* ── Price Setting — spec §3.2 ── */}
+        <PriceSettingPanel settings={settings} onSet={setSetting} />
 
-        {/* ── Chọn hiển thị Product Type ── */}
-        <div style={{ padding: '10px 22px', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, flexShrink: 0, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', color: HC.muted, marginRight: 2 }}>Product Type</span>
+        {/* ── Chọn hiển thị Product Type (multi-select chip — GIỮ hành vi xếp chồng) ── */}
+        <div style={{ padding: '10px 20px', flexShrink: 0, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: PS.textSecondary }}>
+            Product Type
+          </span>
+          <span title="Chọn 1, 2 hay nhiều — bảng xếp chồng như sheet" aria-label="Gợi ý: chọn 1, 2 hay nhiều — bảng xếp chồng như sheet"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
+              width: 15, height: 15, borderRadius: '50%', fontSize: 10, fontWeight: 700,
+              border: `1px solid ${PS.borderStrong}`, color: PS.textMuted, marginRight: 4,
+            }}>?</span>
           {productTypes.map((pt) => (
-            <button key={pt.id} onClick={() => toggleShown(pt.id)}
-              style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 13px', borderRadius: 9, cursor: 'pointer',
-                border: `1.5px solid ${pt.shown ? 'transparent' : HC.borderStrong}`,
-                background: pt.shown ? SOFT_ACTIVE : HC.surface,
-                color: pt.shown ? '#fff' : HC.muted, whiteSpace: 'nowrap' }}>
-              {pt.shown ? '' : ''} {pt.name || 'Chưa đặt tên'}
+            <button key={pt.id} type="button" onClick={() => toggleShown(pt.id)} aria-pressed={pt.shown}
+              className="ps-chip"
+              style={{
+                fontSize: 12.5, fontWeight: 650, padding: '6px 13px', borderRadius: 999, cursor: 'pointer',
+                border: `1px solid ${pt.shown ? PS.brandBorder : PS.border}`,
+                background: pt.shown ? PS.brandSubtle : PS.bgSurface,
+                color: pt.shown ? PS.brandDeep : PS.textSecondary, whiteSpace: 'nowrap',
+              }}>
+              {pt.shown ? '✓ ' : ''}{pt.name || 'Chưa đặt tên'}
             </button>
           ))}
-          <button onClick={() => setShowAddPTDialog(true)} style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 13px', borderRadius: 9, cursor: 'pointer', border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark }}>＋ Thêm Product Type</button>
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: HC.muted }}>Chọn 1, 2 hay nhiều — bảng xếp chồng như sheet</span>
+          <Btn variant="dashed" size="sm" onClick={() => setShowAddPTDialog(true)}
+            style={{ borderRadius: 999 }}>＋ Thêm Product Type</Btn>
         </div>
 
         {/* ── Body: các product type xếp chồng ── */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 22px 40px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 20px 40px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {shownPTs.length === 0 && (
-            <div style={{ textAlign: 'center', color: HC.muted, padding: 50 }}>Chọn ít nhất một Product Type để hiển thị bảng tính giá.</div>
+            <div style={{
+              textAlign: 'center', color: PS.textMuted, padding: '60px 20px', fontSize: 13.5,
+              background: PS.bgSurface, border: `1.5px dashed ${PS.border}`, borderRadius: 12,
+            }}>
+              Chọn ít nhất một Product Type để hiển thị bảng tính giá.
+            </div>
           )}
           {draftSheet.productTypes.filter(pt => pt.shown).map((pt) => {
             const libEntry = findLibraryEntry(libIndex, pt.name);
             return (
-              <ProductTypeBlock key={pt.id} pt={pt} settings={settings} libEntry={libEntry}
+              <ProductTypeCard key={pt.id} pt={pt} settings={settings} libEntry={libEntry}
                 onPT={patchPT} onRemovePT={removePT}
                 onAddSize={addSize} onUpdateSize={updateSize} onRemoveSize={removeSize} onUpdateCustomize={updateSizeCustomize}
                 onAddCustomize={openAddCustomize} onRenameCustomize={renameCustomize} onRemoveCustomize={removeCustomize} />
@@ -254,32 +275,31 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
           })}
         </div>
 
-        {/* ── Footer ── */}
-        <div style={{ padding: '12px 22px', borderTop: `1px solid ${HC.border}`, background: HC.surface, flexShrink: 0, display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
-          {summary.avgMargin != null && (
-            <div style={{ marginRight: 'auto', display: 'flex', gap: 16, fontSize: 12.5, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>
-              <span>Khoảng giá <b style={{ color: HC.ink }}>{usd(summary.minPrice)} – {usd(summary.maxPrice)}</b></span>
-              <span>Avg margin <b style={{ color: summary.avgMargin > 25 ? AUTO.total : HC.warning }}>{pct(summary.avgMargin, 1)}</b></span>
-            </div>
-          )}
-          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 10, background: HC.cream, border: `1px solid ${HC.border}`, color: HC.brown, cursor: 'pointer', fontWeight: 700 }}>Hủy</button>
-          <button onClick={handleSave} style={{ padding: '9px 26px', borderRadius: 10, background: `linear-gradient(135deg,${HC.success},#0f6b31)`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 }}> Lưu bảng tính giá</button>
-        </div>
+        {/* ── Footer — spec §3.7 ── */}
+        <SummaryFooter summary={summary} dirty={dirty} saving={saving} onCancel={onClose} onSave={handleSave} />
       </div>
 
       {showHistory && (
-        <HistoryPanel sheet={sheet} onClose={() => setShowHistory(false)} onRestore={restoreVersion} onExportVersion={(snap) => exportSheetToExcel({ ...sheet, name: `${sheet.name}_v${snap.version}`, settings: snap.settings, productTypes: snap.productTypes }, showToast)} />
+        <HistoryPanel sheet={sheet} onClose={() => setShowHistory(false)}
+          onRestore={(snap) => setConfirmRestore(snap)}
+          onExportVersion={(snap) => exportSheetToExcel({ ...sheet, name: `${sheet.name}_v${snap.version}`, settings: snap.settings, productTypes: snap.productTypes }, showToast)} />
+      )}
+
+      {confirmRestore && (
+        <ConfirmDialog title="Khôi phục phiên bản" confirmLabel="Khôi phục"
+          message={`Khôi phục về phiên bản v${confirmRestore.version}? Các thay đổi chưa lưu sẽ mất.`}
+          onConfirm={() => restoreVersion(confirmRestore)} onClose={() => setConfirmRestore(null)} />
       )}
 
       {showCustomizeDialog && (
-        <CustomizeInfoDialog onClose={() => setShowCustomizeDialog(null)} onConfirm={(name, defaultPrice) => {
+        <AddCustomizeInfoModal onClose={() => setShowCustomizeDialog(null)} onConfirm={(name, defaultPrice) => {
           addCustomize(showCustomizeDialog, name, defaultPrice);
           setShowCustomizeDialog(null);
         }} />
       )}
 
       {showAddPTDialog && (
-        <AddProductTypeDialog
+        <AddProductTypeModal
           libIndex={libIndex}
           existingKeys={new Set(productTypes.map((pt) => normalizeKey(pt.name)))}
           onPick={addPTFromLibrary}
@@ -287,384 +307,6 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
           onClose={() => setShowAddPTDialog(false)}
         />
       )}
-    </div>
-  );
-}
-
-const ghostBtn = { background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', height: 34, whiteSpace: 'nowrap' };
-
-// ─── Bulk paste giá size: hỗ trợ dán cả vùng nhiều cột từ sheet ──────────
-// (VD: chọn cả 2 cột "Size" + "Giá Size" trong Google Sheet rồi copy) — clipboard
-// khi đó là TSV: mỗi dòng 1 size, các cột cách nhau bằng TAB. Vẫn hỗ trợ dán
-// tay 1 dòng nhiều giá cách nhau bằng dấu phẩy như trước.
-function parsePastedPrices(rawText) {
-  const entries = [];
-  rawText.split(/\r\n|\r|\n/).forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    if (trimmed.includes('\t')) {
-      const cells = trimmed.split('\t').map((c) => c.trim()).filter((c) => c !== '');
-      if (cells.length >= 2) {
-        const price = cells[cells.length - 1];
-        if (/\d/.test(price)) entries.push({ label: cells[0], price });
-      } else if (cells.length === 1 && /\d/.test(cells[0])) {
-        entries.push({ price: cells[0] });
-      }
-    } else if (trimmed.includes(',')) {
-      trimmed.split(',').map((c) => c.trim()).filter((c) => c !== '' && /\d/.test(c))
-        .forEach((v) => entries.push({ price: v }));
-    } else if (/\d/.test(trimmed)) {
-      entries.push({ price: trimmed });
-    }
-  });
-  return entries;
-}
-
-// Áp entries vào các size của product type: ưu tiên khớp theo tên Size (label)
-// trước, phần còn lại gán tuần tự bắt đầu từ startSizeId (hoặc từ đầu bảng).
-function distributeSizeAddValues(pt, entries, startSizeId, onUpdateSize) {
-  const sizes = pt.sizes || [];
-  if (!sizes.length || !entries.length) return 0;
-  const usedIds = new Set();
-  const leftover = [];
-  let applied = 0;
-
-  entries.forEach((entry) => {
-    if (entry.label) {
-      const match = sizes.find((s) => !usedIds.has(s.id) && normalizeKey(s.label) === normalizeKey(entry.label));
-      if (match) {
-        usedIds.add(match.id);
-        onUpdateSize(pt.id, match.id, { sizeAdd: entry.price });
-        applied++;
-        return;
-      }
-    }
-    leftover.push(entry);
-  });
-
-  if (leftover.length) {
-    const startIdx = startSizeId ? Math.max(0, sizes.findIndex((s) => s.id === startSizeId)) : 0;
-    let cursor = startIdx;
-    for (const entry of leftover) {
-      while (cursor < sizes.length && usedIds.has(sizes[cursor].id)) cursor++;
-      if (cursor >= sizes.length) break;
-      onUpdateSize(pt.id, sizes[cursor].id, { sizeAdd: entry.price });
-      usedIds.add(sizes[cursor].id);
-      applied++;
-      cursor++;
-    }
-  }
-  return applied;
-}
-
-// ════════════════════════════════════════════════════════
-//  Một khối Product Type = tiêu đề (Phôi) + bảng size
-// ════════════════════════════════════════════════════════
-function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize, onUpdateSize, onRemoveSize, onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize }) {
-  const customs = pt.customizeInfos || [];
-  const sizes = pt.sizes || [];
-  const rows = sizes.map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) }));
-
-  // ── Kéo dọc qua các ô "Giá Size" để xoá nhanh (giống bôi đen + Delete trên sheet) ──
-  const dragStartIdx = useRef(null);
-  const [dragIds, setDragIds] = useState(null); // Set<id> đang được kéo chọn để xoá
-
-  const onPriceMouseDown = (idx) => { dragStartIdx.current = idx; };
-  const onPriceMouseEnter = (idx, e) => {
-    if (dragStartIdx.current == null) return;
-    if (e.buttons !== 1) { dragStartIdx.current = null; setDragIds(null); return; }
-    const a = Math.min(dragStartIdx.current, idx);
-    const b = Math.max(dragStartIdx.current, idx);
-    const ids = new Set();
-    for (let k = a; k <= b; k++) if (sizes[k]) ids.add(sizes[k].id);
-    setDragIds(ids);
-    // rời khỏi ô đang gõ để cảm giác như đang chọn vùng trên sheet
-    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-    window.getSelection?.()?.removeAllRanges?.();
-  };
-
-  useEffect(() => {
-    const finish = () => {
-      if (dragIds && dragIds.size) dragIds.forEach((id) => onUpdateSize(pt.id, id, { sizeAdd: '' }));
-      dragStartIdx.current = null;
-      setDragIds(null);
-    };
-    window.addEventListener('mouseup', finish);
-    return () => window.removeEventListener('mouseup', finish);
-  }, [dragIds, onUpdateSize, pt.id]);
-
-  return (
-    // flexShrink:0 bắt buộc: card là flex-item của body (flex column). Vì card có
-    // overflow:hidden nên min-size auto = 0 → nếu không khoá, card bị co lại cho vừa
-    // khung thay vì tràn ra, khiến body không bao giờ cuộn được. Đây là nguyên nhân
-    // thật khiến không cuộn xem hết size.
-    <div style={{ flexShrink: 0, border: `1px solid ${HC.border}`, borderRadius: 14, background: HC.surface, boxShadow: HC.shadow, overflow: 'hidden' }}>
-      {/* header */}
-      <div style={{ padding: '12px 16px', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: 15 }}>📊</span>
-        {libEntry ? (
-          <div title="Tên Product Type lấy từ thư viện vendor — không chỉnh sửa"
-            style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', background: HC.surface2, minWidth: 180, display: 'flex', alignItems: 'center', gap: 6, cursor: 'default' }}>
-            <span style={{ fontSize: 12, opacity: 0.75 }}></span>{pt.name}
-          </div>
-        ) : (
-          <input value={pt.name} onChange={(e) => onPT(pt.id, { name: e.target.value })} placeholder="Tên Product Type (VD: T-shirt)"
-            style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', outline: 'none', background: HC.surface, minWidth: 180 }} />
-        )}
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 8, padding: '4px 10px' }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: HC.orangeDark }}>Price ($)</span>
-          <input type="number" step="0.01" value={pt.phoi ?? ''} onChange={(e) => onPT(pt.id, { phoi: e.target.value })} onWheel={(e) => e.target.blur()} placeholder="0"
-            style={{ width: 72, textAlign: 'right', border: `1px solid ${HC.orangeMid}`, borderRadius: 6, padding: '4px 7px', fontSize: 12, fontWeight: 700, color: HC.orangeDeep, background: HC.surface, outline: 'none', fontVariantNumeric: 'tabular-nums' }} />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: HC.surface, border: `1px solid ${HC.borderStrong}`, borderRadius: 8, padding: '2px 4px' }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: HC.muted, padding: '0 4px' }}>Ship Method:</span>
-          {SHIP_METHODS.map(m => (
-            <button key={m.key} onClick={() => onPT(pt.id, { shipMethod: m.key })}
-              style={{
-                fontSize: 10.5, fontWeight: 700, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', border: 'none',
-                background: pt.shipMethod === m.key ? SOFT_ACTIVE : 'transparent',
-                color: pt.shipMethod === m.key ? '#fff' : HC.muted
-              }}>
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        <span style={{ fontSize: 11, fontWeight: 700, color: libEntry ? AUTO.ink : HC.muted, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {libEntry ? '📚 Từ thư viện vendor' : 'Thông tin giá nhập vào'}
-          <span style={{ padding: '2px 6px', background: libEntry ? AUTO.bgStrong : HC.surface2, borderRadius: 10 }}>{pt.sizes?.length || 0} size</span>
-        </span>
-
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          {!libEntry && <button onClick={() => onAddSize(pt.id)} style={miniBtn}>＋ Thêm Size</button>}
-          <button onClick={() => onAddCustomize(pt.id)} style={{ ...miniBtn, color: VIO.ink, borderColor: VIO.line, background: VIO.bg }}>＋ Add Customize Info</button>
-          <button onClick={() => onRemovePT(pt.id)} style={{ ...miniBtn, color: HC.danger, borderColor: '#fbcfcf', background: '#fef2f2' }}>🗑</button>
-        </div>
-      </div>
-
-      {/* table — không giới hạn chiều cao: 1 product type hiện đầy đủ,
-          nhiều product type thì cuộn chung ở khung ngoài như 1 sheet */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 880, fontSize: 12 }}>
-          <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-            <tr>
-              <th colSpan={2 + customs.length + (libEntry ? 0 : 1)} style={{ ...th, background: IN.head, textAlign: 'left', paddingLeft: 12, borderTopLeftRadius: 0 }}> Thông tin giá cần nhập</th>
-              <th colSpan={5 + (libEntry ? 1 : 0)} style={{ ...th, background: AUTO.head, textAlign: 'left', paddingLeft: 12, fontSize: 12 }}>📐 Giá tính được</th>
-              {!libEntry && <th style={{ ...th, background: HC.surface2, color: HC.muted, width: 40 }}></th>}
-            </tr>
-            <tr>
-              <th style={{ ...th, background: IN.head, textAlign: 'left', minWidth: 60 }}>Size</th>
-              <th style={{ ...th, background: IN.head, minWidth: 70 }}>Giá Size ($)</th>
-              {customs.map((ci) => (
-                <th key={ci.id} style={{ ...th, background: VIO.head, padding: '4px 5px', minWidth: 92 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <input value={ci.name} onChange={(e) => onRenameCustomize(pt.id, ci.id, e.target.value)} placeholder="Tên (VD: Color: Black)"
-                      style={{ width: '100%', boxSizing: 'border-box', fontSize: 10.5, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: 5, padding: '3px 5px', outline: 'none' }} />
-                    <span onClick={() => onRemoveCustomize(pt.id, ci.id)} title="Xoá cột" style={{ cursor: 'pointer', fontSize: 12, opacity: 0.85, flexShrink: 0 }}>✕</span>
-                  </div>
-                </th>
-              ))}
-              {!libEntry && <th style={{ ...th, background: IN.head, minWidth: 80 }}>Item Cost ($)</th>}
-              
-              {libEntry && <th style={{ ...th, background: AUTO.head, minWidth: 80, borderLeft: `2px solid ${AUTO.line}` }}>Ship Cost ($)</th>}
-              <th style={{ ...th, background: AUTO.head, minWidth: 90, borderLeft: libEntry ? 'none' : `2px solid ${AUTO.line}` }}>Total Price</th>
-              <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>AMZ Fee</th>
-              <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>Profit</th>
-              <th style={{ ...th, background: AUTO.head, minWidth: 60 }}>Margin</th>
-              <th style={{ ...th, background: AUTO.head, minWidth: 70 }}>After Promo</th>
-              {!libEntry && <th style={{ ...th, background: HC.surface2, color: HC.muted }}>Xoá</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ sz, calc }, i) => (
-              <tr key={sz.id} style={{ background: i % 2 === 0 ? HC.surface : IN.bg }}>
-                <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
-                  <input value={sz.label} onChange={(e) => onUpdateSize(pt.id, sz.id, { label: e.target.value })} placeholder="S / M / L…"
-                    readOnly={sz.isLib}
-                    style={{ ...cellInput, textAlign: 'left', fontWeight: 700, background: sz.isLib ? HC.surface2 : HC.surface, color: sz.isLib ? HC.muted2 : HC.ink2 }} />
-                </td>
-                <td onMouseDown={() => onPriceMouseDown(i)} onMouseEnter={(e) => onPriceMouseEnter(i, e)}
-                  style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}`, background: dragIds?.has(sz.id) ? '#e0f2fe' : undefined, userSelect: dragIds ? 'none' : undefined }}>
-                  <input type="number" step="0.01" value={sz.sizeAdd}
-                    onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })}
-                    onWheel={(e) => e.target.blur()}
-                    onPaste={(e) => {
-                      const raw = e.clipboardData.getData('text');
-                      const entries = parsePastedPrices(raw);
-                      if (entries.length > 1) {
-                        e.preventDefault();
-                        distributeSizeAddValues(pt, entries, sz.id, onUpdateSize);
-                      }
-                    }}
-                    title="Kéo dọc qua nhiều ô để xoá nhanh (như bôi đen trên sheet). Dán nhiều giá cùng lúc cũng được."
-                    placeholder="0" style={{ ...cellInput, ...(dragIds?.has(sz.id) ? { background: '#e0f2fe', borderColor: '#7dd3fc' } : {}) }} />
-                </td>
-                {customs.map((ci) => (
-                  <td key={ci.id} style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}`, background: VIO.bg }}>
-                    <input type="number" step="0.01" value={sz.customize?.[ci.id] ?? ''} onChange={(e) => onUpdateCustomize(pt.id, sz.id, ci.id, e.target.value)} onWheel={(e) => e.target.blur()} placeholder="0"
-                      style={{ ...cellInput, borderColor: VIO.line }} />
-                  </td>
-                ))}
-                
-                {!libEntry && (
-                  <td style={{ padding: '5px 6px', borderBottom: `1px solid ${HC.border}` }}>
-                    <input type="number" step="0.01" value={sz.itemCost} onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })} onWheel={(e) => e.target.blur()} placeholder="0" style={cellInput} />
-                  </td>
-                )}
-
-                {/* ── Auto zone (nổi bật) ── */}
-                {libEntry && (
-                  <td style={{ ...tdAuto, background: AUTO.bg, color: sz.itemCost ? AUTO.ink : HC.danger, borderLeft: `2px solid ${AUTO.line}`, fontWeight: 700 }}>
-                    {sz.itemCost ? usd(sz.itemCost) : '—'}
-                  </td>
-                )}
-                <td style={{ ...tdAuto, background: AUTO.bgStrong, fontWeight: 900, fontSize: 13.5, color: AUTO.total, borderLeft: libEntry ? 'none' : `2px solid ${AUTO.line}` }}>{usd(calc.totalPrice)}</td>
-                <td style={{ ...tdAuto, background: AUTO.bg, color: HC.muted }}>{usd(calc.amzFee)}</td>
-                <td style={{ ...tdAuto, background: AUTO.bg, fontWeight: 900, fontSize: 13, color: calc.profit >= 0 ? AUTO.total : HC.danger }}>{usd(calc.profit)}</td>
-                <td style={{ ...tdAuto, background: AUTO.bgStrong, fontWeight: 800, color: calc.margin >= 25 ? AUTO.total : calc.margin >= 0 ? HC.warning : HC.danger }}>{pct(calc.margin, 1)}</td>
-                <td style={{ ...tdAuto, background: AUTO.bg, fontWeight: 700, color: calc.marginAfter >= 25 ? AUTO.total : calc.marginAfter >= 0 ? HC.warning : HC.danger }}>{pct(calc.marginAfter, 1)}</td>
-
-                {!libEntry && (
-                  <td style={{ padding: '5px 6px', textAlign: 'center', borderBottom: `1px solid ${HC.border}` }}>
-                    {!sz.isLib && (
-                      <button onClick={() => onRemoveSize(pt.id, sz.id)} disabled={(pt.sizes?.length || 0) <= 1}
-                        style={{ width: 26, height: 26, borderRadius: 6, border: '1px solid #fbcfcf', background: (pt.sizes?.length || 0) <= 1 ? HC.surface2 : '#fef2f2', color: (pt.sizes?.length || 0) <= 1 ? HC.muted2 : HC.danger, cursor: (pt.sizes?.length || 0) <= 1 ? 'not-allowed' : 'pointer', fontSize: 12 }}>✕</button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-const miniBtn = { fontSize: 11.5, fontWeight: 700, padding: '6px 11px', borderRadius: 8, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', whiteSpace: 'nowrap' };
-
-// ════════════════════════════════════════════════════════
-//  History panel
-// ════════════════════════════════════════════════════════
-function HistoryPanel({ sheet, onClose, onRestore, onExportVersion }) {
-  const hist = sheet.history || [];
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,0,0.5)', zIndex: 2100, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(520px, 94vw)', height: '100%', background: HC.surface, boxShadow: HC.shadowStrong, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div><div style={{ fontWeight: 800, fontSize: 14 }}>🕘 Lịch sử phiên bản</div><div style={{ fontSize: 11, opacity: 0.9 }}>{sheet.name} · {hist.length} bản đã lưu</div></div>
-          <button onClick={onClose} style={{ ...ghostBtn, width: 32, padding: 0 }}>✕</button>
-        </div>
-        <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {hist.length === 0 && <div style={{ textAlign: 'center', color: HC.muted, padding: 40 }}>Chưa có phiên bản nào. Bấm "Lưu bảng tính giá" để tạo mốc so sánh.</div>}
-          {hist.map((snap, i) => (
-            <div key={snap.savedAt + i} style={{ border: `1px solid ${i === 0 ? HC.orangeMid : HC.border}`, borderRadius: 12, padding: '12px 14px', background: i === 0 ? HC.orangeLight : HC.surface2 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 800, fontSize: 13, color: HC.ink }}>v{snap.version}{i === 0 && ' · mới nhất'}</span>
-                  <span style={{ fontSize: 11, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>{new Date(snap.savedAt).toLocaleString('vi-VN')}</span>
-                </div>
-                <span style={{ fontSize: 11, color: HC.muted }}>{snap.savedBy}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 14, marginTop: 8, fontSize: 12, color: HC.ink2, fontVariantNumeric: 'tabular-nums' }}>
-                <span>Avg margin <b style={{ color: AUTO.total }}>{snap.avgMargin != null ? pct(snap.avgMargin, 1) : '—'}</b></span>
-                <span>Giá <b>{snap.minPrice != null ? `${usd(snap.minPrice)}–${usd(snap.maxPrice)}` : '—'}</b></span>
-                <span>{snap.count} size</span>
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <button onClick={() => onExportVersion(snap)} style={miniBtn}>⬇ Export</button>
-                {i !== 0 && <button onClick={() => onRestore(snap)} style={{ ...miniBtn, color: HC.orangeDark, borderColor: HC.orangeMid, background: HC.orangeLight }}>↩ Khôi phục</button>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════
-//  Customize Info Dialog
-// ════════════════════════════════════════════════════════
-function CustomizeInfoDialog({ onClose, onConfirm }) {
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
-  
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,0,0.55)', backdropFilter: 'blur(3px)', zIndex: 2200, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 340, background: HC.surface, borderRadius: 14, boxShadow: HC.shadowStrong, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', background: `linear-gradient(135deg,#7C3AED,#6D28D9)`, color: '#fff', fontWeight: 800, fontSize: 14 }}>＋ Add Customize Info</div>
-        <div style={{ padding: 16 }}>
-          <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Tên cột (VD: Color, DTG...)</label>
-          <input autoFocus value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 6, border: `1px solid ${HC.border}`, marginBottom: 12 }} />
-          
-          <label style={{ fontSize: 11, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Giá mặc định ($)</label>
-          <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} onWheel={(e) => e.target.blur()} style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 6, border: `1px solid ${HC.border}` }} placeholder="0.00" />
-        </div>
-        <div style={{ padding: '12px 16px', borderTop: `1px solid ${HC.border}`, background: HC.surface2, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={miniBtn}>Huỷ</button>
-          <button onClick={() => { if(name.trim()) onConfirm(name.trim(), price ? Number(price) : 0) }} style={{ ...miniBtn, background: '#7C3AED', color: '#fff', border: 'none' }}>Tạo cột</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════
-//  Dialog: chọn Product Type từ thư viện vendor (thay cho gõ tay)
-// ════════════════════════════════════════════════════════
-function AddProductTypeDialog({ libIndex, existingKeys, onPick, onManual, onClose }) {
-  const [q, setQ] = useState('');
-  const all = useMemo(() => listLibraryProductTypes(libIndex), [libIndex]);
-  const list = useMemo(() => {
-    const nq = normalizeKey(q);
-    return all.filter((it) =>
-      !existingKeys.has(normalizeKey(it.productType)) &&
-      (!nq || normalizeKey(it.productType).includes(nq) || normalizeKey(it.vendor).includes(nq))
-    );
-  }, [all, q, existingKeys]);
-  const loading = libIndex == null;
-
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(30,18,0,0.55)', backdropFilter: 'blur(3px)', zIndex: 2200, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, maxWidth: '100%', maxHeight: '80vh', background: HC.surface, borderRadius: 14, boxShadow: HC.shadowStrong, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '12px 16px', background: AUTO.head, color: '#fff', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-          📚 Chọn Product Type từ thư viện vendor
-        </div>
-        <div style={{ padding: '12px 16px 8px', flexShrink: 0 }}>
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm theo tên product type hoặc vendor…"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: `1px solid ${HC.border}`, outline: 'none', fontSize: 13 }} />
-        </div>
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 10px 8px' }}>
-          {loading && <div style={{ padding: 24, textAlign: 'center', color: HC.muted, fontSize: 13 }}>Đang tải thư viện…</div>}
-          {!loading && list.length === 0 && (
-            <div style={{ padding: 24, textAlign: 'center', color: HC.muted, fontSize: 13, lineHeight: 1.6 }}>
-              {all.length === 0
-                ? 'Thư viện vendor của project này chưa có Product Type nào. Bạn có thể "Nhập thủ công" bên dưới.'
-                : 'Không tìm thấy Product Type khớp — hoặc tất cả đã được thêm vào bảng.'}
-            </div>
-          )}
-          {!loading && list.map((it) => (
-            <button key={normalizeKey(it.productType)} onClick={() => onPick(it.productType)}
-              style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', margin: '4px 0', borderRadius: 10, border: `1px solid ${HC.border}`, background: HC.surface, cursor: 'pointer' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = AUTO.bg; e.currentTarget.style.borderColor = AUTO.line; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = HC.surface; e.currentTarget.style.borderColor = HC.border; }}>
-              <span style={{ fontSize: 16 }}>📦</span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 800, fontSize: 13.5, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.productType}</span>
-                {it.vendor && <span style={{ fontSize: 11, color: HC.muted }}>Vendor: {it.vendor}</span>}
-              </span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: AUTO.ink, background: AUTO.bgStrong, borderRadius: 10, padding: '2px 8px', whiteSpace: 'nowrap' }}>{it.sizeCount} size</span>
-            </button>
-          ))}
-        </div>
-        <div style={{ padding: '10px 16px', borderTop: `1px solid ${HC.border}`, background: HC.surface2, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-          <button onClick={onManual} style={{ ...miniBtn, borderStyle: 'dashed', color: HC.orangeDark, borderColor: HC.orangeMid, background: HC.orangeLight }}>✏️ Nhập thủ công</button>
-          <button onClick={onClose} style={miniBtn}>Huỷ</button>
-        </div>
-      </div>
     </div>
   );
 }
