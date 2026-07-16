@@ -28,9 +28,12 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        entryFileNames: `assets/[name]-[hash]-v5.js`,
-        chunkFileNames: `assets/[name]-[hash]-v5.js`,
-        assetFileNames: `assets/[name]-[hash]-v5.[ext]`,
+        // v6: bump cache-bust suffix để buộc mọi trình duyệt tải lại asset mới.
+        // (Sự cố 2026-07-16: bundle -v5 hỏng đã bị cache 7 ngày dưới cùng tên file
+        //  → phải đổi tên file mới cache-bust được cho toàn bộ user.)
+        entryFileNames: `assets/[name]-[hash]-v6.js`,
+        chunkFileNames: `assets/[name]-[hash]-v6.js`,
+        assetFileNames: `assets/[name]-[hash]-v6.[ext]`,
         manualChunks: {
           // React core — load đầu tiên, cache lâu dài
           'vendor-react': ['react', 'react-dom'],
