@@ -81,7 +81,11 @@ export async function exportSheetToExcel(sheet, showToast) {
 
 export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast }) {
   const [name, setName] = useState(sheet.name || '');
-  const [settings, setSettings] = useState({ ...sheet.settings });
+  // Quantity mặc định = 1; bảng cũ (tạo trước khi có Quantity) hiện trống → coi như 1.
+  const [settings, setSettings] = useState(() => ({
+    ...sheet.settings,
+    quantity: num(sheet.settings?.quantity) > 0 ? sheet.settings.quantity : 1,
+  }));
   const [productTypes, setProductTypes] = useState(() =>
     (sheet.productTypes?.length ? sheet.productTypes : [makeProductType('Product Type 1')]).map((pt) => ({
       ...pt, shown: pt.shown !== false,
@@ -179,7 +183,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
         {/* ── Header ── */}
         <div style={{ padding: '12px 22px', background: `linear-gradient(135deg,${HC.orangeDark},${HC.orangeDeep})`, color: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-            <span style={{ fontSize: 20 }}>💲</span>
+            <span style={{ fontSize: 20 }}></span>
             <div style={{ minWidth: 0 }}>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên bảng tính giá"
                 style={{ background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', fontWeight: 800, fontSize: 15, borderRadius: 8, padding: '4px 10px', outline: 'none', maxWidth: 360 }} />
@@ -220,7 +224,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
                 border: `1.5px solid ${pt.shown ? 'transparent' : HC.borderStrong}`,
                 background: pt.shown ? SOFT_ACTIVE : HC.surface,
                 color: pt.shown ? '#fff' : HC.muted, whiteSpace: 'nowrap' }}>
-              {pt.shown ? '☑' : '☐'} {pt.name || 'Chưa đặt tên'}
+              {pt.shown ? '' : ''} {pt.name || 'Chưa đặt tên'}
             </button>
           ))}
           <button onClick={addPT} style={{ fontSize: 12.5, fontWeight: 700, padding: '6px 13px', borderRadius: 9, cursor: 'pointer', border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark }}>＋ Thêm Product Type</button>
@@ -384,7 +388,7 @@ function ProductTypeBlock({ pt, settings, libEntry, onPT, onRemovePT, onAddSize,
         {libEntry ? (
           <div title="Tên Product Type lấy từ thư viện vendor — không chỉnh sửa"
             style={{ fontWeight: 800, fontSize: 14, color: HC.ink, border: `1px solid ${HC.border}`, borderRadius: 8, padding: '6px 10px', background: HC.surface2, minWidth: 180, display: 'flex', alignItems: 'center', gap: 6, cursor: 'default' }}>
-            <span style={{ fontSize: 12, opacity: 0.75 }}>📚</span>{pt.name}
+            <span style={{ fontSize: 12, opacity: 0.75 }}></span>{pt.name}
           </div>
         ) : (
           <input value={pt.name} onChange={(e) => onPT(pt.id, { name: e.target.value })} placeholder="Tên Product Type (VD: T-shirt)"

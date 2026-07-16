@@ -33,7 +33,7 @@ export const pct = (v, digits = 2) => `${(Number(v) || 0).toFixed(digits)}%`;
 // ─── Price Setting mặc định (khớp sheet mẫu CREATIVE_Hawaap22) ─────────────
 export const DEFAULT_SETTINGS = {
   price: 9.95,
-  quantity: '',
+  quantity: 1,
   shipPerOrder: 4.95,
   shipPerItem: 2.0,
   couponUsd: 0,
@@ -46,7 +46,7 @@ export const DEFAULT_SETTINGS = {
 // Khai báo các trường Price Setting → UI render theo đây (thêm phí = thêm dòng)
 export const SETTING_FIELDS = [
   { key: 'price', label: 'Price', unit: '$', icon: '💵' },
-  { key: 'quantity', label: 'Quantity', unit: 'pcs', icon: '🔢', tooltip: 'Số lượng sản phẩm dự kiến của bảng giá này — chỉ để ghi chú tham khảo, không ảnh hưởng công thức tính giá.' },
+  { key: 'quantity', label: 'Quantity', unit: 'pcs', icon: '🔢', tooltip: 'Số sản phẩm trong 1 listing (multipack). Total Price = (Price + Phôi + Giá Size + Customize) × Quantity + Shipping; giá vốn hàng cũng nhân theo Quantity. Để trống = 1 (không đổi số cũ).' },
   { key: 'shipPerOrder', label: 'Ship / Order', unit: '$', icon: '📦' },
   { key: 'shipPerItem', label: 'Ship / Item', unit: '$', icon: '📦' },
   { key: 'couponUsd', label: 'Coupon', unit: '$', icon: '🎫' },
@@ -58,17 +58,23 @@ export const SETTING_FIELDS = [
 
 /**
  * Tính một dòng size → mọi cột "tự động tính".
- * Công thức bám sheet (Total Price & AMZ Fee đã đối chiếu khớp số thật):
- *   Total Price = Price + Phôi + Giá Size + Σ Customize Info + Shipping
+ * Công thức bám sheet (Total Price, AMZ Fee & Profit đã đối chiếu khớp số thật):
+ *   qty         = Quantity của bảng (trống/≤0 → 1)
+ *   Unit Price  = Price + Phôi + Giá Size + Σ Customize Info      (giá 1 sản phẩm, chưa ship)
+ *   Total Price = Unit Price × qty + Shipping                     (khớp sheet: (…)*Qty + Ship)
  *   AMZ Fee     = AMZ% × Total Price
  *   Coupon      = Coupon$ + Coupon% × Total Price
  *   Variable    = Variable% × Coupon           (Variable Fee (Coupon) — =0 khi coupon=0)
- *   Total Cost  = Item Cost + Shipping + ImportTax
+ *   Total Cost  = Item Cost × qty + Shipping + ImportTax          (vốn hàng ×qty; ship & thuế cộng 1 lần)
  *   Profit      = Total Price − AMZ − Total Cost                    (trước khuyến mãi)
  *   Profit(KM)  = Total Price − AMZ − Variable − Coupon − Total Cost (sau khuyến mãi)
  *
- *   Lưu ý: "Item Cost" (giá vốn) là input tường minh ở đây — trong sheet nó bị ẩn.
- *   Điều này giúp Profit minh bạch & tái lập chính xác.
+ *   Lưu ý:
+ *   • Quantity mô phỏng listing multipack (bán qty sản phẩm/1 đơn). Để trống = 1 nên
+ *     mọi bảng chưa nhập Quantity giữ NGUYÊN số như trước — tương thích ngược.
+ *   • "Item Cost" (giá vốn) là input tường minh ở đây — trong sheet nó bị ẩn.
+ *   • Ship & ImportTax cộng 1 lần/đơn (bám đúng công thức Profit trong sheet: $C$7 cộng
+ *     ngoài phần ×Quantity). Nếu muốn thuế nhập nhân theo qty, sửa 1 dòng totalCost.
  */
 export function computeSizeRow(settings, productType, size) {
   const s = settings || {};
@@ -78,25 +84,32 @@ export function computeSizeRow(settings, productType, size) {
   const sizeAdd = num(size?.sizeAdd);
   const itemCost = num(size?.itemCost);
 
+  // Quantity: số sản phẩm/listing. Trống hoặc ≤0 → coi như 1 (không zero-hoá cả bảng).
+  const qtyRaw = num(s.quantity);
+  const qty = qtyRaw > 0 ? qtyRaw : 1;
+
   const customizeSum = (productType?.customizeInfos || []).reduce(
     (sum, ci) => sum + num(size?.customize?.[ci.id]),
     0
   );
 
-  const totalPrice = price + phoi + sizeAdd + customizeSum + shipping;
+  const unitPrice = price + phoi + sizeAdd + customizeSum;   // giá 1 sản phẩm (chưa ship)
+  const totalPrice = unitPrice * qty + shipping;             // (…)*Qty + Ship — đúng công thức sheet
 
   const couponAmt = num(s.couponUsd) + (num(s.couponPct) / 100) * totalPrice;
   const amzFee = (num(s.amzFeePct) / 100) * totalPrice;
   const variableFee = (num(s.variableFeePct) / 100) * couponAmt;
 
-  const totalCost = itemCost + shipping + num(s.importTax);
+  const totalCost = itemCost * qty + shipping + num(s.importTax);   // vốn hàng ×qty; ship+thuế cộng 1 lần
 
   const profit = totalPrice - amzFee - totalCost;
   const profitAfter = totalPrice - amzFee - variableFee - couponAmt - totalCost;
 
   return {
+    qty,
     shipping,
     customizeSum,
+    unitPrice,
     totalPrice,
     couponAmt,
     amzFee,
