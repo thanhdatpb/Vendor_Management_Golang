@@ -651,7 +651,7 @@ function AddProductTypeDialog({ libIndex, existingKeys, onPick, onManual, onClos
               style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', margin: '4px 0', borderRadius: 10, border: `1px solid ${HC.border}`, background: HC.surface, cursor: 'pointer' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = AUTO.bg; e.currentTarget.style.borderColor = AUTO.line; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = HC.surface; e.currentTarget.style.borderColor = HC.border; }}>
-              <span style={{ fontSize: 16 }}></span>
+              <span style={{ fontSize: 16 }}>📦</span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontWeight: 800, fontSize: 13.5, color: HC.ink, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.productType}</span>
                 {it.vendor && <span style={{ fontSize: 11, color: HC.muted }}>Vendor: {it.vendor}</span>}
