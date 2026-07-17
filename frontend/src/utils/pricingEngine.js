@@ -96,7 +96,7 @@ export function computeSizeRow(settings, productType, size) {
 
   const unitPrice = price + phoi + sizeAdd + customizeSum;              // giá 1 sản phẩm (chưa ship)
   const goodsAmt = unitPrice * qty;                     // phần hàng * qty
-  const totalPrice = goodsAmt + shipPerOrder;                          // ★ (Unit + Ship/Item)×qty + Ship/Order
+  const totalPrice = (unitPrice + shipPerItem) * qty + shipPerOrder;   // ★ (Unit + Ship/Item)×qty + Ship/Order
 
   // ★ Coupon% áp trên phần hàng (goodsAmt), KHÔNG gồm Ship/Order.
   const couponAmt = num(s.couponUsd) + (num(s.couponPct) / 100) * goodsAmt;
