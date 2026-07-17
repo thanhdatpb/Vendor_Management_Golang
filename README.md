@@ -136,7 +136,7 @@ Với mỗi dòng **size**, đặt `qty = Quantity` (để trống hoặc ≤ 0 
 ```
 Unit Price   = Price + Phôi + Giá Size + Σ Customize Info             (giá 1 sản phẩm, chưa ship)
 Total Price  = (Unit Price + Ship/Item) × qty + Ship/Order
-Coupon       = Coupon$ + Coupon% × Total Price
+Coupon       = Coupon$ + Coupon% × ((Unit Price + Ship/Item) × qty)   ← % chỉ áp trên phần hàng, không gồm Ship/Order
 AMZ Fee      = AMZ% × (Total Price − Coupon)
 Variable Fee = Variable% × (Unit Price × qty − Coupon)
 Total Cost   = (Item Cost + Ship/Item + ImportTax) × qty + Ship/Order
@@ -146,7 +146,6 @@ Profit (KM)  = Total Price − AMZ Fee − Variable Fee − Coupon − Total Cos
 Margin       = Profit / Total Price
 ```
 
-> Bản công thức chỉnh bởi Luận Nguyễn (Slack 2026-07-16): Ship/Item và ImportTax nhân theo Quantity, chỉ Ship/Order cộng một lần/đơn; AMZ Fee tính trên (Total − Coupon); Variable Fee tính theo giá hàng (Unit × qty − Coupon).
 
 **Điểm cần lưu ý:**
 - **Quantity (multipack):** mô phỏng listing bán nhiều sản phẩm/1 đơn. Để trống ⇒ qty = 1; khi qty = 1 và không có coupon, Total Price / Total Cost / Profit **giữ nguyên số** như bản cũ.

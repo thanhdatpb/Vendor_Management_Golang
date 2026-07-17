@@ -58,11 +58,10 @@ export const SETTING_FIELDS = [
 
 /**
  * Tính một dòng size → mọi cột "tự động tính".
- * Công thức theo bản chỉnh của Luận Nguyễn (Slack 2026-07-16 — 4 dòng bôi đen):
  *   qty         = Quantity của bảng (trống/≤0 → 1)
  *   Unit Price  = Price + Phôi + Giá Size + Σ Customize Info        (giá 1 sản phẩm, chưa ship)
  *   Total Price = (Unit Price + Ship/Item) × qty + Ship/Order        ★ ship/item nhân theo qty
- *   Coupon      = Coupon$ + Coupon% × Total Price
+ *   Coupon      = Coupon$ + Coupon% × ((Unit Price + Ship/Item) × qty)  ★ % áp trên phần hàng, KHÔNG gồm Ship/Order
  *   AMZ Fee     = AMZ% × (Total Price − Coupon)                      ★ trừ coupon trước khi tính phí
  *   Variable    = Variable% × (Unit Price × qty − Coupon)            ★ theo giá hàng, không theo coupon
  *   Total Cost  = (Item Cost + Ship/Item + ImportTax) × qty + Ship/Order  ★ vốn+ship/item+thuế đều ×qty
@@ -96,9 +95,11 @@ export function computeSizeRow(settings, productType, size) {
   );
 
   const unitPrice = price + phoi + sizeAdd + customizeSum;              // giá 1 sản phẩm (chưa ship)
-  const totalPrice = (unitPrice + shipPerItem) * qty + shipPerOrder;    // ★ (Unit + Ship/Item)×qty + Ship/Order
+  const goodsAmt = (unitPrice + shipPerItem) * qty;                     // phần hàng (chưa cộng Ship/Order)
+  const totalPrice = goodsAmt + shipPerOrder;                          // ★ (Unit + Ship/Item)×qty + Ship/Order
 
-  const couponAmt = num(s.couponUsd) + (num(s.couponPct) / 100) * totalPrice;
+  // ★ Coupon% áp trên phần hàng (goodsAmt), KHÔNG gồm Ship/Order.
+  const couponAmt = num(s.couponUsd) + (num(s.couponPct) / 100) * goodsAmt;
   const amzFee = (num(s.amzFeePct) / 100) * (totalPrice - couponAmt);          // ★ AMZ% × (Total − Coupon)
   const variableFee = (num(s.variableFeePct) / 100) * (unitPrice * qty - couponAmt); // ★ Var% × (Unit×qty − Coupon)
 

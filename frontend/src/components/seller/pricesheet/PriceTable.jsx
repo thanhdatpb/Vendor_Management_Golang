@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { PS, marginTone, toneColor } from './tokens';
 import { Dot, IconBtn } from './primitives';
 import { computeSizeRow, usd, pct, num } from '../../../utils/pricingEngine';
-import { normalizeKey, shipMethodLabel } from '../../../utils/vendorLibraryIndex';
+import { normalizeKey } from '../../../utils/vendorLibraryIndex';
 
 // ─── Bulk paste giá size (GIỮ NGUYÊN logic cũ) ───────────
 // Hỗ trợ dán cả vùng nhiều cột từ sheet (TSV) hoặc 1 dòng nhiều giá
@@ -151,14 +151,9 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
     return () => window.removeEventListener('mouseup', finish);
   }, [dragIds, onUpdateSize, pt.id]);
 
-  // Số cột 2 nhóm (giữ nguyên cấu trúc cột cũ)
+  // Số cột 2 nhóm. Nhóm computed = Coupon + Total + AMZ + Profit + Margin + AfterPromo = 6 (cả 2 chế độ).
   const nInput = 2 + customs.length + (libEntry ? 0 : 1);
-  const nAuto = 5 + (libEntry ? 1 : 0);
-
-  // Tooltip cột Ship Cost khi trống
-  const shipEmptyHint = !pt.shipMethod
-    ? 'Chưa chọn Ship Method — chọn ở thanh công cụ phía trên để nạp giá vốn từ thư viện.'
-    : `Thư viện vendor chưa có giá ${shipMethodLabel(pt.shipMethod)} cho size này.`;
+  const nAuto = 6;
 
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -191,8 +186,8 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
             ))}
             {!libEntry && <th style={{ ...thTier2In, minWidth: 90 }}>Item Cost ($)</th>}
 
-            {libEntry && <th className="ps-divider-l" style={{ ...thTier2Out, minWidth: 90 }}>Ship Cost ($)</th>}
-            <th className={libEntry ? undefined : 'ps-divider-l'} style={{ ...thTier2Out, minWidth: 96 }}>Total Price</th>
+            <th className="ps-divider-l" style={{ ...thTier2Out, minWidth: 90 }}>Coupon ($)</th>
+            <th style={{ ...thTier2Out, minWidth: 96 }}>Total Price</th>
             <th style={{ ...thTier2Out, minWidth: 80 }}>AMZ Fee</th>
             <th style={{ ...thTier2Out, minWidth: 84 }}>Profit</th>
             <th style={{ ...thTier2Out, minWidth: 84 }}>Margin</th>
@@ -254,14 +249,12 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                 )}
 
                 {/* ── Nhóm computed: nền subtle, chữ mảnh, KHÔNG nền màu đậm ── */}
-                {libEntry && (
-                  <td className="ps-cell-auto ps-divider-l"
-                    title={sz.itemCost ? undefined : shipEmptyHint}
-                    style={sz.itemCost ? undefined : { color: PS.textMuted, cursor: 'help' }}>
-                    {sz.itemCost ? usd(sz.itemCost) : '—'}
-                  </td>
-                )}
-                <td className={`ps-cell-auto${libEntry ? '' : ' ps-divider-l'}`}
+                {/* Coupon (thay cột Ship Cost cũ) — số tiền giảm giá của dòng */}
+                <td className="ps-cell-auto ps-divider-l"
+                  style={{ color: calc.couponAmt ? PS.textSecondary : PS.textMuted }}>
+                  {usd(calc.couponAmt)}
+                </td>
+                <td className="ps-cell-auto"
                   style={{ fontWeight: 700, color: PS.text }}>{usd(calc.totalPrice)}</td>
                 <td className="ps-cell-auto" style={{ color: PS.textMuted }}>{usd(calc.amzFee)}</td>
                 <td className="ps-cell-auto"
