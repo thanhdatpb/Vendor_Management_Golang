@@ -24,24 +24,29 @@ export default function ProductTypeCard({
       background: PS.bgSurface, border: `1px solid ${PS.border}`, borderRadius: 12,
       boxShadow: PS.shadowCard, overflow: 'hidden',
     }}>
-      {/* ── Toolbar ── */}
+      {/* ── Toolbar — nền amber-50, tên PT có thanh accent dọc (spec §5) ── */}
       <div style={{
-        padding: '10px 16px', borderBottom: `1px solid ${PS.border}`,
+        padding: '10px 16px', background: PS.accentBg, borderBottom: `1px solid ${PS.accentSoft}`,
         display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center',
       }}>
-        {/* Tên PT: từ thư viện = khoá; nhập tay = input tàng hình */}
-        {libEntry ? (
-          <span title="Tên Product Type lấy từ thư viện vendor — không chỉnh sửa" style={{
-            fontWeight: 700, fontSize: 14.5, color: PS.text, padding: '6px 10px',
-            background: PS.bgSubtle, border: `1px solid ${PS.border}`, borderRadius: 8,
-            cursor: 'default', minWidth: 0, maxWidth: 320, overflow: 'hidden',
-            textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{pt.name}</span>
-        ) : (
-          <input value={pt.name} onChange={(e) => onPT(pt.id, { name: e.target.value })}
-            placeholder="Tên Product Type (VD: T-shirt)" aria-label="Tên product type"
-            className="ps-input ps-input-ghost" style={{ fontSize: 14.5, width: 220, padding: '6px 10px' }} />
-        )}
+        {/* Tên PT: thanh dọc amber-400 + chữ đậm; từ thư viện = khoá, nhập tay = input tàng hình */}
+        <div style={{
+          borderLeft: `4px solid ${PS.accentBar}`, paddingLeft: 10,
+          display: 'flex', alignItems: 'center', minWidth: 0,
+        }}>
+          {libEntry ? (
+            <span title="Tên Product Type lấy từ thư viện vendor — không chỉnh sửa" style={{
+              fontWeight: 650, fontSize: 15.5, color: PS.text,
+              cursor: 'default', minWidth: 0, maxWidth: 320, overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{pt.name}</span>
+          ) : (
+            <input value={pt.name} onChange={(e) => onPT(pt.id, { name: e.target.value })}
+              placeholder="Tên Product Type (VD: T-shirt)" aria-label="Tên product type"
+              className="ps-input ps-input-ghost"
+              style={{ fontSize: 15.5, fontWeight: 650, color: PS.text, width: 220, padding: '4px 8px', marginLeft: -8 }} />
+          )}
+        </div>
 
         {/* Price (Phôi) — giữ nguyên nhãn nghiệp vụ "Price ($)" */}
         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -61,7 +66,7 @@ export default function ProductTypeCard({
           <Segmented label="Ship Method" options={SHIP_METHODS} value={pt.shipMethod}
             onChange={(key) => onPT(pt.id, { shipMethod: key })} />
           {libEntry && !pt.shipMethod && (
-            <Badge tone="warning" style={{ cursor: 'help' }}
+            <Badge tone="warning" style={{ cursor: 'help', border: `1px solid ${PS.accentBorder}` }}
               title="Chọn một phương thức ship để nạp giá vốn (Item Cost) từ thư viện vendor.">Chưa chọn</Badge>
           )}
         </div>

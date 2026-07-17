@@ -73,17 +73,42 @@ export function distributeSizeAddValues(pt, entries, startSizeId, onUpdateSize) 
   return applied;
 }
 
-// ─── Styles dùng chung ───────────────────────────────────
-const thTier1 = {
-  padding: '6px 12px', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: PS.textMuted, textAlign: 'left',
-  background: PS.bgSurface, borderBottom: `1px solid ${PS.border}`, whiteSpace: 'nowrap',
+// ─── Styles dùng chung — header theo 2 vùng màu ──────────
+const thTier1Base = {
+  padding: '7px 12px', fontSize: 11, fontWeight: 650, letterSpacing: '0.08em',
+  textTransform: 'uppercase', textAlign: 'left', whiteSpace: 'nowrap',
 };
-const thTier2 = {
+// Tầng 1 — vùng NHẬP (blue)
+const thTier1In = {
+  ...thTier1Base, color: PS.inText, background: PS.inZone,
+  borderBottom: `1px solid ${PS.inBorder}`, borderLeft: `2px solid ${PS.inBorder}`,
+};
+// Tầng 1 — vùng KẾT QUẢ (emerald)
+const thTier1Out = {
+  ...thTier1Base, color: PS.outText, background: PS.outZone,
+  borderBottom: `1px solid ${PS.outBorder}`,
+};
+const thTier2Base = {
   padding: '7px 10px', fontSize: 11, fontWeight: 650, letterSpacing: '0.05em',
-  textTransform: 'uppercase', color: PS.textSecondary, textAlign: 'right',
-  background: PS.bgSubtle, borderBottom: `1.5px solid ${PS.borderStrong}`, whiteSpace: 'nowrap',
+  textTransform: 'uppercase', textAlign: 'right', whiteSpace: 'nowrap',
 };
+// Tầng 2 — tên cột vùng NHẬP / vùng KẾT QUẢ (85% để đạt AA thay vì /70)
+const thTier2In = {
+  ...thTier2Base, color: 'rgba(29,78,216,0.85)', background: PS.inBg,
+  borderBottom: `1.5px solid ${PS.inBorder}`,
+};
+const thTier2Out = {
+  ...thTier2Base, color: 'rgba(4,120,87,0.85)', background: PS.outBg,
+  borderBottom: `1.5px solid ${PS.outBorder}`,
+};
+
+/** Chấm tròn 6px đứng trước label nhóm cột. */
+function ZoneDot({ color }) {
+  return <span aria-hidden style={{
+    display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+    background: color, marginRight: 6, verticalAlign: 'middle',
+  }} />;
+}
 
 function MarginCell({ value }) {
   const tone = marginTone(value);
@@ -139,18 +164,22 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
     <div style={{ overflowX: 'auto' }}>
       <table className="ps-table" style={{ minWidth: 880 }}>
         <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-          {/* Tầng 1: nhóm cột — chữ nhỏ, KHÔNG nền màu */}
+          {/* Tầng 1: nhóm cột — tint theo vùng + chấm tròn nhận diện */}
           <tr>
-            <th colSpan={nInput} style={thTier1}>Thông tin giá cần nhập</th>
-            <th colSpan={nAuto} className="ps-divider-l" style={thTier1}>Giá tính được</th>
-            {!libEntry && <th style={{ ...thTier1, width: 44 }} aria-label="Thao tác" />}
+            <th colSpan={nInput} style={thTier1In}>
+              <ZoneDot color={PS.inDot} />Thông tin giá cần nhập
+            </th>
+            <th colSpan={nAuto} className="ps-divider-l" style={thTier1Out}>
+              <ZoneDot color={PS.outDot} />Giá tính được
+            </th>
+            {!libEntry && <th style={{ ...thTier1Out, width: 44 }} aria-label="Thao tác" />}
           </tr>
           {/* Tầng 2: tên cột */}
           <tr>
-            <th className="ps-sticky-col" style={{ ...thTier2, textAlign: 'left', minWidth: 76, zIndex: 3, left: 0, position: 'sticky' }}>Size</th>
-            <th style={{ ...thTier2, minWidth: 96 }}>Giá Size ($)</th>
+            <th className="ps-sticky-col" style={{ ...thTier2In, textAlign: 'left', minWidth: 76, zIndex: 3, left: 0, position: 'sticky' }}>Size</th>
+            <th style={{ ...thTier2In, minWidth: 96 }}>Giá Size ($)</th>
             {customs.map((ci) => (
-              <th key={ci.id} style={{ ...thTier2, minWidth: 100, padding: '4px 6px' }}>
+              <th key={ci.id} style={{ ...thTier2In, minWidth: 100, padding: '4px 6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <input value={ci.name} onChange={(e) => onRenameCustomize(pt.id, ci.id, e.target.value)}
                     placeholder="Tên (VD: Color: Black)" aria-label="Tên cột customize"
@@ -160,15 +189,15 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                 </div>
               </th>
             ))}
-            {!libEntry && <th style={{ ...thTier2, minWidth: 90 }}>Item Cost ($)</th>}
+            {!libEntry && <th style={{ ...thTier2In, minWidth: 90 }}>Item Cost ($)</th>}
 
-            {libEntry && <th className="ps-divider-l" style={{ ...thTier2, minWidth: 90 }}>Ship Cost ($)</th>}
-            <th className={libEntry ? undefined : 'ps-divider-l'} style={{ ...thTier2, minWidth: 96 }}>Total Price</th>
-            <th style={{ ...thTier2, minWidth: 80 }}>AMZ Fee</th>
-            <th style={{ ...thTier2, minWidth: 84 }}>Profit</th>
-            <th style={{ ...thTier2, minWidth: 84 }}>Margin</th>
-            <th style={{ ...thTier2, minWidth: 96 }}>After Promo</th>
-            {!libEntry && <th style={{ ...thTier2, textAlign: 'center' }}>Xoá</th>}
+            {libEntry && <th className="ps-divider-l" style={{ ...thTier2Out, minWidth: 90 }}>Ship Cost ($)</th>}
+            <th className={libEntry ? undefined : 'ps-divider-l'} style={{ ...thTier2Out, minWidth: 96 }}>Total Price</th>
+            <th style={{ ...thTier2Out, minWidth: 80 }}>AMZ Fee</th>
+            <th style={{ ...thTier2Out, minWidth: 84 }}>Profit</th>
+            <th style={{ ...thTier2Out, minWidth: 84 }}>Margin</th>
+            <th style={{ ...thTier2Out, minWidth: 96 }}>After Promo</th>
+            {!libEntry && <th style={{ ...thTier2Out, textAlign: 'center' }}>Xoá</th>}
           </tr>
         </thead>
         <tbody>

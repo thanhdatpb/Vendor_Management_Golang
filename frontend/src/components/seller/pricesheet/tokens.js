@@ -24,9 +24,23 @@ export const PS = {
   brandRing: 'rgba(245,166,35,0.30)',
 
   // ── Semantic — chỉ dùng cho GIÁ TRỊ, không làm nền khối ──
-  positive: '#059669', positiveBg: '#ECFDF5',
+  positive: '#047857', positiveBg: '#ECFDF5',
   warning: '#B45309', warningBg: '#FFFBEB',
   negative: '#E11D48', negativeBg: '#FFF1F2',
+
+  // ── Visual hierarchy zones (spec 2026-07-16) ──
+  // Accent identity (amber): tên bảng, tên product type
+  accentBar: '#FBBF24',    // amber-400 — thanh dọc bên trái tiêu đề
+  accentBg: '#FFFBEB',     // amber-50  — nền header card product type
+  accentBorder: '#FDE68A', // amber-200
+  accentSoft: '#FEF3C7',   // amber-100 — border-b toolbar, badge đếm
+  accentText: '#B45309',   // amber-700
+  // Vùng NHẬP (blue)
+  inBg: '#EFF6FF',    inBorder: '#BFDBFE', inText: '#1D4ED8', inDot: '#60A5FA',
+  inZone: '#F7FAFF',  inZoneOdd: '#FCFDFF',   // blue-50/50 trên trắng · + white/60 dòng lẻ (đặc, an toàn sticky)
+  // Vùng KẾT QUẢ (emerald)
+  outBg: '#ECFDF5',   outBorder: '#A7F3D0', outText: '#047857', outDot: '#34D399',
+  outZone: '#F7FEFB', outZoneOdd: '#FCFFFD',  // emerald-50/40 trên trắng · + white/60 dòng lẻ
 
   // ── Text ──
   text: '#171717',          // neutral-900
@@ -92,19 +106,30 @@ export const PS_CSS = `
   outline: 2px solid ${PS.brand}; outline-offset: 2px; border-radius: 6px;
 }
 
-/* ── Bảng ── */
+/* ── Bảng — 2 vùng tint: NHẬP (blue) | KẾT QUẢ (emerald) ── */
 .ps-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
 .ps-table td { border-bottom: 1px solid ${PS.border}; height: 40px; padding: 4px 10px; }
-.ps-cell { background: ${PS.bgSurface}; }
+.ps-cell { background: ${PS.inZone}; }
 .ps-cell-auto {
-  background: ${PS.bgSubtle}; text-align: right; font-variant-numeric: tabular-nums;
+  background: ${PS.outZone}; text-align: right; font-variant-numeric: tabular-nums;
   color: ${PS.textSecondary};
 }
-.ps-tr:nth-child(even) .ps-cell { background: ${PS.bgApp}; }
-.ps-tr:nth-child(even) .ps-cell-auto { background: ${PS.bgSubtle2}; }
+/* Zebra kiểu odd:white/60 — dòng lẻ sáng hơn, dòng chẵn giữ tint đầy đủ */
+.ps-tr:nth-child(odd) .ps-cell { background: ${PS.inZoneOdd}; }
+.ps-tr:nth-child(odd) .ps-cell-auto { background: ${PS.outZoneOdd}; }
 .ps-tr:hover .ps-cell, .ps-tr:hover .ps-cell-auto { background: ${PS.brandSubtle}; }
-.ps-sticky-col { position: sticky; left: 0; z-index: 2; }
-.ps-divider-l { border-left: 2px solid ${PS.borderStrong}; }
+.ps-sticky-col { position: sticky; left: 0; z-index: 2; border-left: 2px solid ${PS.inBorder}; }
+.ps-divider-l { border-left: 2px solid ${PS.outBorder}; }
+
+/* Nút chip trung tính (Lịch sử tính giá) — không cạnh tranh accent */
+.ps-btn-hist {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: 650; color: ${PS.textSecondary};
+  background: ${PS.bgSurface}; border: 1px solid ${PS.border};
+  transition: background .12s;
+}
+.ps-btn-hist:hover { background: ${PS.bgApp}; }
 
 /* ── Chip / segmented ── */
 .ps-chip { transition: background .12s, border-color .12s, color .12s; }

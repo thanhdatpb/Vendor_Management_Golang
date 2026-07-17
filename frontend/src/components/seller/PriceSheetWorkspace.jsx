@@ -9,6 +9,7 @@
 //  LOGIC TÍNH GIÁ + STATE + API GIỮ NGUYÊN 100%.
 // ════════════════════════════════════════════════════════
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { HistoryOutlined } from '@ant-design/icons';
 import {
   computeSizeRow, summarizeSheet, num, pct,
   makeSize, makeProductType, uid,
@@ -207,18 +208,29 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
           padding: '10px 20px', background: PS.bgSurface, borderBottom: `1px solid ${PS.border}`,
           flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
         }}>
-          <div style={{ minWidth: 0, flex: 1 }}>
+          {/* Tên bảng tính — text-xl + thanh accent dọc amber-400 (spec §1) */}
+          <div style={{ minWidth: 0, flex: 1, borderLeft: `4px solid ${PS.accentBar}`, paddingLeft: 12 }}>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên bảng tính giá"
               aria-label="Tên bảng tính giá"
               className="ps-input ps-input-ghost"
-              style={{ fontSize: 17, fontWeight: 700, padding: '4px 8px', marginLeft: -8, width: `${Math.max(24, (name || '').length + 2)}ch`, maxWidth: '100%' }} />
+              style={{ fontSize: 20, fontWeight: 650, color: PS.text, padding: '3px 8px', marginLeft: -8, width: `${Math.max(24, (name || '').length + 2)}ch`, maxWidth: '100%' }} />
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
               <Badge>{shownPTs.length}/{productTypes.length} product type · {summary.count} size</Badge>
               {summary.avgMargin != null && <Badge tone={mTone}>avg margin {pct(summary.avgMargin, 1)}</Badge>}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-            <Btn variant="ghost" onClick={() => setShowHistory(true)}>Lịch sử tính giá ({sheet.history?.length || 0})</Btn>
+            {/* Chip trung tính + icon history + badge đếm (spec §2) */}
+            <button type="button" className="ps-btn-hist" onClick={() => setShowHistory(true)}>
+              <HistoryOutlined style={{ fontSize: 16 }} aria-hidden />
+              Lịch sử tính giá
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999,
+                background: PS.accentSoft, color: PS.accentText,
+                fontSize: 11, fontWeight: 650, fontVariantNumeric: 'tabular-nums',
+              }}>{sheet.history?.length || 0}</span>
+            </button>
             <Btn variant="outline" onClick={() => exportSheetToExcel(draftSheet, showToast)}>⬇ Export Excel</Btn>
             <IconBtn title="Đóng" onClick={onClose}>✕</IconBtn>
           </div>
