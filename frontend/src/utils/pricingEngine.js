@@ -46,7 +46,7 @@ export const DEFAULT_SETTINGS = {
 // Khai báo các trường Price Setting → UI render theo đây (thêm phí = thêm dòng)
 export const SETTING_FIELDS = [
   { key: 'price', label: 'Price', unit: '$', icon: '💵' },
-  { key: 'quantity', label: 'Quantity', unit: 'pcs', icon: '🔢', tooltip: 'Số sản phẩm trong 1 listing (multipack). Total Price = (Price + Phôi + Giá Size + Customize) × Quantity + Shipping; giá vốn hàng cũng nhân theo Quantity. Để trống = 1 (không đổi số cũ).' },
+  { key: 'quantity', label: 'Quantity', unit: 'pcs', icon: '🔢', tooltip: 'Số sản phẩm trong 1 listing (multipack). Total Price = (Giá 1 sản phẩm + Ship/Item) × Quantity + Ship/Order; giá vốn (Item Cost + Ship/Item + ImportTax) cũng nhân theo Quantity. Để trống = 1.' },
   { key: 'shipPerOrder', label: 'Ship / Order', unit: '$', icon: '📦' },
   { key: 'shipPerItem', label: 'Ship / Item', unit: '$', icon: '📦' },
   { key: 'couponUsd', label: 'Coupon', unit: '$', icon: '🎫' },
@@ -58,28 +58,30 @@ export const SETTING_FIELDS = [
 
 /**
  * Tính một dòng size → mọi cột "tự động tính".
- * Công thức bám sheet (Total Price, AMZ Fee & Profit đã đối chiếu khớp số thật):
+ * Công thức theo bản chỉnh của Luận Nguyễn (Slack 2026-07-16 — 4 dòng bôi đen):
  *   qty         = Quantity của bảng (trống/≤0 → 1)
- *   Unit Price  = Price + Phôi + Giá Size + Σ Customize Info      (giá 1 sản phẩm, chưa ship)
- *   Total Price = Unit Price × qty + Shipping                     (khớp sheet: (…)*Qty + Ship)
- *   AMZ Fee     = AMZ% × Total Price
+ *   Unit Price  = Price + Phôi + Giá Size + Σ Customize Info        (giá 1 sản phẩm, chưa ship)
+ *   Total Price = (Unit Price + Ship/Item) × qty + Ship/Order        ★ ship/item nhân theo qty
  *   Coupon      = Coupon$ + Coupon% × Total Price
- *   Variable    = Variable% × Coupon           (Variable Fee (Coupon) — =0 khi coupon=0)
- *   Total Cost  = Item Cost × qty + Shipping + ImportTax          (vốn hàng ×qty; ship & thuế cộng 1 lần)
- *   Profit      = Total Price − AMZ − Total Cost                    (trước khuyến mãi)
+ *   AMZ Fee     = AMZ% × (Total Price − Coupon)                      ★ trừ coupon trước khi tính phí
+ *   Variable    = Variable% × (Unit Price × qty − Coupon)            ★ theo giá hàng, không theo coupon
+ *   Total Cost  = (Item Cost + Ship/Item + ImportTax) × qty + Ship/Order  ★ vốn+ship/item+thuế đều ×qty
+ *   Profit      = Total Price − AMZ − Total Cost                     (trước khuyến mãi)
  *   Profit(KM)  = Total Price − AMZ − Variable − Coupon − Total Cost (sau khuyến mãi)
  *
  *   Lưu ý:
- *   • Quantity mô phỏng listing multipack (bán qty sản phẩm/1 đơn). Để trống = 1 nên
- *     mọi bảng chưa nhập Quantity giữ NGUYÊN số như trước — tương thích ngược.
+ *   • Quantity mô phỏng listing multipack. Trống = 1; với qty=1 và coupon=0 thì
+ *     Total Price/Total Cost/Profit giữ NGUYÊN số như công thức cũ.
+ *   • ⚠ Khác bản cũ: Variable Fee giờ ≠ 0 kể cả khi coupon = 0 (Variable% × Unit×qty),
+ *     nên "After Promo" thấp hơn Margin ngay cả khi không chạy khuyến mãi.
  *   • "Item Cost" (giá vốn) là input tường minh ở đây — trong sheet nó bị ẩn.
- *   • Ship & ImportTax cộng 1 lần/đơn (bám đúng công thức Profit trong sheet: $C$7 cộng
- *     ngoài phần ×Quantity). Nếu muốn thuế nhập nhân theo qty, sửa 1 dòng totalCost.
  */
 export function computeSizeRow(settings, productType, size) {
   const s = settings || {};
   const price = num(s.price);
-  const shipping = num(s.shipPerOrder) + num(s.shipPerItem);
+  const shipPerItem = num(s.shipPerItem);
+  const shipPerOrder = num(s.shipPerOrder);
+  const importTax = num(s.importTax);
   const phoi = num(productType?.phoi);
   const sizeAdd = num(size?.sizeAdd);
   const itemCost = num(size?.itemCost);
@@ -93,21 +95,21 @@ export function computeSizeRow(settings, productType, size) {
     0
   );
 
-  const unitPrice = price + phoi + sizeAdd + customizeSum;   // giá 1 sản phẩm (chưa ship)
-  const totalPrice = unitPrice * qty + shipping;             // (…)*Qty + Ship — đúng công thức sheet
+  const unitPrice = price + phoi + sizeAdd + customizeSum;              // giá 1 sản phẩm (chưa ship)
+  const totalPrice = (unitPrice + shipPerItem) * qty + shipPerOrder;    // ★ (Unit + Ship/Item)×qty + Ship/Order
 
   const couponAmt = num(s.couponUsd) + (num(s.couponPct) / 100) * totalPrice;
-  const amzFee = (num(s.amzFeePct) / 100) * totalPrice;
-  const variableFee = (num(s.variableFeePct) / 100) * couponAmt;
+  const amzFee = (num(s.amzFeePct) / 100) * (totalPrice - couponAmt);          // ★ AMZ% × (Total − Coupon)
+  const variableFee = (num(s.variableFeePct) / 100) * (unitPrice * qty - couponAmt); // ★ Var% × (Unit×qty − Coupon)
 
-  const totalCost = itemCost * qty + shipping + num(s.importTax);   // vốn hàng ×qty; ship+thuế cộng 1 lần
+  const totalCost = (itemCost + shipPerItem + importTax) * qty + shipPerOrder; // ★ (vốn+ship/item+thuế)×qty + ship/order
 
   const profit = totalPrice - amzFee - totalCost;
   const profitAfter = totalPrice - amzFee - variableFee - couponAmt - totalCost;
 
   return {
     qty,
-    shipping,
+    shipping: shipPerItem * qty + shipPerOrder,   // tổng ship của đơn (informational — không nơi nào dùng để tính)
     customizeSum,
     unitPrice,
     totalPrice,

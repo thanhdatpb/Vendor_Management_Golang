@@ -134,21 +134,23 @@ sheet
 Với mỗi dòng **size**, đặt `qty = Quantity` (để trống hoặc ≤ 0 → coi như **1**, đảm bảo tương thích ngược):
 
 ```
-Unit Price   = Price + Phôi + Giá Size + Σ Customize Info        (giá 1 sản phẩm, chưa ship)
-Total Price  = Unit Price × qty + Shipping                       (multipack: nhân trước, cộng ship sau)
-AMZ Fee      = AMZ% × Total Price
+Unit Price   = Price + Phôi + Giá Size + Σ Customize Info             (giá 1 sản phẩm, chưa ship)
+Total Price  = (Unit Price + Ship/Item) × qty + Ship/Order
 Coupon       = Coupon$ + Coupon% × Total Price
-Variable Fee = Variable% × Coupon                                (= 0 khi coupon = 0)
-Total Cost   = Item Cost × qty + Shipping + ImportTax            (vốn hàng ×qty; ship & thuế cộng 1 lần)
+AMZ Fee      = AMZ% × (Total Price − Coupon)
+Variable Fee = Variable% × (Unit Price × qty − Coupon)
+Total Cost   = (Item Cost + Ship/Item + ImportTax) × qty + Ship/Order
 
 Profit       = Total Price − AMZ Fee − Total Cost                          (trước khuyến mãi)
 Profit (KM)  = Total Price − AMZ Fee − Variable Fee − Coupon − Total Cost  (sau khuyến mãi)
 Margin       = Profit / Total Price
 ```
 
+> Bản công thức chỉnh bởi Luận Nguyễn (Slack 2026-07-16): Ship/Item và ImportTax nhân theo Quantity, chỉ Ship/Order cộng một lần/đơn; AMZ Fee tính trên (Total − Coupon); Variable Fee tính theo giá hàng (Unit × qty − Coupon).
+
 **Điểm cần lưu ý:**
-- **Quantity (multipack):** mô phỏng listing bán nhiều sản phẩm/1 đơn. Ship và ImportTax cộng **một lần/đơn** (bám đúng công thức `$C$7` cộng ngoài phần `×Quantity` trong sheet gốc), không nhân theo qty.
-- Để trống Quantity ⇒ mọi bảng cũ giữ **nguyên số** như trước.
+- **Quantity (multipack):** mô phỏng listing bán nhiều sản phẩm/1 đơn. Để trống ⇒ qty = 1; khi qty = 1 và không có coupon, Total Price / Total Cost / Profit **giữ nguyên số** như bản cũ.
+- **Variable Fee ≠ 0 kể cả khi coupon = 0** (tính theo `Variable% × Unit × qty`) — nên "After Promo" luôn thấp hơn Margin một chút.
 - `Item Cost` (giá vốn) là input tường minh trong app — trong sheet gốc nó bị ẩn.
 
 Lưu server, chia sẻ theo project qua API `/api/price-sheets` (xem mục 7).
