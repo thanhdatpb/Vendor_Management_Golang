@@ -6,6 +6,7 @@ import { playNotificationSound } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination } from '../ui/VendorUI';
 import NewsModalComponent from '../components/NewsModalComponent';
 import { pushNotif, pushNotifMulti } from '../../../utils/notifUtils';
+import { newsApi } from '../../../services/api';
 
 export default function NewsManagementSection() {
   const [newsList, setNewsList] = useState([]);
@@ -22,17 +23,19 @@ export default function NewsManagementSection() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const NEWS_STORAGE_KEY = 'STAFF_B_NEWS_V1';
-
-  const loadNews = useCallback(() => {
+  // Danh sách tin tức lưu server (bảng `news`) — trước đây lưu localStorage
+  // (STAFF_B_NEWS_V1) nên mất khi đổi máy, thậm chí mất khi F5 (main.jsx xoá
+  // key này mỗi lần app khởi động).
+  const loadNews = useCallback(async () => {
     setLoading(true);
     try {
-      const saved = localStorage.getItem(NEWS_STORAGE_KEY);
-      const news = saved ? JSON.parse(saved) : [];
+      const res = await newsApi.list();
+      const news = Array.isArray(res.data) ? res.data : [];
       news.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setNewsList(news);
     } catch (err) {
       console.error('Lỗi load tin tức:', err);
+      setToast({ type: 'error', title: 'Lỗi', message: 'Không tải được danh sách thông báo từ server.' });
     } finally {
       setLoading(false);
     }
@@ -111,24 +114,19 @@ export default function NewsManagementSection() {
     if (!validateForm()) return;
     setSubmitting(true);
     try {
-      const newNews = {
-        id: Date.now(),
+      const res = await newsApi.create({
         title: form.title.trim(),
         message: form.message.trim(),
         target: form.target,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_read: false
-      };
-      const updatedList = [newNews, ...newsList];
-      localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(updatedList));
+      });
+      const newNews = res.data;
       sendNewsToDashboards(newNews);
-      setNewsList(updatedList);
+      setNewsList(prev => [newNews, ...prev]);
       closeModal();
       setToast({ type: 'success', title: 'Thành công', message: 'Đã tạo thông báo mới' });
       playNotificationSound();
     } catch (err) {
-      setToast({ type: 'error', title: 'Lỗi', message: 'Không thể tạo thông báo' });
+      setToast({ type: 'error', title: 'Lỗi', message: err?.response?.data?.message || 'Không thể tạo thông báo' });
     } finally {
       setSubmitting(false);
     }
@@ -138,21 +136,18 @@ export default function NewsManagementSection() {
     if (!validateForm() || !editingNews) return;
     setSubmitting(true);
     try {
-      const updatedNews = {
-        ...editingNews,
+      const res = await newsApi.update(editingNews.id, {
         title: form.title.trim(),
         message: form.message.trim(),
         target: form.target,
-        updated_at: new Date().toISOString()
-      };
-      const updatedList = newsList.map(n => n.id === editingNews.id ? updatedNews : n);
-      localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(updatedList));
+      });
+      const updatedNews = res.data;
       updateNewsInDashboards(updatedNews);
-      setNewsList(updatedList);
+      setNewsList(prev => prev.map(n => n.id === editingNews.id ? updatedNews : n));
       closeModal();
       setToast({ type: 'success', title: 'Thành công', message: 'Đã cập nhật thông báo' });
     } catch (err) {
-      setToast({ type: 'error', title: 'Lỗi', message: 'Không thể cập nhật thông báo' });
+      setToast({ type: 'error', title: 'Lỗi', message: err?.response?.data?.message || 'Không thể cập nhật thông báo' });
     } finally {
       setSubmitting(false);
     }
@@ -161,14 +156,13 @@ export default function NewsManagementSection() {
   const handleDeleteNews = async () => {
     if (!deleteConfirm) return;
     try {
-      const updatedList = newsList.filter(n => n.id !== deleteConfirm.id);
-      localStorage.setItem(NEWS_STORAGE_KEY, JSON.stringify(updatedList));
+      await newsApi.remove(deleteConfirm.id);
       removeNewsFromDashboards(deleteConfirm.id);
-      setNewsList(updatedList);
+      setNewsList(prev => prev.filter(n => n.id !== deleteConfirm.id));
       setDeleteConfirm(null);
       setToast({ type: 'success', title: 'Thành công', message: 'Đã xóa thông báo' });
     } catch (err) {
-      setToast({ type: 'error', title: 'Lỗi', message: 'Không thể xóa thông báo' });
+      setToast({ type: 'error', title: 'Lỗi', message: err?.response?.data?.message || 'Không thể xóa thông báo' });
     }
   };
 

@@ -13,6 +13,7 @@ use App\Http\Controllers\VendorController;
 use App\Http\Controllers\Api\VendorImportController;
 use App\Http\Controllers\Api\VendorLibraryController;
 use App\Http\Controllers\Api\PriceSheetController;
+use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\UserController;
 /*
 |--------------------------------------------------------------------------
@@ -145,6 +146,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cập nhật nhẹ 1 field trạng thái Sample — chỉ Vendor (tên cũ: Staff B) được phép
     Route::post('/vendor-library/sample-status', [VendorLibraryController::class, 'updateSampleStatus'])
         ->middleware('role:staff_b,vendor');
+    // Cập nhật nhẹ cờ Best Seller của 1 dòng — lưu server để Seller/CSF/PD cùng thấy
+    Route::post('/vendor-library/best-seller', [VendorLibraryController::class, 'updateBestSeller'])
+        ->middleware('role:staff_b,vendor');
     Route::post('/vendor-library/restore-backup', [VendorLibraryController::class, 'restoreBackup']);
     // Upload hàng loạt ảnh trích xuất từ Excel (ảnh nhúng trực tiếp vào ô) khi import
     Route::post('/vendor-library/upload-images', [VendorLibraryController::class, 'uploadImages'])
@@ -156,6 +160,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/price-sheets',         [PriceSheetController::class, 'index']);
     Route::post('/price-sheets',        [PriceSheetController::class, 'upsert']);
     Route::delete('/price-sheets/{id}', [PriceSheetController::class, 'destroy']);
+
+    // =========================
+    // NEWS (Quản Lý Thông Báo — Vendor tạo) — lưu server, mọi thiết bị Vendor cùng thấy
+    // =========================
+    Route::get('/news', [NewsController::class, 'index']);
+    Route::middleware('role:staff_b,vendor')->group(function () {
+        Route::post('/news',           [NewsController::class, 'store']);
+        Route::put('/news/{id}',       [NewsController::class, 'update']);
+        Route::delete('/news/{id}',    [NewsController::class, 'destroy']);
+    });
 
     Route::get('/vendors',             [VendorController::class, 'index']);
     Route::post('/vendors',            [VendorController::class, 'store']);

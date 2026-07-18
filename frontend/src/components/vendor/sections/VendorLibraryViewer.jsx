@@ -1315,21 +1315,72 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     }
   }, [highlightFileId, libraryFiles]);
 
-  const [bestSellerIds, setBestSellerIds] = useState(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem('BEST_SELLER_EXCEL_IDS_V1') || '[]'));
-    } catch { return new Set(); }
-  });
+  // Best Seller giờ lưu trên server (field `bestSeller` trong từng dòng generalInfo)
+  // → derive trực tiếp từ dữ liệu fetch về, KHÔNG đọc localStorage nữa. Nhờ vậy
+  // Vendor đánh dấu ⭐ thì Seller/CSF/PD (cùng fetch 1 blob) đều thấy.
+  const bestSellerIds = useMemo(() => {
+    const s = new Set();
+    for (const f of rawFiles) {
+      for (const r of (f.generalInfo || [])) {
+        if (r && r.bestSeller) s.add(r.id);
+      }
+    }
+    return s;
+  }, [rawFiles]);
 
-  const toggleBestSeller = useCallback((id) => {
-    setBestSellerIds(prev => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      localStorage.setItem('BEST_SELLER_EXCEL_IDS_V1', JSON.stringify([...n]));
-      return n;
-    });
-  }, []);
+  // Toggle ⭐: cập nhật lạc quan trong bộ nhớ rồi gọi endpoint nhẹ chỉ sửa 1 field
+  // trên server; lỗi thì hoàn tác. Cùng cơ chế với handleSampleStatusChange.
+  const toggleBestSeller = useCallback(async (rowId) => {
+    const next = !bestSellerIds.has(rowId);
+    const apply = (val) => setRawFiles(prev => prev.map(f => ({
+      ...f,
+      generalInfo: (f.generalInfo || []).map(r => (r.id === rowId ? { ...r, bestSeller: val } : r)),
+    })));
+    apply(next);
+    try {
+      await vendorLibraryApi.setBestSeller(rowId, next);
+    } catch (err) {
+      apply(!next);
+      showToast('error', `Không lưu được Best Seller: ${err?.response?.data?.message || err.message || 'lỗi kết nối'}`);
+    }
+  }, [bestSellerIds]);
+
+  // Migrate 1 lần: các ⭐ Best Seller cũ chỉ nằm trong localStorage của máy Vendor.
+  // Sau khi chuyển sang lưu server, đẩy các id cũ lên server đúng một lần (chỉ ở
+  // view có quyền sửa = Vendor) rồi dọn key + đặt cờ đã-migrate để không chạy lại.
+  const migratedRef = useRef(false);
+  useEffect(() => {
+    if (readOnly || !dataLoaded || migratedRef.current) return;
+    if (localStorage.getItem('BEST_SELLER_MIGRATED_V1')) return;
+    let legacyIds = [];
+    try { legacyIds = JSON.parse(localStorage.getItem('BEST_SELLER_EXCEL_IDS_V1') || '[]'); } catch { legacyIds = []; }
+    migratedRef.current = true;
+    if (!legacyIds.length) {
+      localStorage.setItem('BEST_SELLER_MIGRATED_V1', '1');
+      return;
+    }
+    const known = new Set();
+    const already = new Set();
+    for (const f of rawFiles) for (const r of (f.generalInfo || [])) {
+      known.add(r.id);
+      if (r.bestSeller) already.add(r.id);
+    }
+    const toPush = legacyIds.filter(id => known.has(id) && !already.has(id));
+    (async () => {
+      for (const id of toPush) {
+        try { await vendorLibraryApi.setBestSeller(id, true); } catch { /* bỏ qua từng id lỗi */ }
+      }
+      if (toPush.length) {
+        const pushSet = new Set(toPush);
+        setRawFiles(prev => prev.map(f => ({
+          ...f,
+          generalInfo: (f.generalInfo || []).map(r => (pushSet.has(r.id) ? { ...r, bestSeller: true } : r)),
+        })));
+      }
+      localStorage.setItem('BEST_SELLER_MIGRATED_V1', '1');
+      localStorage.removeItem('BEST_SELLER_EXCEL_IDS_V1');
+    })();
+  }, [readOnly, dataLoaded, rawFiles]);
 
   // File đã filter theo mode + search — dùng cho cả badge count lẫn list render
   const displayFiles = useMemo(() => {

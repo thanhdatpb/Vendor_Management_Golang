@@ -214,7 +214,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const [loadingProductId, setLoadingProductId] = useState(null);
   const [pendingPage, setPendingPage] = useState(1);
   const notifiedProductIds = useRef(new Set());
-  const LS_REJECTED_CACHE = 'ADMIN_REJECTED_CACHE_V1';
   const LS_SELLER_PRODUCTS = 'SELLER_PRODUCTS_V1';
 
   useEffect(() => {
@@ -328,24 +327,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     try {
       await productApi.approve(product.id, { approved: true });
 
-      try {
-        const approvedProducts = JSON.parse(localStorage.getItem('STAFF_A_APPROVED_PRODUCTS_V1') || '[]');
-        const existingIndex = approvedProducts.findIndex(p => p.id === product.id);
-        const updatedProduct = { ...product, status: 'approved', approved_at: new Date().toISOString() };
-        if (existingIndex >= 0) {
-          approvedProducts[existingIndex] = updatedProduct;
-        } else {
-          approvedProducts.unshift(updatedProduct);
-        }
-        localStorage.setItem('STAFF_A_APPROVED_PRODUCTS_V1', JSON.stringify(approvedProducts.slice(0, 100)));
-      } catch (e) { }
-
-      const cache = JSON.parse(localStorage.getItem(LS_REJECTED_CACHE) || '{}');
-      if (cache[product.id]) {
-        delete cache[product.id];
-        localStorage.setItem(LS_REJECTED_CACHE, JSON.stringify(cache));
-      }
-
       pushNotif('staff_b', {
         type: 'product_approved',
         icon: '',
@@ -407,16 +388,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         approved: false,
         reason: rejectModal.reason
       });
-
-      try {
-        const rejectedProducts = JSON.parse(localStorage.getItem('STAFF_A_REJECTED_PRODUCTS_V1') || '[]');
-        rejectedProducts.unshift({ ...product, status: 'rejected', rejected_at: new Date().toISOString(), reason: rejectModal.reason });
-        localStorage.setItem('STAFF_A_REJECTED_PRODUCTS_V1', JSON.stringify(rejectedProducts.slice(0, 100)));
-      } catch (e) { }
-
-      const cache = JSON.parse(localStorage.getItem(LS_REJECTED_CACHE) || '{}');
-      cache[product.id] = { timestamp: Date.now() };
-      localStorage.setItem(LS_REJECTED_CACHE, JSON.stringify(cache));
 
       setPendingProducts(prev => prev.filter(p => p.id !== product.id));
       setAllProducts(prev => {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { vendorApi, productApi } from '../../../services/api';
 import { HC, LS_PRODUCT_VENDORS, VENDOR_TYPES, VENDOR_PAGE_SIZE } from '../utils/constants';
@@ -30,12 +30,12 @@ export default function VendorsSection({ filterProductType = '', filterProductId
   const [vPage, setVPage] = useState(1);
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [bestSellerIds, setBestSellerIds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('BEST_SELLER_IDS_V1');
-      return new Set(saved ? JSON.parse(saved) : []);
-    } catch { return new Set(); }
-  });
+  // Best Seller của DB-vendor lấy trực tiếp từ DB (vendor_type = 'Best Seller'),
+  // không cache localStorage nữa — tránh lệch giữa các máy/role.
+  const bestSellerIds = useMemo(
+    () => new Set(vendorList.filter(v => v.vendor_type === 'Best Seller').map(v => String(v.id))),
+    [vendorList]
+  );
   const [showOnlyBestSeller, setShowOnlyBestSeller] = useState(false);
   const importFileRef = useRef(null);
   const [importPreview, setImportPreview] = useState(null);
@@ -86,17 +86,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     }
   }, [toast]);
 
-  useEffect(() => {
-    if (vendorList.length > 0) {
-      const saved = localStorage.getItem('BEST_SELLER_IDS_V1');
-      if (!saved) {
-        const ids = new Set(vendorList.filter(v => v.vendor_type === 'Best Seller').map(v => String(v.id)));
-        setBestSellerIds(ids);
-        if (ids.size > 0) localStorage.setItem('BEST_SELLER_IDS_V1', JSON.stringify([...ids]));
-      }
-    }
-  }, [vendorList]);
-
   const bestSellerSorted = [...vendorList].sort((a, b) => (bestSellerIds.has(String(b.id)) ? 1 : 0) - (bestSellerIds.has(String(a.id)) ? 1 : 0));
   let filteredVendors = activeTab === 'bestseller'
     ? (showOnlyBestSeller ? vendorList.filter(v => bestSellerIds.has(String(v.id))) : bestSellerSorted)
@@ -127,17 +116,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     const allSel = pageIds.every(id => selectedIds.has(id));
     setSelectedIds(prev => { const n = new Set(prev); if (allSel) { pageIds.forEach(id => n.delete(id)); } else { pageIds.forEach(id => n.add(id)); } return n; });
   };
-  const toggleBestSeller = (vendorId) => {
-    setBestSellerIds(prev => {
-      const n = new Set(prev);
-      const sid = String(vendorId);
-      if (n.has(sid)) n.delete(sid);
-      else n.add(sid);
-      localStorage.setItem('BEST_SELLER_IDS_V1', JSON.stringify([...n]));
-      return n;
-    });
-  };
-
   const pageAllSelected = pagedVendors.length > 0 && pagedVendors.every(v => selectedIds.has(v.id));
   const pageSomeSelected = pagedVendors.some(v => selectedIds.has(v.id));
   

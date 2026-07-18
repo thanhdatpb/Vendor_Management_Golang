@@ -239,10 +239,17 @@ export default function VendorLibraryCsfPdViewer({ projectKey }) {
   const [fetchError, setFetchError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [bestSellerIds] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('BEST_SELLER_EXCEL_IDS_V1') || '[]')); }
-    catch { return new Set(); }
-  });
+  // Best Seller lưu trên server (field `bestSeller` trong từng dòng generalInfo)
+  // → derive từ dữ liệu fetch về, không đọc localStorage nữa.
+  const bestSellerIds = useMemo(() => {
+    const s = new Set();
+    for (const f of rawFiles) {
+      for (const r of (f.generalInfo || [])) {
+        if (r && r.bestSeller) s.add(r.id);
+      }
+    }
+    return s;
+  }, [rawFiles]);
 
   const fetchLibrary = useCallback(async () => {
     setLoading(true);

@@ -15,17 +15,14 @@ const parseAssignedVendors = (raw) => {
 export default function VendorViewerModal({ product, onClose }) {
   const LS_A_FEEDBACK_RESPONSE = 'STAFF_A_FEEDBACK_RESPONSE_V1';
 
+  // Ưu tiên assigned_vendors từ API (nguồn thật, đồng bộ mọi thiết bị) — trước đây
+  // đọc localStorage TRƯỚC nên nếu Seller gán vendor mới trên máy khác, máy này vẫn
+  // hiển thị danh sách cũ cho tới khi user tự thao tác lại. Local chỉ còn là fallback
+  // khi API chưa có dữ liệu (vd sản phẩm gán nhanh chưa kịp đồng bộ ngay).
   const getVendors = (pid) => {
-    const fromLS = lsGet(LS_PRODUCT_VENDORS, {})[pid] || [];
-    if (fromLS.length > 0) return fromLS;
     const fromAPI = parseAssignedVendors(product?.assigned_vendors);
-    if (fromAPI.length > 0) {
-      const all = lsGet(LS_PRODUCT_VENDORS, {});
-      all[pid] = fromAPI;
-      lsSet(LS_PRODUCT_VENDORS, all);
-      return fromAPI;
-    }
-    return [];
+    if (fromAPI.length > 0) return fromAPI;
+    return lsGet(LS_PRODUCT_VENDORS, {})[pid] || [];
   };
 
   const [vendors, setVendors] = useState(() => getVendors(product?.id));

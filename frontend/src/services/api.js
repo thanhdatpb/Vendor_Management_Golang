@@ -290,6 +290,9 @@ export const vendorLibraryApi = {
   // Cập nhật nhẹ trạng thái Sample của 1 dòng generalInfo (không gửi cả blob)
   setSampleStatus: (rowId, sampleStatus) =>
     api.post('/vendor-library/sample-status', { rowId, sampleStatus }),
+  // Cập nhật nhẹ cờ Best Seller của 1 dòng generalInfo — lưu server, chia sẻ mọi role
+  setBestSeller: (rowId, isBestSeller) =>
+    api.post('/vendor-library/best-seller', { rowId, isBestSeller }),
   restoreBackup: () => api.post('/vendor-library/restore-backup'),
   // Upload hàng loạt ảnh trích xuất từ Excel (ảnh nhúng trực tiếp vào ô) khi import
   uploadImages: (formData) => api.post('/vendor-library/upload-images', formData, {
@@ -341,6 +344,16 @@ export const priceSheetApi = {
   list:   ()      => api.get("/price-sheets"),
   save:   (sheet) => api.post("/price-sheets", sheet),
   remove: (id)    => api.delete(`/price-sheets/${id}`),
+};
+
+// ===============================
+// NEWS (Quản Lý Thông Báo — Vendor tạo) — lưu server thay localStorage
+// ===============================
+export const newsApi = {
+  list:   ()            => api.get("/news"),
+  create: (data)         => api.post("/news", data),
+  update: (id, data)     => api.put(`/news/${id}`, data),
+  remove: (id)           => api.delete(`/news/${id}`),
 };
 
 

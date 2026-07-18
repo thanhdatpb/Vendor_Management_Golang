@@ -109,6 +109,63 @@ class VendorLibraryController extends Controller
     }
 
     /**
+     * Cập nhật riêng cờ Best Seller của MỘT dòng generalInfo theo id.
+     * Cùng cơ chế với updateSampleStatus: đọc–sửa–ghi đúng 1 field trên server
+     * → Best Seller lưu vào DB (dùng chung cho Seller/CSF/PD), không còn phụ thuộc
+     * localStorage của từng máy.
+     */
+    public function updateBestSeller(Request $request)
+    {
+        $validated = $request->validate([
+            'rowId'        => ['required'],
+            'isBestSeller' => ['required', 'boolean'],
+        ]);
+
+        $rowId = (string) $validated['rowId'];
+        $flag  = (bool) $validated['isBestSeller'];
+
+        $row = $this->getRow();
+        if (!$row) {
+            return response()->json(['message' => 'Thư viện trống, không thể cập nhật.'], 404);
+        }
+
+        $data = json_decode($row->data, true);
+        if (!is_array($data)) {
+            return response()->json(['message' => 'Dữ liệu thư viện không hợp lệ.'], 422);
+        }
+
+        $found = false;
+        foreach ($data as &$file) {
+            if (empty($file['generalInfo']) || !is_array($file['generalInfo'])) {
+                continue;
+            }
+            foreach ($file['generalInfo'] as &$gr) {
+                if (isset($gr['id']) && (string) $gr['id'] === $rowId) {
+                    $gr['bestSeller'] = $flag;
+                    $found = true;
+                }
+            }
+            unset($gr);
+        }
+        unset($file);
+
+        if (!$found) {
+            return response()->json(['message' => 'Không tìm thấy dòng cần cập nhật.'], 404);
+        }
+
+        DB::table('vendor_library')->where('id', $row->id)->update([
+            'data'       => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message'      => 'Đã cập nhật Best Seller.',
+            'rowId'        => $rowId,
+            'isBestSeller' => $flag,
+        ]);
+    }
+
+    /**
      * Nhận hàng loạt ảnh trích xuất từ file Excel (ảnh nhúng trực tiếp vào ô,
      * không phải URL/formula =IMAGE()) và lưu vào disk public, trả về URL thật
      * cho từng ảnh — client dùng key gửi lên để map ngược ảnh vào đúng dòng.
