@@ -14,13 +14,23 @@ class BackfillVendorAssignedTime extends Command
      * để copy 2 field này khi gán vendor từ Thư Viện Excel (assigned_vendors là
      * snapshot JSON tại thời điểm gán, không link sống tới vendor_library).
      *
-     * Chỉ vá các vendor entry có is_excel=true + source_file_id + excel_row_id
-     * (định danh dòng gốc trong vendor_library) và đang thiếu avg_time_vendor
-     * lẫn avg_time_actual — tra ngược vendor_library để lấy đúng giá trị hiện tại.
+     * QUAN TRỌNG: id của mỗi dòng generalInfo trong vendor_library được sinh mới
+     * ('row-' + Date.now() + random, xem frontend/src/utils/vendorExcel.js) MỖI
+     * LẦN file được import/re-import — không ổn định. Vì vậy khớp theo id thường
+     * MISS 100% với dữ liệu cũ nếu file từng được re-import từ lúc gán vendor.
+     * Command này khớp theo id trước (rẻ, chính xác tuyệt đối nếu còn khớp), rồi
+     * fallback khớp theo định danh nghiệp vụ (kyHieu / tên vendor + product type)
+     * — CHỈ áp dụng khi khớp DUY NHẤT 1 kết quả trong toàn thư viện, để tránh vá
+     * nhầm dữ liệu của vendor khác.
      */
     protected $signature = 'app:backfill-vendor-assigned-time {--dry-run : Chỉ xem trước, không ghi vào DB}';
 
     protected $description = 'Vá avg_time_vendor/avg_time_actual còn thiếu trong products.assigned_vendors (dữ liệu gán vendor cũ trước khi field này được thêm)';
+
+    private function norm(?string $s): string
+    {
+        return trim(mb_strtolower((string) $s));
+    }
 
     public function handle(): int
     {
@@ -38,35 +48,76 @@ class BackfillVendorAssignedTime extends Command
             return self::FAILURE;
         }
 
-        // Lookup: "fileId|rowId" -> ['avgTimeVendor' => ..., 'avgTimeActual' => ...]
-        $lookup = [];
+        // byId: "fileId|rowId" -> time data (khớp tuyệt đối nếu id còn nguyên vẹn)
+        // byKey: "loại:giá trị" -> mảng candidate time data (khớp nghiệp vụ, fallback)
+        $byId = [];
+        $byKey = [];
+        $addKey = function (string $key, array $time) use (&$byKey) {
+            $byKey[$key][] = $time;
+        };
+
         foreach ($libraryData as $file) {
             $fileId = $file['id'] ?? null;
-            if ($fileId === null || empty($file['generalInfo']) || !is_array($file['generalInfo'])) {
+            if (empty($file['generalInfo']) || !is_array($file['generalInfo'])) {
                 continue;
             }
             foreach ($file['generalInfo'] as $row) {
-                $rowId = $row['id'] ?? null;
-                if ($rowId === null) {
-                    continue;
-                }
-                $lookup[$fileId . '|' . $rowId] = [
+                $time = [
                     'avgTimeVendor' => $row['avgTimeVendor'] ?? '',
                     'avgTimeActual' => $row['avgTimeActual'] ?? '',
                 ];
+                if (empty($time['avgTimeVendor']) && empty($time['avgTimeActual'])) {
+                    continue; // dòng thư viện cũng chưa có dữ liệu thời gian — không có gì để vá
+                }
+
+                $rowId = $row['id'] ?? null;
+                if ($fileId !== null && $rowId !== null) {
+                    $byId[$fileId . '|' . $rowId] = $time;
+                }
+
+                $kyHieu = $this->norm($row['kyHieu'] ?? '');
+                $vendorName = $this->norm($row['vendorName'] ?? '');
+                $productType = $this->norm($row['productType'] ?? '');
+
+                if ($kyHieu !== '' && $productType !== '') {
+                    $addKey('kh_pt:' . $kyHieu . '|' . $productType, $time);
+                }
+                if ($vendorName !== '' && $productType !== '') {
+                    $addKey('vn_pt:' . $vendorName . '|' . $productType, $time);
+                }
+                if ($kyHieu !== '') {
+                    $addKey('kh:' . $kyHieu, $time);
+                }
             }
         }
 
-        $this->info('Đã nạp ' . count($lookup) . ' dòng từ Thư Viện Vendor để tra cứu.');
+        $this->info('Đã nạp dữ liệu Thư Viện Vendor để tra cứu (' . count($byId) . ' theo ID, ' . count($byKey) . ' khoá nghiệp vụ).');
+
+        // Khớp DUY NHẤT: nếu candidate list có >1 phần tử VÀ chúng không đồng nhất giá trị
+        // (thời gian khác nhau giữa các dòng trùng khoá) thì coi là mơ hồ, không áp dụng.
+        $resolveUnique = function (array $candidates) {
+            if (count($candidates) === 0) {
+                return null;
+            }
+            $first = $candidates[0];
+            foreach ($candidates as $c) {
+                if ($c['avgTimeVendor'] !== $first['avgTimeVendor'] || $c['avgTimeActual'] !== $first['avgTimeActual']) {
+                    return null; // trùng khoá nhưng giá trị khác nhau → mơ hồ, bỏ qua
+                }
+            }
+            return $first;
+        };
 
         $productsScanned = 0;
         $productsUpdated = 0;
-        $entriesPatched = 0;
+        $entriesPatchedById = 0;
+        $entriesPatchedByKey = 0;
+        $entriesAmbiguous = 0;
         $entriesNotFound = 0;
 
         Product::whereNotNull('assigned_vendors')->chunkById(50, function ($products) use (
-            $lookup, $dryRun,
-            &$productsScanned, &$productsUpdated, &$entriesPatched, &$entriesNotFound
+            $byId, $byKey, $resolveUnique, $dryRun,
+            &$productsScanned, &$productsUpdated, &$entriesPatchedById, &$entriesPatchedByKey, &$entriesAmbiguous, &$entriesNotFound
         ) {
             foreach ($products as $product) {
                 $productsScanned++;
@@ -84,20 +135,53 @@ class BackfillVendorAssignedTime extends Command
                     if ($hasTime) {
                         continue;
                     }
+
+                    $match = null;
+                    $matchedBy = null;
+
                     $fileId = $v['source_file_id'] ?? null;
                     $rowId = $v['excel_row_id'] ?? null;
-                    if ($fileId === null || $rowId === null) {
-                        continue;
+                    if ($fileId !== null && $rowId !== null && isset($byId[$fileId . '|' . $rowId])) {
+                        $match = $byId[$fileId . '|' . $rowId];
+                        $matchedBy = 'id';
                     }
-                    $key = $fileId . '|' . $rowId;
-                    if (!isset($lookup[$key])) {
+
+                    if ($match === null) {
+                        $kyHieu = $this->norm($v['kyHieu'] ?? '');
+                        $vendorName = $this->norm($v['name'] ?? '');
+                        $productType = $this->norm($v['vendor_type'] ?? '');
+
+                        foreach ([
+                            $kyHieu !== '' && $productType !== '' ? 'kh_pt:' . $kyHieu . '|' . $productType : null,
+                            $vendorName !== '' && $productType !== '' ? 'vn_pt:' . $vendorName . '|' . $productType : null,
+                            $kyHieu !== '' ? 'kh:' . $kyHieu : null,
+                        ] as $tryKey) {
+                            if ($tryKey === null || !isset($byKey[$tryKey])) {
+                                continue;
+                            }
+                            $resolved = $resolveUnique($byKey[$tryKey]);
+                            if ($resolved !== null) {
+                                $match = $resolved;
+                                $matchedBy = 'key';
+                                break;
+                            }
+                            $entriesAmbiguous++;
+                        }
+                    }
+
+                    if ($match === null) {
                         $entriesNotFound++;
                         continue;
                     }
-                    $v['avg_time_vendor'] = $lookup[$key]['avgTimeVendor'];
-                    $v['avg_time_actual'] = $lookup[$key]['avgTimeActual'];
+
+                    $v['avg_time_vendor'] = $match['avgTimeVendor'];
+                    $v['avg_time_actual'] = $match['avgTimeActual'];
                     $changed = true;
-                    $entriesPatched++;
+                    if ($matchedBy === 'id') {
+                        $entriesPatchedById++;
+                    } else {
+                        $entriesPatchedByKey++;
+                    }
                 }
                 unset($v);
 
@@ -114,9 +198,12 @@ class BackfillVendorAssignedTime extends Command
 
         $this->newLine();
         $this->info("Quét {$productsScanned} sản phẩm có assigned_vendors.");
-        $this->info("{$productsUpdated} sản phẩm được vá, {$entriesPatched} dòng vendor được cập nhật.");
+        $this->info("{$productsUpdated} sản phẩm được vá — {$entriesPatchedById} dòng khớp theo ID, {$entriesPatchedByKey} dòng khớp theo tên/ký hiệu.");
+        if ($entriesAmbiguous > 0) {
+            $this->warn("{$entriesAmbiguous} lượt khớp bị mơ hồ (trùng khoá nhưng thời gian khác nhau giữa các dòng) — bỏ qua để an toàn.");
+        }
         if ($entriesNotFound > 0) {
-            $this->warn("{$entriesNotFound} dòng vendor không tìm thấy trong Thư Viện Vendor hiện tại (có thể đã bị xoá/sửa) — bỏ qua.");
+            $this->warn("{$entriesNotFound} dòng vendor không tìm thấy trong Thư Viện Vendor hiện tại (đã bị xoá/đổi tên/không đủ dữ liệu để khớp) — bỏ qua.");
         }
         if ($dryRun) {
             $this->comment('Chế độ --dry-run: CHƯA ghi gì vào DB. Chạy lại không kèm --dry-run để áp dụng thật.');
