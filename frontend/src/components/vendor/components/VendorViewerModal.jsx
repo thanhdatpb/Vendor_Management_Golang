@@ -420,8 +420,7 @@ export default function VendorViewerModal({ product, onClose }) {
                               <th style={{ ...thS({ textAlign: 'left', minWidth: 150 }) }}>Vendor</th>
                               <th style={{ ...thS({ textAlign: 'left', minWidth: 120 }) }}>Chất liệu</th>
                               <th style={{ ...thS({ width: 80 }) }}>Size</th>
-                              <th style={{ ...thS({ width: 62 }) }}>T.gian SX</th>
-                              <th style={{ ...thS({ width: 62 }) }}>T.gian Ship</th>
+                              <th style={{ ...thS({ width: 124 }) }}>T.gian Vendor</th>
                               <th style={{ ...thS({ width: 70 }) }}>Folder</th>
                               <th style={{ ...thS({ minWidth: 260, borderRight: 'none', color: '#059669' }) }}>Giá & So sánh Target</th>
                             </tr>
@@ -506,18 +505,16 @@ export default function VendorViewerModal({ product, onClose }) {
                                     }
                                   </td>
 
-                                  {/* T.gian SX */}
-                                  <td style={{ ...td({ textAlign: 'center', width: 62 }) }}>
-                                    {product.production_time
-                                      ? <span style={{ fontWeight: 700, fontSize: 11, color: '#0284c7' }}>{product.production_time}</span>
-                                      : <NaLib />
-                                    }
-                                  </td>
-
-                                  {/* T.gian Ship */}
-                                  <td style={{ ...td({ textAlign: 'center', width: 62 }) }}>
-                                    {product.shipping_time
-                                      ? <span style={{ fontWeight: 700, fontSize: 11, color: '#7c3aed' }}>{product.shipping_time}</span>
+                                  {/* T.gian Vendor — thời gian do CHÍNH vendor này báo cáo (avg_time_vendor/avg_time_actual),
+                                      KHÔNG phải production_time/shipping_time của request gốc (giống nhau cho mọi vendor) */}
+                                  <td style={{ ...td({ textAlign: 'left', width: 124 }) }}>
+                                    {(v.avg_time_vendor || v.avg_time_actual)
+                                      ? (
+                                        <div style={{ fontSize: 10, lineHeight: 1.4 }}>
+                                          {v.avg_time_vendor && <div style={{ fontWeight: 700, color: '#0284c7', whiteSpace: 'pre-line' }}>{v.avg_time_vendor}</div>}
+                                          {v.avg_time_actual && <div style={{ fontWeight: 600, color: '#7c3aed', marginTop: v.avg_time_vendor ? 3 : 0, whiteSpace: 'pre-line' }}>Thực tế: {v.avg_time_actual}</div>}
+                                        </div>
+                                      )
                                       : <NaLib />
                                     }
                                   </td>

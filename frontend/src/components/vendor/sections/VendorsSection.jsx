@@ -155,6 +155,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               kyHieu: m.kyHieu || '',
               source_file_id: file.id,
               source_file_name: file.filename || '',
+              avg_time_vendor: m.avgTimeVendor || '',
+              avg_time_actual: m.avgTimeActual || '',
             };
             const norm = s => (s || '').toString().trim().toLowerCase();
             const mk = norm(m.kyHieu);
