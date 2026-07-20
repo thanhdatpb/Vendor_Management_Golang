@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Product;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class BackfillVendorAssignedTime extends Command
@@ -207,6 +208,14 @@ class BackfillVendorAssignedTime extends Command
         }
         if ($dryRun) {
             $this->comment('Chế độ --dry-run: CHƯA ghi gì vào DB. Chạy lại không kèm --dry-run để áp dụng thật.');
+        } elseif ($productsUpdated > 0) {
+            // ProductController::index() cache 1h theo products_cache_version — nếu không
+            // bust ở đây, danh sách sản phẩm (cả Seller lẫn Vendor) tiếp tục trả dữ liệu
+            // cũ tới khi cache tự hết hạn, dù DB đã được vá đúng.
+            Cache::increment('products_cache_version');
+            Cache::forget('products_pending');
+            Cache::forget('products_approved');
+            $this->info('Đã xoá cache danh sách sản phẩm — Seller/Vendor sẽ thấy dữ liệu mới ngay khi tải lại trang.');
         }
 
         return self::SUCCESS;
