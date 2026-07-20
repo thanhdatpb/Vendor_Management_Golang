@@ -795,24 +795,6 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                           </table>
                         </div>
                       </div>
-
-                      {/* Legend */}
-                      <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '7px 12px', background: '#fff', borderRadius: 8, border: `1px solid ${HC.border}` }}>
-                        <span style={{ fontSize: 10, color: HC.muted, fontWeight: 700 }}>Chú thích:</span>
-                        <span style={{ fontSize: 10, color: '#94a3b8', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ fontSize: 10, color: '#cbd5e1' }}>—</span> Thư viện chưa có dữ liệu
-                        </span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: HC.muted }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: '#92400e', padding: '1px 6px', borderRadius: 4, background: '#fffbeb', border: '1px solid #fde68a' }}>chờ Staff B</span>
-                          Bộ phận Vận hành chưa nhập
-                        </span>
-                        {groupedVendors.length > 1 && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: HC.muted }}>
-                            <span style={{ fontSize: 8, fontWeight: 900, color: '#fff', padding: '1px 5px', borderRadius: 3, background: '#16a34a' }}>BEST</span>
-                            Giá tốt nhất trong danh sách
-                          </span>
-                        )}
-                      </div>
                     </>
                   );
                 })()}
