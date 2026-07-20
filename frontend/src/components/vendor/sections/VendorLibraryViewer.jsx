@@ -15,10 +15,25 @@ const TH = (extra = {}) => ({
   border: `1px solid ${HC.orange}`, fontFamily: "'Nunito',sans-serif",
   verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', ...extra,
 });
+// Header cột SỐ (Price Ship / Price Ship Item 2 / Total…): cho xuống dòng, gọn,
+// vì nội dung cột chỉ là giá trị $ nhỏ → tiêu đề dài xuống dòng thay vì kéo ngang.
+const THnum = (extra = {}) => ({
+  padding: '4px 2px', fontWeight: 800, fontSize: 9, textTransform: 'uppercase',
+  letterSpacing: 0, color: '#fff', background: HC.orangeDark,
+  border: `1px solid ${HC.orange}`, fontFamily: "'Nunito',sans-serif",
+  verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'normal', lineHeight: 1.1, ...extra,
+});
 const TD = (idx, extra = {}) => ({
-  padding: '7px 8px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`,
+  padding: '6px 5px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`,
   background: idx % 2 === 0 ? HC.surface : HC.surface2,
   fontFamily: "'Nunito Sans',sans-serif", verticalAlign: 'top', wordBreak: 'break-word', overflowWrap: 'break-word', ...extra,
+});
+// Ô SỐ trong body: không bẻ dòng giá trị, padding hẹp để cột nhỏ vẫn đủ chứa "$XX.XX".
+const TDnum = (idx, extra = {}) => ({
+  padding: '6px 3px', fontSize: 11.5, color: HC.ink2, border: `1px solid ${HC.border}`,
+  background: idx % 2 === 0 ? HC.surface : HC.surface2,
+  fontFamily: "'Nunito Sans',sans-serif", verticalAlign: 'middle', textAlign: 'right',
+  whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', ...extra,
 });
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
@@ -533,28 +548,43 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1100 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1160, tableLayout: 'fixed' }}>
+        <colgroup>
+          <col style={{ width: 78 }} />{/* Vendor Name */}
+          <col style={{ width: 104 }} />{/* Product Type */}
+          <col style={{ width: 50 }} />{/* Size */}
+          <col style={{ width: 46 }} />{/* Optional */}
+          <col style={{ width: 50 }} />{/* P1 */}
+          <col style={{ width: 46 }} />{/* P2 */}
+          {shipMethods.map((m) => [
+            <col key={`${m.label}-c1`} style={{ width: 50 }} />,
+            <col key={`${m.label}-c2`} style={{ width: 50 }} />,
+            <col key={`${m.label}-c3`} style={{ width: 54 }} />,
+          ])}
+          <col style={{ width: 72 }} />{/* Link Template */}
+          {showActions && <col style={{ width: 54 }} />}
+        </colgroup>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ ...TH(), minWidth: 120, textAlign: 'left' }}>Vendor Name</th>
-            <th rowSpan={2} style={{ ...TH(), textAlign: 'left', minWidth: 160 }}>Product Type</th>
+            <th rowSpan={2} style={{ ...TH(), textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.15 }}>Vendor Name</th>
+            <th rowSpan={2} style={{ ...TH(), textAlign: 'left' }}>Product Type</th>
             <th colSpan={2} style={{ ...TH() }}>Detail</th>
             <th colSpan={2} style={{ ...TH() }}>Pricing</th>
             {shipMethods.map((m, si) => (
               <th key={m.label} colSpan={3} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
             ))}
-            <th rowSpan={2} style={{ ...TH(), minWidth: 110, textAlign: 'left' }}>Link Template</th>
-            {showActions && <th rowSpan={2} style={{ ...TH(), width: 60 }}>Thao tác</th>}
+            <th rowSpan={2} style={{ ...TH(), textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.15 }}>Link Template</th>
+            {showActions && <th rowSpan={2} style={{ ...TH() }}>Thao tác</th>}
           </tr>
           <tr>
-            <th style={{ ...TH(), minWidth: 80 }}>Size</th>
-            <th style={{ ...TH(), minWidth: 80 }}>Optional</th>
-            <th style={{ ...TH({ background: '#b45309' }), minWidth: 70 }}>P1</th>
-            <th style={{ ...TH({ background: '#b45309' }), minWidth: 70 }}>P2</th>
+            <th style={{ ...TH() }}>Size</th>
+            <th style={{ ...TH() }}>Optional</th>
+            <th style={{ ...TH({ background: '#b45309' }) }}>P1</th>
+            <th style={{ ...TH({ background: '#b45309' }) }}>P2</th>
             {shipMethods.map((m, si) => [
-              <th key={`${m.label}-price`} style={{ ...TH({ background: shipBg[si], opacity: 0.85 }), minWidth: 80 }}>Price Ship</th>,
-              <th key={`${m.label}-item2`} style={{ ...TH({ background: shipBg[si], opacity: 0.7 }), minWidth: 84 }}>Price Ship Item 2</th>,
-              <th key={`${m.label}-total`} style={{ ...TH({ background: shipBg[si] }), minWidth: 90 }}>Total (fulfill)</th>,
+              <th key={`${m.label}-price`} style={{ ...THnum({ background: shipBg[si], opacity: 0.85 }) }}>Price Ship</th>,
+              <th key={`${m.label}-item2`} style={{ ...THnum({ background: shipBg[si], opacity: 0.7 }) }}>Price Ship Item 2</th>,
+              <th key={`${m.label}-total`} style={{ ...THnum({ background: shipBg[si] }) }}>Total (fulfill)</th>,
             ])}
           </tr>
         </thead>
@@ -605,30 +635,30 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                     <input type="text" value={editForm.optional} onChange={e => setEditForm(p => ({ ...p, optional: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
                   ) : fmtNA(r.optional)}
                 </td>
-                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>
+                <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
                   {isEditing ? (
                     <input type="number" step="0.01" value={editForm.pricing1} onChange={e => setEditForm(p => ({ ...p, pricing1: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
                   ) : fmt$(r.pricing1)}
                 </td>
-                <td style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: '#b45309' }}>
+                <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
                   {isEditing ? (
                     <input type="number" step="0.01" value={editForm.pricing2} onChange={e => setEditForm(p => ({ ...p, pricing2: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
                   ) : fmt$(r.pricing2)}
                 </td>
                 {shipMethods.map((m) => [
-                  <td key={`${m.label}-price`} style={{ ...TD(i), textAlign: 'right', color: HC.muted }}>
+                  <td key={`${m.label}-price`} style={{ ...TDnum(i), color: HC.muted }}>
                     {isEditing ? (
-                      <input type="number" step="0.01" value={editForm[m.priceKey]} onChange={e => setEditForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                      <input type="number" step="0.01" value={editForm[m.priceKey]} onChange={e => setEditForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
                     ) : fmt$(r[m.priceKey])}
                   </td>,
-                  <td key={`${m.label}-item2`} style={{ ...TD(i), textAlign: 'right', color: HC.muted }}>
+                  <td key={`${m.label}-item2`} style={{ ...TDnum(i), color: HC.muted }}>
                     {isEditing ? (
-                      <input type="number" step="0.01" value={editForm[m.item2Key]} onChange={e => setEditForm(p => ({ ...p, [m.item2Key]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                      <input type="number" step="0.01" value={editForm[m.item2Key]} onChange={e => setEditForm(p => ({ ...p, [m.item2Key]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
                     ) : fmt$(r[m.item2Key])}
                   </td>,
-                  <td key={`${m.label}-total`} style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>
+                  <td key={`${m.label}-total`} style={{ ...TDnum(i), fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>
                     {isEditing ? (
-                      <input type="number" step="0.01" value={editForm[m.totalKey]} onChange={e => setEditForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
+                      <input type="number" step="0.01" value={editForm[m.totalKey]} onChange={e => setEditForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
                     ) : fmt$(r[m.totalKey])}
                   </td>,
                 ])}
