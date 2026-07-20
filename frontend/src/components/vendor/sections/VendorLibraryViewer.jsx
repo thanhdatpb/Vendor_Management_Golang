@@ -38,6 +38,44 @@ const TDnum = (idx, extra = {}) => ({
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
+// ── Ô số click-để-sửa tại chỗ ────────────────────────────────────────────────
+// Vendor không có nút "Sửa" nên cho phép nhấn thẳng vào từng giá trị để chỉnh.
+// Enter/blur = lưu (gọi onCommit → onSave), Esc = huỷ. readOnly → chỉ hiển thị.
+function EditableNum({ value, display, onCommit, readOnly, align = 'right', extraStyle }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const skip = useRef(false);
+  if (readOnly) return <span style={extraStyle}>{display}</span>;
+  if (!editing) {
+    return (
+      <span
+        onClick={() => { setDraft(value ?? ''); setEditing(true); }}
+        title="Nhấn để sửa"
+        style={{ cursor: 'pointer', display: 'block', borderRadius: 3, padding: '1px 2px', ...extraStyle }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,166,35,0.18)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      >{display}</span>
+    );
+  }
+  const commit = () => {
+    setEditing(false);
+    if (String(draft ?? '') !== String(value ?? '')) onCommit(draft);
+  };
+  return (
+    <input
+      type="number" step="0.01" autoFocus value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={() => { if (skip.current) { skip.current = false; setEditing(false); } else commit(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        else if (e.key === 'Escape') { skip.current = true; e.currentTarget.blur(); }
+      }}
+      style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.orange}`, textAlign: align, boxSizing: 'border-box', outline: 'none', ...extraStyle }}
+    />
+  );
+}
+
 // ── Project visibility helpers ────────────────────────────────────────────────
 // Trả về project key từ tên file, hoặc null nếu không có ký hiệu (= hiện cho tất cả).
 function extractFileProject(filename) {
@@ -428,6 +466,15 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
     if (onSave) onSave(newRows);
   };
 
+  // Sửa tại chỗ MỘT ô giá trị số (click-để-sửa). '' → null; số hợp lệ → Number.
+  const updateCellValue = (idx, field, value) => {
+    const num = (value === '' || value === null || value === undefined) ? null : Number(value);
+    if (num !== null && !Number.isFinite(num)) return; // bỏ qua nhập không hợp lệ
+    const newRows = [...rows];
+    newRows[idx] = { ...newRows[idx], [field]: num };
+    if (onSave) onSave(newRows);
+  };
+
   if (!rows || rows.length === 0) return (
     <div>
       <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>
@@ -638,28 +685,28 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                 <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
                   {isEditing ? (
                     <input type="number" step="0.01" value={editForm.pricing1} onChange={e => setEditForm(p => ({ ...p, pricing1: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                  ) : fmt$(r.pricing1)}
+                  ) : <EditableNum readOnly={readOnly} value={r.pricing1} display={fmt$(r.pricing1)} onCommit={v => updateCellValue(i, 'pricing1', v)} />}
                 </td>
                 <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
                   {isEditing ? (
                     <input type="number" step="0.01" value={editForm.pricing2} onChange={e => setEditForm(p => ({ ...p, pricing2: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                  ) : fmt$(r.pricing2)}
+                  ) : <EditableNum readOnly={readOnly} value={r.pricing2} display={fmt$(r.pricing2)} onCommit={v => updateCellValue(i, 'pricing2', v)} />}
                 </td>
                 {shipMethods.map((m) => [
                   <td key={`${m.label}-price`} style={{ ...TDnum(i), color: HC.muted }}>
                     {isEditing ? (
                       <input type="number" step="0.01" value={editForm[m.priceKey]} onChange={e => setEditForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                    ) : fmt$(r[m.priceKey])}
+                    ) : <EditableNum readOnly={readOnly} value={r[m.priceKey]} display={fmt$(r[m.priceKey])} onCommit={v => updateCellValue(i, m.priceKey, v)} />}
                   </td>,
                   <td key={`${m.label}-item2`} style={{ ...TDnum(i), color: HC.muted }}>
                     {isEditing ? (
                       <input type="number" step="0.01" value={editForm[m.item2Key]} onChange={e => setEditForm(p => ({ ...p, [m.item2Key]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                    ) : fmt$(r[m.item2Key])}
+                    ) : <EditableNum readOnly={readOnly} value={r[m.item2Key]} display={fmt$(r[m.item2Key])} onCommit={v => updateCellValue(i, m.item2Key, v)} />}
                   </td>,
                   <td key={`${m.label}-total`} style={{ ...TDnum(i), fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>
                     {isEditing ? (
                       <input type="number" step="0.01" value={editForm[m.totalKey]} onChange={e => setEditForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
-                    ) : fmt$(r[m.totalKey])}
+                    ) : <EditableNum readOnly={readOnly} value={r[m.totalKey]} display={fmt$(r[m.totalKey])} onCommit={v => updateCellValue(i, m.totalKey, v)} extraStyle={{ color: r[m.totalKey] != null ? HC.success : HC.muted2, fontWeight: 700 }} />}
                   </td>,
                 ])}
                 <td style={{ ...TD(i) }}>
