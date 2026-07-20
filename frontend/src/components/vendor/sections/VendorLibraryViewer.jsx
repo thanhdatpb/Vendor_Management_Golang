@@ -346,7 +346,7 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
         {shipMethods.map(m => (
           <div key={m.label} style={{ border: `1.5px solid ${m.bg}33`, borderRadius: 8, padding: '8px 8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ fontWeight: 800, fontSize: 10, color: m.bg, textAlign: 'center', textTransform: 'uppercase' }}>{m.label}</div>
-            {[['Price Ship', m.priceKey, HC.muted], ['Total (fulfill)', m.totalKey, HC.success]].map(([lbl, key, clr]) => (
+            {[['Price Ship', m.priceKey, HC.muted], ['Price Ship Item 2', m.item2Key, HC.muted], ['Total (fulfill)', m.totalKey, HC.success]].map(([lbl, key, clr]) => (
               <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: HC.muted, textTransform: 'uppercase' }}>{lbl}</label>
                 <input type="number" step="0.01" placeholder="0.00" value={addForm[key]} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))} style={{ padding: '5px 6px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', color: clr, fontWeight: 700, boxSizing: 'border-box', outline: 'none' }} />
@@ -378,11 +378,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
   const mkAddForm = () => ({
     kyHieu: '', productType: '', size: '', optional: '',
     pricing1: '', pricing2: '',
-    eco_price: '', eco_total: '',
-    ground_price: '', ground_total: '',
-    express_price: '', express_total: '',
-    twoday_price: '', twoday_total: '',
-    overnight_price: '', overnight_total: '',
+    eco_price: '', eco_total: '', eco_price_item2: '',
+    ground_price: '', ground_total: '', ground_price_item2: '',
+    express_price: '', express_total: '', express_price_item2: '',
+    twoday_price: '', twoday_total: '', twoday_price_item2: '',
+    overnight_price: '', overnight_total: '', overnight_price_item2: '',
     linkTemplate: '',
   });
 
@@ -395,11 +395,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       size: addForm.size,
       optional: addForm.optional,
       pricing1: toNum(addForm.pricing1), pricing2: toNum(addForm.pricing2),
-      eco_price: toNum(addForm.eco_price), eco_total: toNum(addForm.eco_total),
-      ground_price: toNum(addForm.ground_price), ground_total: toNum(addForm.ground_total),
-      express_price: toNum(addForm.express_price), express_total: toNum(addForm.express_total),
-      twoday_price: toNum(addForm.twoday_price), twoday_total: toNum(addForm.twoday_total),
-      overnight_price: toNum(addForm.overnight_price), overnight_total: toNum(addForm.overnight_total),
+      eco_price: toNum(addForm.eco_price), eco_total: toNum(addForm.eco_total), eco_price_item2: toNum(addForm.eco_price_item2),
+      ground_price: toNum(addForm.ground_price), ground_total: toNum(addForm.ground_total), ground_price_item2: toNum(addForm.ground_price_item2),
+      express_price: toNum(addForm.express_price), express_total: toNum(addForm.express_total), express_price_item2: toNum(addForm.express_price_item2),
+      twoday_price: toNum(addForm.twoday_price), twoday_total: toNum(addForm.twoday_total), twoday_price_item2: toNum(addForm.twoday_price_item2),
+      overnight_price: toNum(addForm.overnight_price), overnight_total: toNum(addForm.overnight_total), overnight_price_item2: toNum(addForm.overnight_price_item2),
       linkTemplate: addForm.linkTemplate,
     };
     if (onSave) onSave([...(rows || []), newRow]);
@@ -419,11 +419,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       {!readOnly && (
         addingRow && addForm
           ? <AddRowForm addForm={addForm} setAddForm={setAddForm} saveAddRow={saveAddRow} onCancel={() => { setAddingRow(false); setAddForm(null); }} shipMethods={[
-              { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total', bg: '#1d6b3a' },
-              { label: 'Ground', priceKey: 'ground_price', totalKey: 'ground_total', bg: HC.orangeDark },
-              { label: 'Express', priceKey: 'express_price', totalKey: 'express_total', bg: '#1e4fa0' },
-              { label: '2 Days', priceKey: 'twoday_price', totalKey: 'twoday_total', bg: '#7c3aed' },
-              { label: 'Overnight', priceKey: 'overnight_price', totalKey: 'overnight_total', bg: '#b91c1c' },
+              { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total', item2Key: 'eco_price_item2', bg: '#1d6b3a' },
+              { label: 'Ground', priceKey: 'ground_price', totalKey: 'ground_total', item2Key: 'ground_price_item2', bg: HC.orangeDark },
+              { label: 'Express', priceKey: 'express_price', totalKey: 'express_total', item2Key: 'express_price_item2', bg: '#1e4fa0' },
+              { label: '2 Days', priceKey: 'twoday_price', totalKey: 'twoday_total', item2Key: 'twoday_price_item2', bg: '#7c3aed' },
+              { label: 'Overnight', priceKey: 'overnight_price', totalKey: 'overnight_total', item2Key: 'overnight_price_item2', bg: '#b91c1c' },
             ]} />
           : <button onClick={() => { setAddingRow(true); setAddForm(mkAddForm()); }} style={{ width: '100%', padding: '9px 0', marginTop: 8, borderRadius: 8, border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>➕ Thêm dòng size/giá</button>
       )}
@@ -467,14 +467,19 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       pricing2: row.pricing2 ?? '',
       eco_price: row.eco_price ?? '',
       eco_total: row.eco_total ?? '',
+      eco_price_item2: row.eco_price_item2 ?? '',
       ground_price: row.ground_price ?? '',
       ground_total: row.ground_total ?? '',
+      ground_price_item2: row.ground_price_item2 ?? '',
       express_price: row.express_price ?? '',
       express_total: row.express_total ?? '',
+      express_price_item2: row.express_price_item2 ?? '',
       twoday_price: row.twoday_price ?? '',
       twoday_total: row.twoday_total ?? '',
+      twoday_price_item2: row.twoday_price_item2 ?? '',
       overnight_price: row.overnight_price ?? '',
       overnight_total: row.overnight_total ?? '',
+      overnight_price_item2: row.overnight_price_item2 ?? '',
     });
   };
 
@@ -491,14 +496,19 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
       pricing2: toNum(editForm.pricing2),
       eco_price: toNum(editForm.eco_price),
       eco_total: toNum(editForm.eco_total),
+      eco_price_item2: toNum(editForm.eco_price_item2),
       ground_price: toNum(editForm.ground_price),
       ground_total: toNum(editForm.ground_total),
+      ground_price_item2: toNum(editForm.ground_price_item2),
       express_price: toNum(editForm.express_price),
       express_total: toNum(editForm.express_total),
+      express_price_item2: toNum(editForm.express_price_item2),
       twoday_price: toNum(editForm.twoday_price),
       twoday_total: toNum(editForm.twoday_total),
+      twoday_price_item2: toNum(editForm.twoday_price_item2),
       overnight_price: toNum(editForm.overnight_price),
       overnight_total: toNum(editForm.overnight_total),
+      overnight_price_item2: toNum(editForm.overnight_price_item2),
     };
     setEditIdx(-1);
     setEditForm(null);
@@ -511,11 +521,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
   };
 
   const shipMethods = [
-    { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total' },
-    { label: 'Ground', priceKey: 'ground_price', totalKey: 'ground_total' },
-    { label: 'Express', priceKey: 'express_price', totalKey: 'express_total' },
-    { label: '2 Days', priceKey: 'twoday_price', totalKey: 'twoday_total' },
-    { label: 'Overnight', priceKey: 'overnight_price', totalKey: 'overnight_total' },
+    { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total', item2Key: 'eco_price_item2' },
+    { label: 'Ground', priceKey: 'ground_price', totalKey: 'ground_total', item2Key: 'ground_price_item2' },
+    { label: 'Express', priceKey: 'express_price', totalKey: 'express_total', item2Key: 'express_price_item2' },
+    { label: '2 Days', priceKey: 'twoday_price', totalKey: 'twoday_total', item2Key: 'twoday_price_item2' },
+    { label: 'Overnight', priceKey: 'overnight_price', totalKey: 'overnight_total', item2Key: 'overnight_price_item2' },
   ];
 
   const shipBg = ['#1d6b3a', HC.orangeDark, '#1e4fa0', '#7c3aed', '#b91c1c'];
@@ -531,7 +541,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
             <th colSpan={2} style={{ ...TH() }}>Detail</th>
             <th colSpan={2} style={{ ...TH() }}>Pricing</th>
             {shipMethods.map((m, si) => (
-              <th key={m.label} colSpan={2} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
+              <th key={m.label} colSpan={3} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
             ))}
             <th rowSpan={2} style={{ ...TH(), minWidth: 110, textAlign: 'left' }}>Link Template</th>
             {showActions && <th rowSpan={2} style={{ ...TH(), width: 60 }}>Thao tác</th>}
@@ -543,6 +553,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
             <th style={{ ...TH({ background: '#b45309' }), minWidth: 70 }}>P2</th>
             {shipMethods.map((m, si) => [
               <th key={`${m.label}-price`} style={{ ...TH({ background: shipBg[si], opacity: 0.85 }), minWidth: 80 }}>Price Ship</th>,
+              <th key={`${m.label}-item2`} style={{ ...TH({ background: shipBg[si], opacity: 0.7 }), minWidth: 84 }}>Price Ship Item 2</th>,
               <th key={`${m.label}-total`} style={{ ...TH({ background: shipBg[si] }), minWidth: 90 }}>Total (fulfill)</th>,
             ])}
           </tr>
@@ -609,6 +620,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                     {isEditing ? (
                       <input type="number" step="0.01" value={editForm[m.priceKey]} onChange={e => setEditForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
                     ) : fmt$(r[m.priceKey])}
+                  </td>,
+                  <td key={`${m.label}-item2`} style={{ ...TD(i), textAlign: 'right', color: HC.muted }}>
+                    {isEditing ? (
+                      <input type="number" step="0.01" value={editForm[m.item2Key]} onChange={e => setEditForm(p => ({ ...p, [m.item2Key]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                    ) : fmt$(r[m.item2Key])}
                   </td>,
                   <td key={`${m.label}-total`} style={{ ...TD(i), textAlign: 'right', fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>
                     {isEditing ? (
@@ -993,11 +1009,11 @@ function ManualAddModal({ onClose, onSave, mode }) {
     _key: `${Date.now()}_${Math.random()}`,
     kyHieu: '', productType: '', size: '', optional: '',
     pricing1: '', pricing2: '',
-    eco_price: '', eco_total: '',
-    ground_price: '', ground_total: '',
-    express_price: '', express_total: '',
-    twoday_price: '', twoday_total: '',
-    overnight_price: '', overnight_total: '',
+    eco_price: '', eco_total: '', eco_price_item2: '',
+    ground_price: '', ground_total: '', ground_price_item2: '',
+    express_price: '', express_total: '', express_price_item2: '',
+    twoday_price: '', twoday_total: '', twoday_price_item2: '',
+    overnight_price: '', overnight_total: '', overnight_price_item2: '',
     linkTemplate: '',
   });
 
@@ -1038,11 +1054,11 @@ function ManualAddModal({ onClose, onSave, mode }) {
       size: r.size,
       optional: r.optional,
       pricing1: toNum(r.pricing1), pricing2: toNum(r.pricing2),
-      eco_price: toNum(r.eco_price), eco_total: toNum(r.eco_total),
-      ground_price: toNum(r.ground_price), ground_total: toNum(r.ground_total),
-      express_price: toNum(r.express_price), express_total: toNum(r.express_total),
-      twoday_price: toNum(r.twoday_price), twoday_total: toNum(r.twoday_total),
-      overnight_price: toNum(r.overnight_price), overnight_total: toNum(r.overnight_total),
+      eco_price: toNum(r.eco_price), eco_total: toNum(r.eco_total), eco_price_item2: toNum(r.eco_price_item2),
+      ground_price: toNum(r.ground_price), ground_total: toNum(r.ground_total), ground_price_item2: toNum(r.ground_price_item2),
+      express_price: toNum(r.express_price), express_total: toNum(r.express_total), express_price_item2: toNum(r.express_price_item2),
+      twoday_price: toNum(r.twoday_price), twoday_total: toNum(r.twoday_total), twoday_price_item2: toNum(r.twoday_price_item2),
+      overnight_price: toNum(r.overnight_price), overnight_total: toNum(r.overnight_total), overnight_price_item2: toNum(r.overnight_price_item2),
       linkTemplate: r.linkTemplate,
     }));
 
@@ -1058,11 +1074,11 @@ function ManualAddModal({ onClose, onSave, mode }) {
   };
 
   const shipMethods = [
-    { label: 'Economy',   pk: 'eco_price',      tk: 'eco_total',      color: '#1d6b3a' },
-    { label: 'Ground',    pk: 'ground_price',   tk: 'ground_total',   color: HC.orangeDark },
-    { label: 'Express',   pk: 'express_price',  tk: 'express_total',  color: '#1e4fa0' },
-    { label: '2 Days',    pk: 'twoday_price',   tk: 'twoday_total',   color: '#7c3aed' },
-    { label: 'Overnight', pk: 'overnight_price',tk: 'overnight_total',color: '#b91c1c' },
+    { label: 'Economy',   pk: 'eco_price',      tk: 'eco_total',      i2: 'eco_price_item2',      color: '#1d6b3a' },
+    { label: 'Ground',    pk: 'ground_price',   tk: 'ground_total',   i2: 'ground_price_item2',   color: HC.orangeDark },
+    { label: 'Express',   pk: 'express_price',  tk: 'express_total',  i2: 'express_price_item2',  color: '#1e4fa0' },
+    { label: '2 Days',    pk: 'twoday_price',   tk: 'twoday_total',   i2: 'twoday_price_item2',   color: '#7c3aed' },
+    { label: 'Overnight', pk: 'overnight_price',tk: 'overnight_total',i2: 'overnight_price_item2',color: '#b91c1c' },
   ];
 
   return (
@@ -1197,6 +1213,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
                       <div key={m.label} style={{ border: `1.5px solid ${m.color}33`, borderRadius: 8, padding: '10px 10px 12px', display: 'flex', flexDirection: 'column', gap: 8, background: '#fff' }}>
                         <div style={{ fontWeight: 800, fontSize: 10, color: m.color, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{m.label}</div>
                         <FieldGroup label="Price Ship"><input type="number" step="0.01" placeholder="0.00" value={r[m.pk]} onChange={e => updatePricing(r._key, m.pk, e.target.value)} style={inputSt({ fontSize: 11, textAlign: 'right' })} /></FieldGroup>
+                        <FieldGroup label="Price Ship Item 2"><input type="number" step="0.01" placeholder="0.00" value={r[m.i2]} onChange={e => updatePricing(r._key, m.i2, e.target.value)} style={inputSt({ fontSize: 11, textAlign: 'right' })} /></FieldGroup>
                         <FieldGroup label="Total (fulfill)"><input type="number" step="0.01" placeholder="0.00" value={r[m.tk]} onChange={e => updatePricing(r._key, m.tk, e.target.value)} style={inputSt({ fontSize: 11, textAlign: 'right', color: HC.success, fontWeight: 700 })} /></FieldGroup>
                       </div>
                     ))}

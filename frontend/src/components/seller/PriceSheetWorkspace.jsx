@@ -14,7 +14,7 @@ import {
   computeSizeRow, summarizeSheet, num, pct,
   makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
-import { loadVendorLibraryIndex, findLibraryEntry, getLibraryTotal, normalizeKey } from '../../utils/vendorLibraryIndex';
+import { loadVendorLibraryIndex, findLibraryEntry, getLibraryItemCost, getLibraryShip, getLibraryShipItem2, normalizeKey } from '../../utils/vendorLibraryIndex';
 
 import { PS, marginTone } from './pricesheet/tokens';
 import { PsStyles, Btn, IconBtn, Badge, ConfirmDialog } from './pricesheet/primitives';
@@ -111,8 +111,11 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       if (!libEntry) return pt;
       const sizes = libEntry.sizes.map((label) => {
         const existing = (pt.sizes || []).find((s) => s.label === label);
-        const itemCost = getLibraryTotal(libEntry, label, pt.shipMethod) || '';
-        return { ...(existing || makeSize(label, '')), label, itemCost, isLib: true };
+        // Bản chỉnh 2026-07-17: giá vốn = P1 (không còn cột Total); cost-ship lấy per-method.
+        const itemCost = getLibraryItemCost(libEntry, label) || '';
+        const totalShipCost = getLibraryShip(libEntry, label, pt.shipMethod) || 0;      // cột "Price Ship"
+        const shipCostItem = getLibraryShipItem2(libEntry, label, pt.shipMethod) || 0;  // cột "Price Ship Item 2"
+        return { ...(existing || makeSize(label, '')), label, itemCost, totalShipCost, shipCostItem, isLib: true };
       });
       return { ...pt, sizes };
     });

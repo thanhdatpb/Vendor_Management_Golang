@@ -20,12 +20,15 @@ function extractFileProject(filename) {
 
 // Khai báo phương thức ship → field tương ứng trong pricing row của thư viện.
 // (khớp đúng cấu trúc parseHappyCreativeLibrary trong vendorExcel.js)
+// priceField    = cột "Price Ship"         → Total Ship cost (ship cả đơn)
+// item2Field     = cột "Price Ship Item 2"  → Ship cost/item (ship mỗi sản phẩm thêm, multipack)
+// totalField     = cột "Total (Fulfill)"    → không còn dùng để tính giá vốn (Item Cost giờ = P1)
 export const SHIP_METHODS = [
-  { key: 'eco',       label: 'Economy',   totalField: 'eco_total',       priceField: 'eco_price' },
-  { key: 'ground',    label: 'Ground',    totalField: 'ground_total',    priceField: 'ground_price' },
-  { key: 'express',   label: 'Express',   totalField: 'express_total',   priceField: 'express_price' },
-  { key: 'twoday',    label: '2 Days',    totalField: 'twoday_total',    priceField: 'twoday_price' },
-  { key: 'overnight', label: 'Overnight', totalField: 'overnight_total', priceField: 'overnight_price' },
+  { key: 'eco',       label: 'Economy',   totalField: 'eco_total',       priceField: 'eco_price',       item2Field: 'eco_price_item2' },
+  { key: 'ground',    label: 'Ground',    totalField: 'ground_total',    priceField: 'ground_price',    item2Field: 'ground_price_item2' },
+  { key: 'express',   label: 'Express',   totalField: 'express_total',   priceField: 'express_price',   item2Field: 'express_price_item2' },
+  { key: 'twoday',    label: '2 Days',    totalField: 'twoday_total',    priceField: 'twoday_price',    item2Field: 'twoday_price_item2' },
+  { key: 'overnight', label: 'Overnight', totalField: 'overnight_total', priceField: 'overnight_price', item2Field: 'overnight_price_item2' },
 ];
 export const shipMethodLabel = (key) => SHIP_METHODS.find((m) => m.key === key)?.label || '';
 
@@ -91,11 +94,29 @@ export function findLibraryEntry(index, productTypeName) {
 
 /** Lấy Total (Fulfill) của 1 size theo phương thức ship đã chọn. null nếu không có trong thư viện. */
 export function getLibraryTotal(entry, sizeLabel, methodKey) {
-  if (!entry || !methodKey) return null;
+  return getLibraryField(entry, sizeLabel, SHIP_METHODS.find((m) => m.key === methodKey)?.totalField);
+}
+
+/** Item Cost = cột P1 (Pricing 1) của size — giá hàng thuần, KHÔNG phụ thuộc phương thức ship. */
+export function getLibraryItemCost(entry, sizeLabel) {
+  return getLibraryField(entry, sizeLabel, 'pricing1');
+}
+
+/** Total Ship cost = cột "Price Ship" của phương thức ship đã chọn. */
+export function getLibraryShip(entry, sizeLabel, methodKey) {
+  return getLibraryField(entry, sizeLabel, SHIP_METHODS.find((m) => m.key === methodKey)?.priceField);
+}
+
+/** Ship cost/item = cột "Price Ship Item 2" (mới) của phương thức ship đã chọn. */
+export function getLibraryShipItem2(entry, sizeLabel, methodKey) {
+  return getLibraryField(entry, sizeLabel, SHIP_METHODS.find((m) => m.key === methodKey)?.item2Field);
+}
+
+/** Đọc 1 field số của 1 size từ pricing row thư viện. null nếu thiếu/rỗng. */
+function getLibraryField(entry, sizeLabel, field) {
+  if (!entry || !field) return null;
   const row = entry.bySize[normalizeKey(sizeLabel)];
   if (!row) return null;
-  const field = SHIP_METHODS.find((m) => m.key === methodKey)?.totalField;
-  if (!field) return null;
   const v = row[field];
   return (v === null || v === undefined || v === '') ? null : Number(v);
 }

@@ -1,4 +1,4 @@
-# HappyC-Hub Vendor Manager
+# HappyC-Hub Vendor Management
 
 Hệ thống nội bộ **số hoá quy trình quản lý nhà cung cấp (Vendor) và thẩm định giá sản phẩm** cho **Happy Creative LLC** 
 
@@ -139,12 +139,18 @@ Total Price  = (Unit Price + Ship/Item) × qty + Ship/Order
 Coupon       = Coupon$ + Coupon% × ((Unit Price + Ship/Item) × qty)   ← % chỉ áp trên phần hàng, không gồm Ship/Order
 AMZ Fee      = AMZ% × (Total Price − Coupon)
 Variable Fee = Variable% × (Unit Price × qty − Coupon)
-Total Cost   = (Item Cost + Ship/Item + ImportTax) × qty + Ship/Order
+Total Cost   = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
 
 Profit       = Total Price − AMZ Fee − Total Cost                          (trước khuyến mãi)
 Profit (KM)  = Total Price − AMZ Fee − Variable Fee − Coupon − Total Cost  (sau khuyến mãi)
 Margin       = Profit / Total Price
 ```
+
+Ba biến chi phí lấy từ **Thư viện Vendor** theo từng size (bản chỉnh 2026-07-17):
+- **Item Cost** ← cột **P1** (Pricing 1) — giá hàng thuần, không còn dùng cột `Total (Fulfill)` (tránh cộng ship 2 lần).
+- **Total Ship cost** ← cột **Price Ship** của phương thức ship đã chọn.
+- **Ship cost/item** ← cột **Price Ship Item 2** (mới) — ship mỗi sản phẩm tăng thêm khi multipack.
+- Ship phía chi phí (từ thư viện) tách biệt với **Ship/Item & Ship/Order** ở Price Setting — hai cái sau chỉ dùng cho **Total Price** (doanh thu). Product Type nhập tay dùng tạm Price Setting làm cost-ship.
 
 
 **Điểm cần lưu ý:**

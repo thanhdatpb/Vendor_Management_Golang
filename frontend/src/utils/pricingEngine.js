@@ -64,15 +64,23 @@ export const SETTING_FIELDS = [
  *   Coupon      = Coupon$ + Coupon% × ((Unit Price + Ship/Item) × qty)  ★ % áp trên phần hàng, KHÔNG gồm Ship/Order
  *   AMZ Fee     = AMZ% × (Total Price − Coupon)                      ★ trừ coupon trước khi tính phí
  *   Variable    = Variable% × (Unit Price × qty − Coupon)            ★ theo giá hàng, không theo coupon
- *   Total Cost  = (Item Cost + Ship/Item + ImportTax) × qty + Ship/Order  ★ vốn+ship/item+thuế đều ×qty
+ *   Total Cost  = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
  *   Profit      = Total Price − AMZ − Total Cost                     (trước khuyến mãi)
  *   Profit(KM)  = Total Price − AMZ − Variable − Coupon − Total Cost (sau khuyến mãi)
  *
+ *   Nguồn ba biến chi phí (bản chỉnh 2026-07-17):
+ *     • Item Cost      ← cột P1 (Pricing 1) của thư viện vendor  (giá hàng THUẦN, không gồm ship)
+ *     • Total Ship cost← cột "Price Ship" của phương thức ship đã chọn (ship cả đơn)
+ *     • Ship cost/item ← cột "Price Ship Item 2" (ship mỗi sản phẩm tăng thêm khi multipack)
+ *   Với qty=1: Ship cost/item triệt tiêu → Total Cost = Item Cost + ImportTax + Total Ship cost.
+ *   Với qty>1: mỗi sản phẩm thêm cộng 1 lần Ship cost/item.
+ *
  *   Lưu ý:
- *   • Quantity mô phỏng listing multipack. Trống = 1; với qty=1 và coupon=0 thì
- *     Total Price/Total Cost/Profit giữ NGUYÊN số như công thức cũ.
- *   • ⚠ Khác bản cũ: Variable Fee giờ ≠ 0 kể cả khi coupon = 0 (Variable% × Unit×qty),
- *     nên "After Promo" thấp hơn Margin ngay cả khi không chạy khuyến mãi.
+ *   • Ship phía CHI PHÍ (shipCostItem/totalShipCost) lấy từ THƯ VIỆN theo từng size —
+ *     khác hẳn Ship/Item & Ship/Order trong Price Setting (đó là ship phía DOANH THU,
+ *     dùng cho Total Price). Product Type nhập tay (không từ thư viện) dùng tạm
+ *     Ship/Item & Ship/Order của Price Setting làm cost-ship.
+ *   • ⚠ Khác bản cũ: Variable Fee ≠ 0 kể cả khi coupon = 0 (Variable% × Unit×qty).
  *   • "Item Cost" (giá vốn) là input tường minh ở đây — trong sheet nó bị ẩn.
  */
 export function computeSizeRow(settings, productType, size) {
@@ -103,14 +111,25 @@ export function computeSizeRow(settings, productType, size) {
   const amzFee = (num(s.amzFeePct) / 100) * (totalPrice - couponAmt);          // ★ AMZ% × (Total − Coupon)
   const variableFee = (num(s.variableFeePct) / 100) * (unitPrice * qty - couponAmt); // ★ Var% × (Unit×qty − Coupon)
 
-  const totalCost = (itemCost + shipPerItem + importTax) * qty + shipPerOrder; // ★ (vốn+ship/item+thuế)×qty + ship/order
+  // ── Ship phía CHI PHÍ ──
+  // Size từ thư viện (isLib): lấy shipCostItem (Price Ship Item 2) + totalShipCost (Price Ship)
+  //   đã được PriceSheetWorkspace nạp sẵn theo phương thức ship đã chọn (0 nếu thư viện chưa có).
+  // Size nhập tay: dùng Ship/Item & Ship/Order của Price Setting làm cost-ship.
+  const isLib = !!size?.isLib;
+  const shipCostItem = isLib ? num(size?.shipCostItem) : shipPerItem;
+  const totalShipCost = isLib ? num(size?.totalShipCost) : shipPerOrder;
+
+  // ★ Total Cost = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
+  const totalCost = (itemCost + shipCostItem + importTax) * qty + (totalShipCost - shipCostItem);
 
   const profit = totalPrice - amzFee - totalCost;
   const profitAfter = totalPrice - amzFee - variableFee - couponAmt - totalCost;
 
   return {
     qty,
-    shipping: shipPerItem * qty + shipPerOrder,   // tổng ship của đơn (informational — không nơi nào dùng để tính)
+    shipping: shipPerItem * qty + shipPerOrder,   // tổng ship phía doanh thu (informational)
+    shipCostItem,
+    totalShipCost,
     customizeSum,
     unitPrice,
     totalPrice,

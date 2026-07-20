@@ -653,20 +653,24 @@ export async function parseHappyCreativeLibrary(file) {
               else if ((s.includes('pricing 2') || s === 'pricing2') && c > altPtCol) colP2 = c;
             });
 
-            // Tìm shipping method columns từ colP2 trở đi
-            // Mỗi method: "price ship" rồi "total" đầu tiên sau đó
-            // Bỏ qua "Total Price 2", "Total Price 3"... (extra columns trong một số format)
+            // Tìm shipping method columns từ colP2 trở đi.
+            // Mỗi method: "Price Ship" + "Total" + (mới) "Price Ship Item 2".
+            // ⚠ "Price Ship Item 2" cũng chứa "price ship" → KHÔNG được coi là đầu 1 method mới.
+            const isMethodStart = (c) =>
+              (c.includes('price ship') || c.includes('price_ship')) && !c.includes('item 2') && !c.includes('item2');
+            const isItem2 = (c) => c.includes('item 2') || c.includes('item2');
             let i = colP2 + 1;
             while (i < subCells.length && shipCols.length < 5) {
-              if (subCells[i].includes('price ship') || subCells[i].includes('price_ship')) {
+              if (isMethodStart(subCells[i])) {
                 const priceCol = i;
-                let totalCol = null;
+                let totalCol = null, item2Col = null;
                 for (let j = priceCol + 1; j < subCells.length; j++) {
-                  if (subCells[j].includes('price ship') || subCells[j].includes('price_ship')) break;
-                  if (subCells[j].includes('total')) { totalCol = j; break; }
+                  if (isMethodStart(subCells[j])) break;                       // sang method kế tiếp
+                  if (item2Col == null && isItem2(subCells[j])) item2Col = j;   // Price Ship Item 2
+                  else if (totalCol == null && subCells[j].includes('total')) totalCol = j;
                 }
-                shipCols.push({ price: priceCol, total: totalCol });
-                i = totalCol != null ? totalCol + 1 : priceCol + 1;
+                shipCols.push({ price: priceCol, total: totalCol, item2: item2Col });
+                i = Math.max(priceCol, totalCol ?? priceCol, item2Col ?? priceCol) + 1;
               } else {
                 i++;
               }
@@ -709,10 +713,10 @@ export async function parseHappyCreativeLibrary(file) {
               if (rawVendor) lastKyHieu = rawVendor;
             }
 
-            const getShip = (idx, isTotal) => {
+            const getShip = (idx, which) => {   // which: 'price' | 'total' | 'item2'
               const col = shipCols[idx];
               if (!col) return null;
-              const colIdx = isTotal ? col.total : col.price;
+              const colIdx = which === 'total' ? col.total : which === 'item2' ? col.item2 : col.price;
               return colIdx != null ? parseN(row[colIdx]) : null;
             };
 
@@ -723,16 +727,21 @@ export async function parseHappyCreativeLibrary(file) {
               optional: cellStr(row[colOptional]) === 'N/A' ? '' : cellStr(row[colOptional]),
               pricing1: parseN(row[colP1]),
               pricing2: parseN(row[colP2]),
-              eco_price: getShip(0, false),
-              eco_total: getShip(0, true),
-              ground_price: getShip(1, false),
-              ground_total: getShip(1, true),
-              express_price: getShip(2, false),
-              express_total: getShip(2, true),
-              twoday_price: getShip(3, false),
-              twoday_total: getShip(3, true),
-              overnight_price: getShip(4, false),
-              overnight_total: getShip(4, true),
+              eco_price: getShip(0, 'price'),
+              eco_total: getShip(0, 'total'),
+              eco_price_item2: getShip(0, 'item2'),
+              ground_price: getShip(1, 'price'),
+              ground_total: getShip(1, 'total'),
+              ground_price_item2: getShip(1, 'item2'),
+              express_price: getShip(2, 'price'),
+              express_total: getShip(2, 'total'),
+              express_price_item2: getShip(2, 'item2'),
+              twoday_price: getShip(3, 'price'),
+              twoday_total: getShip(3, 'total'),
+              twoday_price_item2: getShip(3, 'item2'),
+              overnight_price: getShip(4, 'price'),
+              overnight_total: getShip(4, 'total'),
+              overnight_price_item2: getShip(4, 'item2'),
             });
           }
         }
