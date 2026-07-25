@@ -23,6 +23,27 @@ const TD = (idx, extra = {}) => ({
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 const naStyle = { background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' };
 
+// Link video YouTube không phải ảnh → thay <img> vỡ bằng logo YouTube (giống VendorLibraryViewer).
+const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)/i.test(u);
+function MediaThumb({ url }) {
+  if (isYouTubeUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" title="Video YouTube — bấm để mở"
+        style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <svg width="26" height="26" viewBox="0 0 24 24" aria-label="YouTube">
+          <rect x="1" y="5" width="22" height="14" rx="4" fill="#FF0000" />
+          <path d="M10 8.5l6 3.5-6 3.5z" fill="#fff" />
+        </svg>
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer">
+      <img src={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+    </a>
+  );
+}
+
 // ── Project filter helpers (giống logic của VendorLibraryViewer) ──────────────
 function extractFileProject(filename) {
   if (!filename) return null;
@@ -129,9 +150,7 @@ function MergedInfoTable({ generalInfo, pricing }) {
                 <td style={{ ...TD(i) }}>
                   <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                     {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
-                      <a key={idx} href={img} target="_blank" rel="noreferrer">
-                        <img src={img} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                      </a>
+                      <MediaThumb key={idx} url={img} />
                     )) : <span style={{ color: HC.muted, fontSize: 10, fontStyle: 'italic' }}>Không có ảnh</span>}
                   </div>
                 </td>

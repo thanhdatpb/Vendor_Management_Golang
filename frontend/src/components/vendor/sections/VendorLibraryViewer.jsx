@@ -38,6 +38,30 @@ const TDnum = (idx, extra = {}) => ({
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
+// Link video YouTube (youtube.com / youtu.be) không phải ảnh → <img> sẽ vỡ.
+const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)/i.test(u);
+
+// Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube (bấm mở video);
+// còn lại → ảnh như cũ. Nhờ vậy người dùng nhận ra ngay đó là video, không phải ảnh lỗi.
+function MediaThumb({ url }) {
+  if (isYouTubeUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" title="Video YouTube — bấm để mở"
+        style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <svg width="26" height="26" viewBox="0 0 24 24" aria-label="YouTube">
+          <rect x="1" y="5" width="22" height="14" rx="4" fill="#FF0000" />
+          <path d="M10 8.5l6 3.5-6 3.5z" fill="#fff" />
+        </svg>
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer">
+      <img src={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+    </a>
+  );
+}
+
 // Một file "New Arrivals" chỉ còn là hàng mới TRONG TUẦN nó được upload (tuần bắt
 // đầu từ thứ Hai). Sang thứ Hai của tuần kế tiếp, importedAt < mốc thứ Hai tuần
 // hiện tại → hết hiển thị ở tab New Arrivals + hết badge "Mới", trở về file thường.
@@ -326,9 +350,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                 ) : (
                   <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                     {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
-                      <a key={idx} href={img} target="_blank" rel="noreferrer">
-                        <img src={img} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                      </a>
+                      <MediaThumb key={idx} url={img} />
                     )) : <span style={{ color: HC.muted, fontSize: 10, fontStyle: 'italic' }}>Không có ảnh</span>}
                   </div>
                 )}
