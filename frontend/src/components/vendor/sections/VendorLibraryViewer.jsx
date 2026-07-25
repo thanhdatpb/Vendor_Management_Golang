@@ -475,6 +475,14 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
     if (onSave) onSave(newRows);
   };
 
+  // Sửa tại chỗ MỘT ô văn bản (Product Type / Size / Optional) — lưu chuỗi as-is.
+  // Cho phép cả role vendor sửa (chỉ chặn theo readOnly), không cần vào chế độ Sửa.
+  const updateTextValue = (idx, field, value) => {
+    const newRows = [...rows];
+    newRows[idx] = { ...newRows[idx], [field]: value };
+    if (onSave) onSave(newRows);
+  };
+
   if (!rows || rows.length === 0) return (
     <div>
       <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>
@@ -668,6 +676,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
                     <input type="text" placeholder="Product Type..." value={editForm.productType} onChange={e => setEditForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
+                  ) : !readOnly ? (
+                    <input type="text" placeholder="Product Type..." defaultValue={r.productType || ''}
+                      onBlur={e => { const v = e.target.value; if (v !== (r.productType || '')) updateTextValue(i, 'productType', v); }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                      style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
                   ) : (
                     r.productType ? <span style={{ fontWeight: 700 }}>{r.productType}</span> : <span style={naStyle}>N/A</span>
                   )}
@@ -675,11 +688,21 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                 <td style={{ ...TD(i), textAlign: 'center' }}>
                   {isEditing ? (
                     <input type="text" value={editForm.size} onChange={e => setEditForm(p => ({ ...p, size: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
+                  ) : !readOnly ? (
+                    <input type="text" defaultValue={r.size ?? ''}
+                      onBlur={e => { const v = e.target.value; if (v !== String(r.size ?? '')) updateTextValue(i, 'size', v); }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                      style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
                   ) : fmtNA(r.size)}
                 </td>
                 <td style={{ ...TD(i), textAlign: 'center' }}>
                   {isEditing ? (
                     <input type="text" value={editForm.optional} onChange={e => setEditForm(p => ({ ...p, optional: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
+                  ) : !readOnly ? (
+                    <input type="text" defaultValue={r.optional ?? ''}
+                      onBlur={e => { const v = e.target.value; if (v !== String(r.optional ?? '')) updateTextValue(i, 'optional', v); }}
+                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                      style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
                   ) : fmtNA(r.optional)}
                 </td>
                 <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
