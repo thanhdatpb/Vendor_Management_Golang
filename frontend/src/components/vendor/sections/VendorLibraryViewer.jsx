@@ -89,6 +89,44 @@ function EditableNum({ value, display, onCommit, readOnly, align = 'right', extr
   );
 }
 
+// Giống EditableNum nhưng cho VĂN BẢN (Product Type / Size / Optional): hiển thị
+// như text bình thường, nhấn mới hiện ô sửa — không luôn hiện khung input.
+// readOnly → chỉ hiển thị (Seller/CSF/PD). `display` = nội dung hiển thị lúc chưa sửa.
+function EditableText({ value, display, onCommit, readOnly, align = 'left', placeholder, extraStyle }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const skip = useRef(false);
+  if (readOnly) return <span style={extraStyle}>{display}</span>;
+  if (!editing) {
+    return (
+      <span
+        onClick={() => { setDraft(value ?? ''); setEditing(true); }}
+        title="Nhấn để sửa"
+        style={{ cursor: 'pointer', display: 'block', borderRadius: 3, padding: '1px 2px', minHeight: 15, ...extraStyle }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,166,35,0.18)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      >{display}</span>
+    );
+  }
+  const commit = () => {
+    setEditing(false);
+    if (String(draft ?? '') !== String(value ?? '')) onCommit(draft);
+  };
+  return (
+    <input
+      type="text" autoFocus value={draft} placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={() => { if (skip.current) { skip.current = false; setEditing(false); } else commit(); }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        else if (e.key === 'Escape') { skip.current = true; e.currentTarget.blur(); }
+      }}
+      style={{ width: '100%', padding: '4px 4px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.orange}`, textAlign: align, boxSizing: 'border-box', outline: 'none', ...extraStyle }}
+    />
+  );
+}
+
 // ── Project visibility helpers ────────────────────────────────────────────────
 // Trả về project key từ tên file, hoặc null nếu không có ký hiệu (= hiện cho tất cả).
 function extractFileProject(filename) {
@@ -689,34 +727,27 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
                     <input type="text" placeholder="Product Type..." value={editForm.productType} onChange={e => setEditForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                  ) : !readOnly ? (
-                    <input type="text" placeholder="Product Type..." defaultValue={r.productType || ''}
-                      onBlur={e => { const v = e.target.value; if (v !== (r.productType || '')) updateTextValue(i, 'productType', v); }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
-                      style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
                   ) : (
-                    r.productType ? <span style={{ fontWeight: 700 }}>{r.productType}</span> : <span style={naStyle}>N/A</span>
+                    <EditableText readOnly={readOnly} align="left" placeholder="Product Type..."
+                      value={r.productType} onCommit={v => updateTextValue(i, 'productType', v)}
+                      display={r.productType ? <span style={{ fontWeight: 700 }}>{r.productType}</span> : <span style={naStyle}>N/A</span>} />
                   )}
                 </td>
                 <td style={{ ...TD(i), textAlign: 'center' }}>
                   {isEditing ? (
                     <input type="text" value={editForm.size} onChange={e => setEditForm(p => ({ ...p, size: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
-                  ) : !readOnly ? (
-                    <input type="text" defaultValue={r.size ?? ''}
-                      onBlur={e => { const v = e.target.value; if (v !== String(r.size ?? '')) updateTextValue(i, 'size', v); }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
-                      style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
-                  ) : fmtNA(r.size)}
+                  ) : (
+                    <EditableText readOnly={readOnly} align="center"
+                      value={r.size} onCommit={v => updateTextValue(i, 'size', v)} display={fmtNA(r.size)} />
+                  )}
                 </td>
                 <td style={{ ...TD(i), textAlign: 'center' }}>
                   {isEditing ? (
                     <input type="text" value={editForm.optional} onChange={e => setEditForm(p => ({ ...p, optional: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
-                  ) : !readOnly ? (
-                    <input type="text" defaultValue={r.optional ?? ''}
-                      onBlur={e => { const v = e.target.value; if (v !== String(r.optional ?? '')) updateTextValue(i, 'optional', v); }}
-                      onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
-                      style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
-                  ) : fmtNA(r.optional)}
+                  ) : (
+                    <EditableText readOnly={readOnly} align="center"
+                      value={r.optional} onCommit={v => updateTextValue(i, 'optional', v)} display={fmtNA(r.optional)} />
+                  )}
                 </td>
                 <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
                   {isEditing ? (
