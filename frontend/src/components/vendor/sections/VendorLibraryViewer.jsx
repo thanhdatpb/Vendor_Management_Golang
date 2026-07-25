@@ -40,9 +40,11 @@ const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
 // Link video YouTube (youtube.com / youtu.be) không phải ảnh → <img> sẽ vỡ.
 const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)/i.test(u);
+// Link Google Drive (drive.google.com) cũng không phải ảnh → hiển thị logo Drive.
+const isGoogleDriveUrl = (u) => typeof u === 'string' && /drive\.google\.com/i.test(u);
 
-// Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube (bấm mở video);
-// còn lại → ảnh như cũ. Nhờ vậy người dùng nhận ra ngay đó là video, không phải ảnh lỗi.
+// Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube, link Google Drive
+// → logo Drive (bấm mở); còn lại → ảnh như cũ. Người dùng nhận ra ngay không phải ảnh lỗi.
 function MediaThumb({ url }) {
   if (isYouTubeUrl(url)) {
     return (
@@ -51,6 +53,21 @@ function MediaThumb({ url }) {
         <svg width="26" height="26" viewBox="0 0 24 24" aria-label="YouTube">
           <rect x="1" y="5" width="22" height="14" rx="4" fill="#FF0000" />
           <path d="M10 8.5l6 3.5-6 3.5z" fill="#fff" />
+        </svg>
+      </a>
+    );
+  }
+  if (isGoogleDriveUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" title="Google Drive — bấm để mở"
+        style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <svg width="24" height="22" viewBox="0 0 87.3 78" aria-label="Google Drive">
+          <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
+          <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47" />
+          <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 11.5z" fill="#ea4335" />
+          <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
+          <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
+          <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
         </svg>
       </a>
     );
