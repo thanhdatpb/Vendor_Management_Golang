@@ -102,11 +102,15 @@ sequenceDiagram
 ## 4. Tính năng chính
 
 - **Quản lý Product Request** — Staff A tạo yêu cầu, Admin duyệt, Staff B tiếp nhận và xử lý.
-- **Thư viện Vendor** — Import danh sách vendor từ file Excel (định dạng Happy Creative), lưu thông tin phôi, size và bảng giá theo từng project.
-- **Gán Vendor cho sản phẩm** — Staff B gán vendor phù hợp; Seller xem và ra quyết định đặt Sample.
+- **Thư viện Vendor** — Import danh sách vendor từ file Excel (định dạng Happy Creative), lưu thông tin phôi, size và bảng giá theo từng project. Ba tab: **Tổng quan Vendor & Sản phẩm**, **New Arrivals**, **Best Seller**.
+- **New Arrivals** — file upload mới hiển thị ở tab riêng kèm badge **"Mới"** trong **tuần** được upload (tuần tính từ **thứ Hai**); sang thứ Hai tuần kế tiếp tự trở về "Tổng quan" như file thường, không cần thao tác tay.
+- **Best Seller** — Vendor đánh dấu ⭐ dòng sản phẩm nổi bật; **lưu ở DB** (không còn localStorage) nên Seller/CSF/PD trên mọi thiết bị đều thấy giống nhau.
+- **Sửa nhanh tại chỗ** — trong bảng giá của Thư viện Vendor, Vendor sửa được các ô **giá** và **Product Type / Size / Optional** bằng click-để-sửa; Seller/CSF/PD chỉ xem.
+- **Gán Vendor cho sản phẩm** — Staff B gán vendor phù hợp (kèm thời gian SX/ship do chính vendor báo); Seller xem và ra quyết định đặt Sample.
 - **Bảng tính giá của Seller (Price Sheet)** — số hoá sheet tính giá, xem chi tiết ở mục 5.
+- **Quản Lý Thông Báo (News)** — Vendor đăng tin/thông báo cho Admin & Seller; **lưu ở DB** (bảng `news`), không mất khi F5 hay đổi máy.
 - **Tra cứu read-only cho CSF/PD** — xem Thư viện Vendor không kèm giá, đúng phạm vi project.
-- **Thông báo cross-role** — Admin → Staff B, Staff B → Staff A, Seller → Staff B (mock qua localStorage + polling; backend có `notifications`).
+- **Thông báo cross-role** — chuông thông báo nhắc việc giữa các vai trò (Admin ↔ Staff B ↔ Staff A) theo từng bước của luồng duyệt.
 - **Xuất Excel** — export danh sách sản phẩm và bảng giá.
 - **Media vendor** — upload ảnh/video, lightbox xem nhanh.
 
@@ -154,6 +158,7 @@ Ba biến chi phí lấy từ **Thư viện Vendor** theo từng size (bản ch�
 
 
 **Điểm cần lưu ý:**
+- **Cột "Profit" hiển thị = lãi SAU khuyến mãi** (Profit KM = đã trừ Variable Fee + Coupon) ở **cả bảng tính lẫn file Excel export**. Cột **Margin** vẫn tính theo lãi trước KM; cột **After Promo** theo lãi sau KM.
 - **Quantity (multipack):** mô phỏng listing bán nhiều sản phẩm/1 đơn. Để trống ⇒ qty = 1; khi qty = 1 và không có coupon, Total Price / Total Cost / Profit **giữ nguyên số** như bản cũ.
 - **Variable Fee ≠ 0 kể cả khi coupon = 0** (tính theo `Variable% × Unit × qty`) — nên "After Promo" luôn thấp hơn Margin một chút.
 - `Item Cost` (giá vốn) là input tường minh trong app — trong sheet gốc nó bị ẩn.
@@ -167,7 +172,7 @@ Lưu server, chia sẻ theo project qua API `/api/price-sheets` (xem mục 7).
 ### Frontend
 - **Framework:** React 19 + Vite (SPA) · **Routing:** React Router DOM v7 (route theo vai trò).
 - **UI:** phần lớn tự code Box/Modal/Table bằng inline CSS theo Design System nội bộ (`HC.orange`, `HC.surface`, gradient, glassmorphism — [`src/constants/sellerTheme.js`](frontend/src/constants/sellerTheme.js)); có dùng Chart.js cho biểu đồ. Hạn chế UI framework.
-- **State:** React `useState/useEffect` + **`localStorage`** làm mock DB / mô phỏng notification real-time giữa các tab-role.
+- **State:** React `useState/useEffect` + **`localStorage`** để chia sẻ state giữa các tab và giữa các vai trò.
 - **HTTP:** Axios ([`src/services/api.js`](frontend/src/services/api.js)) · **Excel:** SheetJS (XLSX).
 
 ### Backend
@@ -190,10 +195,10 @@ Route (api.php)
 ```
 /
 ├── backend/                 # Laravel 12 API
-│   ├── app/Http/Controllers # Product, Vendor, PriceSheet, VendorLibrary, Notification, AdminUser…
-│   ├── app/Models           # Product, Vendor, User, Notification
+│   ├── app/Http/Controllers # Product, Vendor, PriceSheet, VendorLibrary, News, Notification, AdminUser…
+│   ├── app/Models           # Product, Vendor, User, Notification, News
 │   ├── app/Http/Middleware  # RoleMiddleware, AdminMiddleware
-│   ├── database/migrations  # Schema (products, vendors, vendor_details, users, notifications…)
+│   ├── database/migrations  # Schema (products, vendors, vendor_details, users, notifications, news…)
 │   └── routes/api.php        # Khai báo toàn bộ endpoint
 ├── frontend/                # React + Vite
 │   ├── src/pages            # Login, Admin/Seller/Vendor/Csf/Pd Dashboard
@@ -217,8 +222,9 @@ Base: `/api` · phần lớn nằm sau `auth:sanctum`.
 | **Products** | `GET·POST /products`, `GET·PUT·DELETE /products/{id}`, `POST /products/{id}/submit`, `POST /products/{id}/assign-vendors` |
 | **Duyệt (Admin)** | `GET /admin/product-approvals`, `POST /admin/products/{id}/approve·reject`, `GET /admin/products/{id}/vendor-comparison` |
 | **Vendors** | `GET·POST /vendors`, `GET·PUT·DELETE /vendors/{id}`, `POST /vendors/import`, `GET /vendors/compare` |
-| **Vendor Library** | `GET·POST /vendor-library`, `POST /vendor-library/sample-status·upload-images·restore-backup` |
+| **Vendor Library** | `GET·POST /vendor-library`, `POST /vendor-library/sample-status·best-seller·upload-images·restore-backup` |
 | **Price Sheets** | `GET /price-sheets`, `POST /price-sheets`, `DELETE /price-sheets/{id}` |
+| **News (Thông báo)** | `GET·POST /news`, `PUT·DELETE /news/{id}` |
 | **Notifications** | `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read` |
 | **Nhân sự (Admin)** | `GET·POST /admin/users`, `PATCH /admin/users/{id}`, `PATCH /admin/users/{id}/status` |
 
@@ -230,6 +236,7 @@ Base: `/api` · phần lớn nằm sau `auth:sanctum`.
 erDiagram
     USERS ||--o{ PRODUCTS : "created_by / submitted_by / reviewed_by"
     USERS ||--o{ NOTIFICATIONS : "user_id"
+    USERS ||--o{ NEWS : "created_by"
     VENDORS ||--o{ PRODUCTS : "vendor_id (vendor duoc chot)"
     VENDORS ||--o{ VENDOR_DETAILS : "vendor_id"
     PRODUCTS ||--o{ VENDOR_COMPARISONS : "request_id"
@@ -322,13 +329,21 @@ erDiagram
 
     VENDOR_LIBRARY {
         bigint id PK
-        json data "TOAN BO thu vien (document JSON, 1 dong duy nhat)"
+        json data "TOAN BO thu vien (1 dong; moi dong gia mang co bestSeller + sampleStatus)"
+    }
+
+    NEWS {
+        bigint id PK
+        string title
+        text message
+        json target "admin | seller | both | [ten project...]"
+        bigint created_by FK "users.id (Vendor tao)"
     }
 ```
 
 **Ghi chú thiết kế:**
 
-- **2 kiểu lưu trữ song song:** các bảng nghiệp vụ (`products`, `vendors`, `vendor_details`…) là quan hệ chuẩn; riêng **`price_sheets`** và **`vendor_library`** hoạt động như **document store** — toàn bộ nội dung nằm trong cột JSON `data`, backend chỉ đọc/ghi blob (riêng `sample-status` được server sửa đúng 1 field để tránh client ghi đè lẫn nhau).
+- **2 kiểu lưu trữ song song:** các bảng nghiệp vụ (`products`, `vendors`, `vendor_details`, `news`…) là quan hệ chuẩn; riêng **`price_sheets`** và **`vendor_library`** hoạt động như **document store** — toàn bộ nội dung nằm trong cột JSON `data`, backend chỉ đọc/ghi blob. Riêng **`sample-status`** và **`best-seller`** được server sửa **đúng 1 field** trong blob (không nhận cả blob từ client) để tránh nhiều thiết bị ghi đè lẫn nhau.
 - **Phân quyền theo project ở tầng dữ liệu:** `price_sheets.project` khớp chuỗi với `users.project` (liên kết mềm, không FK). `PriceSheetController` lọc **ngay tại server** — role thường chỉ nhận sheet thuộc project của mình, không lộ giá project khác; admin/vendor(staff_b) thấy tất cả.
 - **`products.assigned_vendors`** là JSON array (không FK cứng) — danh sách vendor Staff B đề xuất; còn `products.vendor_id` là vendor **được chốt** cuối cùng.
 - **Soft delete** trên `products` và `vendors` (`deleted_at`) — xoá không mất lịch sử.
