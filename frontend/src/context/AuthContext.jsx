@@ -19,56 +19,58 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // Lưu token + user vào localStorage và state (dùng chung login / selectAccount).
+  const applyAuth = useCallback((userData, token) => {
+    if (userData.seller_name) userData.sellerName = userData.seller_name;
+    localStorage.setItem("auth_token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+    return userData;
+  }, []);
+
   const login = useCallback(async (email, password) => {
     try {
-      console.log("Login attempt with:", { email, password });
-
-      // Đã tắt hệ thống MOCK để đảm bảo đồng bộ dữ liệu với server thật
-
       const res = await authApi.login(email, password);
-      console.log("Login response:", res);
 
-      // Dựa vào cấu trúc response thực tế, có thể là res.data.user hoặc res.data.data.user...
-      let userData = null;
-      let token = null;
+      // 1 email có nhiều tài khoản → chưa cấp token, yêu cầu chọn.
+      if (res.data?.needs_selection) {
+        return { needsSelection: true, ticket: res.data.ticket, accounts: res.data.accounts || [] };
+      }
 
+      let userData = null, token = null;
       if (res.data.user && res.data.token) {
-        userData = res.data.user;
-        token = res.data.token;
-      } else if (res.data.data && res.data.data.user && res.data.data.token) {
-        userData = res.data.data.user;
-        token = res.data.data.token;
+        userData = res.data.user; token = res.data.token;
+      } else if (res.data.data?.user && res.data.data?.token) {
+        userData = res.data.data.user; token = res.data.data.token;
       } else if (res.data) {
-        // Nếu không có, thử lấy từ res.data trực tiếp (nếu backend trả về user và token)
-        userData = res.data.user || res.data;
-        token = res.data.token;
+        userData = res.data.user || res.data; token = res.data.token;
       }
 
-      if (!userData || !token) {
-        throw new Error("Invalid response structure: missing user or token");
-      }
+      if (!userData || !token) throw new Error("Invalid response structure: missing user or token");
 
-      // Đảm bảo seller_name được map sang sellerName
-      if (userData.seller_name) {
-        userData.sellerName = userData.seller_name;
-      }
-
-      localStorage.setItem("auth_token", token);
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
-
-      return userData;
-
+      return applyAuth(userData, token);
     } catch (error) {
-      console.error("Login error:", error);
-      // Hiển thị lỗi chi tiết
       const message = error.response?.data?.message
         || error.response?.data?.error
         || error.message
         || "Login failed";
       throw new Error(message);
     }
-  }, []);
+  }, [applyAuth]);
+
+  // Hoàn tất đăng nhập sau khi người dùng chọn tài khoản (email có nhiều role/project).
+  const selectAccount = useCallback(async (ticket, accountId) => {
+    try {
+      const res = await authApi.selectAccount(ticket, accountId);
+      const userData = res.data?.user;
+      const token = res.data?.token;
+      if (!userData || !token) throw new Error("Invalid response structure");
+      return applyAuth(userData, token);
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || "Không hoàn tất được đăng nhập";
+      throw new Error(message);
+    }
+  }, [applyAuth]);
 
   const logout = useCallback(() => {
     localStorage.removeItem("auth_token");
@@ -85,6 +87,7 @@ export function AuthProvider({ children }) {
         user,
         loading,
         login,
+        selectAccount,
         logout,
         isAdmin: userRole === "admin",
         isStaff: userRole === "seller" || userRole === "staffa",

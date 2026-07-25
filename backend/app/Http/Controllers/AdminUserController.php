@@ -41,11 +41,10 @@ class AdminUserController extends Controller
     // =========================
     public function store(Request $request)
     {
+        // Không còn chặn unique email: 1 email được thêm vào nhiều (role, project).
+        // Tính duy nhất chuyển sang cặp (email, role, project) — kiểm ở dưới.
         $validated = $request->validate([
-            'email'     => [
-                'required', 'email',
-                Rule::unique('users', 'email'),
-            ],
+            'email'     => ['required', 'email'],
             'full_name' => 'required|string|max:255',
             'role'      => ['required', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf'])],
             'project'   => [
@@ -54,21 +53,40 @@ class AdminUserController extends Controller
                 Rule::in(self::$VALID_PROJECTS),
             ],
         ], [
-            'email.unique'   => 'Email này đã tồn tại trong hệ thống',
             'project.required_if' => 'Project là bắt buộc khi role là seller hoặc PD',
             'project.in'     => 'Project không hợp lệ',
         ]);
 
+        $email        = strtolower(trim($validated['email']));
         $needsProject = in_array($validated['role'], ['seller', 'pd']);
+        $project      = $needsProject ? $validated['project'] : null;
+
+        // Chặn trùng ĐÚNG cặp (email + role + project). Cho phép cùng email nếu
+        // khác role hoặc khác project.
+        $dupQuery = User::where('email', $email)->where('role', $validated['role']);
+        $needsProject ? $dupQuery->where('project', $project) : $dupQuery->whereNull('project');
+        if ($dupQuery->exists()) {
+            return response()->json([
+                'message' => $needsProject
+                    ? 'Email này đã có ở role "' . $validated['role'] . '" cho project này rồi'
+                    : 'Email này đã có ở role "' . $validated['role'] . '" rồi',
+            ], 422);
+        }
+
+        // Nếu email đã tồn tại ở tài khoản khác → kế thừa liên kết Google (google_id,
+        // avatar) để đăng nhập Google hoạt động ngay cho vai trò/project mới này.
+        $sibling = User::where('email', $email)->whereNotNull('google_id')->first();
 
         $user = User::create([
-            'email'     => strtolower(trim($validated['email'])),
-            'full_name' => $validated['full_name'],
-            'name'      => $validated['full_name'],
-            'role'      => $validated['role'],
-            'project'   => $needsProject ? $validated['project'] : null,
-            'is_active' => true,
-            'password'  => null,
+            'email'      => $email,
+            'full_name'  => $validated['full_name'],
+            'name'       => $validated['full_name'],
+            'role'       => $validated['role'],
+            'project'    => $project,
+            'is_active'  => true,
+            'password'   => null,
+            'google_id'  => $sibling?->google_id,
+            'avatar_url' => $sibling?->avatar_url,
         ]);
 
         $this->auditLog($request, 'CREATE_USER', null, $user);
@@ -116,6 +134,19 @@ class AdminUserController extends Controller
                     'message' => 'Phải còn ít nhất 1 admin hoạt động trong hệ thống'
                 ], 422);
             }
+        }
+
+        $newProject = $newRoleNeedsProject ? ($validated['project'] ?? $user->project) : null;
+
+        // Không cho đổi thành cặp (email, role, project) đã có ở tài khoản khác.
+        $dupQuery = User::where('email', $user->email)
+            ->where('role', $newRole)
+            ->where('id', '!=', $user->id);
+        $newRoleNeedsProject ? $dupQuery->where('project', $newProject) : $dupQuery->whereNull('project');
+        if ($dupQuery->exists()) {
+            return response()->json([
+                'message' => 'Đã có tài khoản khác cùng email ở role/project này',
+            ], 422);
         }
 
         $before = $user->only(['full_name', 'role', 'project']);

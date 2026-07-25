@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
+import AccountChooser from "../components/shared/AccountChooser";
 import logoImg from "../assets/logo.png";
 
 const ERROR_MESSAGES = {
@@ -14,29 +15,58 @@ const ERROR_MESSAGES = {
 function resolveRoleRoute(role) {
   const r = (role || "").toLowerCase().replace(/[_\-\s]/g, "");
   if (r === "admin")  return "/admin";
-  if (r === "vendor") return "/vendor";
-  return "/seller";
+  if (r === "vendor" || r === "staffb") return "/vendor";
+  if (r === "csf") return "/csf";
+  if (r === "pd")  return "/pd";
+  return "/seller"; // seller / staffa
 }
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState("loading"); // loading | error
+  const [status, setStatus] = useState("loading"); // loading | select | error
   const [errorMsg, setErrorMsg] = useState("");
+  const [ticket, setTicket] = useState("");
+  const [accounts, setAccounts] = useState([]);
+  const [selectBusyId, setSelectBusyId] = useState(null);
 
   const ORANGE = "#F5A623";
+
+  // Lưu token + user rồi điều hướng theo vai trò (full reload để AuthContext re-init).
+  const finishLogin = (userData, token) => {
+    if (userData.seller_name) userData.sellerName = userData.seller_name;
+    localStorage.setItem("auth_token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+    window.location.href = resolveRoleRoute(userData.role);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error  = params.get("error");
     const token  = params.get("token");
+    const select = params.get("select");   // vé chọn tài khoản (email nhiều role/project)
 
-    // Nếu backend redirect về với lỗi
     if (error) {
       const msg = ERROR_MESSAGES[error] || "Đăng nhập thất bại. Vui lòng thử lại.";
       setErrorMsg(msg);
       setStatus("error");
-      // Sau 3 giây tự về trang login
       setTimeout(() => navigate("/?error=" + encodeURIComponent(msg), { replace: true }), 3000);
+      return;
+    }
+
+    // Nhiều tài khoản → hiện bước chọn
+    if (select) {
+      try {
+        const raw = params.get("accounts") || "";
+        const list = JSON.parse(atob(raw));
+        window.history.replaceState({}, document.title, "/auth/callback");
+        setTicket(select);
+        setAccounts(Array.isArray(list) ? list : []);
+        setStatus("select");
+      } catch {
+        setErrorMsg("Dữ liệu chọn tài khoản không hợp lệ. Vui lòng đăng nhập lại.");
+        setStatus("error");
+        setTimeout(() => navigate("/", { replace: true }), 3000);
+      }
       return;
     }
 
@@ -45,26 +75,14 @@ export default function AuthCallback() {
       return;
     }
 
-    // Xóa token khỏi URL ngay lập tức
     window.history.replaceState({}, document.title, "/auth/callback");
-
-    // Lưu token trước, rồi gọi /me
     localStorage.setItem("auth_token", token);
 
     authApi.me()
       .then((res) => {
         const userData = res.data?.user || res.data;
         if (!userData) throw new Error("No user data");
-
-        // Lưu các field cần thiết
-        if (userData.seller_name) {
-          userData.sellerName = userData.seller_name;
-        }
-
-        localStorage.setItem("user", JSON.stringify(userData));
-
-        // Full reload để AuthContext re-init từ localStorage
-        window.location.href = resolveRoleRoute(userData.role);
+        finishLogin(userData, token);
       })
       .catch(() => {
         localStorage.removeItem("auth_token");
@@ -74,12 +92,28 @@ export default function AuthCallback() {
       });
   }, [navigate]);
 
+  const handleSelect = async (accountId) => {
+    setSelectBusyId(accountId);
+    setErrorMsg("");
+    try {
+      const res = await authApi.selectAccount(ticket, accountId);
+      const userData = res.data?.user;
+      const token = res.data?.token;
+      if (!userData || !token) throw new Error("Invalid response");
+      finishLogin(userData, token);
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || "Không hoàn tất được đăng nhập. Vui lòng đăng nhập lại.");
+      setSelectBusyId(null);
+    }
+  };
+
   return (
     <div style={{
       minHeight: "100vh",
       display: "flex", alignItems: "center", justifyContent: "center",
       background: "radial-gradient(ellipse at 60% 40%, #FDE8B8 0%, #FFF8EE 45%, #FFFBF4 100%)",
       fontFamily: "'Nunito', sans-serif",
+      padding: 16,
     }}>
       <div style={{
         background: "rgba(255,253,249,0.95)",
@@ -89,7 +123,7 @@ export default function AuthCallback() {
         boxShadow: "0 12px 56px rgba(245,166,35,0.18), 0 2px 16px rgba(0,0,0,0.06)",
         padding: "44px 40px",
         textAlign: "center",
-        maxWidth: 400,
+        maxWidth: 420,
         width: "100%",
       }}>
         <div style={{
@@ -100,9 +134,8 @@ export default function AuthCallback() {
           <img src={logoImg} alt="Logo" style={{ width: 56, height: 56, objectFit: "contain" }} />
         </div>
 
-        {status === "loading" ? (
+        {status === "loading" && (
           <>
-            {/* Spinner */}
             <div style={{
               width: 44, height: 44, borderRadius: "50%",
               border: `4px solid #FDE8B8`,
@@ -117,7 +150,13 @@ export default function AuthCallback() {
               Vui lòng chờ trong giây lát
             </div>
           </>
-        ) : (
+        )}
+
+        {status === "select" && (
+          <AccountChooser accounts={accounts} onSelect={handleSelect} busyId={selectBusyId} error={errorMsg} />
+        )}
+
+        {status === "error" && (
           <>
             <div style={{
               width: 44, height: 44, borderRadius: "50%",

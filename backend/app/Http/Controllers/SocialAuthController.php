@@ -41,35 +41,48 @@ class SocialAuthController extends Controller
 
         $email = strtolower(trim($googleUser->getEmail()));
 
-        // Layer 2: Email must exist in our allowlist (users table)
-        $user = User::where('email', $email)->first();
-        if (!$user) {
+        // Layer 2: Email must exist (allowlist). 1 email có thể có NHIỀU tài khoản
+        // (mỗi role/project 1 dòng) → lấy tất cả.
+        $accounts = User::where('email', $email)->get();
+        if ($accounts->isEmpty()) {
             return redirect($frontendUrl . '/login?error=account_not_found');
         }
 
-        // Layer 3: Account must be active
-        if (!$user->is_active) {
+        // Layer 3: phải còn ít nhất 1 tài khoản active
+        $active = $accounts->where('is_active', true)->values();
+        if ($active->isEmpty()) {
             return redirect($frontendUrl . '/login?error=account_disabled');
         }
 
-        // Layer 4: google_id integrity check
+        // Layer 4: google_id integrity — kiểm trên bất kỳ dòng nào đã liên kết.
         $incomingGoogleId = $googleUser->getId();
-        if ($user->google_id && $user->google_id !== $incomingGoogleId) {
+        $linked = $accounts->firstWhere('google_id', $incomingGoogleId)
+            ?? $accounts->first(fn ($u) => !empty($u->google_id));
+        if ($linked && $linked->google_id !== $incomingGoogleId) {
             return redirect($frontendUrl . '/login?error=identity_mismatch');
         }
 
-        // First Google login: persist google_id and avatar
-        if (!$user->google_id) {
-            $user->update([
-                'google_id'  => $incomingGoogleId,
-                'avatar_url' => $googleUser->getAvatar(),
-                'full_name'  => $user->full_name ?: $googleUser->getName(),
-            ]);
+        // Lần đầu đăng nhập Google: gắn google_id cho TẤT CẢ dòng cùng email +
+        // điền avatar/full_name cho dòng còn thiếu (giữ mọi tài khoản đồng bộ).
+        foreach ($accounts as $acc) {
+            $patch = [];
+            if (empty($acc->google_id))  $patch['google_id']  = $incomingGoogleId;
+            if (empty($acc->avatar_url)) $patch['avatar_url'] = $googleUser->getAvatar();
+            if (empty($acc->full_name))  $patch['full_name']  = $googleUser->getName();
+            if ($patch) $acc->update($patch);
         }
 
-        // Issue a Sanctum token (our own token, NOT Google's)
-        $token = $user->createToken('google_auth')->plainTextToken;
+        // 1 tài khoản → đăng nhập luôn; nhiều tài khoản → chuyển sang bước chọn.
+        if ($active->count() === 1) {
+            $token = $active->first()->createToken('google_auth')->plainTextToken;
+            return redirect($frontendUrl . '/auth/callback?token=' . urlencode($token));
+        }
 
-        return redirect($frontendUrl . '/auth/callback?token=' . urlencode($token));
+        $ticket   = AuthController::makeSelectionTicket($email);
+        $accountsB64 = base64_encode(json_encode(
+            $active->map(fn ($u) => AuthController::accountSummary($u))->all()
+        ));
+
+        return redirect($frontendUrl . '/auth/callback?select=' . urlencode($ticket) . '&accounts=' . urlencode($accountsB64));
     }
 }

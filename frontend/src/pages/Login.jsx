@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AccountChooser from "../components/shared/AccountChooser";
 import logoImg from "../assets/logo.png";
 import useIsMobile from "../hooks/useIsMobile";
 
@@ -25,7 +26,7 @@ import {
 } from "@ant-design/icons";
 
 export default function Login() {
-  const { login, user: contextUser } = useAuth();
+  const { login, selectAccount, user: contextUser } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
@@ -52,6 +53,19 @@ export default function Login() {
   const [error, setError] = useState(oauthErrorMsg);
   const [focused, setFocused] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [selection, setSelection] = useState(null);       // { ticket, accounts } khi 1 email có nhiều tài khoản
+  const [selectBusyId, setSelectBusyId] = useState(null); // id account đang được chọn
+
+  const goByRole = (user) => {
+    const rawRole = typeof user.role === "object" ? user.role?.name : user.role;
+    const role = rawRole ? rawRole.toString().toLowerCase().replace(/[_\-\s]/g, "") : "";
+    if (role === "admin") navigate("/admin");
+    else if (role === "staffa" || role === "staff" || role === "seller") navigate("/seller");
+    else if (role === "staffb" || role === "vendor") navigate("/vendor");
+    else if (role === "csf") navigate("/csf");
+    else if (role === "pd") navigate("/pd");
+    else navigate("/");
+  };
 
   const handleSubmit = async () => {
     if (!form.email || !form.password) {
@@ -64,35 +78,33 @@ export default function Login() {
 
     try {
       const result = await login(form.email, form.password);
-      const user = result || contextUser;
 
-      if (!user) throw new Error("Không lấy được thông tin người dùng");
-
-      const rawRole = typeof user.role === "object"
-        ? user.role?.name
-        : user.role;
-        
-      const role = rawRole ? rawRole.toString().toLowerCase().replace(/[_\-\s]/g, "") : "";
-
-      if (role === "admin") {
-        navigate("/admin");
-      } else if (role === "staffa" || role === "staff" || role === "seller") {
-        navigate("/seller");
-      } else if (role === "staffb" || role === "vendor") {
-        navigate("/vendor");
-      } else if (role === "csf") {
-        navigate("/csf");
-      } else if (role === "pd") {
-        navigate("/pd");
-      } else {
-        navigate("/");
+      // 1 email có nhiều tài khoản → hiện bước chọn thay vì vào thẳng.
+      if (result?.needsSelection) {
+        setSelection({ ticket: result.ticket, accounts: result.accounts });
+        return;
       }
 
+      const user = result || contextUser;
+      if (!user) throw new Error("Không lấy được thông tin người dùng");
+      goByRole(user);
     } catch (err) {
       console.error("Login error:", err);
       setError(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectAccount = async (accountId) => {
+    setSelectBusyId(accountId);
+    setError("");
+    try {
+      const user = await selectAccount(selection.ticket, accountId);
+      goByRole(user);
+    } catch (err) {
+      setError(err.message || "Không hoàn tất được đăng nhập.");
+      setSelectBusyId(null);
     }
   };
 
@@ -369,6 +381,18 @@ export default function Login() {
             </div>
           )}
 
+          {selection ? (
+            <div>
+              <AccountChooser accounts={selection.accounts} onSelect={handleSelectAccount} busyId={selectBusyId} />
+              <button
+                onClick={() => { setSelection(null); setSelectBusyId(null); setError(""); }}
+                style={{ display: "block", margin: "18px auto 0", background: "none", border: "none", color: "#9C7A50", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", fontFamily: "'Nunito', sans-serif" }}
+              >
+                ← Đăng nhập bằng email khác
+              </button>
+            </div>
+          ) : (
+          <>
           {/* Fields */}
           {/* Tài khoản */}
           <div style={{ marginBottom: 20 }}>
@@ -513,6 +537,8 @@ export default function Login() {
               Dành cho nhân sự — tài khoản phải được Admin cấp phép
             </p>
           </div>
+          </>
+          )}
 
           {/* Footer */}
           <div style={{

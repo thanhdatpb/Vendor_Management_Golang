@@ -362,6 +362,8 @@ export const newsApi = {
 // ===============================
 export const authApi = {
   login: (email, password) => api.post("/login", { email, password }),
+  // Hoàn tất đăng nhập khi 1 email có nhiều tài khoản (role/project khác nhau)
+  selectAccount: (ticket, accountId) => api.post("/select-account", { ticket, account_id: accountId }),
   logout: () => api.post("/logout"),
   me: () => api.get("/me"),
 };

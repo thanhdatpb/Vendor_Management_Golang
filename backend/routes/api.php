@@ -45,6 +45,8 @@ Route::get('/login', function() {
     ], 401);
 })->name('login');
 Route::post('/login', [AuthController::class, 'login']);
+// Hoàn tất đăng nhập khi 1 email có nhiều tài khoản (role/project khác nhau)
+Route::post('/select-account', [AuthController::class, 'selectAccount']);
 
 // Google OAuth (stateless — no session needed)
 Route::get('/auth/google/redirect',  [SocialAuthController::class, 'redirect']);
