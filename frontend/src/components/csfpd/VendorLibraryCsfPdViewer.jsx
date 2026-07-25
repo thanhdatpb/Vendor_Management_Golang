@@ -34,6 +34,18 @@ function extractFileProject(filename) {
   return null;
 }
 
+// New Arrivals chỉ hiệu lực trong TUẦN upload (tuần bắt đầu thứ Hai) — giống logic
+// của VendorLibraryViewer. Sang thứ Hai tuần kế tiếp, file rời khỏi tab này.
+function isWithinCurrentWeek(importedAt) {
+  if (!importedAt) return false;
+  const t = new Date(importedAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  const now = new Date();
+  const daysSinceMonday = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday, 0, 0, 0, 0);
+  return t >= monday.getTime();
+}
+
 // ── Ghép Link Template (từ bảng giá) vào từng dòng thông tin chung ────────────
 const normStr = (s) => (s || '').toString().trim().toLowerCase().replace(/[()'"“”‘’]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -281,7 +293,7 @@ export default function VendorLibraryCsfPdViewer({ projectKey }) {
       files = files.map(f => f.generalInfo ? { ...f, generalInfo: f.generalInfo.filter(r => bestSellerIds.has(r.id)) } : f)
         .filter(f => f.generalInfo && f.generalInfo.length > 0);
     } else if (activeTab === 'new_products') {
-      files = files.filter(f => f.sourceTab === 'new_products');
+      files = files.filter(f => f.sourceTab === 'new_products' && isWithinCurrentWeek(f.importedAt));
     }
 
     if (searchQuery.trim()) {

@@ -38,6 +38,19 @@ const TDnum = (idx, extra = {}) => ({
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 
+// Một file "New Arrivals" chỉ còn là hàng mới TRONG TUẦN nó được upload (tuần bắt
+// đầu từ thứ Hai). Sang thứ Hai của tuần kế tiếp, importedAt < mốc thứ Hai tuần
+// hiện tại → hết hiển thị ở tab New Arrivals + hết badge "Mới", trở về file thường.
+function isWithinCurrentWeek(importedAt) {
+  if (!importedAt) return false;
+  const t = new Date(importedAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  const now = new Date();
+  const daysSinceMonday = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=CN → 6
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday, 0, 0, 0, 0);
+  return t >= monday.getTime();
+}
+
 // ── Ô số click-để-sửa tại chỗ ────────────────────────────────────────────────
 // Vendor không có nút "Sửa" nên cho phép nhấn thẳng vào từng giá trị để chỉnh.
 // Enter/blur = lưu (gọi onCommit → onSave), Esc = huỷ. readOnly → chỉ hiển thị.
@@ -949,7 +962,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 
           {/* Meta row */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            {mode === 'all' && entry.sourceTab === 'new_products' && (
+            {mode === 'all' && entry.sourceTab === 'new_products' && isWithinCurrentWeek(entry.importedAt) && (
               <span style={{ padding: '1px 6px', borderRadius: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mới</span>
             )}
             <span style={{
@@ -1508,7 +1521,9 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         return { ...file, generalInfo: file.generalInfo.filter(r => bestSellerIds.has(r.id)) };
       }).filter(file => file.generalInfo && file.generalInfo.length > 0);
     } else if (mode === 'new_products') {
-      files = files.filter(file => file.sourceTab === 'new_products');
+      // Chỉ hiển thị file upload vào New Arrivals TRONG TUẦN hiện tại (từ thứ Hai).
+      // Sang tuần mới, file cũ tự rời khỏi đây và về "Tổng quan" như file thường.
+      files = files.filter(file => file.sourceTab === 'new_products' && isWithinCurrentWeek(file.importedAt));
     }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
