@@ -58,7 +58,7 @@ export async function exportSheetToExcel(sheet, showToast) {
         aoa.push([
           pt.name, sz.label, num(pt.phoi), num(sz.sizeAdd), ...custVals, num(sz.itemCost),
           +r.totalPrice.toFixed(2), +r.amzFee.toFixed(2), +r.couponAmt.toFixed(2),
-          +r.variableFee.toFixed(2), +r.profit.toFixed(2), +r.margin.toFixed(2), +r.marginAfter.toFixed(2),
+          +r.variableFee.toFixed(2), +r.profitAfter.toFixed(2), +r.margin.toFixed(2), +r.marginAfter.toFixed(2),
         ]);
       });
     });

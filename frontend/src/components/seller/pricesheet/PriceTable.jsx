@@ -258,7 +258,7 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                   style={{ fontWeight: 700, color: PS.text }}>{usd(calc.totalPrice)}</td>
                 <td className="ps-cell-auto" style={{ color: PS.textMuted }}>{usd(calc.amzFee)}</td>
                 <td className="ps-cell-auto"
-                  style={{ fontWeight: 650, color: calc.profit >= 0 ? PS.text : PS.negative }}>{usd(calc.profit)}</td>
+                  style={{ fontWeight: 650, color: calc.profitAfter >= 0 ? PS.text : PS.negative }}>{usd(calc.profitAfter)}</td>
                 <td className="ps-cell-auto"><MarginCell value={calc.margin} /></td>
                 <td className="ps-cell-auto"><MarginCell value={calc.marginAfter} /></td>
 
