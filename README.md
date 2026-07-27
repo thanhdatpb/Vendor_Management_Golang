@@ -75,8 +75,20 @@ Hệ thống có 5 vai trò — 3 vai trò tham gia luồng duyệt và 2 vai tr
 | **Admin** | Duyệt/từ chối Product Request, quản lý nhân sự & phân quyền, xem toàn bộ dữ liệu. |
 | **Seller / Staff A** | Tạo yêu cầu sản phẩm (Product Request), duyệt vendor do Staff B đề xuất, **thiết lập giá bán**. |
 | **Vendor / Staff B** | Tiếp nhận Request, quản lý Thư viện Vendor (import Excel), gán vendor phù hợp cho từng sản phẩm. |
-| **CSF** *(Customer Service & Fulfillment)* | **Read-only** Thư viện Vendor, **ẩn giá**. Xem được cả 4 project cùng lúc. |
-| **PD** *(Product Design)* | **Read-only** Thư viện Vendor, **ẩn giá**. Chỉ xem project được phân quyền. |
+| **CSF** *(Customer Service & Fulfillment)* | **Read-only** Thư viện Vendor, **ẩn giá**. Sidebar cố định **4 project**: Happy · Creative · Global · Hapify84. |
+| **PD** *(Product Design)* | **Read-only** Thư viện Vendor, **ẩn giá**. Sidebar liệt kê **đúng các project được phân công cho email này** — một PD có thể phụ trách nhiều project. |
+
+### Một email — nhiều vai trò / nhiều project
+
+Cùng một người có thể giữ nhiều vai trò, hoặc cùng vai trò ở nhiều project. Mô hình dữ liệu: **mỗi (email + role + project) là một dòng riêng trong `users`** — vì vậy `users.email` **không unique**.
+
+Hệ quả ở đăng nhập:
+
+- Nếu email chỉ khớp một tài khoản → vào thẳng.
+- Nếu khớp nhiều tài khoản **khác vai trò** → hiện **bước chọn tài khoản** (`POST /api/select-account`). Vé chọn tài khoản được mã hoá bằng `APP_KEY`, hết hạn sau 10 phút.
+- Nếu khớp nhiều tài khoản **cùng vai trò, khác project** (vd PD làm 2 project) → vào thẳng, sidebar tự liệt kê đủ project.
+
+`GET /api/me` trả thêm trường `projects` — danh sách mọi project của email này ở cùng vai trò — để UI dựng sidebar.
 
 ### Luồng duyệt sản phẩm
 
@@ -95,13 +107,13 @@ sequenceDiagram
     Ad->>Ad: Chốt vendor sản xuất
 ```
 
-> **Ẩn giá cho CSF/PD:** Hai vai trò này dùng chung dữ liệu Thư viện Vendor nhưng mọi trường giá (Target Cost, Economy/Express/Overnight Price, Total Price…) bị **lọc bỏ trước khi render/truyền props** — không lộ trong markup hay response hiển thị. CSF xem đa-project (hiện 4 project); PD chỉ xem project hiện tại.
+> **Ẩn giá cho CSF/PD:** Hai vai trò này dùng chung dữ liệu Thư viện Vendor nhưng mọi trường giá (Target Cost, Economy/Express/Overnight Price, Total Price…) bị **lọc bỏ trước khi render/truyền props** — không lộ trong markup hay response hiển thị. Khác nhau ở phạm vi: CSF luôn thấy đủ 4 project (danh sách cứng ở client); PD chỉ thấy các project được cấp tài khoản.
 
 ---
 
 ## 4. Tính năng chính
 
-- **Quản lý Product Request** — Staff A tạo yêu cầu, Admin duyệt, Staff B tiếp nhận và xử lý.
+- **Quản lý Product Request** — Staff A tạo yêu cầu, Admin duyệt, Staff B tiếp nhận và xử lý. Trường **Total Cost** nhận **khoảng giá** dạng tự do (`100-150`), không chỉ một con số — vì Seller gộp Base + Shipping nên thường ra khoảng. Các trường mô tả dài (Vùng In, Packaging, Đặc tính KT, Review) hiển thị trong ô cố định chiều cao có cuộn, tránh form dài vô tận.
 - **Thư viện Vendor** — Import danh sách vendor từ file Excel (định dạng Happy Creative), lưu thông tin phôi, size và bảng giá theo từng project. Ba tab: **Tổng quan Vendor & Sản phẩm**, **New Arrivals**, **Best Seller**.
 - **New Arrivals** — file upload mới hiển thị ở tab riêng kèm badge **"Mới"** trong **tuần** được upload (tuần tính từ **thứ Hai**); sang thứ Hai tuần kế tiếp tự trở về "Tổng quan" như file thường, không cần thao tác tay.
 - **Best Seller** — Vendor đánh dấu ⭐ dòng sản phẩm nổi bật; **lưu ở DB** (không còn localStorage) nên Seller/CSF/PD trên mọi thiết bị đều thấy giống nhau.
@@ -218,7 +230,7 @@ Base: `/api` · phần lớn nằm sau `auth:sanctum`.
 
 | Nhóm | Endpoint tiêu biểu |
 |---|---|
-| **Auth** | `POST /login`, `POST /logout`, `GET /me`, `GET /auth/google/redirect·callback` |
+| **Auth** | `POST /login`, `POST /select-account`, `POST /logout`, `GET /me`, `GET /auth/google/redirect·callback` |
 | **Products** | `GET·POST /products`, `GET·PUT·DELETE /products/{id}`, `POST /products/{id}/submit`, `POST /products/{id}/assign-vendors` |
 | **Duyệt (Admin)** | `GET /admin/product-approvals`, `POST /admin/products/{id}/approve·reject`, `GET /admin/products/{id}/vendor-comparison` |
 | **Vendors** | `GET·POST /vendors`, `GET·PUT·DELETE /vendors/{id}`, `POST /vendors/import`, `GET /vendors/compare` |
@@ -244,11 +256,11 @@ erDiagram
     USERS {
         bigint id PK
         string name
-        string email
+        string email "KHONG unique - 1 email co nhieu dong role/project"
         string role "admin | seller(staff_a) | vendor(staff_b) | csf | pd"
         string project "pham vi project (Seller/PD)"
         string seller_name
-        string google_id "Google OAuth"
+        string google_id "Google OAuth - index thuong KHONG unique"
         boolean is_active
     }
 
@@ -267,7 +279,7 @@ erDiagram
         json media_urls
         string production_time
         string shipping_time
-        decimal total_cost
+        string total_cost "chuoi tu do - so hoac khoang gia vd 100-150"
         string material
         datetime deleted_at "soft delete"
     }
@@ -347,5 +359,48 @@ erDiagram
 - **Phân quyền theo project ở tầng dữ liệu:** `price_sheets.project` khớp chuỗi với `users.project` (liên kết mềm, không FK). `PriceSheetController` lọc **ngay tại server** — role thường chỉ nhận sheet thuộc project của mình, không lộ giá project khác; admin/vendor(staff_b) thấy tất cả.
 - **`products.assigned_vendors`** là JSON array (không FK cứng) — danh sách vendor Staff B đề xuất; còn `products.vendor_id` là vendor **được chốt** cuối cùng.
 - **Soft delete** trên `products` và `vendors` (`deleted_at`) — xoá không mất lịch sử.
+- **Danh tính không unique theo email:** vì một người có thể giữ nhiều vai trò/project, `users.email` và `users.google_id` **đều không còn ràng buộc UNIQUE** (chỉ còn index thường). Tính hợp lệ được đảm bảo ở tầng ứng dụng: `SocialAuthController` chỉ gắn `google_id` cho các dòng **cùng email đã được Google xác minh**.
+- **`products.total_cost` là chuỗi, không phải số** — nó chứa khoảng giá do Seller nhập (`100-150`). Mọi chỗ so sánh với giá vendor phải đi qua [`frontend/src/utils/targetCost.js`](frontend/src/utils/targetCost.js) (lấy cận trên của khoảng làm trần), **không dùng `Number()` trực tiếp** vì `Number("100-150")` = `NaN`.
 - Migrations còn các bảng `customers`, `orders`, `order_items`, `payments`, `inventory_logs` từ scaffold ban đầu — **không dùng** trong luồng nghiệp vụ hiện tại (legacy).
+
+---
+
+## 9. Triển khai & vận hành
+
+Deploy là **thủ công**: trên VPS `git pull` rồi phục vụ bản build đã commit. **Push git không tự cập nhật production.**
+
+### Đổi code frontend → bắt buộc rebuild `dist/`
+
+`frontend/dist/` được **commit vào git** và chính nó là thứ production phục vụ. Sửa `src/` mà quên rebuild thì production vẫn chạy code cũ.
+
+```bash
+cd frontend && npx vite build      # rồi commit cả src/ lẫn dist/
+```
+
+> ⛔ **Không bao giờ resolve conflict thủ công trong `frontend/dist/`.** Đó là JS đã minify — sót một marker `<<<<<<<` hoặc giữ cả hai bên là hỏng cú pháp cả bundle → app trắng trang. Cách đúng: bỏ qua nội dung conflict, chạy lại `npx vite build` để **tái tạo** `dist/` từ source đã resolve, rồi `git add -A frontend/dist`.
+
+### Đổi code backend → chạy migration trên server
+
+```bash
+cd backend
+composer install --no-dev --optimize-autoloader   # nếu có dependency mới
+php artisan migrate
+php artisan config:clear
+```
+
+Hai điểm hay bị bỏ sót:
+
+- **`composer install` là bắt buộc khi thêm package.** `backend/vendor/` bị `.gitignore` (dù một phần đã lỡ được track), nên **dependency mới không đi theo `git pull`**.
+- **Một migration lỗi sẽ chặn TẤT CẢ migration sau nó.** `php artisan migrate` chạy tuần tự và abort ngay khi gặp lỗi — các migration phía sau không bao giờ chạy, kể cả khi chúng hoàn toàn hợp lệ. Vì vậy migration nào có thể đã được áp dụng bằng tay (drop index, đổi cột…) **phải viết idempotent**, kiểm tra trạng thái trước khi thao tác:
+
+  ```php
+  $indexes = collect(Schema::getIndexes('users'))->pluck('name');
+  if ($indexes->contains('users_google_id_unique')) {
+      $table->dropUnique('users_google_id_unique');
+  }
+  ```
+
+### Kiểm chứng bundle trước khi deploy
+
+Môi trường không có trình duyệt tự động, nên trước khi deploy hãy phục vụ bản build (`npx vite preview`) rồi mở bằng Chrome headless, xác nhận `#root` có render và **không có exception** — bắt sớm lỗi trắng trang.
 
