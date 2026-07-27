@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
 
 import { HCLogo } from '../components/vendor/ui/VendorUI';
+import UserAvatar from '../components/shared/UserAvatar';
 import VendorNotificationCenter from '../components/vendor/components/VendorNotificationCenter';
 import NewsManagementSection from '../components/vendor/sections/NewsManagementSection';
 import ProductsSection from '../components/vendor/sections/ProductsSection';
@@ -260,7 +261,7 @@ export default function VendorDashboard() {
           {sidebarOpen ? (
             <div onClick={() => setShowLogout(v => !v)} style={{ margin: '14px 12px', padding: '12px 14px', borderRadius: 12, background: DARK.cardBg, border: `1px solid ${showLogout ? 'rgba(249,115,22,0.3)' : DARK.border}`, animation: 'vendor-fadein 0.25s ease', flexShrink: 0, cursor: 'pointer', transition: 'border-color 0.18s ease' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', flexShrink: 0 }}><ShopOutlined /></div>
+                <UserAvatar user={user} size={36} radius={10} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.full_name || user?.name || 'Vendor'}</div>
                   <div style={{ fontSize: 10, color: DARK.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}><ShopOutlined style={{ fontSize: 9, color: HC.orange }} /><span>Vendor Account</span></div>
@@ -315,9 +316,7 @@ function VendorCollapsedUser({ user, logout }) {
     <div style={{ padding: '8px 8px 0', position: 'relative' }}>
       <div onClick={() => setShowMenu(v => !v)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         style={{ padding: '11px', borderRadius: 10, background: showMenu ? DARK_LOCAL.bgActive : hovered ? DARK_LOCAL.bgHover : 'transparent', border: `1px solid ${showMenu ? DARK_LOCAL.borderActive : 'transparent'}`, cursor: 'pointer', transition: 'all 0.18s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg, #f97316, #c2410c)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#fff', flexShrink: 0 }}>
-          <ShopOutlined />
-        </div>
+        <UserAvatar user={user} size={30} radius={8} />
       </div>
       {showMenu && (
         <>

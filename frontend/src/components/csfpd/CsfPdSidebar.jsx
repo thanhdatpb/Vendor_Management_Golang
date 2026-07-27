@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { HC } from '../../constants/sellerTheme';
 import { HCLogo } from '../seller/SellerUI';
+import UserAvatar from '../shared/UserAvatar';
 
 const DARK = {
   bg:           'var(--hc-dark-bg)',
@@ -127,9 +128,7 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
           style={{ margin: '14px 12px', padding: '12px 14px', borderRadius: 12, background: DARK.cardBg, border: `1px solid ${showLogout ? 'rgba(249,115,22,0.3)' : DARK.border}`, flexShrink: 0, cursor: 'pointer', transition: 'border-color 0.18s ease' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', flexShrink: 0 }}>
-              <UserOutlined />
-            </div>
+            <UserAvatar user={user} size={36} radius={10} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameToShow}</div>
               <div style={{ fontSize: 10, color: DARK.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
@@ -158,9 +157,7 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
             onClick={() => setShowLogout(v => !v)}
             style={{ padding: '11px', borderRadius: 10, background: showLogout ? DARK.bgActive : 'transparent', border: `1px solid ${showLogout ? DARK.borderActive : 'transparent'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
           >
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#fff', flexShrink: 0 }}>
-              <UserOutlined />
-            </div>
+            <UserAvatar user={user} size={30} radius={8} />
             {showLogout && (
               <>
                 <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={(e) => { e.stopPropagation(); setShowLogout(false); }} />

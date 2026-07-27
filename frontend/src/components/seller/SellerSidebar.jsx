@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { HC } from '../../constants/sellerTheme';
 import { HCLogo, MENU } from './SellerUI';
+import UserAvatar from '../shared/UserAvatar';
 import useIsMobile from '../../hooks/useIsMobile';
 
 const DARK = {
@@ -123,14 +124,7 @@ function CollapsedUserItem({ user, logout }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <div style={{
-          width: 30, height: 30, borderRadius: 8,
-          background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, color: '#fff', flexShrink: 0,
-        }}>
-          <UserOutlined />
-        </div>
+        <UserAvatar user={user} size={30} radius={8} />
       </div>
 
       {showMenu && (
@@ -321,14 +315,7 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16, color: '#fff', flexShrink: 0,
-            }}>
-              <UserOutlined />
-            </div>
+            <UserAvatar user={user} size={36} radius={10} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontSize: 13, fontWeight: 700, color: '#f1f5f9',

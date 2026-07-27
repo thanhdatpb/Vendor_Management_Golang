@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LogoutOutlined, CrownOutlined } from '@ant-design/icons';
 import { HC, MENU } from './constants';
 import { HCLogo } from './ui';
+import UserAvatar from '../shared/UserAvatar';
 
 const DARK = {
   bg:           'var(--hc-dark-bg)',
@@ -120,15 +121,7 @@ function CollapsedUserItem({ user, logout }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <div style={{
-          width: 30, height: 30, borderRadius: 8,
-          background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 800, color: '#fff',
-          fontFamily: "'Nunito',sans-serif", flexShrink: 0,
-        }}>
-          {user?.name?.charAt(0).toUpperCase() || 'A'}
-        </div>
+        <UserAvatar user={user} size={30} radius={8} fontSize={13} />
       </div>
 
       {showMenu && (
@@ -291,15 +284,7 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 15, fontWeight: 800, color: '#fff',
-              fontFamily: "'Nunito',sans-serif", flexShrink: 0,
-            }}>
-              {user?.name?.charAt(0).toUpperCase() || 'A'}
-            </div>
+            <UserAvatar user={user} size={36} radius={10} fontSize={15} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontSize: 13, fontWeight: 700, color: '#f1f5f9',

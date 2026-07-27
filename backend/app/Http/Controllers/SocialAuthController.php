@@ -66,9 +66,11 @@ class SocialAuthController extends Controller
         // điền avatar/full_name cho dòng còn thiếu (giữ mọi tài khoản đồng bộ).
         foreach ($accounts as $acc) {
             $patch = [];
-            if (empty($acc->google_id))  $patch['google_id']  = $incomingGoogleId;
-            if (empty($acc->avatar_url)) $patch['avatar_url'] = $googleUser->getAvatar();
-            if (empty($acc->full_name))  $patch['full_name']  = $googleUser->getName();
+            if (empty($acc->google_id)) $patch['google_id'] = $incomingGoogleId;
+            // Luôn đồng bộ ảnh đại diện Google (người dùng có thể đổi ảnh bên Google)
+            $gAvatar = $googleUser->getAvatar();
+            if ($gAvatar && $acc->avatar_url !== $gAvatar) $patch['avatar_url'] = $gAvatar;
+            if (empty($acc->full_name)) $patch['full_name'] = $googleUser->getName();
             if (!$patch) continue;
             try {
                 $acc->update($patch);
