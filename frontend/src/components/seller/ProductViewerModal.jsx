@@ -361,7 +361,12 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: isMobile ? 'auto' : 'hidden' }}>
 
             {/* TOP SECTION: Media & Product Info (Sheet Layout) */}
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
+            {/* maxHeight (desktop): các trường như Vùng In / Packing / Đặc tính KT có
+                thể dài hàng chục dòng. Không chặn trần thì khối này (flexShrink: 0)
+                phình ra, đẩy bảng so sánh vendor ra khỏi vùng nhìn, và vì container
+                cha để overflow:hidden nên nội dung bị CẮT mà không cuộn được.
+                Chặn trần rồi cho panel thông tin bên dưới tự cuộn — bố cục giữ nguyên. */}
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', flexShrink: 0, maxHeight: isMobile ? 'none' : '48vh', borderBottom: `1.5px solid ${HC.border}`, background: HC.surface }}>
               {/* Media */}
               <div style={isMobile ? { width: '100%', height: 170, flexShrink: 0, borderBottom: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' } : { width: 240, flexShrink: 0, borderRight: `1.5px solid ${HC.border}`, display: 'flex', flexDirection: 'column', background: '#1a1008' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', cursor: displayUrls.length ? 'pointer' : 'default' }}>
@@ -405,7 +410,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
               </div>
 
               {/* Product Info — compact */}
-              <div style={{ flex: 1, overflowX: 'hidden', padding: '10px 16px', background: '#f8fafc' }}>
+              {/* minHeight:0 là bắt buộc: flex item mặc định min-height:auto nên panel
+                  sẽ nở theo nội dung thay vì tôn trọng maxHeight của cha → overflowY
+                  không bao giờ kích hoạt. Mobile giữ nguyên vì cả modal đã cuộn sẵn. */}
+              <div style={{ flex: 1, minHeight: 0, overflowX: 'hidden', overflowY: isMobile ? 'visible' : 'auto', padding: '10px 16px', background: '#f8fafc' }}>
                 {/* Header row */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

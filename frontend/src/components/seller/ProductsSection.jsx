@@ -1335,8 +1335,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                   <Field label="2.1 Chất liệu (Ví dụ: 100% cotton)" required error={formErrors.material}>
                     <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ borderColor: formErrors.material ? HC.danger : HC.border }} />
                   </Field>
+                  {/* Nội dung ở đây hay dài hàng chục dòng (spec, evidence...) — dùng
+                      textarea cố định chiều cao + cuộn như 2.3/2.4/2.5, thay vì
+                      AutoGrowTextarea (cao theo nội dung, đẩy form dài vô tận). */}
                   <Field label="2.2 Vùng In/Thiết kế (Ví dụ: 2 vùng in trước và sau)" required error={formErrors.print_area}>
-                    <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.print_area} onChange={fld('print_area')} style={{ borderColor: formErrors.print_area ? HC.danger : HC.border }} />
+                    <textarea
+                      placeholder="Câu trả lời của bạn"
+                      value={form.print_area}
+                      onChange={fld('print_area')}
+                      style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.print_area ? HC.danger : HC.border }}
+                    />
                   </Field>
                 </div>
               </div>
@@ -1385,19 +1393,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                 <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>3. Packaging & đóng gói (Yêu cầu về đóng gói)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                   <Field label="3.1 Packaging (Ví dụ: Mỗi sản phẩm được đóng gói hộp xốp)" required error={formErrors.packaging_links}>
-                    <AutoGrowTextarea
+                    <textarea
                       placeholder="Câu trả lời của bạn"
                       value={form.packaging_links}
                       onChange={fld('packaging_links')}
-                      style={{ borderColor: formErrors.packaging_links ? HC.danger : HC.border }}
+                      style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.packaging_links ? HC.danger : HC.border }}
                     />
                   </Field>
                   <Field label="3.2 Other Packaging (Phụ kiện đi kèm - Ví dụ: Thank you card)" required error={formErrors.other_packaging}>
-                    <AutoGrowTextarea
+                    <textarea
                       placeholder="Câu trả lời của bạn"
                       value={form.other_packaging}
                       onChange={fld('other_packaging')}
-                      style={{ borderColor: formErrors.other_packaging ? HC.danger : HC.border }}
+                      style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.other_packaging ? HC.danger : HC.border }}
                     />
                   </Field>
                 </div>
