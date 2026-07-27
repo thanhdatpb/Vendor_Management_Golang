@@ -69,11 +69,22 @@ class SocialAuthController extends Controller
             if (empty($acc->google_id))  $patch['google_id']  = $incomingGoogleId;
             if (empty($acc->avatar_url)) $patch['avatar_url'] = $googleUser->getAvatar();
             if (empty($acc->full_name))  $patch['full_name']  = $googleUser->getName();
-            if ($patch) $acc->update($patch);
+            if (!$patch) continue;
+            try {
+                $acc->update($patch);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // DB còn ràng buộc unique cũ trên google_id (migration chưa chạy):
+                // vẫn cho đăng nhập, chỉ bỏ qua việc gắn google_id cho dòng này.
+                unset($patch['google_id']);
+                if ($patch) {
+                    try { $acc->update($patch); } catch (\Throwable $e2) { /* bỏ qua */ }
+                }
+            }
         }
 
-        // 1 tài khoản → đăng nhập luôn; nhiều tài khoản → chuyển sang bước chọn.
-        if ($active->count() === 1) {
+        // Chỉ hỏi chọn khi các tài khoản KHÁC VAI TRÒ. Cùng vai trò mà khác project
+        // (vd PD làm 2 project) → vào thẳng, sidebar hiển thị đủ project.
+        if ($active->count() === 1 || $active->pluck('role')->unique()->count() === 1) {
             $token = $active->first()->createToken('google_auth')->plainTextToken;
             return redirect($frontendUrl . '/auth/callback?token=' . urlencode($token));
         }

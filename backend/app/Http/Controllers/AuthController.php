@@ -19,9 +19,26 @@ class AuthController extends Controller
             'email'       => $user->email,
             'role'        => $user->role,
             'project'     => $user->project,
+            // Tất cả project mà email này được cấp CÙNG vai trò — để UI (vd PD)
+            // hiển thị đủ các project ở sidebar, giống CSF.
+            'projects'    => self::projectsFor($user),
             'seller_name' => $user->seller_name,
             'avatar_url'  => $user->avatar_url,
         ];
+    }
+
+    /** Danh sách project của các tài khoản đang hoạt động cùng email + cùng role. */
+    public static function projectsFor(User $user): array
+    {
+        return User::where('email', $user->email)
+            ->where('role', $user->role)
+            ->where('is_active', true)
+            ->whereNotNull('project')
+            ->orderBy('project')
+            ->pluck('project')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     // Tóm tắt 1 tài khoản để hiển thị ở bước chọn (không lộ gì nhạy cảm).
@@ -69,8 +86,9 @@ class AuthController extends Controller
             return response()->json(['message' => 'Mật khẩu sai'], 401);
         }
 
-        // Nhiều tài khoản khớp → yêu cầu client chọn vào đâu.
-        if ($matched->count() > 1) {
+        // Chỉ hỏi chọn khi các tài khoản KHÁC VAI TRÒ. Nếu cùng vai trò mà khác
+        // project (vd PD làm 2 project) thì vào thẳng — sidebar hiển thị đủ project.
+        if ($matched->pluck('role')->unique()->count() > 1) {
             return response()->json([
                 'needs_selection' => true,
                 'ticket'   => self::makeSelectionTicket($email),

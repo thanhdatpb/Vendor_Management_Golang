@@ -1,16 +1,12 @@
 // ════════════════════════════════════════════════════════
 //  PD DASHBOARD — Xem Thư Viện Vendor của project mình (không thấy giá)
 // ════════════════════════════════════════════════════════
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { HC } from '../constants/sellerTheme';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import VendorLibraryCsfPdViewer from '../components/csfpd/VendorLibraryCsfPdViewer';
-
-const MENU = [
-  { id: 'vendors', icon: <ShopOutlined />, label: 'Thư Viện Vendor' },
-];
 
 // "Happy Project" → "happy" — khớp với ký hiệu P.xxx dùng trong tên file thư viện
 function projectNameToKey(name) {
@@ -25,10 +21,21 @@ function projectNameToKey(name) {
 
 export default function PdDashboard() {
   const { user, logout } = useAuth();
-  const [active, setActive] = useState('vendors');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const projectKey = projectNameToKey(user?.project);
+  // 1 nhân sự PD có thể phụ trách NHIỀU project (mỗi project 1 tài khoản cùng email).
+  // Backend trả `projects` = tất cả project của email này ở role PD → sidebar liệt kê
+  // đủ, giống CSF. Fallback về `project` của tài khoản đang đăng nhập (dữ liệu cũ).
+  const projectMenu = useMemo(() => {
+    const names = (user?.projects?.length ? user.projects : [user?.project]).filter(Boolean);
+    return names
+      .map(name => ({ id: projectNameToKey(name), icon: <ShopOutlined />, label: name }))
+      .filter(m => m.id);
+  }, [user?.projects, user?.project]);
+
+  const [active, setActive] = useState(null);
+  const projectKey = active || projectMenu[0]?.id || null;
+  const activeLabel = projectMenu.find(m => m.id === projectKey)?.label || user?.project || '';
 
   return (
     <>
@@ -43,13 +50,13 @@ export default function PdDashboard() {
 
       <div style={{ display: 'flex', height: '100vh', background: `linear-gradient(135deg, ${HC.orangePale} 0%, ${HC.cream} 100%)`, fontFamily: "'Nunito Sans',sans-serif", color: HC.ink, overflow: 'hidden' }}>
         <CsfPdSidebar
-          active={active}
+          active={projectKey}
           setActive={setActive}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
           user={user}
           logout={logout}
-          menu={MENU}
+          menu={projectMenu}
           roleLabel="PD"
           displayName={user?.full_name || user?.project || 'PD'}
         />
@@ -59,7 +66,7 @@ export default function PdDashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 4, height: 32, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
               <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em' }}>
-                Thư Viện Vendor {user?.project ? `— ${user.project}` : ''}
+                Thư Viện Vendor {activeLabel ? `— ${activeLabel}` : ''}
               </div>
             </div>
             <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>
