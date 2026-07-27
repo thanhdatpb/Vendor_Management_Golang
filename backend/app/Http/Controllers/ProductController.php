@@ -101,10 +101,30 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * total_cost giờ là chuỗi tự do để nhận khoảng giá ("100-150"), nhưng client cũ
+     * và test vẫn gửi số thuần (12.00). Rule 'string' sẽ TRƯỢT với JSON số, nên ép
+     * về chuỗi trước khi validate để cả hai dạng cùng đi qua.
+     */
+    private function normalizeTotalCost(Request $request): void
+    {
+        if (!$request->has('total_cost')) {
+            return;
+        }
+
+        $value = $request->input('total_cost');
+
+        if (is_int($value) || is_float($value)) {
+            $request->merge(['total_cost' => (string) $value]);
+        }
+    }
+
     // 2️⃣ Thêm sản phẩm (hỗ trợ nhiều file) - ĐÃ SỬA HOÀN CHỈNH
 public function store(Request $request)
 {
     $user = $request->user();
+
+    $this->normalizeTotalCost($request);
 
     $validated = $request->validate([
         'vendor_id'         => 'nullable|exists:vendors,id',
@@ -119,7 +139,10 @@ public function store(Request $request)
         'media.*'           => 'nullable|file|max:20480|mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm',
         'production_time'   => 'nullable|string|max:255',
         'shipping_time'     => 'nullable|string|max:255',
-        'total_cost'        => 'nullable|numeric|min:0',
+        // Là KHOẢNG GIÁ dạng tự do ("100-150"), không phải một con số — Seller nhập
+        // Base + Shipping gộp lại nên rất hay là khoảng. Giữ 'numeric' ở đây sẽ chặn
+        // đúng thứ mà nhãn của trường đang hướng dẫn người dùng nhập.
+        'total_cost'        => 'nullable|string|max:255',
         'material'          => 'nullable|string',
         'print_area'        => 'nullable|string',
         'packaging_links'   => 'nullable|string',
@@ -210,6 +233,8 @@ public function update(Request $request, $id)
         }
     }
 
+    $this->normalizeTotalCost($request);
+
     $validated = $request->validate([
         'deadline_date'     => 'sometimes|nullable|date',
         'product_type'      => 'sometimes|nullable|string|max:255',
@@ -221,7 +246,7 @@ public function update(Request $request, $id)
         'bad_review'        => 'sometimes|nullable|string',
         'production_time'   => 'sometimes|nullable|string|max:255',
         'shipping_time'     => 'sometimes|nullable|string|max:255',
-        'total_cost'        => 'sometimes|nullable|numeric|min:0',
+        'total_cost'        => 'sometimes|nullable|string|max:255', // khoảng giá — xem store()
         'material'          => 'sometimes|nullable|string',
         'print_area'        => 'sometimes|nullable|string',
         'packaging_links'   => 'sometimes|nullable|string',

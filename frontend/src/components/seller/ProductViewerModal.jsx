@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { LeftOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_A_SELECTIONS, LS_B_SELECTIONS, LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE, LS_B_SUBMITTED_FEEDBACK } from '../../constants/sellerTheme';
 import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, getProductLinks, toImageEmbedUrl } from '../../utils/sellerHelpers';
+import { targetCostCeiling } from '../../utils/targetCost';
 import { pushNotif } from '../../utils/notifUtils';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -543,7 +544,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                     <div style={{ fontSize: 12, color: HC.muted, lineHeight: 1.6, textAlign: 'center', maxWidth: 320 }}>Bộ phận Vận hành sẽ gán nhà cung cấp phù hợp sau khi xem xét yêu cầu sản phẩm này.</div>
                   </div>
                 ) : (() => {
-                  const target = product.total_cost != null ? Number(product.total_cost) : null;
+                  // total_cost có thể là khoảng ("100-150") → lấy cận trên làm trần
+                  // so sánh. Number() trực tiếp sẽ ra NaN, khiến mọi vendor bị gắn
+                  // nhãn "Vượt target" và delta hiện "+$NaN".
+                  const target = targetCostCeiling(product.total_cost);
 
                   // N/A phân biệt: thư viện trống vs chờ Staff B
                   const NaLib = ({ title: tip } = {}) => (

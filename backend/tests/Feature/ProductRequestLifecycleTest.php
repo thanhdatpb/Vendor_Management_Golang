@@ -394,6 +394,36 @@ class ProductRequestLifecycleTest extends TestCase
         $this->assertEquals('lib_us1_B', $byName['US1']['id'],              'US1 id đúng');
     }
 
+    /**
+     * total_cost là Base + Shipping gộp lại nên Seller thường nhập KHOẢNG, đúng như
+     * nhãn trên form hướng dẫn ("Ví dụ: 100-150"). Trước đây rule 'numeric' chặn
+     * thẳng dạng này bằng 422 — người dùng buộc phải nhập một con số.
+     */
+    public function test_total_cost_accepts_price_range(): void
+    {
+        $seller = $this->makeUser('seller', '9');
+
+        $created = $this->createDraftProduct($seller, ['total_cost' => '100-150']);
+
+        $this->assertSame('100-150', $created['total_cost'], 'Khoảng giá phải được lưu nguyên vẹn');
+
+        // Sửa lại qua update() cũng phải nhận khoảng giá
+        $updated = $this->actingAs($seller)
+            ->putJson('/api/products/' . $created['id'], ['total_cost' => '200 - 250']);
+
+        $updated->assertStatus(200);
+        $this->assertSame('200 - 250', $updated->json('total_cost'), 'update() cũng phải nhận khoảng giá');
+    }
+
+    /** Client cũ (và chính test helper) vẫn gửi số thuần — không được vỡ. */
+    public function test_total_cost_still_accepts_plain_number(): void
+    {
+        $seller  = $this->makeUser('seller', '9');
+        $created = $this->createDraftProduct($seller, ['total_cost' => 12.50]);
+
+        $this->assertEquals(12.50, (float) $created['total_cost'], 'Số thuần vẫn lưu đúng giá trị');
+    }
+
     // ══════════════════════════════════════════
     // CASE 5 — SO TARGET COST
     // target_cost biết trước, giá vendor biết trước → hệ thống cung cấp đủ dữ liệu để tính delta

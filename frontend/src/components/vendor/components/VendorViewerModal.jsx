@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS, LS_B_SELECTIONS } from '../utils/constants';
 import { lsGet, lsSet, getMediaUrls, fmtDate } from '../utils/helpers';
 import { pushNotif } from '../../../utils/notifUtils';
+import { targetCostCeiling } from '../../../utils/targetCost';
 import PriceComparisonMatrix from './PriceComparisonMatrix';
 import Lightbox from './Lightbox';
 import { BestSellerBadge } from '../ui/VendorUI';
@@ -160,7 +161,9 @@ export default function VendorViewerModal({ product, onClose }) {
     { key: 'overnight_total', short: 'OVN',  label: 'Overnight', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
   ];
 
-  const target = product.total_cost != null ? Number(product.total_cost) : null;
+  // total_cost có thể là khoảng ("100-150") → lấy cận trên làm trần so sánh.
+  // Number() trực tiếp sẽ ra NaN, khiến mọi vendor bị gắn nhãn "Vượt target".
+  const target = targetCostCeiling(product.total_cost);
 
   const getTotal = (vi, key) => {
     const v = Number(vi[key]);
@@ -385,9 +388,9 @@ export default function VendorViewerModal({ product, onClose }) {
                   const uCount = new Set(vendors.map(v => (v.name || v.vendor_type || '').toString().trim()).filter(Boolean)).size || vendors.length;
                   return <span style={{ padding: '2px 10px', borderRadius: 20, background: 'rgba(120,53,15,0.1)', color: '#78350f', fontSize: 10, fontWeight: 700 }}>{uCount} vendor</span>;
                 })()}
-                {target != null && (
+                {product.total_cost != null && (
                   <span style={{ marginLeft: 4, padding: '2px 10px', borderRadius: 20, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontSize: 10, fontWeight: 700 }}>
-                    Target: ${target}
+                    Target: ${product.total_cost}
                   </span>
                 )}
               </div>
