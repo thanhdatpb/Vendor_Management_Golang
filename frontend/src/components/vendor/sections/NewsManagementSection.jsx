@@ -5,8 +5,14 @@ import AppToast from '../../shared/AppToast';
 import { playNotificationSound } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination } from '../ui/VendorUI';
 import NewsModalComponent from '../components/NewsModalComponent';
-import { pushNotif, pushNotifMulti } from '../../../utils/notifUtils';
+import NewsDetailModal from '../components/NewsDetailModal';
+import { pushNotifMulti } from '../../../utils/notifUtils';
 import { newsApi } from '../../../services/api';
+
+// Vendor luôn phát thông báo cho cả Admin lẫn Seller — không còn chọn đối tượng
+// trong form nữa, nên khoá cứng target ở một chỗ để list/API/notif dùng chung.
+const NEWS_TARGET = 'both';
+const NEWS_TARGET_ROLES = ['admin', 'seller'];
 
 export default function NewsManagementSection() {
   const [newsList, setNewsList] = useState([]);
@@ -17,10 +23,11 @@ export default function NewsManagementSection() {
   const [form, setForm] = useState({
     title: '',
     message: '',
-    target: 'both'
+    target: NEWS_TARGET
   });
   const [formErrors, setFormErrors] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [detailNews, setDetailNews] = useState(null);
   const [toast, setToast] = useState(null);
 
   // Danh sách tin tức lưu server (bảng `news`) — trước đây lưu localStorage
@@ -66,10 +73,7 @@ export default function NewsManagementSection() {
       source: 'staff_b'
     };
 
-    const targets = [];
-    if (news.target === 'admin' || news.target === 'both') targets.push('admin');
-    if (news.target !== 'admin') targets.push('seller');
-    await pushNotifMulti(targets, { ...notification, targetProject: news.target });
+    await pushNotifMulti(NEWS_TARGET_ROLES, { ...notification, targetProject: NEWS_TARGET });
   };
 
   const updateNewsInDashboards = (news) => {
@@ -117,13 +121,13 @@ export default function NewsManagementSection() {
       const res = await newsApi.create({
         title: form.title.trim(),
         message: form.message.trim(),
-        target: form.target,
+        target: NEWS_TARGET,
       });
       const newNews = res.data;
-      sendNewsToDashboards(newNews);
+      await sendNewsToDashboards(newNews);
       setNewsList(prev => [newNews, ...prev]);
       closeModal();
-      setToast({ type: 'success', title: 'Thành công', message: 'Đã tạo thông báo mới' });
+      setToast({ type: 'success', title: 'Thành công', message: 'Đã gửi thông báo tới Admin & Seller' });
       playNotificationSound();
     } catch (err) {
       setToast({ type: 'error', title: 'Lỗi', message: err?.response?.data?.message || 'Không thể tạo thông báo' });
@@ -139,11 +143,12 @@ export default function NewsManagementSection() {
       const res = await newsApi.update(editingNews.id, {
         title: form.title.trim(),
         message: form.message.trim(),
-        target: form.target,
+        target: NEWS_TARGET,
       });
       const updatedNews = res.data;
       updateNewsInDashboards(updatedNews);
       setNewsList(prev => prev.map(n => n.id === editingNews.id ? updatedNews : n));
+      setDetailNews(prev => (prev && prev.id === updatedNews.id ? updatedNews : prev));
       closeModal();
       setToast({ type: 'success', title: 'Thành công', message: 'Đã cập nhật thông báo' });
     } catch (err) {
@@ -159,6 +164,7 @@ export default function NewsManagementSection() {
       await newsApi.remove(deleteConfirm.id);
       removeNewsFromDashboards(deleteConfirm.id);
       setNewsList(prev => prev.filter(n => n.id !== deleteConfirm.id));
+      setDetailNews(prev => (prev && prev.id === deleteConfirm.id ? null : prev));
       setDeleteConfirm(null);
       setToast({ type: 'success', title: 'Thành công', message: 'Đã xóa thông báo' });
     } catch (err) {
@@ -167,7 +173,7 @@ export default function NewsManagementSection() {
   };
 
   const resetForm = () => {
-    setForm({ title: '', message: '', target: 'both' });
+    setForm({ title: '', message: '', target: NEWS_TARGET });
     setFormErrors({});
   };
 
@@ -182,9 +188,10 @@ export default function NewsManagementSection() {
     setForm({
       title: news.title,
       message: news.message,
-      target: news.target || 'both'
+      target: NEWS_TARGET
     });
     setFormErrors({});
+    setDetailNews(null);
     setShowModal(true);
   };
 
@@ -204,33 +211,6 @@ export default function NewsManagementSection() {
     }
   }, [formErrors.title, formErrors.message]);
 
-  const getTargetLabel = (target) => {
-    if (Array.isArray(target)) return '🎯 ' + target.map(t => t.replace(' Project', '')).join(', ');
-    switch (target) {
-      case 'admin': return '📋 Admin';
-      case 'seller': return '👤 Tất cả Seller';
-      case 'both': return '📋👤 Tất cả';
-      case 'Creative Project': return '🎨 Creative Project';
-      case 'Happy Project': return '😊 Happy Project';
-      case 'Global Project': return '🌍 Global Project';
-      case 'Hapify84 Project': return '🚀 Hapify84 Project';
-      default: return target || '—';
-    }
-  };
-
-  const getTargetColor = (target) => {
-    if (Array.isArray(target)) return '#8b5cf6';
-    if (['Creative Project', 'Happy Project', 'Global Project', 'Hapify84 Project'].includes(target)) {
-      return '#8b5cf6'; // purple for projects
-    }
-    switch (target) {
-      case 'admin': return '#3b82f6';
-      case 'seller': return '#16a34a';
-      case 'both': return '#f59e0b';
-      default: return HC.muted;
-    }
-  };
-
   const NewsTable = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
@@ -245,30 +225,30 @@ export default function NewsManagementSection() {
               <th style={{ padding: '12px 14px', textAlign: 'center', width: 60, color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>STT</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Tiêu đề</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Nội dung</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center', width: 100, color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Đối tượng</th>
               <th style={{ padding: '12px 14px', textAlign: 'center', width: 140, color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Ngày tạo</th>
               <th style={{ padding: '12px 14px', textAlign: 'center', width: 100, color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {pagedNews.map((news, idx) => (
-              <tr key={news.id} style={{ borderBottom: `1px solid ${HC.border}` }} onMouseEnter={e => e.currentTarget.style.background = HC.orangePale} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <tr
+                key={news.id}
+                onClick={() => setDetailNews(news)}
+                title="Bấm để xem chi tiết thông báo"
+                style={{ borderBottom: `1px solid ${HC.border}`, cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = HC.orangePale}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
                 <td style={{ padding: '12px 14px', textAlign: 'center', color: HC.muted, fontWeight: 700 }}>
                   {(currentPage - 1) * itemsPerPage + idx + 1}
                 </td>
                 <td style={{ padding: '12px 14px', fontWeight: 800, color: HC.ink2 }}>{news.title}</td>
-                <td style={{ padding: '12px 14px', color: HC.ink2, maxWidth: 400, wordBreak: 'break-word' }}>{news.message}</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: 20,
-                    background: `${getTargetColor(news.target)}20`,
-                    color: getTargetColor(news.target),
-                    fontSize: 11,
-                    fontWeight: 700,
-                    display: 'inline-block'
-                  }}>
-                    {getTargetLabel(news.target)}
+                <td style={{ padding: '12px 14px', color: HC.ink2, maxWidth: 400, wordBreak: 'break-word' }}>
+                  <div style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
+                    {news.message}
+                  </div>
+                  <span style={{ fontSize: 10.5, fontWeight: 800, color: HC.orangeDark, marginTop: 4, display: 'inline-block' }}>
+                    Xem chi tiết →
                   </span>
                 </td>
                 <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 11, color: HC.muted }}>
@@ -277,7 +257,7 @@ export default function NewsManagementSection() {
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                     <button
-                      onClick={() => openEditModal(news)}
+                      onClick={e => { e.stopPropagation(); openEditModal(news); }}
                       style={{
                         padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orangeMid}`,
                         background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 800,
@@ -287,7 +267,7 @@ export default function NewsManagementSection() {
                       <EditOutlined /> Sửa
                     </button>
                     <button
-                      onClick={() => setDeleteConfirm(news)}
+                      onClick={e => { e.stopPropagation(); setDeleteConfirm(news); }}
                       style={{
                         padding: '5px 12px', borderRadius: 7, border: '1.5px solid #fecaca',
                         background: '#fef2f2', cursor: 'pointer', fontSize: 11, fontWeight: 800,
@@ -327,6 +307,9 @@ export default function NewsManagementSection() {
           <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>
             {newsList.length} thông báo
           </span>
+          <span style={{ fontSize: 11, color: HC.muted, fontWeight: 600 }}>
+            · Bấm vào dòng để xem chi tiết
+          </span>
         </div>
         <button
           onClick={openCreateModal}
@@ -352,6 +335,13 @@ export default function NewsManagementSection() {
         onSubmit={editingNews ? handleUpdateNews : handleCreateNews}
         onFormChange={handleFormChange}
         vendorMode={true}
+      />
+
+      <NewsDetailModal
+        news={detailNews}
+        onClose={() => setDetailNews(null)}
+        onEdit={openEditModal}
+        onDelete={(news) => { setDetailNews(null); setDeleteConfirm(news); }}
       />
 
       {deleteConfirm && (

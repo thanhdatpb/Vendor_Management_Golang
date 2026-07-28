@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditOutlined, SendOutlined, NotificationOutlined } from '@ant-design/icons';
+import { EditOutlined, SendOutlined, NotificationOutlined, TeamOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 
 const NewsModalComponent = React.memo(({
@@ -178,21 +178,22 @@ const NewsModalComponent = React.memo(({
             )}
           </div>
 
+          {/* Vendor luôn gửi cho cả Admin & Seller → bỏ hẳn ô chọn đối tượng,
+              thông tin người nhận nằm ngay trên nút submit ở footer. */}
+          {!vendorMode && (
           <div style={{ marginBottom: 24 }}>
             <label style={{ fontSize: 13, fontWeight: 800, color: HC.ink, marginBottom: 12, display: 'block' }}>
               Đối tượng nhận
             </label>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
               <label style={{
-                display: 'flex', alignItems: 'center', gap: 10, cursor: vendorMode ? 'default' : 'pointer', padding: '8px 16px',
+                display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
                 borderRadius: 10, background: HC.orangeLight,
                 border: `1px solid ${HC.orange}`,
               }}>
-                <input type="radio" checked={true} readOnly disabled={vendorMode} style={{ width: 18, height: 18, cursor: vendorMode ? 'default' : 'pointer' }} />
+                <input type="radio" checked={true} readOnly style={{ width: 18, height: 18, cursor: 'pointer' }} />
                 <span style={{ fontSize: 13 }}>Tất cả (Admin &amp; Seller)</span>
               </label>
-              {!vendorMode && (
-                <>
                   <label style={{
                     display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 16px',
                     borderRadius: 10, background: isSelected('admin') ? HC.orangeLight : 'transparent',
@@ -241,26 +242,41 @@ const NewsModalComponent = React.memo(({
                     <input type="checkbox" checked={isSelected('Hapify84 Project')} onChange={() => handleTargetChange('Hapify84 Project')} style={{ width: 18, height: 18, cursor: 'pointer' }} />
                     <span style={{ fontSize: 13 }}>Hapify84 Project</span>
                   </label>
-                </>
-              )}
             </div>
           </div>
+          )}
         </div>
 
         <div style={{
           padding: '16px 24px', borderTop: `1.5px solid ${HC.border}`, background: HC.cream,
-          borderRadius: '0 0 20px 20px', display: 'flex', justifyContent: 'flex-end', gap: 12, flexShrink: 0
+          borderRadius: '0 0 20px 20px', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', flexShrink: 0
         }}>
-          <button onClick={onClose} style={{ padding: '10px 24px', borderRadius: 10, background: HC.surface, border: `1.5px solid ${HC.border}`, color: HC.brown, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            Hủy
-          </button>
-          <button disabled={submitting} onClick={onSubmit} style={{
-            padding: '10px 28px', borderRadius: 10, background: submitting ? HC.muted2 : `linear-gradient(135deg, ${HC.success}, #15803d)`,
-            color: '#fff', border: 'none', fontSize: 13, fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            {submitting ? '⟳ Đang xử lý...' : editingNews ? <><EditOutlined /> Cập nhật</> : <><SendOutlined /> Gửi thông báo</>}
-          </button>
+          {vendorMode ? (
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: HC.orangeDark, background: HC.orangeLight,
+              border: `1px solid ${HC.orangeMid}`, borderRadius: 99, padding: '5px 12px',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              <TeamOutlined /> Người nhận: Admin &amp; Seller
+            </span>
+          ) : <span />}
+          <div style={{ display: 'flex', gap: 12, marginLeft: 'auto' }}>
+            <button onClick={onClose} style={{ padding: '10px 24px', borderRadius: 10, background: HC.surface, border: `1.5px solid ${HC.border}`, color: HC.brown, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Hủy
+            </button>
+            <button disabled={submitting} onClick={onSubmit} style={{
+              padding: '10px 28px', borderRadius: 10, background: submitting ? HC.muted2 : `linear-gradient(135deg, ${HC.success}, #15803d)`,
+              color: '#fff', border: 'none', fontSize: 13, fontWeight: 800, cursor: submitting ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+            }}>
+              {submitting
+                ? '⟳ Đang xử lý...'
+                : editingNews
+                  ? <><EditOutlined /> Cập nhật {vendorMode ? 'cho Admin & Seller' : ''}</>
+                  : <><SendOutlined /> Gửi {vendorMode ? 'đến Admin & Seller' : 'thông báo'}</>}
+            </button>
+          </div>
         </div>
       </div>
     </div>
