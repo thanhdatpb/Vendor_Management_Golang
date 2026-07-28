@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { EditOutlined, DeleteOutlined, NotificationOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, SendOutlined, NotificationOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 
 /**
@@ -7,7 +7,7 @@ import { HC } from '../utils/constants';
  * Bảng danh sách chỉ hiển thị nội dung rút gọn 2 dòng, nên cần chỗ đọc trọn vẹn
  * nội dung dài (giữ nguyên xuống dòng) + xem mốc thời gian tạo/cập nhật.
  */
-export default function NewsDetailModal({ news, onClose, onEdit, onDelete }) {
+export default function NewsDetailModal({ news, onClose, onEdit, onDelete, onSend }) {
   useEffect(() => {
     if (!news) return undefined;
     const onKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
@@ -145,6 +145,19 @@ export default function NewsDetailModal({ news, onClose, onEdit, onDelete }) {
           >
             Đóng
           </button>
+          {onSend && (
+            <button
+              onClick={() => onSend(news)}
+              title="Gửi thông báo này tới Admin & Seller"
+              style={{
+                padding: '10px 20px', borderRadius: 10, background: '#ecfdf5',
+                border: '1.5px solid #bbf7d0', color: HC.success, fontSize: 13, fontWeight: 800,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <SendOutlined /> Gửi tới Admin &amp; Seller
+            </button>
+          )}
           {onDelete && (
             <button
               onClick={() => onDelete(news)}

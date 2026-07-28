@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ProfileOutlined } from '@ant-design/icons';
+import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined, ProfileOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 import AppToast from '../../shared/AppToast';
 import { playNotificationSound } from '../utils/helpers';
@@ -27,6 +27,8 @@ export default function NewsManagementSection() {
   });
   const [formErrors, setFormErrors] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [sendConfirm, setSendConfirm] = useState(null);
+  const [sendingId, setSendingId] = useState(null);
   const [detailNews, setDetailNews] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -60,20 +62,39 @@ export default function NewsManagementSection() {
     return Object.keys(errors).length === 0;
   };
 
-  const sendNewsToDashboards = async (news) => {
+  // resend = bấm nút Gửi ở danh sách: đẩy lại đúng thông báo đó cho Admin & Seller,
+  // mốc thời gian lấy lúc gửi để bên nhận thấy là thông báo mới (không phải bản cũ).
+  const sendNewsToDashboards = async (news, { resend = false } = {}) => {
+    const sentAt = resend ? new Date().toISOString() : news.created_at;
     const notification = {
-      id: `news_${news.id}`,
+      id: resend ? `news_${news.id}_${Date.now()}` : `news_${news.id}`,
       type: 'news',
       icon: '📰',
       title: news.title,
       message: news.message,
-      time: new Date(news.created_at).toLocaleString('vi-VN'),
+      time: new Date(sentAt).toLocaleString('vi-VN'),
       read: false,
-      timestamp: news.created_at,
+      timestamp: sentAt,
       source: 'staff_b'
     };
 
     await pushNotifMulti(NEWS_TARGET_ROLES, { ...notification, targetProject: NEWS_TARGET });
+  };
+
+  const handleResend = async () => {
+    if (!sendConfirm) return;
+    const news = sendConfirm;
+    setSendingId(news.id);
+    try {
+      await sendNewsToDashboards(news, { resend: true });
+      setSendConfirm(null);
+      setToast({ type: 'success', title: 'Đã gửi', message: `"${news.title}" đã được gửi tới Admin & Seller` });
+      playNotificationSound();
+    } catch (err) {
+      setToast({ type: 'error', title: 'Lỗi', message: err?.response?.data?.message || 'Không gửi được thông báo' });
+    } finally {
+      setSendingId(null);
+    }
   };
 
   const updateNewsInDashboards = (news) => {
@@ -257,6 +278,19 @@ export default function NewsManagementSection() {
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                     <button
+                      onClick={e => { e.stopPropagation(); setSendConfirm(news); }}
+                      disabled={sendingId === news.id}
+                      title="Gửi thông báo này tới Admin & Seller"
+                      style={{
+                        padding: '5px 12px', borderRadius: 7, border: '1.5px solid #bbf7d0',
+                        background: '#ecfdf5', cursor: sendingId === news.id ? 'wait' : 'pointer',
+                        fontSize: 11, fontWeight: 800, color: HC.success,
+                        display: 'flex', alignItems: 'center', gap: 4, opacity: sendingId === news.id ? 0.6 : 1
+                      }}
+                    >
+                      <SendOutlined /> {sendingId === news.id ? 'Đang gửi…' : 'Gửi'}
+                    </button>
+                    <button
                       onClick={e => { e.stopPropagation(); openEditModal(news); }}
                       style={{
                         padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orangeMid}`,
@@ -342,7 +376,39 @@ export default function NewsManagementSection() {
         onClose={() => setDetailNews(null)}
         onEdit={openEditModal}
         onDelete={(news) => { setDetailNews(null); setDeleteConfirm(news); }}
+        onSend={(news) => { setDetailNews(null); setSendConfirm(news); }}
       />
+
+      {sendConfirm && (
+        <div onClick={() => sendingId ? null : setSendConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2100, backdropFilter: 'blur(4px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: 420, maxWidth: '92%', background: '#fff', borderRadius: 20, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            <div style={{ padding: '20px', textAlign: 'center', background: 'linear-gradient(135deg, #ecfdf5, #fff)', borderBottom: '1px solid #bbf7d0' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 26, color: HC.success }}>
+                <SendOutlined />
+              </div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: HC.success }}>Gửi thông báo</h3>
+              <p style={{ fontSize: 12, color: HC.brown, marginTop: 6 }}>Người nhận: <b>Admin &amp; Seller</b></p>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ background: HC.orangeLight, borderRadius: 12, padding: '14px', textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: HC.orangeDark }}>{sendConfirm.title}</div>
+                <div style={{ fontSize: 11, color: HC.brownLight, marginTop: 4 }}>
+                  {sendConfirm.message.length > 80 ? sendConfirm.message.substring(0, 80) + '…' : sendConfirm.message}
+                </div>
+              </div>
+              <div style={{ fontSize: 11.5, color: HC.muted, textAlign: 'center', marginBottom: 18, lineHeight: 1.5 }}>
+                Thông báo sẽ xuất hiện ở chuông thông báo của Admin và toàn bộ Seller với mốc thời gian hiện tại.
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button disabled={!!sendingId} onClick={() => setSendConfirm(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${HC.borderStrong}`, background: '#fff', fontSize: 13, fontWeight: 600, cursor: sendingId ? 'not-allowed' : 'pointer' }}>Hủy</button>
+                <button disabled={!!sendingId} onClick={handleResend} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: sendingId ? HC.muted2 : `linear-gradient(135deg, ${HC.success}, #15803d)`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: sendingId ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  {sendingId ? '⟳ Đang gửi…' : <><SendOutlined /> Gửi ngay</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteConfirm && (
         <div onClick={() => setDeleteConfirm(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2100, backdropFilter: 'blur(4px)' }}>
