@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { EditOutlined, DeleteOutlined, SendOutlined, NotificationOutlined } from '@ant-design/icons';
+import { EditOutlined, SendOutlined, NotificationOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 
 /**
@@ -7,7 +7,9 @@ import { HC } from '../utils/constants';
  * Bảng danh sách chỉ hiển thị nội dung rút gọn 2 dòng, nên cần chỗ đọc trọn vẹn
  * nội dung dài (giữ nguyên xuống dòng) + xem mốc thời gian tạo/cập nhật.
  */
-export default function NewsDetailModal({ news, onClose, onEdit, onDelete, onSend }) {
+// Xoá thông báo chỉ nằm ở nút Xóa trên từng dòng danh sách — modal này thuần để
+// đọc nội dung + gửi/sửa, tránh thao tác huỷ nhầm khi đang xem chi tiết.
+export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
   useEffect(() => {
     if (!news) return undefined;
     const onKeyDown = (e) => { if (e.key === 'Escape') onClose(); };
@@ -150,18 +152,6 @@ export default function NewsDetailModal({ news, onClose, onEdit, onDelete, onSen
               }}
             >
               <SendOutlined /> Gửi tới Admin &amp; Seller
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={() => onDelete(news)}
-              style={{
-                padding: '10px 20px', borderRadius: 10, background: '#fef2f2',
-                border: '1.5px solid #fecaca', color: HC.danger, fontSize: 13, fontWeight: 800,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              <DeleteOutlined /> Xóa
             </button>
           )}
           {onEdit && (

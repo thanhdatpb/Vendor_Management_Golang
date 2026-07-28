@@ -375,7 +375,6 @@ export default function NewsManagementSection() {
         news={detailNews}
         onClose={() => setDetailNews(null)}
         onEdit={openEditModal}
-        onDelete={(news) => { setDetailNews(null); setDeleteConfirm(news); }}
         onSend={(news) => { setDetailNews(null); setSendConfirm(news); }}
       />
 
