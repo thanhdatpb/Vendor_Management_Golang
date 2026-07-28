@@ -76,6 +76,25 @@ export async function exportSheetToExcel(sheet, showToast) {
   }
 }
 
+// ── Size lấy từ thư viện vendor: id phải suy ra được từ (ptId + label) ──
+// draftSheet dựng lại danh sách size từ thư viện ở MỖI render. Nếu dòng chưa có
+// trong state mà lại sinh id ngẫu nhiên (makeSize → uid) thì id hiển thị trên UI
+// không tồn tại trong state → onUpdateSize không tìm thấy dòng để patch, ô "Giá
+// Size" gõ không ăn (và input còn bị remount vì React key đổi liên tục).
+const libSizeId = (ptId, label) => `szlib_${ptId}_${normalizeKey(label)}`;
+
+/**
+ * Danh sách size của 1 Product Type theo đúng thư viện vendor.
+ * Giữ nguyên dòng cũ khi khớp label (không mất giá đã nhập), dòng chưa có thì
+ * tạo mới với id tiền định để state và UI luôn dùng chung một id.
+ */
+function libSizesOf(pt, libEntry) {
+  return (libEntry.sizes || []).map((label) => {
+    const existing = (pt.sizes || []).find((s) => s.label === label);
+    return existing || { ...makeSize(label, ''), id: libSizeId(pt.id, label) };
+  });
+}
+
 export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast }) {
   const [name, setName] = useState(sheet.name || '');
   // Quantity mặc định = 1; bảng cũ (tạo trước khi có Quantity) hiện trống → coi như 1.
@@ -109,13 +128,13 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     const computedPTs = productTypes.map((pt) => {
       const libEntry = findLibraryEntry(libIndex, pt.name);
       if (!libEntry) return pt;
-      const sizes = libEntry.sizes.map((label) => {
-        const existing = (pt.sizes || []).find((s) => s.label === label);
+      const sizes = libSizesOf(pt, libEntry).map((base) => {
+        const label = base.label;
         // Bản chỉnh 2026-07-17: giá vốn = P1 (không còn cột Total); cost-ship lấy per-method.
         const itemCost = getLibraryItemCost(libEntry, label) || '';
         const totalShipCost = getLibraryShip(libEntry, label, pt.shipMethod) || 0;      // cột "Price Ship"
         const shipCostItem = getLibraryShipItem2(libEntry, label, pt.shipMethod) || 0;  // cột "Price Ship Item 2"
-        return { ...(existing || makeSize(label, '')), label, itemCost, totalShipCost, shipCostItem, isLib: true };
+        return { ...base, label, itemCost, totalShipCost, shipCostItem, isLib: true };
       });
       return { ...pt, sizes };
     });
@@ -131,7 +150,13 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   // Thêm product type bằng cách CHỌN từ thư viện vendor: dùng đúng tên trong thư viện
   // → findLibraryEntry khớp chính xác, sizes + Item Cost tự nạp, tên khoá không sửa.
   const addPTFromLibrary = (nameFromLib) => {
-    setProductTypes((p) => [...p, { ...makeProductType(nameFromLib), shown: true }]);
+    const libEntry = findLibraryEntry(libIndex, nameFromLib);
+    const pt = { ...makeProductType(nameFromLib), shown: true };
+    // Nạp sẵn size của thư viện vào state (giống luồng tạo bảng ở SetupPriceSection)
+    // — nếu để mặc định 1 size rỗng thì các dòng size hiển thị chỉ là dữ liệu dựng
+    // tạm của draftSheet, không có trong state để sửa.
+    if (libEntry?.sizes?.length) pt.sizes = libSizesOf(pt, libEntry);
+    setProductTypes((p) => [...p, pt]);
     setShowAddPTDialog(false);
   };
   // Confirm xoá đã chuyển vào ConfirmDialog trong ProductTypeCard
@@ -142,14 +167,21 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const updateSizeCustomize = (ptId, szId, ciId, val) =>
     patchPTSizes(ptId, (sizes) => sizes.map((s) => (s.id === szId ? { ...s, customize: { ...s.customize, [ciId]: val } } : s)));
   function patchPTSizes(ptId, fn) {
-    setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, sizes: fn(pt.sizes || []) } : pt)));
+    setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, sizes: fn(baseSizesOf(pt)) } : pt)));
+  }
+  // Sizes dùng làm gốc khi ghi: với PT lấy từ thư viện thì đồng bộ theo thư viện
+  // trước (id khớp với dòng đang hiển thị) — bảng cũ lưu thiếu size, hoặc thư viện
+  // bổ sung size sau khi bảng được tạo, đều sửa được bình thường.
+  function baseSizesOf(pt) {
+    const libEntry = findLibraryEntry(libIndex, pt.name);
+    return libEntry ? libSizesOf(pt, libEntry) : (pt.sizes || []);
   }
   const openAddCustomize = (ptId) => setShowCustomizeDialog(ptId);
   const addCustomize = (ptId, name, defaultPrice) => {
     const ciId = uid('ci');
     setProductTypes((p) => p.map((pt) => {
       if (pt.id !== ptId) return pt;
-      const newSizes = (pt.sizes || []).map(sz => ({
+      const newSizes = baseSizesOf(pt).map(sz => ({
         ...sz,
         customize: { ...sz.customize, [ciId]: defaultPrice }
       }));
