@@ -90,12 +90,6 @@ export default function NewsDetailModal({ news, onClose, onEdit, onDelete, onSen
             }}>
               📰 Tin tức
             </span>
-            <span style={{
-              fontSize: 10, fontWeight: 800, borderRadius: 99, padding: '3px 10px',
-              background: HC.orangeLight, color: HC.orangeDark, border: `1px solid ${HC.orangeMid}`,
-            }}>
-              📤 Đã gửi: Admin &amp; Seller
-            </span>
             {isEdited && (
               <span style={{
                 fontSize: 10, fontWeight: 800, borderRadius: 99, padding: '3px 10px',
