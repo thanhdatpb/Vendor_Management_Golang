@@ -104,6 +104,13 @@ class SocialAuthController extends Controller
      *
      * Cả 2 migration có thể chưa chạy trên một DB nào đó, nên vẫn bỏ dần trường
      * gây lỗi rồi thử lại: ưu tiên giữ được google_id (cần cho Layer 4) hơn ảnh.
+     *
+     * BẮT BUỘC discardChanges() trước mỗi lần thử lại: Eloquent::update() =
+     * fill() + save(), mà fill() đã nhét giá trị vào model TRƯỚC khi câu SQL nổ.
+     * Thuộc tính hỏng vẫn nằm đó ở trạng thái "dirty", nên lần update sau — dù
+     * chỉ truyền google_id — save() vẫn gom luôn avatar_url cũ vào câu UPDATE và
+     * lỗi y hệt. Đó là lý do trên production tài khoản vào được hệ thống nhưng
+     * cột google_id vẫn NULL (2026-08-01).
      */
     private function syncProfileFromGoogle(User $acc, array $patch): void
     {
@@ -111,6 +118,7 @@ class SocialAuthController extends Controller
             $acc->update($patch);
             return;
         } catch (\Throwable $e) {
+            $acc->discardChanges();
             \Log::warning('Google login: lỗi đồng bộ hồ sơ, thử bỏ bớt trường', [
                 'user_id' => $acc->id, 'fields' => array_keys($patch), 'error' => $e->getMessage(),
             ]);
@@ -124,6 +132,7 @@ class SocialAuthController extends Controller
                 $acc->update($patch);
                 return;
             } catch (\Throwable $e) {
+                $acc->discardChanges();
                 \Log::warning('Google login: vẫn lỗi sau khi bỏ avatar_url', [
                     'user_id' => $acc->id, 'error' => $e->getMessage(),
                 ]);
