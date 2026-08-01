@@ -72,16 +72,7 @@ class SocialAuthController extends Controller
             if ($gAvatar && $acc->avatar_url !== $gAvatar) $patch['avatar_url'] = $gAvatar;
             if (empty($acc->full_name)) $patch['full_name'] = $googleUser->getName();
             if (!$patch) continue;
-            try {
-                $acc->update($patch);
-            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
-                // DB còn ràng buộc unique cũ trên google_id (migration chưa chạy):
-                // vẫn cho đăng nhập, chỉ bỏ qua việc gắn google_id cho dòng này.
-                unset($patch['google_id']);
-                if ($patch) {
-                    try { $acc->update($patch); } catch (\Throwable $e2) { /* bỏ qua */ }
-                }
-            }
+            $this->syncProfileFromGoogle($acc, $patch);
         }
 
         // Chỉ hỏi chọn khi các tài khoản KHÁC VAI TRÒ. Cùng vai trò mà khác project
@@ -97,5 +88,57 @@ class SocialAuthController extends Controller
         ));
 
         return redirect($frontendUrl . '/auth/callback?select=' . urlencode($ticket) . '&accounts=' . urlencode($accountsB64));
+    }
+
+    /**
+     * Ghi thông tin hồ sơ lấy từ Google vào 1 dòng user.
+     *
+     * Đồng bộ hồ sơ là việc PHỤ, chạy trước khi phát token — nên mọi lỗi ở đây
+     * phải nuốt lại, không được ném ra ngoài làm hỏng đăng nhập. Đã có 2 sự cố
+     * 500 đúng vì lý do này:
+     *   - google_id còn UNIQUE trên DB (1 email nhiều dòng role/project)
+     *     → UniqueConstraintViolation (đã sửa ở migration 2026_07_27_000001).
+     *   - avatar_url là VARCHAR(500) mà URL avatar Google dài >1000 ký tự
+     *     → SQLSTATE 22001 "Data too long" (đã nới thành TEXT ở migration
+     *       2026_08_01_000001).
+     *
+     * Cả 2 migration có thể chưa chạy trên một DB nào đó, nên vẫn bỏ dần trường
+     * gây lỗi rồi thử lại: ưu tiên giữ được google_id (cần cho Layer 4) hơn ảnh.
+     */
+    private function syncProfileFromGoogle(User $acc, array $patch): void
+    {
+        try {
+            $acc->update($patch);
+            return;
+        } catch (\Throwable $e) {
+            \Log::warning('Google login: lỗi đồng bộ hồ sơ, thử bỏ bớt trường', [
+                'user_id' => $acc->id, 'fields' => array_keys($patch), 'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Nghi phạm số 1: avatar_url quá dài so với cột.
+        if (array_key_exists('avatar_url', $patch)) {
+            unset($patch['avatar_url']);
+            if (!$patch) return;
+            try {
+                $acc->update($patch);
+                return;
+            } catch (\Throwable $e) {
+                \Log::warning('Google login: vẫn lỗi sau khi bỏ avatar_url', [
+                    'user_id' => $acc->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Nghi phạm số 2: google_id vướng unique cũ.
+        unset($patch['google_id']);
+        if (!$patch) return;
+        try {
+            $acc->update($patch);
+        } catch (\Throwable $e) {
+            \Log::warning('Google login: bỏ qua đồng bộ hồ sơ', [
+                'user_id' => $acc->id, 'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
