@@ -48,6 +48,9 @@ export default function SellerDashboard() {
       .then(r => {
         const apiNotifs = r.data.data || [];
         apiNotifs.forEach(n => {
+          // Tin từ Vendor có tab riêng (loadNewsNotifications) — bỏ khỏi tab yêu cầu
+          // để không hiện hai lần trong chuông.
+          if (n.type === 'news') return;
           const productName = n.data?.product_type || n.product_type || 'Sản phẩm';
           const productId = n.data?.product_id || n.product_id || null;
           const exists = requests.some(ex => ex.id === `api_${n.id}`);
@@ -129,47 +132,36 @@ export default function SellerDashboard() {
   }, []);
 
   // ─── Load News Notifications ────────────────────────────
+  // Tin từ Vendor đến qua API: Vendor bấm Gửi → server tạo notification type 'news'
+  // cho từng tài khoản Seller. Bản cũ chỉ đọc localStorage nên Seller không bao giờ
+  // nhận được — Vendor ghi vào localStorage của chính máy Vendor, mà main.jsx còn
+  // xoá sạch key SELLER_NOTIFICATIONS/STAFF_B_NOTIFICATIONS mỗi lần app khởi động.
   const loadNewsNotifications = useCallback(() => {
-    const news = [];
-    try {
-      const staffBNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS') || '[]');
-      staffBNotifs.filter(n => n.type === 'news').forEach(n => {
-        news.push({
-          id: `news_${n.id}`, type: 'news', icon: n.icon || '📰',
-          title: n.title || 'Tin tức mới', message: n.message || '',
-          time: n.time || new Date(n.created_at || Date.now()).toLocaleString('vi-VN'),
-          read: n.is_read || false, timestamp: n.created_at || Date.now(), source: 'staff_b',
+    notificationApi.list()
+      .then(r => {
+        const news = (r.data?.data || [])
+          .filter(n => n.type === 'news')
+          .map(n => ({
+            id: `api_${n.id}`,
+            type: 'news',
+            icon: n.data?.icon || '📰',
+            title: n.title || 'Tin tức mới',
+            message: n.body || '',
+            time: new Date(n.created_at).toLocaleString('vi-VN'),
+            read: n.is_read || false,
+            timestamp: n.created_at,
+            source: 'staff_b',
+          }));
+
+        setNewsNotifications(prev => {
+          const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
+          return news
+            .map(n => ({ ...n, read: prevMap[n.id]?.read === true ? true : n.read }))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 100);
         });
-      });
-    } catch (err) { console.error('Lỗi load tin tức:', err); }
-
-    try {
-      const sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
-      sellerNotifs.filter(n => n.type === 'news').forEach(n => {
-        // Lọc theo project của seller:
-        // - Nhận các tin tức dành cho 'seller', 'both' hoặc không có target
-        // - Nếu có targetProject là tên dự án, thì phải khớp với user.project
-        const isTargetMatch = !n.targetProject || 
-                              ['seller', 'both'].includes(n.targetProject) || 
-                              (Array.isArray(n.targetProject) ? n.targetProject.includes(user?.project) : n.targetProject === user?.project);
-                              
-        if (isTargetMatch && !news.some(ex => ex.id === n.id)) {
-          news.push({
-            id: n.id, type: 'news', icon: n.icon || '📰',
-            title: n.title || 'Tin tức mới', message: n.message || '',
-            time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'),
-            read: n.read || false, timestamp: n.timestamp || Date.now(), source: 'staff_b',
-          });
-        }
-      });
-    } catch (err) { console.error('Lỗi load SELLER_NOTIFICATIONS:', err); }
-
-    news.sort((a, b) => new Date(b.time) - new Date(a.time));
-    setNewsNotifications(prev => {
-      const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
-      const merged = news.map(n => ({ ...n, read: prevMap[n.id]?.read === true ? true : n.read }));
-      return merged.sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 100);
-    });
+      })
+      .catch(err => console.error('Lỗi load tin tức:', err));
   }, []);
 
   // ─── Mark as read ───────────────────────────────────────
@@ -191,17 +183,11 @@ export default function SellerDashboard() {
   }, []);
 
   const markNewsAsRead = useCallback((notificationId) => {
-    try {
-      const staffBNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS') || '[]');
-      const originalId = notificationId.replace('news_', '');
-      localStorage.setItem('STAFF_B_NOTIFICATIONS', JSON.stringify(
-        staffBNotifs.map(n => String(n.id) === originalId ? { ...n, is_read: true } : n)
-      ));
-      const sellerNotifs = JSON.parse(localStorage.getItem('SELLER_NOTIFICATIONS') || '[]');
-      localStorage.setItem('SELLER_NOTIFICATIONS', JSON.stringify(
-        sellerNotifs.map(n => String(n.id) === notificationId ? { ...n, read: true } : n)
-      ));
-    } catch (err) { }
+    // Tin từ API mang id dạng api_<id> → báo đã đọc lên server, để mở lại ở máy khác
+    // cũng không còn đếm là chưa đọc.
+    if (String(notificationId).startsWith('api_')) {
+      notificationApi.readOne(String(notificationId).replace('api_', '')).catch(err => console.error(err));
+    }
     setNewsNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
   }, []);
 

@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined, ProfileOutlined } from '@ant-design/icons';
+import { BellOutlined, PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined, ProfileOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 import AppToast from '../../shared/AppToast';
 import { playNotificationSound } from '../utils/helpers';
 import { Spinner, EmptyState, Pagination } from '../ui/VendorUI';
 import NewsModalComponent from '../components/NewsModalComponent';
 import NewsDetailModal from '../components/NewsDetailModal';
-import { pushNotifMulti } from '../../../utils/notifUtils';
 import { newsApi } from '../../../services/api';
 
 // Vendor luôn phát thông báo cho cả Admin lẫn Seller — không còn chọn đối tượng
-// trong form nữa, nên khoá cứng target ở một chỗ để list/API/notif dùng chung.
+// trong form nữa, nên khoá cứng target ở một chỗ để list/API dùng chung.
 const NEWS_TARGET = 'both';
-const NEWS_TARGET_ROLES = ['admin', 'seller'];
+
+// Đã gửi = đã có notification nằm ở chuông của Admin & Seller → khoá sửa/xoá/gửi lại,
+// vì sửa nội dung gốc lúc này sẽ lệch với bản người nhận đã đọc.
+const isSent = (news) => !!news?.sent_at;
 
 export default function NewsManagementSection() {
   const [newsList, setNewsList] = useState([]);
@@ -62,77 +64,33 @@ export default function NewsManagementSection() {
     return Object.keys(errors).length === 0;
   };
 
-  // resend = bấm nút Gửi ở danh sách: đẩy lại đúng thông báo đó cho Admin & Seller,
-  // mốc thời gian lấy lúc gửi để bên nhận thấy là thông báo mới (không phải bản cũ).
-  const sendNewsToDashboards = async (news, { resend = false } = {}) => {
-    const sentAt = resend ? new Date().toISOString() : news.created_at;
-    const notification = {
-      id: resend ? `news_${news.id}_${Date.now()}` : `news_${news.id}`,
-      type: 'news',
-      icon: '📰',
-      title: news.title,
-      message: news.message,
-      time: new Date(sentAt).toLocaleString('vi-VN'),
-      read: false,
-      timestamp: sentAt,
-      source: 'staff_b'
-    };
-
-    await pushNotifMulti(NEWS_TARGET_ROLES, { ...notification, targetProject: NEWS_TARGET });
-  };
-
-  const handleResend = async () => {
+  // Fan-out nằm ở server (POST /news/{id}/send): server tạo notification cho mọi
+  // tài khoản Admin & Seller rồi đóng dấu sent_at. Bản cũ đẩy từ client qua
+  // pushNotifMulti → POST /notifications, nhưng route đó không tồn tại nên request
+  // luôn 404 rồi rơi vào fallback localStorage của chính máy Vendor — người nhận ở
+  // máy khác không bao giờ thấy, mà toast vẫn báo "Đã gửi".
+  const handleSend = async () => {
     if (!sendConfirm) return;
     const news = sendConfirm;
     setSendingId(news.id);
     try {
-      await sendNewsToDashboards(news, { resend: true });
+      const res = await newsApi.send(news.id);
+      const sent = res.data;
+      setNewsList(prev => prev.map(n => (n.id === sent.id ? sent : n)));
+      setDetailNews(prev => (prev && prev.id === sent.id ? sent : prev));
       setSendConfirm(null);
       setToast({ type: 'success', title: 'Đã gửi', message: `"${news.title}" đã được gửi tới Admin & Seller` });
       playNotificationSound();
     } catch (err) {
+      // 409 = thông báo đã gửi ở tab/máy khác — nạp lại để danh sách khớp server.
+      if (err?.response?.status === 409) {
+        setSendConfirm(null);
+        loadNews();
+      }
       setToast({ type: 'error', title: 'Lỗi', message: err?.response?.data?.message || 'Không gửi được thông báo' });
     } finally {
       setSendingId(null);
     }
-  };
-
-  const updateNewsInDashboards = (news) => {
-    const notification = {
-      type: 'news',
-      icon: '📰',
-      title: news.title,
-      message: news.message,
-      time: new Date(news.created_at || Date.now()).toLocaleString('vi-VN'),
-      read: false,
-      timestamp: news.created_at || Date.now(),
-      source: 'staff_b'
-    };
-
-    // Khi backend có PATCH /notifications/{id}, thay bằng API call
-    // Tạm thời cập nhật lại localStorage fallback
-    ['STAFF_B_NOTIFICATIONS_TO_ADMIN', 'SELLER_NOTIFICATIONS'].forEach(key => {
-      try {
-        const notifs = JSON.parse(localStorage.getItem(key) || '[]');
-        const idx = notifs.findIndex(n => n.id === `admin_${news.id}` || n.id === `seller_${news.id}`);
-        if (idx !== -1) notifs[idx] = { ...notifs[idx], title: news.title, message: news.message };
-        localStorage.setItem(key, JSON.stringify(notifs));
-        window.dispatchEvent(new StorageEvent('storage', { key }));
-      } catch {}
-    });
-  };
-
-  const removeNewsFromDashboards = (newsId) => {
-    // Khi backend có DELETE /notifications/{id}, thay bằng notificationApi.deleteOne()
-    ['STAFF_B_NOTIFICATIONS_TO_ADMIN', 'SELLER_NOTIFICATIONS'].forEach(key => {
-      try {
-        const notifs = JSON.parse(localStorage.getItem(key) || '[]').filter(
-          n => n.id !== `admin_${newsId}` && n.id !== `seller_${newsId}`
-        );
-        localStorage.setItem(key, JSON.stringify(notifs));
-        window.dispatchEvent(new StorageEvent('storage', { key }));
-      } catch {}
-    });
   };
 
   const handleCreateNews = async () => {
@@ -144,12 +102,10 @@ export default function NewsManagementSection() {
         message: form.message.trim(),
         target: NEWS_TARGET,
       });
-      const newNews = res.data;
-      await sendNewsToDashboards(newNews);
-      setNewsList(prev => [newNews, ...prev]);
+      // Tạo ra là bản nháp — chưa gửi cho ai. Vendor soát lại rồi bấm Gửi.
+      setNewsList(prev => [res.data, ...prev]);
       closeModal();
-      setToast({ type: 'success', title: 'Thành công', message: 'Đã gửi thông báo tới Admin & Seller' });
-      playNotificationSound();
+      setToast({ type: 'success', title: 'Đã tạo', message: 'Đã lưu thông báo. Bấm "Gửi" để phát tới Admin & Seller.' });
     } catch (err) {
       setToast({ type: 'error', title: 'Lỗi', message: err?.response?.data?.message || 'Không thể tạo thông báo' });
     } finally {
@@ -167,7 +123,6 @@ export default function NewsManagementSection() {
         target: NEWS_TARGET,
       });
       const updatedNews = res.data;
-      updateNewsInDashboards(updatedNews);
       setNewsList(prev => prev.map(n => n.id === editingNews.id ? updatedNews : n));
       setDetailNews(prev => (prev && prev.id === updatedNews.id ? updatedNews : prev));
       closeModal();
@@ -183,7 +138,6 @@ export default function NewsManagementSection() {
     if (!deleteConfirm) return;
     try {
       await newsApi.remove(deleteConfirm.id);
-      removeNewsFromDashboards(deleteConfirm.id);
       setNewsList(prev => prev.filter(n => n.id !== deleteConfirm.id));
       setDetailNews(prev => (prev && prev.id === deleteConfirm.id ? null : prev));
       setDeleteConfirm(null);
@@ -247,7 +201,7 @@ export default function NewsManagementSection() {
               <th style={{ padding: '12px 14px', textAlign: 'left', color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Tiêu đề</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Nội dung</th>
               <th style={{ padding: '12px 14px', textAlign: 'center', width: 140, color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Ngày tạo</th>
-              <th style={{ padding: '12px 14px', textAlign: 'center', width: 100, color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Thao tác</th>
+              <th style={{ padding: '12px 14px', textAlign: 'center', width: 240, color: HC.brown, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', borderBottom: `1.5px solid ${HC.border}` }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -276,41 +230,53 @@ export default function NewsManagementSection() {
                   {new Date(news.created_at).toLocaleString('vi-VN')}
                 </td>
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                    <button
-                      onClick={e => { e.stopPropagation(); setSendConfirm(news); }}
-                      disabled={sendingId === news.id}
-                      title="Gửi thông báo này tới Admin & Seller"
-                      style={{
-                        padding: '5px 12px', borderRadius: 7, border: '1.5px solid #bbf7d0',
-                        background: '#ecfdf5', cursor: sendingId === news.id ? 'wait' : 'pointer',
-                        fontSize: 11, fontWeight: 800, color: HC.success,
-                        display: 'flex', alignItems: 'center', gap: 4, opacity: sendingId === news.id ? 0.6 : 1
-                      }}
-                    >
-                      <SendOutlined /> {sendingId === news.id ? 'Đang gửi…' : 'Gửi'}
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); openEditModal(news); }}
-                      style={{
-                        padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orangeMid}`,
-                        background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 800,
-                        color: HC.orangeDark, display: 'flex', alignItems: 'center', gap: 4
-                      }}
-                    >
-                      <EditOutlined /> Sửa
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); setDeleteConfirm(news); }}
-                      style={{
-                        padding: '5px 12px', borderRadius: 7, border: '1.5px solid #fecaca',
-                        background: '#fef2f2', cursor: 'pointer', fontSize: 11, fontWeight: 800,
-                        color: HC.danger, display: 'flex', alignItems: 'center', gap: 4
-                      }}
-                    >
-                      <DeleteOutlined /> Xóa
-                    </button>
-                  </div>
+                  {isSent(news) ? (
+                    // Đã phát tới chuông Admin & Seller → không còn thao tác nào, chỉ
+                    // báo lại mốc đã gửi để Vendor biết tin này đi lúc nào.
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px',
+                      borderRadius: 999, border: '1.5px solid #bbf7d0', background: '#ecfdf5',
+                      color: HC.success, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap'
+                    }}>
+                      <CheckCircleOutlined /> Đã gửi · {new Date(news.sent_at).toLocaleString('vi-VN')}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); setSendConfirm(news); }}
+                        disabled={sendingId === news.id}
+                        title="Gửi thông báo này tới Admin & Seller"
+                        style={{
+                          padding: '5px 12px', borderRadius: 7, border: '1.5px solid #bbf7d0',
+                          background: '#ecfdf5', cursor: sendingId === news.id ? 'wait' : 'pointer',
+                          fontSize: 11, fontWeight: 800, color: HC.success,
+                          display: 'flex', alignItems: 'center', gap: 4, opacity: sendingId === news.id ? 0.6 : 1
+                        }}
+                      >
+                        <SendOutlined /> {sendingId === news.id ? 'Đang gửi…' : 'Gửi'}
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); openEditModal(news); }}
+                        style={{
+                          padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orangeMid}`,
+                          background: HC.orangeLight, cursor: 'pointer', fontSize: 11, fontWeight: 800,
+                          color: HC.orangeDark, display: 'flex', alignItems: 'center', gap: 4
+                        }}
+                      >
+                        <EditOutlined /> Sửa
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeleteConfirm(news); }}
+                        style={{
+                          padding: '5px 12px', borderRadius: 7, border: '1.5px solid #fecaca',
+                          background: '#fef2f2', cursor: 'pointer', fontSize: 11, fontWeight: 800,
+                          color: HC.danger, display: 'flex', alignItems: 'center', gap: 4
+                        }}
+                      >
+                        <DeleteOutlined /> Xóa
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -371,11 +337,13 @@ export default function NewsManagementSection() {
         vendorMode={true}
       />
 
+      {/* Đã gửi thì modal chi tiết chỉ để đọc — bỏ luôn hai nút Gửi/Sửa cho khớp
+          với hàng thao tác ở danh sách (và với ràng buộc 409 phía server). */}
       <NewsDetailModal
         news={detailNews}
         onClose={() => setDetailNews(null)}
-        onEdit={openEditModal}
-        onSend={(news) => { setDetailNews(null); setSendConfirm(news); }}
+        onEdit={isSent(detailNews) ? null : openEditModal}
+        onSend={isSent(detailNews) ? null : (news) => { setDetailNews(null); setSendConfirm(news); }}
       />
 
       {sendConfirm && (
@@ -396,11 +364,13 @@ export default function NewsManagementSection() {
                 </div>
               </div>
               <div style={{ fontSize: 11.5, color: HC.muted, textAlign: 'center', marginBottom: 18, lineHeight: 1.5 }}>
-                Thông báo sẽ xuất hiện ở chuông thông báo của Admin và toàn bộ Seller với mốc thời gian hiện tại.
+                Thông báo sẽ xuất hiện ở chuông thông báo của Admin và toàn bộ Seller.
+                <br />
+                <b>Chỉ gửi được một lần</b> — sau khi gửi sẽ không sửa hay xoá được nữa.
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <button disabled={!!sendingId} onClick={() => setSendConfirm(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: `1px solid ${HC.borderStrong}`, background: '#fff', fontSize: 13, fontWeight: 600, cursor: sendingId ? 'not-allowed' : 'pointer' }}>Hủy</button>
-                <button disabled={!!sendingId} onClick={handleResend} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: sendingId ? HC.muted2 : `linear-gradient(135deg, ${HC.success}, #15803d)`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: sendingId ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <button disabled={!!sendingId} onClick={handleSend} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: sendingId ? HC.muted2 : `linear-gradient(135deg, ${HC.success}, #15803d)`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: sendingId ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   {sendingId ? '⟳ Đang gửi…' : <><SendOutlined /> Gửi ngay</>}
                 </button>
               </div>

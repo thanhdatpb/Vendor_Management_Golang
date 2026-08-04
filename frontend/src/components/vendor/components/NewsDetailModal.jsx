@@ -29,6 +29,7 @@ export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
   const updatedAt = fmt(news.updated_at);
   const isEdited = news.updated_at && news.created_at
     && new Date(news.updated_at).getTime() - new Date(news.created_at).getTime() > 1000;
+  const isSent = !!news.sent_at;
 
   const metaRow = (icon, label, value) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -67,7 +68,7 @@ export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
                 Chi tiết thông báo
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
-                Nội dung đầy đủ đã gửi tới Admin &amp; Seller
+                {isSent ? 'Nội dung đã gửi tới Admin & Seller' : 'Bản nháp — chưa gửi tới Admin & Seller'}
               </div>
             </div>
           </div>
@@ -91,6 +92,14 @@ export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
               background: '#f0f9ff', color: '#0891b2', border: '1px solid #bae6fd',
             }}>
               📰 Tin tức
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 800, borderRadius: 99, padding: '3px 10px',
+              background: isSent ? '#ecfdf5' : '#fffbeb',
+              color: isSent ? '#15803d' : '#b45309',
+              border: `1px solid ${isSent ? '#bbf7d0' : '#fde68a'}`,
+            }}>
+              {isSent ? '✓ Đã gửi' : '📝 Chưa gửi'}
             </span>
             {isEdited && (
               <span style={{
@@ -123,6 +132,7 @@ export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
           }}>
             {metaRow('🕒', 'Ngày tạo', createdAt)}
             {isEdited && metaRow('🔄', 'Cập nhật lúc', updatedAt)}
+            {metaRow('📤', 'Đã gửi lúc', isSent ? fmt(news.sent_at) : 'Chưa gửi')}
             {metaRow('👥', 'Đối tượng nhận', 'Admin & Seller')}
           </div>
         </div>

@@ -70,6 +70,9 @@ export default function AdminDashboard() {
           // "new_form" duy nhất mỗi form request) — bỏ qua để không hiện song song
           // với thông báo "new_form" của cùng 1 form.
           if (n.type === 'pending') return;
+          // 'news' là tin từ Vendor — có tab riêng (loadNewsNotifications), không
+          // trộn vào tab yêu cầu để khỏi hiện hai lần.
+          if (n.type === 'news') return;
 
           const productId = n.data?.product_id || n.product_id || null;
           const productType = n.data?.product_type || n.product_type || '';
@@ -129,21 +132,34 @@ export default function AdminDashboard() {
       });
   }, []);
 
+  // Tin từ Vendor giờ đến qua API (Vendor bấm Gửi → server tạo notification type
+  // 'news' cho từng Admin). Trước đây hàm này chỉ đọc localStorage nên chỉ thấy tin
+  // do chính máy này ghi ra — Vendor gửi từ máy khác thì Admin không bao giờ nhận.
+  // Vẫn đọc thêm localStorage để không mất các tin cũ còn tồn trên máy đang dùng.
   const loadNewsNotifications = useCallback(() => {
-    try {
-      let staffBNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
-      const formattedNews = staffBNotifs.map(notif => ({
-        id: notif.id || `news_${Date.now()}_${Math.random()}`,
-        type: notif.type || 'news',
-        icon: notif.icon || '📰',
-        title: notif.title || 'Thông báo mới từ Staff B',
-        message: notif.message || '',
-        author: notif.author || 'Staff B',
-        timestamp: notif.timestamp || new Date().toISOString(),
-        read: notif.read || false,
-      }));
-      formattedNews.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      const sliced = formattedNews.slice(0, 50);
+    const readLegacy = () => {
+      try {
+        const staffBNotifs = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
+        return staffBNotifs.map(notif => ({
+          id: notif.id || `news_${Date.now()}_${Math.random()}`,
+          type: notif.type || 'news',
+          icon: notif.icon || '📰',
+          title: notif.title || 'Thông báo mới từ Staff B',
+          message: notif.message || '',
+          author: notif.author || 'Staff B',
+          timestamp: notif.timestamp || new Date().toISOString(),
+          read: notif.read || false,
+        }));
+      } catch (err) {
+        console.error('Error loading legacy news notifications:', err);
+        return [];
+      }
+    };
+
+    const applyNews = (list) => {
+      const sliced = list
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, 50);
       setNewsNotifications(prev => {
         const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
         return sliced.map(n => ({
@@ -151,10 +167,28 @@ export default function AdminDashboard() {
           read: prevMap[n.id]?.read === true ? true : n.read,
         }));
       });
-    } catch (err) {
-      console.error('Error loading news notifications:', err);
-      setNewsNotifications([]);
-    }
+    };
+
+    notificationApi.list()
+      .then(r => {
+        const apiNews = (r.data?.data || [])
+          .filter(n => n.type === 'news')
+          .map(n => ({
+            id: `api_${n.id}`,
+            type: 'news',
+            icon: n.data?.icon || '📰',
+            title: n.title || 'Thông báo mới từ Vendor',
+            message: n.body || '',
+            author: 'Vendor',
+            timestamp: n.created_at,
+            read: n.is_read || false,
+          }));
+        // Tin cũ trong localStorage có thể trùng tin vừa nhận qua API (cùng tiêu đề)
+        // — bỏ bản localStorage để chuông không hiện hai dòng y hệt nhau.
+        const apiTitles = new Set(apiNews.map(n => n.title));
+        applyNews([...apiNews, ...readLegacy().filter(n => !apiTitles.has(n.title))]);
+      })
+      .catch(() => applyNews(readLegacy()));
   }, []);
 
   const markRequestAsRead = useCallback((notificationId) => {
@@ -174,18 +208,24 @@ export default function AdminDashboard() {
   }, []);
 
   const markNewsAsRead = useCallback((notificationId) => {
-    try {
-      const news = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
-      const updated = news.map(n =>
-        String(n.id) === notificationId ? { ...n, read: true } : n
-      );
-      localStorage.setItem('STAFF_B_NOTIFICATIONS_TO_ADMIN', JSON.stringify(updated));
-      setNewsNotifications(prev =>
-        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-      );
-    } catch (err) {
-      console.error('Error marking news as read:', err);
+    // Tin đến từ API mang id dạng api_<id> → báo đã đọc lên server để lần load sau
+    // (kể cả trên máy khác) không còn đếm là chưa đọc.
+    if (String(notificationId).startsWith('api_')) {
+      notificationApi.readOne(String(notificationId).replace('api_', '')).catch(() => {});
+    } else {
+      try {
+        const news = JSON.parse(localStorage.getItem('STAFF_B_NOTIFICATIONS_TO_ADMIN') || '[]');
+        const updated = news.map(n =>
+          String(n.id) === notificationId ? { ...n, read: true } : n
+        );
+        localStorage.setItem('STAFF_B_NOTIFICATIONS_TO_ADMIN', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Error marking news as read:', err);
+      }
     }
+    setNewsNotifications(prev =>
+      prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+    );
   }, []);
 
   const handleRequestClick = useCallback(async (notification) => {

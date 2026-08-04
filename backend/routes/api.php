@@ -171,6 +171,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/news',           [NewsController::class, 'store']);
         Route::put('/news/{id}',       [NewsController::class, 'update']);
         Route::delete('/news/{id}',    [NewsController::class, 'destroy']);
+        // Phát thông báo tới chuông của Admin & Seller (fan-out chạy ở server —
+        // trước đây client tự đẩy nên Admin/Seller máy khác không nhận được).
+        Route::post('/news/{id}/send', [NewsController::class, 'send']);
     });
 
     Route::get('/vendors',             [VendorController::class, 'index']);

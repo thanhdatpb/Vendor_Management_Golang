@@ -354,6 +354,9 @@ export const newsApi = {
   create: (data)         => api.post("/news", data),
   update: (id, data)     => api.put(`/news/${id}`, data),
   remove: (id)           => api.delete(`/news/${id}`),
+  // Phát tới chuông của Admin & Seller. Fan-out chạy ở server rồi đóng dấu sent_at
+  // — chỉ gửi được đúng 1 lần, sau đó API trả 409 cho send/update/delete.
+  send:   (id)           => api.post(`/news/${id}/send`),
 };
 
 
