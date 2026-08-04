@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\News;
 use App\Services\NotificationService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * CRUD cho danh sách "Thông báo" (News) mà Vendor tạo trong màn Quản Lý Thông Báo.
@@ -107,6 +110,20 @@ class NewsController extends Controller
             return $this->alreadySentResponse('gửi lại');
         }
 
+        // Cột sent_at do migration 2026_08_04_000001 tạo ra. Deploy của dự án là thủ
+        // công nên rất dễ `git pull` xong quên `php artisan migrate` — khi đó câu
+        // update phía dưới ném SQLSTATE[42S22] và (nếu server để APP_DEBUG=true)
+        // Laravel trả nguyên chuỗi SQL kèm host/port/tên database ra tận toast của
+        // người dùng cuối. Chặn sớm, nói thẳng việc cần làm.
+        if (!Schema::hasColumn('news', 'sent_at')) {
+            Log::error('news.sent_at chưa tồn tại — server chưa chạy "php artisan migrate" sau khi cập nhật code.');
+
+            return response()->json([
+                'message' => 'Máy chủ chưa cập nhật cơ sở dữ liệu (thiếu cột news.sent_at). '
+                    . 'Vui lòng báo quản trị viên chạy "php artisan migrate" rồi thử lại.',
+            ], 503);
+        }
+
         // Khoá dòng news rồi kiểm tra lại sent_at: nếu request khác vừa gửi xong
         // trong lúc mình chờ khoá thì dừng, không phát trùng.
         $claimed = DB::transaction(function () use ($news) {
@@ -123,17 +140,31 @@ class NewsController extends Controller
             return $this->alreadySentResponse('gửi lại');
         }
 
-        NotificationService::sendToRole(
-            self::RECIPIENT_ROLES,
-            'news',
-            $claimed->title,
-            $claimed->message,
-            [
-                'news_id' => (int) $claimed->id,
-                'icon'    => '📰',
-                'source'  => 'staff_b',
-            ]
-        );
+        try {
+            NotificationService::sendToRole(
+                self::RECIPIENT_ROLES,
+                'news',
+                $claimed->title,
+                $claimed->message,
+                [
+                    'news_id' => (int) $claimed->id,
+                    'icon'    => '📰',
+                    'source'  => 'staff_b',
+                ]
+            );
+        } catch (QueryException $e) {
+            // sent_at đã commit ở trên rồi mới fan-out lỗi (thiếu cột notifications.*,
+            // JSON hỏng, deadlock…) — nếu không nhả lại, tin bị khoá VĨNH VIỄN ở trạng
+            // thái "đã gửi" dù chưa ai nhận được gì: send/update/destroy sau đó đều 409,
+            // không còn cách nào gửi lại hay sửa ngoài can thiệp thẳng vào DB.
+            News::where('id', $claimed->id)->whereNotNull('sent_at')->update(['sent_at' => null]);
+
+            Log::error('Gửi thông báo thất bại', ['news_id' => $id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'Không gửi được thông báo do lỗi cơ sở dữ liệu. Vui lòng thử lại hoặc báo quản trị viên.',
+            ], 500);
+        }
 
         return response()->json($claimed);
     }
