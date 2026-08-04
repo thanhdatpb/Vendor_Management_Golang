@@ -355,7 +355,7 @@ export default function Login() {
               marginTop: 6, fontSize: 13, color: "#9C7A50",
               fontFamily: "'Nunito Sans', sans-serif", fontWeight: 600,
             }}>
-              Đăng nhập để tiếp tục quá trình quản lý
+              Đăng nhập để tiếp tục công việc tại Vendor Management
             </div>
           </div>
 
