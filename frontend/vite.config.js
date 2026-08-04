@@ -1,8 +1,23 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
+  const frontendEnv = loadEnv(mode, frontendRoot, '')
+  const backendEnv = loadEnv(mode, fileURLToPath(new URL('../backend', import.meta.url)), '')
+
+  // Pusher key/cluster là thông tin public dành cho browser. Ưu tiên biến VITE_;
+  // nếu chưa có thì dùng cấu hình tương ứng của Laravel để tránh build thiếu realtime.
+  const pusherKey = frontendEnv.VITE_PUSHER_APP_KEY || backendEnv.PUSHER_APP_KEY || ''
+  const pusherCluster = frontendEnv.VITE_PUSHER_APP_CLUSTER || backendEnv.PUSHER_APP_CLUSTER || ''
+
+  return {
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_PUSHER_APP_KEY': JSON.stringify(pusherKey),
+    'import.meta.env.VITE_PUSHER_APP_CLUSTER': JSON.stringify(pusherCluster),
+  },
   base: "/",
   server: {
     host: "0.0.0.0",
@@ -50,4 +65,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

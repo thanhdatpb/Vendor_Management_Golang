@@ -45,3 +45,22 @@ export function subscribeProductChanges(callback) {
     channel.stopListening('.ProductChanged', callback);
   };
 }
+
+/**
+ * Lắng nghe tín hiệu có notification mới. Event chỉ mang userId/notificationId;
+ * nội dung thật luôn được tải lại qua API có Bearer token.
+ */
+export function subscribeNotificationChanges(userId, callback) {
+  const echo = getEcho();
+  if (!echo || !userId) return () => {};
+
+  const listener = (event) => {
+    if (String(event?.userId) === String(userId)) callback(event);
+  };
+  const channel = echo.channel('notifications');
+  channel.listen('.NotificationCreated', listener);
+
+  return () => {
+    channel.stopListening('.NotificationCreated', listener);
+  };
+}

@@ -2,6 +2,7 @@
 import { LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
+import { subscribeNotificationChanges } from '../services/echo';
 
 import { HCLogo } from '../components/vendor/ui/VendorUI';
 import UserAvatar from '../components/shared/UserAvatar';
@@ -159,15 +160,31 @@ export default function VendorDashboard() {
   const handleNewsClick = useCallback((notification) => { console.log('Click vào tin tức:', notification); }, []);
 
   useEffect(() => {
-    loadRequestNotifications(); loadNewsNotifications();
+    const refreshNotifications = () => {
+      loadRequestNotifications();
+      loadNewsNotifications();
+    };
+    const refreshWhenVisible = () => {
+      if (!document.hidden) refreshNotifications();
+    };
+
+    refreshNotifications();
+    const unsubscribeNotifications = subscribeNotificationChanges(user?.id, refreshNotifications);
     const interval = setInterval(() => {
-      if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
-      loadRequestNotifications(); loadNewsNotifications();
-    }, 120000);
+      refreshWhenVisible();
+    }, 15000);
     const handleStorageChange = (e) => { if (e.key === 'STAFF_A_NOTIFICATIONS') loadRequestNotifications(); };
     window.addEventListener('storage', handleStorageChange);
-    return () => { clearInterval(interval); window.removeEventListener('storage', handleStorageChange); };
-  }, [loadRequestNotifications, loadNewsNotifications]);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      clearInterval(interval);
+      unsubscribeNotifications();
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [user?.id, loadRequestNotifications, loadNewsNotifications]);
 
   useEffect(() => { if (!sidebarOpen) setShowLogout(false); }, [sidebarOpen]);
 

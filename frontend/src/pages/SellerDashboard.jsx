@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
+import { subscribeNotificationChanges } from '../services/echo';
 
 import { HC } from '../constants/sellerTheme';
 import useIsMobile from '../hooks/useIsMobile';
@@ -203,19 +204,34 @@ export default function SellerDashboard() {
 
   // ─── Polling & storage sync ─────────────────────────────
   useEffect(() => {
-    loadRequestNotifications();
-    loadNewsNotifications();
+    const refreshNotifications = () => {
+      loadRequestNotifications();
+      loadNewsNotifications();
+    };
+    const refreshWhenVisible = () => {
+      if (!document.hidden) refreshNotifications();
+    };
+
+    refreshNotifications();
+    const unsubscribeNotifications = subscribeNotificationChanges(user?.id, refreshNotifications);
     const interval = setInterval(() => {
-      if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
-      loadRequestNotifications(); loadNewsNotifications();
-    }, 60000);
+      refreshWhenVisible();
+    }, 15000);
     const handleStorageChange = (e) => {
       if (['STAFF_B_NOTIFICATIONS', 'STAFF_A_NOTIFICATIONS'].includes(e.key)) loadRequestNotifications();
       if (['STAFF_B_NOTIFICATIONS', 'SELLER_NOTIFICATIONS'].includes(e.key)) loadNewsNotifications();
     };
     window.addEventListener('storage', handleStorageChange);
-    return () => { clearInterval(interval); window.removeEventListener('storage', handleStorageChange); };
-  }, [loadRequestNotifications, loadNewsNotifications]);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      clearInterval(interval);
+      unsubscribeNotifications();
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [user?.id, loadRequestNotifications, loadNewsNotifications]);
 
   // Mở sản phẩm khi chuyển tab
   useEffect(() => {
