@@ -17,6 +17,7 @@ function resolveRoleRoute(role) {
   if (r === "admin")  return "/admin";
   if (r === "vendor" || r === "staffb") return "/vendor";
   if (r === "csf") return "/csf";
+  if (r === "marvel") return "/marvel";
   if (r === "pd")  return "/pd";
   return "/seller"; // seller / staffa
 }

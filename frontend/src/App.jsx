@@ -62,6 +62,18 @@ export default function App() {
         }
       />
 
+      {/* Marvel dùng chung dashboard với CSF (quyền y hệt), chỉ khác nhãn */}
+      <Route
+        path="/marvel"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["marvel"]}>
+              <CsfDashboard roleLabel="Marvel" />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/pd"
         element={

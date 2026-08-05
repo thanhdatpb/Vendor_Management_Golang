@@ -66,7 +66,16 @@ class User extends Authenticatable {
     public function isCsf(): bool {
         return $this->role === 'csf';
     }
-    
+
+    /**
+     * Kiểm tra user có phải Marvel không.
+     * Marvel giống hệt CSF về quyền (xem Thư viện Vendor read-only, ẩn giá,
+     * xem được mọi project) — chỉ khác nhãn hiển thị trên UI.
+     */
+    public function isMarvel(): bool {
+        return $this->role === 'marvel';
+    }
+
     /**
      * Trích xuất tên seller từ email
      * Ví dụ: phuoc.huynh.seller@gmail.com -> Phuoc Huynh

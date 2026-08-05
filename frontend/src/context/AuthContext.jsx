@@ -93,6 +93,7 @@ export function AuthProvider({ children }) {
         isStaff: userRole === "seller" || userRole === "staffa",
         isStaffC: userRole === "vendor" || userRole === "staffb",
         isCSF: userRole === "csf",
+        isMarvel: userRole === "marvel",
         isPD: userRole === "pd",
         isAuthenticated: !!user,
         sellerName: user?.sellerName || user?.seller_name || null,

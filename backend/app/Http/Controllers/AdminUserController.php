@@ -18,7 +18,7 @@ class AdminUserController extends Controller
     public function index(Request $request)
     {
         $users = User::select('id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at')
-            ->orderByRaw("FIELD(role, 'admin', 'vendor', 'csf', 'seller', 'pd')")
+            ->orderByRaw("FIELD(role, 'admin', 'vendor', 'csf', 'marvel', 'seller', 'pd')")
             ->orderBy('project')
             ->orderBy('full_name')
             ->get()
@@ -46,7 +46,7 @@ class AdminUserController extends Controller
         $validated = $request->validate([
             'email'     => ['required', 'email'],
             'full_name' => 'required|string|max:255',
-            'role'      => ['required', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf'])],
+            'role'      => ['required', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf', 'marvel'])],
             'project'   => [
                 Rule::requiredIf(in_array($request->role, ['seller', 'pd'])),
                 'nullable',
@@ -115,7 +115,7 @@ class AdminUserController extends Controller
 
         $validated = $request->validate([
             'full_name' => 'sometimes|string|max:255',
-            'role'      => ['sometimes', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf'])],
+            'role'      => ['sometimes', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf', 'marvel'])],
             'project'   => ['nullable', Rule::in(array_merge(self::$VALID_PROJECTS, [null]))],
         ]);
 

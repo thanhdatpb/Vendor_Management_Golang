@@ -5,7 +5,7 @@
 //   - Login bằng Google (AuthCallback.jsx)
 // ════════════════════════════════════════════════════════
 const ROLE_LABEL = {
-  admin: 'Admin', vendor: 'Vendor', seller: 'Seller', csf: 'CSF', pd: 'PD',
+  admin: 'Admin', vendor: 'Vendor', seller: 'Seller', csf: 'CSF', marvel: 'Marvel', pd: 'PD',
 };
 
 export default function AccountChooser({ accounts = [], onSelect, busyId = null, error = '' }) {

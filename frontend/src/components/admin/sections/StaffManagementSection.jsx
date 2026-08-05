@@ -8,8 +8,13 @@ const PROJECTS = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify
 const TABS = [
   ...PROJECTS.map(p => ({ key: p, label: p.replace(' Project', ''), type: 'seller' })),
   { key: '__csf__', label: 'CSF', type: 'csf' },
+  { key: '__marvel__', label: 'Marvel', type: 'marvel' },
   { key: '__admin_vendor__', label: 'Admin & Vendor', type: 'admin_vendor' },
 ];
+
+// Tab chỉ chứa đúng 1 role → modal Thêm/Sửa khoá cứng role, không cho chọn.
+// `type` của tab trùng luôn với giá trị role để dùng trực tiếp làm fixedRole.
+const SINGLE_ROLE_TABS = ['csf', 'marvel'];
 
 const ROLE_BADGE = {
   admin:  { bg: '#FEF3DC', color: HC.orangeDark, label: 'Admin' },
@@ -17,6 +22,7 @@ const ROLE_BADGE = {
   seller: { bg: '#ECFDF5', color: '#065f46',      label: 'Seller' },
   pd:     { bg: '#F3E8FF', color: '#7e22ce',      label: 'PD' },
   csf:    { bg: '#FCE7F3', color: '#be185d',      label: 'CSF' },
+  marvel: { bg: '#FEE2E2', color: '#b91c1c',      label: 'Marvel' },
 };
 
 // Role options theo từng loại tab, dùng cho select trong modal Thêm/Sửa nhân sự
@@ -28,7 +34,7 @@ const ROLE_OPTIONS_BY_TAB = {
 // Suy ra loại tab tương ứng với 1 role hiện có (dùng khi Sửa nhân sự)
 function tabTypeForRole(role) {
   if (role === 'seller' || role === 'pd') return 'seller';
-  if (role === 'csf') return 'csf';
+  if (SINGLE_ROLE_TABS.includes(role)) return role;
   return 'admin_vendor';
 }
 
@@ -348,7 +354,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
 function usersForTab(tab, users) {
   if (!tab) return [];
   if (tab.type === 'admin_vendor') return users.filter(u => u.role === 'admin' || u.role === 'vendor');
-  if (tab.type === 'csf') return users.filter(u => u.role === 'csf');
+  if (SINGLE_ROLE_TABS.includes(tab.type)) return users.filter(u => u.role === tab.type);
   return users.filter(u => u.project === tab.key && (u.role === 'seller' || u.role === 'pd'));
 }
 
@@ -428,8 +434,8 @@ export default function StaffManagementSection() {
   const openAdd = () => {
     if (currentTab.type === 'seller') {
       setAddModal({ fixedProject: currentTab.key, fixedRole: null, roleOptions: ROLE_OPTIONS_BY_TAB.seller });
-    } else if (currentTab.type === 'csf') {
-      setAddModal({ fixedProject: null, fixedRole: 'csf', roleOptions: null });
+    } else if (SINGLE_ROLE_TABS.includes(currentTab.type)) {
+      setAddModal({ fixedProject: null, fixedRole: currentTab.type, roleOptions: null });
     } else {
       setAddModal({ fixedProject: null, fixedRole: null, roleOptions: ROLE_OPTIONS_BY_TAB.admin_vendor });
     }
@@ -514,8 +520,9 @@ export default function StaffManagementSection() {
       {editModal && (() => {
         const editTabType = tabTypeForRole(editModal.role);
         const editFixedProject = editTabType === 'seller' ? editModal.project : null;
-        const editFixedRole = editTabType === 'csf' ? 'csf' : null;
-        const editRoleOptions = editTabType === 'csf' ? null : ROLE_OPTIONS_BY_TAB[editTabType];
+        const editSingleRole = SINGLE_ROLE_TABS.includes(editTabType);
+        const editFixedRole = editSingleRole ? editTabType : null;
+        const editRoleOptions = editSingleRole ? null : ROLE_OPTIONS_BY_TAB[editTabType];
         return (
           <UserFormModal
             mode="edit"

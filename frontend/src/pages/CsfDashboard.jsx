@@ -1,5 +1,9 @@
 // ════════════════════════════════════════════════════════
 //  CSF DASHBOARD — Xem Thư Viện Vendor theo từng project (không thấy giá)
+//
+//  Dùng chung cho role `csf` và `marvel`: hai role giống hệt nhau về quyền,
+//  chỉ khác nhãn hiển thị → truyền qua prop `roleLabel` (xem route /marvel
+//  trong App.jsx).
 // ════════════════════════════════════════════════════════
 import { useState } from 'react';
 import { ShopOutlined } from '@ant-design/icons';
@@ -15,7 +19,7 @@ const PROJECT_MENU = [
   { id: 'hapify84',  icon: <ShopOutlined />, label: 'Hapify84 Project' },
 ];
 
-export default function CsfDashboard() {
+export default function CsfDashboard({ roleLabel = 'CSF' }) {
   const { user, logout } = useAuth();
   const [active, setActive] = useState('happy');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -42,8 +46,8 @@ export default function CsfDashboard() {
           user={user}
           logout={logout}
           menu={PROJECT_MENU}
-          roleLabel="CSF"
-          displayName={user?.full_name || 'CSF'}
+          roleLabel={roleLabel}
+          displayName={user?.full_name || roleLabel}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
