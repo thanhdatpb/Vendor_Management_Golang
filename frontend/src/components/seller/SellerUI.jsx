@@ -143,7 +143,7 @@ export function Pagination({ currentPage, totalPages, totalItems, onPageChange, 
     minWidth: 32, height: 32, borderRadius: 8, border: `1.5px solid ${HC.border}`,
     fontSize: 12, fontWeight: 700, cursor: 'pointer',
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    padding: '0 8px', fontFamily: "'Nunito',sans-serif", ...ex,
+    padding: '0 8px', fontFamily: "'Inter',sans-serif", ...ex,
   });
 
   return (
@@ -152,7 +152,7 @@ export function Pagination({ currentPage, totalPages, totalItems, onPageChange, 
       flexWrap: 'wrap', gap: 10, marginTop: 14, padding: '10px 16px',
       background: HC.surface, borderRadius: 12, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow,
     }}>
-      <div style={{ fontSize: 12, color: HC.muted, fontWeight: 600, fontFamily: "'Nunito Sans',sans-serif" }}>
+      <div style={{ fontSize: 12, color: HC.muted, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
         Hiển thị <b style={{ color: HC.ink }}>{from}–{to}</b> / <b style={{ color: HC.ink }}>{totalItems}</b>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -198,10 +198,10 @@ export function CardHeader({ icon, title, subtitle, badge, dimmed = false }) {
     <div style={{ padding: '12px 14px', background: bg, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
       <span style={{ fontSize: 16 }}>{icon}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 900, fontSize: 10, color: '#fff', fontFamily: "'Nunito',sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em' }}>{title}</div>
-        {subtitle && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
+        <div style={{ fontWeight: 900, fontSize: 10, color: '#fff', fontFamily: "'Inter',sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em' }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', fontFamily: "'Inter',sans-serif", marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitle}</div>}
       </div>
-      {badge && <span style={{ flexShrink: 0, padding: '2px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.22)', color: '#fff', fontSize: 10, fontWeight: 900, fontFamily: "'Nunito',sans-serif", border: '1px solid rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{badge}</span>}
+      {badge && <span style={{ flexShrink: 0, padding: '2px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.22)', color: '#fff', fontSize: 10, fontWeight: 900, fontFamily: "'Inter',sans-serif", border: '1px solid rgba(255,255,255,0.3)', whiteSpace: 'nowrap' }}>{badge}</span>}
     </div>
   );
 }
@@ -210,8 +210,8 @@ export function CardHeader({ icon, title, subtitle, badge, dimmed = false }) {
 export function InfoRow({ label, value, valueColor, valueBold, idx, isLast }) {
   return (
     <div style={{ display: 'flex', gap: 8, padding: '7px 12px', borderBottom: isLast ? 'none' : `1px solid ${HC.border}`, background: idx % 2 === 0 ? HC.surface : HC.surface2, minHeight: 34 }}>
-      <span style={{ minWidth: 108, flexShrink: 0, fontWeight: 800, color: HC.muted, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 2, fontFamily: "'Nunito',sans-serif", lineHeight: 1.4 }}>{label}</span>
-      <span style={{ color: valueColor || HC.ink2, fontWeight: valueBold ? 700 : 400, flex: 1, wordBreak: 'break-word', fontFamily: "'Nunito Sans',sans-serif", fontSize: 12, lineHeight: 1.4 }}>{value || '—'}</span>
+      <span style={{ minWidth: 108, flexShrink: 0, fontWeight: 800, color: HC.muted, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', paddingTop: 2, fontFamily: "'Inter',sans-serif", lineHeight: 1.4 }}>{label}</span>
+      <span style={{ color: valueColor || HC.ink2, fontWeight: valueBold ? 700 : 400, flex: 1, wordBreak: 'break-word', fontFamily: "'Inter',sans-serif", fontSize: 12, lineHeight: 1.4 }}>{value || '—'}</span>
     </div>
   );
 }

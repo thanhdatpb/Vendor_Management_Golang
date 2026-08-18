@@ -89,7 +89,7 @@ export default function AppToast({ toast, onClose }) {
         borderLeft: `4px solid ${variant.border}`,
         overflow: 'hidden',
         animation: 'hc-toast-in 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards',
-        fontFamily: "'Nunito', 'Nunito Sans', sans-serif",
+        fontFamily: "'Inter', sans-serif",
       }}>
         <div style={{
           padding: '14px 14px 14px 16px',

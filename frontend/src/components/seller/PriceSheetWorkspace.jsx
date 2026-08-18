@@ -11,13 +11,15 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { HistoryOutlined } from '@ant-design/icons';
 import {
-  computeSizeRow, summarizeSheet, num, pct,
+  summarizeSheet, num, pct,
   makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
-import { loadVendorLibraryIndex, findLibraryEntry, getLibraryItemCost, getLibraryShip, getLibraryShipItem2, normalizeKey } from '../../utils/vendorLibraryIndex';
+import { loadVendorLibraryIndex, findLibraryEntry, normalizeKey } from '../../utils/vendorLibraryIndex';
+import { resolveSheet, baseSizesOf as baseSizesOfLib, libSizesOf } from '../../utils/resolveSheet';
+import { exportSheetToExcel } from '../../utils/sheetExport';
 
 import { PS, marginTone } from './pricesheet/tokens';
-import { PsStyles, Btn, IconBtn, Badge, ConfirmDialog } from './pricesheet/primitives';
+import { PsStyles, Btn, IconBtn, Badge, ConfirmDialog, ModalShell } from './pricesheet/primitives';
 import PriceSettingPanel from './pricesheet/PriceSettingPanel';
 import ProductTypeCard from './pricesheet/ProductTypeCard';
 import AddCustomizeInfoModal from './pricesheet/AddCustomizeInfoModal';
@@ -25,75 +27,9 @@ import AddProductTypeModal from './pricesheet/AddProductTypeModal';
 import HistoryPanel from './pricesheet/HistoryPanel';
 import SummaryFooter from './pricesheet/SummaryFooter';
 
-// ═══ Export ra Excel (GIỮ NGUYÊN — dùng lại xlsx đã có trong dự án) ═══
-export async function exportSheetToExcel(sheet, showToast) {
-  try {
-    const xlsxMod = await import('xlsx');
-    const XLSX = xlsxMod.default ?? xlsxMod;
-    const s = sheet.settings || {};
-    const aoa = [];
-    aoa.push(['Price Setting']);
-    aoa.push(['Price', s.price, 'Quantity', s.quantity, 'Ship/Order', s.shipPerOrder, 'Ship/Item', s.shipPerItem]);
-    aoa.push(['Coupon ($)', s.couponUsd, 'Coupon (%)', s.couponPct]);
-    aoa.push(['Variable Fee (%)', s.variableFeePct, 'AMZ Fee (%)', s.amzFeePct, 'ImportTax/item', s.importTax]);
-    aoa.push([]);
-
-    // header với các cột customize gộp chung theo tên
-    const allCustomize = [];
-    (sheet.productTypes || []).forEach((pt) =>
-      (pt.customizeInfos || []).forEach((ci) => { if (!allCustomize.find((c) => c.name === ci.name)) allCustomize.push(ci); })
-    );
-    const header = ['Product Type', 'Size', 'Giá Phôi', 'Giá Size',
-      ...allCustomize.map((c) => c.name || 'Customize'),
-      'Item Cost', 'Total Price', 'AMZ Fee', 'Coupon', 'Variable', 'Profit', 'Margin %', 'After Promo %'];
-    aoa.push(header);
-
-    (sheet.productTypes || []).forEach((pt) => {
-      (pt.sizes || []).forEach((sz) => {
-        const r = computeSizeRow(sheet.settings, pt, sz);
-        const custVals = allCustomize.map((c) => {
-          const own = (pt.customizeInfos || []).find((x) => x.name === c.name);
-          return own ? num(sz.customize?.[own.id]) : '';
-        });
-        aoa.push([
-          pt.name, sz.label, num(pt.phoi), num(sz.sizeAdd), ...custVals, num(sz.itemCost),
-          +r.totalPrice.toFixed(2), +r.amzFee.toFixed(2), +r.couponAmt.toFixed(2),
-          +r.variableFee.toFixed(2), +r.profitAfter.toFixed(2), +r.margin.toFixed(2), +r.marginAfter.toFixed(2),
-        ]);
-      });
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, (sheet.name || 'Gia').slice(0, 28));
-    const slug = (sheet.name || 'BangGia').replace(/[^\w]+/g, '_').slice(0, 30);
-    const date = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `HC_Gia_${slug}_${date}.xlsx`);
-    showToast?.('success', 'Đã export', `Tải file HC_Gia_${slug}_${date}.xlsx`);
-  } catch (err) {
-    console.error('exportSheetToExcel', err);
-    showToast?.('error', 'Lỗi export', err.message || 'Không xuất được Excel');
-  }
-}
-
-// ── Size lấy từ thư viện vendor: id phải suy ra được từ (ptId + label) ──
-// draftSheet dựng lại danh sách size từ thư viện ở MỖI render. Nếu dòng chưa có
-// trong state mà lại sinh id ngẫu nhiên (makeSize → uid) thì id hiển thị trên UI
-// không tồn tại trong state → onUpdateSize không tìm thấy dòng để patch, ô "Giá
-// Size" gõ không ăn (và input còn bị remount vì React key đổi liên tục).
-const libSizeId = (ptId, label) => `szlib_${ptId}_${normalizeKey(label)}`;
-
-/**
- * Danh sách size của 1 Product Type theo đúng thư viện vendor.
- * Giữ nguyên dòng cũ khi khớp label (không mất giá đã nhập), dòng chưa có thì
- * tạo mới với id tiền định để state và UI luôn dùng chung một id.
- */
-function libSizesOf(pt, libEntry) {
-  return (libEntry.sizes || []).map((label) => {
-    const existing = (pt.sizes || []).find((s) => s.label === label);
-    return existing || { ...makeSize(label, ''), id: libSizeId(pt.id, label) };
-  });
-}
+// ═══ Export ra Excel — logic dựng dữ liệu nằm ở utils/sheetExport.js (T0) ═══
+// Re-export để SetupPriceSection giữ nguyên đường import cũ.
+export { exportSheetToExcel };
 
 export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast }) {
   const [name, setName] = useState(sheet.name || '');
@@ -113,6 +49,8 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const [showAddPTDialog, setShowAddPTDialog] = useState(false);
   const [confirmRestore, setConfirmRestore] = useState(null); // snapshot
   const [saving, setSaving] = useState(false);
+  // Xung đột phiên bản (mục 16): { updatedBy, updatedAt, currentVersion, current }
+  const [conflict, setConflict] = useState(null);
 
   // Dirty-check: so state người dùng sửa được với snapshot lúc mở / lúc lưu.
   const snapshotOf = (n, st, pts) => JSON.stringify({ n, st, pts });
@@ -124,22 +62,10 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     loadVendorLibraryIndex(sheet.project || '', !sheet.project).then(setLibIndex).catch(console.error);
   }, [sheet.project]);
 
-  const draftSheet = useMemo(() => {
-    const computedPTs = productTypes.map((pt) => {
-      const libEntry = findLibraryEntry(libIndex, pt.name);
-      if (!libEntry) return pt;
-      const sizes = libSizesOf(pt, libEntry).map((base) => {
-        const label = base.label;
-        // Bản chỉnh 2026-07-17: giá vốn = P1 (không còn cột Total); cost-ship lấy per-method.
-        const itemCost = getLibraryItemCost(libEntry, label) || '';
-        const totalShipCost = getLibraryShip(libEntry, label, pt.shipMethod) || 0;      // cột "Price Ship"
-        const shipCostItem = getLibraryShipItem2(libEntry, label, pt.shipMethod) || 0;  // cột "Price Ship Item 2"
-        return { ...base, label, itemCost, totalShipCost, shipCostItem, isLib: true };
-      });
-      return { ...pt, sizes };
-    });
-    return { ...sheet, name, settings, productTypes: computedPTs };
-  }, [sheet, name, settings, productTypes, libIndex]);
+  const draftSheet = useMemo(
+    () => resolveSheet({ ...sheet, name, settings, productTypes }, libIndex),
+    [sheet, name, settings, productTypes, libIndex]
+  );
   const summary = useMemo(() => summarizeSheet(draftSheet), [draftSheet]);
 
   // ── mutations (GIỮ NGUYÊN) ──
@@ -169,13 +95,8 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   function patchPTSizes(ptId, fn) {
     setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, sizes: fn(baseSizesOf(pt)) } : pt)));
   }
-  // Sizes dùng làm gốc khi ghi: với PT lấy từ thư viện thì đồng bộ theo thư viện
-  // trước (id khớp với dòng đang hiển thị) — bảng cũ lưu thiếu size, hoặc thư viện
-  // bổ sung size sau khi bảng được tạo, đều sửa được bình thường.
-  function baseSizesOf(pt) {
-    const libEntry = findLibraryEntry(libIndex, pt.name);
-    return libEntry ? libSizesOf(pt, libEntry) : (pt.sizes || []);
-  }
+  // Sizes dùng làm gốc khi ghi — logic ở utils/resolveSheet.js (T0), gắn libIndex hiện tại.
+  const baseSizesOf = (pt) => baseSizesOfLib(pt, libIndex);
   const openAddCustomize = (ptId) => setShowCustomizeDialog(ptId);
   const addCustomize = (ptId, name, defaultPrice) => {
     const ciId = uid('ci');
@@ -200,9 +121,12 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const shownPTs = productTypes.filter((pt) => pt.shown);
 
   // ── save (append version snapshot — GIỮ NGUYÊN, thêm saving state) ──
-  const handleSave = async () => {
+  // `force` = người dùng đã xem cảnh báo xung đột và cố ý ghi đè (mục 16).
+  const handleSave = async (force = false) => {
     const snap = {
-      version: (sheet.history?.length || 0) + 1,
+      // Lịch sử không còn đi kèm bảng (mục 17) — số bản đọc từ `historyCount`
+      // của server; server mới cũng tự đánh lại số version khi ghi.
+      version: (sheet.historyCount ?? sheet.history?.length ?? 0) + 1,
       savedAt: new Date().toISOString(),
       savedBy: (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').name || 'Seller'; } catch { return 'Seller'; } })(),
       avgMargin: summary.avgMargin, minPrice: summary.minPrice, maxPrice: summary.maxPrice, count: summary.count,
@@ -211,12 +135,43 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     const history = [snap, ...(sheet.history || [])].slice(0, 20);
     setSaving(true);
     try {
-      await Promise.resolve(onSave({ ...draftSheet, history, updatedAt: new Date().toISOString() }));
+      await Promise.resolve(onSave(
+        { ...draftSheet, history, updatedAt: new Date().toISOString() },
+        { force }
+      ));
       savedSnapRef.current = snapshotOf(name, settings, productTypes);
+      setConflict(null);
       showToast?.('success', 'Đã lưu', `${name} · phiên bản v${snap.version}`);
+    } catch (err) {
+      // 409: có người khác đã lưu bảng này sau lúc ta mở nó. TUYỆT ĐỐI không
+      // ghi đè im lặng — trước đây server là last-write-wins nên toàn bộ thay
+      // đổi của người kia biến mất mà không ai biết.
+      if (err?.response?.status === 409) {
+        const info = err.response.data || {};
+        setConflict({
+          updatedBy: info.updatedBy || 'người khác',
+          updatedAt: info.updatedAt || null,
+          currentVersion: info.currentVersion,
+          current: info.current || null,
+        });
+      } else {
+        showToast?.('error', 'Lưu thất bại', err?.message || 'Không lưu được lên server.');
+      }
     } finally {
       setSaving(false);
     }
+  };
+
+  /** Bỏ thay đổi đang gõ, lấy bản mới nhất trên server. */
+  const takeServerVersion = () => {
+    const srv = conflict?.current;
+    if (!srv) { onClose?.(); return; }
+    setName(srv.name || '');
+    setSettings({ ...srv.settings });
+    setProductTypes((srv.productTypes || []).map((pt) => ({ ...pt, shown: pt.shown !== false })));
+    savedSnapRef.current = snapshotOf(srv.name || '', srv.settings, srv.productTypes || []);
+    setConflict(null);
+    showToast?.('success', 'Đã tải lại', `Đang xem bản v${conflict.currentVersion} của ${conflict.updatedBy}`);
   };
 
   const restoreVersion = (snap) => {
@@ -264,7 +219,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
                 minWidth: 18, height: 18, padding: '0 5px', borderRadius: 999,
                 background: PS.accentSoft, color: PS.accentText,
                 fontSize: 11, fontWeight: 650, fontVariantNumeric: 'tabular-nums',
-              }}>{sheet.history?.length || 0}</span>
+              }}>{sheet.historyCount ?? sheet.history?.length ?? 0}</span>
             </button>
             <Btn variant="outline" onClick={() => exportSheetToExcel(draftSheet, showToast)}>⬇ Export Excel</Btn>
             <IconBtn title="Đóng" onClick={onClose}>✕</IconBtn>
@@ -323,8 +278,38 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
         </div>
 
         {/* ── Footer — spec §3.7 ── */}
-        <SummaryFooter summary={summary} dirty={dirty} saving={saving} onCancel={onClose} onSave={handleSave} />
+        <SummaryFooter summary={summary} dirty={dirty} saving={saving} onCancel={onClose} onSave={() => handleSave(false)} />
       </div>
+
+      {/* ── Xung đột phiên bản (mục 16) ──────────────────────────────────────
+          Hiện khi server trả 409: có người khác đã lưu bảng này sau lúc ta mở.
+          Ba lựa chọn đều tường minh — không có nhánh nào âm thầm mất dữ liệu. */}
+      {conflict && (
+        <ModalShell title="⚠ Bảng này vừa được người khác cập nhật" width={460} zIndex={2500}
+          onClose={() => setConflict(null)}
+          footer={<>
+            <Btn variant="ghost" onClick={() => setConflict(null)}>Để tôi xem lại</Btn>
+            <Btn variant="outline" onClick={takeServerVersion}>Tải bản mới</Btn>
+            <Btn variant="primary" disabled={saving}
+              style={{ background: PS.negative, borderColor: PS.negative }}
+              onClick={() => handleSave(true)}>
+              {saving ? 'Đang ghi đè…' : 'Ghi đè bằng bản của tôi'}
+            </Btn>
+          </>}>
+          <div style={{ padding: 16, fontSize: 13.5, color: PS.textSecondary, lineHeight: 1.7 }}>
+            <p style={{ margin: '0 0 12px' }}>
+              <b style={{ color: PS.text }}>{conflict.updatedBy}</b> đã lưu bảng này
+              {conflict.updatedAt ? ` lúc ${new Date(conflict.updatedAt).toLocaleString('vi-VN')}` : ''}
+              {conflict.currentVersion ? ` (phiên bản v${conflict.currentVersion})` : ''}.
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <li><b>Tải bản mới</b> — bỏ thay đổi đang gõ, lấy bản trên server.</li>
+              <li><b>Ghi đè</b> — giữ bản của bạn. Bản của {conflict.updatedBy} vẫn nằm trong Lịch sử tính giá, không mất hẳn.</li>
+              <li><b>Để tôi xem lại</b> — đóng hộp thoại, chưa lưu gì.</li>
+            </ul>
+          </div>
+        </ModalShell>
+      )}
 
       {showHistory && (
         <HistoryPanel sheet={sheet} onClose={() => setShowHistory(false)}

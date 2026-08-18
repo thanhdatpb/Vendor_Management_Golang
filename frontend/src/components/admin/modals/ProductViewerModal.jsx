@@ -127,8 +127,8 @@ export default function ProductViewerModal({ product, onClose, onApprove, onReje
           <div style={{ padding: '13px 20px', background: HC.ink, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <div style={{ width: 4, height: 22, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})`, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Chi tiết sản phẩm</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>
+              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Inter',sans-serif" }}>Chi tiết sản phẩm</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontFamily: "'Inter',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>
             </div>
             <Badge status={statusKey} />
             <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,166,35,0.2)'; e.currentTarget.style.color = HC.orange; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}>✕</button>
@@ -143,7 +143,7 @@ export default function ProductViewerModal({ product, onClose, onApprove, onReje
                 <img src={mediaUrls[0]} alt="" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
               )
             ) : (
-              <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div style={{ fontSize: 12, fontWeight: 700, fontFamily: "'Nunito',sans-serif", marginTop: 6 }}>Không có ảnh</div></div>
+              <div style={{ color: HC.muted2, textAlign: 'center' }}><div style={{ fontSize: 48, marginBottom: 8 }}>📷</div><div style={{ fontSize: 12, fontWeight: 700, fontFamily: "'Inter',sans-serif", marginTop: 6 }}>Không có ảnh</div></div>
             )}
             {mediaUrls.length > 1 && (
               <div style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '4px 12px', fontSize: 11, color: '#fff' }}>
@@ -187,12 +187,12 @@ export default function ProductViewerModal({ product, onClose, onApprove, onReje
 
           <div style={{ padding: '12px 20px', background: HC.surface, borderTop: `1.5px solid ${HC.border}`, display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
             {product.status === 'pending' && onReject && (
-              <button onClick={onReject} style={{ padding: '10px 24px', borderRadius: 10, background: '#fff', color: HC.danger, border: `1.5px solid ${HC.danger}`, cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Nunito',sans-serif" }}>Từ chối</button>
+              <button onClick={onReject} style={{ padding: '10px 24px', borderRadius: 10, background: '#fff', color: HC.danger, border: `1.5px solid ${HC.danger}`, cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Inter',sans-serif" }}>Từ chối</button>
             )}
             {product.status === 'pending' && onApprove && (
-              <button onClick={() => onApprove(product)} style={{ padding: '10px 24px', borderRadius: 10, background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Nunito',sans-serif" }}>Duyệt</button>
+              <button onClick={() => onApprove(product)} style={{ padding: '10px 24px', borderRadius: 10, background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Inter',sans-serif" }}>Duyệt</button>
             )}
-            <button onClick={onClose} style={{ padding: '10px 28px', borderRadius: 10, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Nunito',sans-serif", boxShadow: `0 4px 16px ${HC.orangeGlow}` }}>Đóng</button>
+            <button onClick={onClose} style={{ padding: '10px 28px', borderRadius: 10, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 13, fontFamily: "'Inter',sans-serif", boxShadow: `0 4px 16px ${HC.orangeGlow}` }}>Đóng</button>
           </div>
         </div>
       </div>

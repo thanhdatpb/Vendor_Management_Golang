@@ -702,7 +702,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   };
 
   return (
-    <div style={{ fontFamily: "'Inter','Nunito',system-ui,sans-serif" }}>
+    <div style={{ fontFamily: "'Inter',system-ui,sans-serif" }}>
       {/* ── Toast ── */}
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
@@ -1156,7 +1156,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             {/* Modal Header */}
             <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: isMobile ? 0 : '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: isMobile ? 'sticky' : 'static', top: 0, zIndex: 2 }}>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
+                <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Inter',sans-serif" }}>
                   {isEditing ? '✏️ Chỉnh sửa sản phẩm' : (() => {
                     const rawName = user?.project || user?.sellerName || user?.seller_name || user?.name || '';
                     let titleName = 'Project Global';
@@ -1475,7 +1475,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
               <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg,#16a34a,#15803d)', display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>↓</div>
                 <div>
-                  <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Xác nhận xuất Excel</div>
+                  <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Inter',sans-serif" }}>Xác nhận xuất Excel</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 3 }}>
                     {toExport.length} sản phẩm sẽ được xuất ra file Excel
                   </div>

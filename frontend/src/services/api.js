@@ -286,6 +286,14 @@ export const vendorApi = {
 
 export const vendorLibraryApi = {
   get: (mode = 'all') => api.get(`/vendor-library?mode=${mode}`),
+  // Index GỌN cho bảng tính giá: chỉ recordKey + size + giá vốn, thay vì tải cả
+  // blob thư viện (ảnh, notes, generalInfo) mỗi lần mở một bảng giá.
+  // 304 được coi là hợp lệ để nơi gọi dùng lại bản đã cache theo ETag.
+  index: (project = '', headers = {}) => api.get('/vendor-library/index', {
+    params: project ? { project } : {},
+    headers,
+    validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
+  }),
   save: (data, mode = 'all') => api.post(`/vendor-library?mode=${mode}`, data),
   // Cập nhật nhẹ trạng thái Sample của 1 dòng generalInfo (không gửi cả blob)
   setSampleStatus: (rowId, sampleStatus) =>
@@ -341,8 +349,27 @@ export const vendorSelectionApi = {
 // PRICE SHEETS (Bảng tính giá) — lưu server, đồng bộ mọi máy theo project
 // ===============================
 export const priceSheetApi = {
-  list:   ()      => api.get("/price-sheets"),
-  save:   (sheet) => api.post("/price-sheets", sheet),
+  // Danh sách CHỈ trả cột tổng hợp — không kèm productTypes/settings/history.
+  // `summary=1` là lời cam kết của client: "tôi biết payload này không có nội
+  // dung bảng, và sẽ gọi get(id) trước khi mở workspace". Backend trả bản đầy
+  // đủ cho ai không gửi cờ, nên deploy backend trước không làm hỏng bundle cũ
+  // còn nằm trong cache trình duyệt.
+  list:   ()      => api.get("/price-sheets", { params: { summary: 1 } }),
+  // Nội dung đầy đủ, gọi khi bấm "Mở bảng". Bắt buộc: object trong danh sách
+  // không đủ dữ liệu để mở workspace.
+  get:    (id)    => api.get(`/price-sheets/${id}`),
+  // Lịch sử phiên bản, nạp lazy khi mở panel Lịch sử.
+  versions: (id)  => api.get(`/price-sheets/${id}/versions`),
+  // `expectedVersion` = version đọc được lúc mở bảng. Server so với version
+  // hiện hành; lệch → trả 409 kèm bản mới thay vì âm thầm ghi đè công của
+  // người khác. `force: true` là lối thoát khi người dùng đã xem cảnh báo và
+  // cố ý ghi đè. Bảng chưa có version (tạo trước bản này) thì bỏ trường đi —
+  // server giữ nguyên hành vi cũ.
+  save:   (sheet, { force = false } = {}) => api.post("/price-sheets", {
+    ...sheet,
+    ...(sheet?.version ? { expectedVersion: sheet.version } : {}),
+    ...(force ? { force: true } : {}),
+  }),
   remove: (id)    => api.delete(`/price-sheets/${id}`),
 };
 

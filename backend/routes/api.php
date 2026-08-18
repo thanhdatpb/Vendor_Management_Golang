@@ -69,7 +69,7 @@ Route::get('/products-approved', [ProductController::class, 'approvedProducts'])
 // PROTECTED ROUTES
 // =========================
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'seen'])->group(function () {
 
 
     // =========================
@@ -143,6 +143,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/vendors/compare',  [VendorController::class, 'compare']);
     Route::post('/vendors/import', [VendorImportController::class, 'import']);
 
+    // ⚠️ /vendor-library/index PHẢI đứng TRƯỚC các route ghi cùng tiền tố để
+    //    thứ tự khớp không đổi khi thêm route mới.
+    // Index gọn cho bảng tính giá: chỉ size + giá vốn, và là nơi strip giá theo role.
+    Route::get('/vendor-library/index', [VendorLibraryController::class, 'index']);
     Route::get('/vendor-library', [VendorLibraryController::class, 'getLibrary']);
     Route::post('/vendor-library', [VendorLibraryController::class, 'saveLibrary']);
     // Cập nhật nhẹ 1 field trạng thái Sample — chỉ Vendor (tên cũ: Staff B) được phép
@@ -159,9 +163,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // =========================
     // PRICE SHEETS (Bảng tính giá) — lưu server, chia sẻ theo project
     // =========================
-    Route::get('/price-sheets',         [PriceSheetController::class, 'index']);
-    Route::post('/price-sheets',        [PriceSheetController::class, 'upsert']);
-    Route::delete('/price-sheets/{id}', [PriceSheetController::class, 'destroy']);
+    // Danh sách chỉ trả số liệu tổng hợp; nội dung đầy đủ và lịch sử nạp riêng.
+    Route::get('/price-sheets',                   [PriceSheetController::class, 'index']);
+    Route::get('/price-sheets/{id}',              [PriceSheetController::class, 'show']);
+    Route::get('/price-sheets/{id}/versions',     [PriceSheetController::class, 'versions']);
+    Route::post('/price-sheets',                  [PriceSheetController::class, 'upsert']);
+    Route::delete('/price-sheets/{id}',           [PriceSheetController::class, 'destroy']);
 
     // =========================
     // NEWS (Quản Lý Thông Báo — Vendor tạo) — lưu server, mọi thiết bị Vendor cùng thấy

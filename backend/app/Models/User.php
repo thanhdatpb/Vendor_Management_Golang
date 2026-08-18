@@ -27,8 +27,11 @@ class User extends Authenticatable {
     
     protected $hidden   = ['password', 'remember_token'];
     protected $casts    = [
-        'is_active' => 'boolean', 
-        'last_login_at' => 'datetime'
+        'is_active' => 'boolean',
+        // `last_login_at` từng được khai ở đây nhưng KHÔNG có cột nào trong DB
+        // và không chỗ nào ghi. Thay bằng cột thật `last_seen_at` — mốc thao
+        // tác gần nhất, do middleware TouchLastSeen cập nhật.
+        'last_seen_at' => 'datetime',
     ];
 
     public function isAdmin(): bool { 

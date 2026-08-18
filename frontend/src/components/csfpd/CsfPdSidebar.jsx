@@ -44,7 +44,7 @@ function NavItem({ item, isActive, isCollapsed, onClick }) {
       </div>
       {!isCollapsed && (
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13.5, fontWeight: isActive ? 700 : 500, color: isActive ? DARK.textActive : hovered ? DARK.text : DARK.textMuted, fontFamily: "'Nunito',sans-serif", transition: 'color 0.18s ease', letterSpacing: '0.01em' }}>
+          <div style={{ fontSize: 13.5, fontWeight: isActive ? 700 : 500, color: isActive ? DARK.textActive : hovered ? DARK.text : DARK.textMuted, fontFamily: "'Inter',sans-serif", transition: 'color 0.18s ease', letterSpacing: '0.01em' }}>
             {item.label}
           </div>
         </div>
@@ -53,7 +53,7 @@ function NavItem({ item, isActive, isCollapsed, onClick }) {
         <div style={{ width: 5, height: 5, borderRadius: '50%', background: DARK.accent, boxShadow: `0 0 0 3px ${DARK.accent}30`, flexShrink: 0 }} />
       )}
       {isCollapsed && hovered && (
-        <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', color: '#f1f5f9', fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif", padding: '6px 12px', borderRadius: 8, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', color: '#f1f5f9', fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: '6px 12px', borderRadius: 8, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
           {item.label}
           <div style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', border: '5px solid transparent', borderRightColor: '#0f172a' }} />
         </div>
@@ -116,7 +116,7 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
         </div>
         {sidebarOpen && (
           <div>
-            <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: 14.5, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em' }}>Happy Creative LLC</div>
+            <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: 14.5, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em' }}>Happy Creative LLC</div>
             <div style={{ color: HC.orange, fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, textTransform: 'uppercase', marginTop: 3, opacity: 0.85 }}>Vendor Management</div>
           </div>
         )}
@@ -130,7 +130,7 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <UserAvatar user={user} size={36} radius={10} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameToShow}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Inter',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nameToShow}</div>
               <div style={{ fontSize: 10, color: DARK.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                 <UserOutlined style={{ fontSize: 9, color: HC.orange }} />
                 <span>{roleLabel}</span>
@@ -147,7 +147,7 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
               style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', cursor: 'pointer' }}
             >
               <LogoutOutlined style={{ fontSize: 12 }} />
-              <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif" }}>Đăng xuất</span>
+              <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>Đăng xuất</span>
             </div>
           )}
         </div>
@@ -163,12 +163,12 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
                 <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={(e) => { e.stopPropagation(); setShowLogout(false); }} />
                 <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.55)', minWidth: 165 }}>
                   <div style={{ padding: '4px 6px 10px', borderBottom: `1px solid ${DARK.border}` }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif" }}>{nameToShow}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Inter',sans-serif" }}>{nameToShow}</div>
                     <div style={{ fontSize: 10, color: DARK.textMuted, marginTop: 3 }}>{roleLabel}</div>
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); logout(); }}
-                    style={{ width: '100%', marginTop: 8, padding: '7px 10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, color: '#f87171', fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                    style={{ width: '100%', marginTop: 8, padding: '7px 10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, color: '#f87171', fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
                   >
                     <LogoutOutlined /> Đăng xuất
                   </button>

@@ -8,7 +8,9 @@ import { HC } from '../../constants/sellerTheme';
 import AppToast from '../shared/AppToast';
 import { Pagination } from './SellerUI';
 import { vendorLibraryApi, priceSheetApi } from '../../services/api';
-import { summarizeSheet, usd, pct, makeSheet, makeProductType, makeSize } from '../../utils/pricingEngine';
+import { subscribePriceSheetChanges } from '../../services/echo';
+import { usd, pct, makeSheet, makeProductType, makeSize } from '../../utils/pricingEngine';
+import { normalizeSheetRow, matchesSheetSearch, sheetInProject, toSummaryRow } from '../../utils/priceSheetSummary';
 import PriceSheetWorkspace, { exportSheetToExcel } from './PriceSheetWorkspace';
 
 const LS_SHEETS = 'PRICE_SHEETS_V1';
@@ -34,7 +36,21 @@ function _getUserProjectKey() {
 }
 
 const loadAllSheets = () => { try { return JSON.parse(localStorage.getItem(LS_SHEETS) || '[]'); } catch { return []; } };
-const persistAllSheets = (list) => localStorage.setItem(LS_SHEETS, JSON.stringify(list));
+
+/**
+ * Cache CHỈ bản tổng hợp.
+ * Bản cũ nhét nguyên sheet (productTypes + tới 20 snapshot history) của MỌI
+ * bảng vào đây và chạm trần ~5MB của localStorage — khi đó `setItem` ném lỗi,
+ * cache hỏng lặng lẽ và danh sách trắng trơn lúc mất mạng.
+ */
+const persistAllSheets = (list) => {
+  try {
+    const lean = list.map(normalizeSheetRow).map(toSummaryRow).filter(Boolean);
+    localStorage.setItem(LS_SHEETS, JSON.stringify(lean));
+  } catch (err) {
+    console.warn('Không cache được danh sách bảng tính giá:', err?.message || err);
+  }
+};
 
 export default function SetupPriceSection() {
   const [allSheets, setAllSheets] = useState(loadAllSheets);
@@ -43,7 +59,8 @@ export default function SetupPriceSection() {
   const [toast, setToast] = useState(null);
   const [workspaceSheet, setWorkspaceSheet] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const initRef = useRef(false);
+  const [openingId, setOpeningId] = useState(null); // id bảng đang tải nội dung
+  const aliveRef = useRef(true);
 
   const { skip, key: projectKey } = _getUserProjectKey();
 
@@ -52,76 +69,164 @@ export default function SetupPriceSection() {
     setTimeout(() => setToast(null), duration);
   }, []);
 
-  useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
-    let alive = true;
-    setAllSheets(loadAllSheets()); // vẽ ngay từ cache local
-    (async () => {
-      try {
-        const res = await priceSheetApi.list();
-        const server = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
-        if (!alive) return;
-        setAllSheets(server);
-        persistAllSheets(server);
-      } catch (err) {
-        console.warn('Không tải được bảng tính giá từ server, dùng cache local:', err);
-      }
-    })();
-    return () => { alive = false; };
+  /** Tải lại danh sách từ server. Gọi được nhiều lần — không còn khoá một-lần. */
+  const refreshSheets = useCallback(async () => {
+    try {
+      const res = await priceSheetApi.list();
+      const server = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+      if (!aliveRef.current) return;
+      setAllSheets(server);
+      persistAllSheets(server);
+    } catch (err) {
+      // Chỉ in message: object lỗi kèm cả response đi thẳng ra console của
+      // bất kỳ ai mở DevTools trên production.
+      console.warn('Không tải được bảng tính giá từ server, dùng cache local:', err?.message || err);
+    }
   }, []);
 
-  // Sheets thuộc project của user
-  const sheets = useMemo(() => {
-    const mine = skip ? allSheets : allSheets.filter((s) => !s.project || !projectKey || s.project === projectKey || projectKey.includes(s.project) || s.project.includes(projectKey));
-    return mine;
-  }, [allSheets, skip, projectKey]);
+  // ─── Đồng bộ danh sách (mục 16) ──────────────────────────────────────────
+  // Trước đây effect này bị khoá bằng `initRef` nên danh sách chỉ tải ĐÚNG MỘT
+  // LẦN cả đời component: Seller A lưu bảng, Seller B cùng project không thấy
+  // cho tới khi F5. Nay làm mới theo 3 nguồn tín hiệu, bù cho nhau:
+  //   1. Pusher  — gần như tức thì, nhưng có thể rớt hoặc chưa cấu hình
+  //   2. Quay lại tab — bắt được cả khi Pusher chết
+  //   3. Lần mount đầu
+  useEffect(() => {
+    aliveRef.current = true;
+    setAllSheets(loadAllSheets()); // vẽ ngay từ cache local
+    refreshSheets();
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return sheets;
-    return sheets.filter((s) =>
-      (s.name || '').toLowerCase().includes(q) ||
-      (s.vendorRef || '').toLowerCase().includes(q) ||
-      (s.productTypes || []).some((pt) => (pt.name || '').toLowerCase().includes(q))
-    );
-  }, [sheets, search]);
+    const refreshWhenVisible = () => { if (!document.hidden) refreshSheets(); };
+    const unsubscribe = subscribePriceSheetChanges(skip ? '' : projectKey, refreshSheets);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      aliveRef.current = false;
+      unsubscribe();
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [refreshSheets, skip, projectKey]);
+
+  // Danh sách từ server chỉ có cột tổng hợp; cache localStorage của bản cũ lại
+  // là sheet đầy đủ. Quy về một hình dạng ngay tại đây (utils/priceSheetSummary)
+  // để phần vẽ bảng bên dưới chỉ có một đường duy nhất.
+  const sheets = useMemo(
+    () => allSheets
+      .map(normalizeSheetRow)
+      .filter((row) => row && sheetInProject(row, projectKey, skip)),
+    [allSheets, skip, projectKey]
+  );
+
+  const filtered = useMemo(
+    () => sheets.filter((row) => matchesSheetSearch(row, search)),
+    [sheets, search]
+  );
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   // ── CRUD ──
-  const commitSheet = (updated) => {
+  /** Ghi vào state + cache local, rồi đẩy lên server.
+   *  Ném lại lỗi 409 để nơi gọi (workspace) hiện hộp thoại xung đột. */
+  const commitSheet = async (updated, { force = false } = {}) => {
     setAllSheets((prev) => {
       const exists = prev.some((s) => s.id === updated.id);
       const next = exists ? prev.map((s) => (s.id === updated.id ? updated : s)) : [updated, ...prev];
       persistAllSheets(next); // cache local
       return next;
     });
+
     // Đồng bộ lên server để mọi máy trong project thấy được
-    priceSheetApi.save(updated)
-      .catch((err) => {
-        console.warn('Lưu bảng tính giá lên server thất bại:', err);
-        showToast('error', 'Lưu thất bại', 'Đã lưu tạm ở máy này. Kiểm tra kết nối / đăng nhập rồi lưu lại.', 4500);
-      });
+    try {
+      const res = await priceSheetApi.save(updated, { force });
+      const version = res?.data?.version;
+      if (version) {
+        // Nhận version mới của server để lần lưu sau gửi đúng — nếu không, lần
+        // lưu thứ hai sẽ tự xung đột với chính mình.
+        const synced = { ...updated, version };
+        setAllSheets((prev) => {
+          const next = prev.map((s) => (s.id === synced.id ? synced : s));
+          persistAllSheets(next);
+          return next;
+        });
+        return synced;
+      }
+      return updated;
+    } catch (err) {
+      // 409 = có người khác đã lưu ở giữa. Không nuốt lỗi: workspace cần biết
+      // để hỏi người dùng, thay vì âm thầm ghi đè công của người kia.
+      if (err?.response?.status === 409) throw err;
+
+      console.warn('Lưu bảng tính giá lên server thất bại:', err?.message || err);
+      showToast('error', 'Lưu thất bại', 'Đã lưu tạm ở máy này. Kiểm tra kết nối / đăng nhập rồi lưu lại.', 4500);
+      return updated;
+    }
   };
 
   const handleCreate = (sheet) => {
     commitSheet(sheet);
     setShowCreate(false);
-    setWorkspaceSheet(sheet);
+    setWorkspaceSheet(sheet); // bảng mới tạo đã đủ dữ liệu, không cần tải lại
   };
 
-  const handleSaveWorkspace = (updated) => {
-    commitSheet(updated);
-    setWorkspaceSheet(updated); // giữ mở với dữ liệu mới
+  /**
+   * Mở workspace: PHẢI tải bản đầy đủ.
+   * Danh sách chỉ mang cột tổng hợp (không có settings/productTypes) nên mở
+   * thẳng object của danh sách sẽ ra bảng rỗng.
+   */
+  /**
+   * Đường lùi khi server chưa có `/price-sheets/{id}` (deploy frontend trước
+   * backend): lúc đó danh sách vẫn là sheet ĐẦY ĐỦ, nên mở thẳng bản trong
+   * danh sách còn hơn chặn Seller không mở được bảng nào.
+   */
+  const fullRowFromList = (id) => {
+    const raw = allSheets.find((s) => s.id === id);
+    return raw && Array.isArray(raw.productTypes) ? raw : null;
+  };
+
+  const openSheet = async (row) => {
+    setOpeningId(row.id);
+    try {
+      const res = await priceSheetApi.get(row.id);
+      setWorkspaceSheet(res.data);
+    } catch (err) {
+      const fallback = fullRowFromList(row.id);
+      if (fallback) { setWorkspaceSheet(fallback); return; }
+
+      console.warn('Không tải được nội dung bảng tính giá:', err?.message || err);
+      showToast('error', 'Không mở được bảng', 'Kiểm tra kết nối rồi thử lại.', 4000);
+    } finally {
+      setOpeningId(null);
+    }
+  };
+
+  const handleSaveWorkspace = async (updated, opts) => {
+    const synced = await commitSheet(updated, opts); // 409 ném lên workspace
+    setWorkspaceSheet(synced); // giữ mở với dữ liệu mới (kèm version server)
+    return synced;
+  };
+
+  /** Export từ danh sách — cũng phải tải bản đầy đủ trước, vì lý do như openSheet. */
+  const exportSheet = async (row) => {
+    try {
+      const res = await priceSheetApi.get(row.id);
+      exportSheetToExcel(res.data, showToast);
+    } catch (err) {
+      const fallback = fullRowFromList(row.id);
+      if (fallback) { exportSheetToExcel(fallback, showToast); return; }
+
+      console.warn('Không tải được bảng để export:', err?.message || err);
+      showToast('error', 'Không export được', 'Kiểm tra kết nối rồi thử lại.', 4000);
+    }
   };
 
   const handleDelete = (sheet) => {
     if (!window.confirm(`Xoá bảng tính giá "${sheet.name}"?`)) return;
     setAllSheets((prev) => { const next = prev.filter((s) => s.id !== sheet.id); persistAllSheets(next); return next; });
     priceSheetApi.remove(sheet.id).catch((err) => {
-      console.warn('Xoá trên server thất bại:', err);
+      console.warn('Xoá trên server thất bại:', err?.message || err);
     });
     showToast('success', 'Đã xoá', sheet.name);
   };
@@ -167,40 +272,42 @@ export default function SetupPriceSection() {
                 </thead>
                 <tbody>
                   {paged.map((sheet, idx) => {
-                    const sum = summarizeSheet(sheet);
-                    const pts = sheet.productTypes || [];
+                    const names = sheet.productTypeNames;
                     return (
                       <tr key={sheet.id} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#fff' : HC.surface2 }}>
                         <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>{(page - 1) * ITEMS_PER_PAGE + idx + 1}</td>
                         <td style={{ padding: '10px' }}>
                           <div style={{ fontWeight: 800, color: HC.ink2 }}>{sheet.name || '—'}</div>
-                          {sheet._sourceFile && <div style={{ fontSize: 10, color: HC.muted, marginTop: 2 }}>📄 {sheet._sourceFile}</div>}
+                          {sheet.sourceFile && <div style={{ fontSize: 10, color: HC.muted, marginTop: 2 }}>📄 {sheet.sourceFile}</div>}
                         </td>
                         <td style={{ padding: '10px', fontWeight: 600, color: HC.orange }}>{sheet.vendorRef || '—'}</td>
                         <td style={{ padding: '8px 10px', maxWidth: 240 }}>
-                          {pts.length === 0 ? <span style={{ color: HC.muted, fontSize: 11 }}>—</span> : (
+                          {names.length === 0 ? <span style={{ color: HC.muted, fontSize: 11 }}>—</span> : (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                              {pts.slice(0, 3).map((pt) => <span key={pt.id} style={chip}>{pt.name || '—'}</span>)}
-                              {pts.length > 3 && <span style={{ ...chip, background: HC.orangeLight, color: HC.orangeDark, borderColor: HC.orangeMid }}>+{pts.length - 3}</span>}
+                              {names.slice(0, 3).map((name, i) => <span key={`${name}-${i}`} style={chip}>{name}</span>)}
+                              {names.length > 3 && <span style={{ ...chip, background: HC.orangeLight, color: HC.orangeDark, borderColor: HC.orangeMid }}>+{names.length - 3}</span>}
                             </div>
                           )}
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center' }}>
-                          <span style={{ padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontWeight: 700, fontSize: 11 }}>{sum.count} size</span>
+                          <span style={{ padding: '2px 8px', borderRadius: 12, background: HC.orangeLight, color: HC.orangeDark, fontWeight: 700, fontSize: 11 }}>{sheet.sizeCount} size</span>
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center', fontWeight: 700, color: HC.ink2, fontVariantNumeric: 'tabular-nums' }}>
-                          {sum.minPrice != null ? (sum.minPrice === sum.maxPrice ? usd(sum.minPrice) : `${usd(sum.minPrice)} – ${usd(sum.maxPrice)}`) : <span style={{ color: HC.muted }}>—</span>}
+                          {sheet.minPrice != null ? (sheet.minPrice === sheet.maxPrice ? usd(sheet.minPrice) : `${usd(sheet.minPrice)} – ${usd(sheet.maxPrice)}`) : <span style={{ color: HC.muted }}>—</span>}
                         </td>
-                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: sum.avgMargin != null ? (sum.avgMargin > 25 ? HC.success : HC.warning) : HC.muted }}>
-                          {sum.avgMargin != null ? pct(sum.avgMargin, 1) : '—'}
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: sheet.avgMargin != null ? (sheet.avgMargin > 25 ? HC.success : HC.warning) : HC.muted }}>
+                          {sheet.avgMargin != null ? pct(sheet.avgMargin, 1) : '—'}
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center', fontSize: 11, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>
                           {sheet.updatedAt ? new Date(sheet.updatedAt).toLocaleDateString('vi-VN') : '—'}
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                            <button onClick={() => setWorkspaceSheet(sheet)} style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>Mở bảng</button>
-                            <button onClick={() => exportSheetToExcel(sheet, showToast)} title="Export Excel" style={{ padding: '5px 9px', borderRadius: 6, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>⬇</button>
+                            <button onClick={() => openSheet(sheet)} disabled={openingId === sheet.id}
+                              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: openingId === sheet.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800, opacity: openingId === sheet.id ? 0.7 : 1 }}>
+                              {openingId === sheet.id ? 'Đang mở…' : 'Mở bảng'}
+                            </button>
+                            <button onClick={() => exportSheet(sheet)} title="Export Excel" style={{ padding: '5px 9px', borderRadius: 6, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>⬇</button>
                             <button onClick={() => handleDelete(sheet)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Xoá</button>
                           </div>
                         </td>

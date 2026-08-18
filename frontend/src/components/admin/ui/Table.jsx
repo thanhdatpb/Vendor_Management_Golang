@@ -15,7 +15,7 @@ export default function Table({ cols, rows }) {
                   padding: '12px 14px',
                   color: HC.brown,
                   fontWeight: 900,
-                  fontFamily: "'Nunito',sans-serif",
+                  fontFamily: "'Inter',sans-serif",
                   borderBottom: `1.5px solid ${HC.border}`,
                   fontSize: 10,
                   textTransform: 'uppercase',
@@ -43,7 +43,7 @@ export default function Table({ cols, rows }) {
                     padding: '12px 14px',
                     color: HC.ink2,
                     verticalAlign: 'middle',
-                    fontFamily: "'Nunito Sans',sans-serif"
+                    fontFamily: "'Inter',sans-serif"
                   }}
                 >
                   {cell}

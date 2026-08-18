@@ -6,13 +6,14 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate } from '../../../utils/vendorExcel';
 import { vendorLibraryApi } from '../../../services/api';
+import { subscribeVendorLibraryChanges } from '../../../services/echo';
 import AppToast from '../../shared/AppToast';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
   padding: '7px 8px', fontWeight: 800, fontSize: 9.5, textTransform: 'uppercase',
   letterSpacing: '0.05em', color: '#fff', background: HC.orangeDark,
-  border: `1px solid ${HC.orange}`, fontFamily: "'Nunito',sans-serif",
+  border: `1px solid ${HC.orange}`, fontFamily: "'Inter',sans-serif",
   verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', ...extra,
 });
 // Header cột SỐ (Price Ship / Price Ship Item 2 / Total…): cho xuống dòng, gọn,
@@ -20,19 +21,19 @@ const TH = (extra = {}) => ({
 const THnum = (extra = {}) => ({
   padding: '4px 2px', fontWeight: 800, fontSize: 9, textTransform: 'uppercase',
   letterSpacing: 0, color: '#fff', background: HC.orangeDark,
-  border: `1px solid ${HC.orange}`, fontFamily: "'Nunito',sans-serif",
+  border: `1px solid ${HC.orange}`, fontFamily: "'Inter',sans-serif",
   verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'normal', lineHeight: 1.1, ...extra,
 });
 const TD = (idx, extra = {}) => ({
   padding: '6px 5px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`,
   background: idx % 2 === 0 ? HC.surface : HC.surface2,
-  fontFamily: "'Nunito Sans',sans-serif", verticalAlign: 'top', wordBreak: 'break-word', overflowWrap: 'break-word', ...extra,
+  fontFamily: "'Inter',sans-serif", verticalAlign: 'top', wordBreak: 'break-word', overflowWrap: 'break-word', ...extra,
 });
 // Ô SỐ trong body: không bẻ dòng giá trị, padding hẹp để cột nhỏ vẫn đủ chứa "$XX.XX".
 const TDnum = (idx, extra = {}) => ({
   padding: '6px 3px', fontSize: 11.5, color: HC.ink2, border: `1px solid ${HC.border}`,
   background: idx % 2 === 0 ? HC.surface : HC.surface2,
-  fontFamily: "'Nunito Sans',sans-serif", verticalAlign: 'middle', textAlign: 'right',
+  fontFamily: "'Inter',sans-serif", verticalAlign: 'middle', textAlign: 'right',
   whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', ...extra,
 });
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
@@ -468,7 +469,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
 function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) {
   return (
     <div style={{ border: `1.5px solid ${HC.orange}`, borderRadius: 10, padding: 16, marginTop: 8, background: '#fffbeb' }}>
-      <div style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, marginBottom: 14, fontFamily: "'Nunito',sans-serif" }}>➕ Dòng giá mới</div>
+      <div style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, marginBottom: 14, fontFamily: "'Inter',sans-serif" }}>➕ Dòng giá mới</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
         {[['Ký hiệu', 'kyHieu', 'A, B...'],['Product Type','productType','Loại sản phẩm...'],['Size','size','S/M/L...'],['Optional','optional','Optional...']].map(([lbl,key,ph]) => (
           <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -998,7 +999,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
                 onClick={e => e.stopPropagation()}
                 style={{
                   flex: 1, padding: '3px 8px', fontSize: 12.5, fontWeight: 800,
-                  fontFamily: "'Nunito',sans-serif", borderRadius: 6,
+                  fontFamily: "'Inter',sans-serif", borderRadius: 6,
                   border: `1.5px solid ${HC.orange}`,
                   boxShadow: `0 0 0 3px ${HC.orangeGlow}`,
                   outline: 'none', color: HC.ink,
@@ -1008,7 +1009,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
             ) : (
               <span style={{
                 fontWeight: 800, fontSize: 12.5, color: HC.ink,
-                fontFamily: "'Nunito',sans-serif",
+                fontFamily: "'Inter',sans-serif",
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 flex: 1, minWidth: 0,
               }}>
@@ -1125,7 +1126,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
                 color: activeSection === tab.id ? HC.orangeDark : HC.muted,
                 fontSize: 12, fontWeight: activeSection === tab.id ? 900 : 700,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                fontFamily: "'Nunito',sans-serif", transition: 'all 0.15s',
+                fontFamily: "'Inter',sans-serif", transition: 'all 0.15s',
               }}>
                 {tab.label}
                 <span style={{
@@ -1155,7 +1156,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
 const inputSt = (extra = {}) => ({
   width: '100%', padding: '7px 10px', fontSize: 12,
   borderRadius: 6, border: `1.5px solid ${HC.border}`,
-  fontFamily: "'Nunito Sans',sans-serif", color: HC.ink,
+  fontFamily: "'Inter',sans-serif", color: HC.ink,
   background: '#fff', outline: 'none', boxSizing: 'border-box', ...extra,
 });
 
@@ -1271,7 +1272,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
         {/* Header */}
         <div style={{ padding: '18px 24px', borderBottom: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: `linear-gradient(135deg, ${HC.orangeLight}, #fff)` }}>
           <div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>➕ Thêm mới Vendor thủ công</div>
+            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, fontFamily: "'Inter',sans-serif" }}>➕ Thêm mới Vendor thủ công</div>
             <div style={{ fontSize: 11, color: HC.muted, marginTop: 2 }}>Nhập dữ liệu thủ công — sẽ hiển thị như file Excel đã import</div>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${HC.border}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -1307,7 +1308,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
               color: activeTab === tab.id ? HC.orangeDark : HC.muted,
               fontSize: 12, fontWeight: activeTab === tab.id ? 900 : 700,
               cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-              fontFamily: "'Nunito',sans-serif", transition: 'all 0.15s',
+              fontFamily: "'Inter',sans-serif", transition: 'all 0.15s',
             }}>
               {tab.label}
               <span style={{ padding: '1px 8px', borderRadius: 99, background: activeTab === tab.id ? HC.orangeLight : HC.border, color: activeTab === tab.id ? HC.orangeDark : HC.muted, fontSize: 10, fontWeight: 800 }}>{tab.count}</span>
@@ -1324,7 +1325,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
               {generalRows.map((r, i) => (
                 <div key={r._key} style={{ border: `1.5px solid ${HC.border}`, borderRadius: 10, padding: 16, marginBottom: 14, background: HC.surface }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <span style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, fontFamily: "'Nunito',sans-serif" }}>Dòng {i + 1}</span>
+                    <span style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, fontFamily: "'Inter',sans-serif" }}>Dòng {i + 1}</span>
                     {generalRows.length > 1 && (
                       <button onClick={() => setGeneralRows(prev => prev.filter(x => x._key !== r._key))} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>✕ Xóa dòng</button>
                     )}
@@ -1372,7 +1373,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
               {pricingRows.map((r, i) => (
                 <div key={r._key} style={{ border: `1.5px solid ${HC.border}`, borderRadius: 10, padding: 16, marginBottom: 14, background: HC.surface }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <span style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, fontFamily: "'Nunito',sans-serif" }}>Dòng giá {i + 1}</span>
+                    <span style={{ fontWeight: 800, fontSize: 12, color: HC.orangeDark, fontFamily: "'Inter',sans-serif" }}>Dòng giá {i + 1}</span>
                     {pricingRows.length > 1 && (
                       <button onClick={() => setPricingRows(prev => prev.filter(x => x._key !== r._key))} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>✕ Xóa dòng</button>
                     )}
@@ -1440,6 +1441,9 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [selectedProductId, setSelectedProductId] = useState('');
   const fileInputRef = useRef(null);
   const highlightRef = useRef(null);
+  // Bỏ qua đúng một tín hiệu realtime kế tiếp — dùng khi chính máy này vừa ghi
+  // (xem effect đồng bộ ở dưới).
+  const skipNextSyncRef = useRef(false);
 
   // Danh sách product có vendor được gán (dùng cho dropdown filter)
   const productOptions = useMemo(() => {
@@ -1538,6 +1542,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     })));
     apply(next);
     try {
+      skipNextSyncRef.current = true; // tín hiệu của chính mình dội về — bỏ qua
       await vendorLibraryApi.setBestSeller(rowId, next);
     } catch (err) {
       apply(!next);
@@ -1644,8 +1649,30 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     }
   }, [mode, readOnly, onLibraryLoaded]);
 
+  // ─── Đồng bộ thư viện (mục 16) ───────────────────────────────────────────
+  // Trước đây chỉ tải lúc mount: sau khi Vendor import file mới, người đang mở
+  // tab vẫn thấy bản cũ — và nếu họ mở bảng tính giá thì tính trên giá vốn cũ
+  // mà không hay biết. Nay làm mới theo Pusher, và theo lượt quay lại tab để
+  // bù cho trường hợp Pusher chưa cấu hình hoặc rớt kết nối.
+  //
+  // `skipNextRef`: chính máy này vừa ghi thì sự kiện của mình dội về, không
+  // cần tải lại (state đã đúng) — tránh nhấp nháy bảng.
   useEffect(() => {
     fetchLibrary();
+
+    const refreshWhenVisible = () => { if (!document.hidden) fetchLibrary(); };
+    const unsubscribe = subscribeVendorLibraryChanges(() => {
+      if (skipNextSyncRef.current) { skipNextSyncRef.current = false; return; }
+      fetchLibrary();
+    });
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, [fetchLibrary]);
 
   const showToast = (type, msg) => {
@@ -1659,6 +1686,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       return false;
     }
     try {
+      skipNextSyncRef.current = true; // tín hiệu của chính mình dội về — bỏ qua
       await vendorLibraryApi.save(newData, mode);
       setRawFiles(newData);
       if (onLibraryLoaded) onLibraryLoaded(newData);
@@ -1765,6 +1793,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     })));
     applyStatus(status);
     try {
+      skipNextSyncRef.current = true; // tín hiệu của chính mình dội về — bỏ qua
       await vendorLibraryApi.setSampleStatus(rowId, status);
     } catch (err) {
       applyStatus(status === 'has_sample' ? 'no_sample' : 'has_sample');
@@ -1798,7 +1827,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       {/* Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>
+          <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink, fontFamily: "'Inter',sans-serif" }}>
             {(mode === 'bestseller' || mode === 'best_seller') ? 'Danh sách Vendor Best Seller' : mode === 'new_products' ? 'New Arrivals' : 'Tổng quan Vendor & Sản phẩm'}
           </div>
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
@@ -1826,7 +1855,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
                 paddingLeft: 12, paddingRight: searchQuery ? 30 : 12, paddingTop: 7, paddingBottom: 7,
                 borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`,
                 background: HC.surface, color: HC.ink, fontSize: 12,
-                fontFamily: "'Nunito Sans',sans-serif", outline: 'none',
+                fontFamily: "'Inter',sans-serif", outline: 'none',
                 width: 280, transition: 'border-color 0.15s, box-shadow 0.15s',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               }}
@@ -1960,7 +1989,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       {deleteConfirm && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
           <div style={{ background: '#fff', padding: 24, borderRadius: 12, width: 400, boxShadow: HC.shadowStrong, animation: 'scaleIn 0.2s ease-out' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: 18, color: '#dc2626', fontFamily: "'Nunito',sans-serif" }}>Xác nhận xóa</h3>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: 18, color: '#dc2626', fontFamily: "'Inter',sans-serif" }}>Xác nhận xóa</h3>
             <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted, lineHeight: 1.5 }}>
               {deleteConfirm.type === 'all' 
                 ? `Bạn có chắc chắn muốn xóa toàn bộ ${rawFiles.length} file thư viện? Hành động này không thể hoàn tác.`

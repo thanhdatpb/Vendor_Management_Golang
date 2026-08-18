@@ -265,7 +265,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
         fontSize: 11,
         fontWeight: 800,
         color: HC.brown,
-        fontFamily: "'Nunito',sans-serif",
+        fontFamily: "'Inter',sans-serif",
         transition: 'all 0.15s',
         opacity: loadingProductId === p.id ? 0.6 : 1
       }}
@@ -275,7 +275,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
   );
 
   const sHdr = { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' };
-  const h3S = { fontSize: 15, fontWeight: 900, color: HC.ink, margin: 0, fontFamily: "'Nunito',sans-serif" };
+  const h3S = { fontSize: 15, fontWeight: 900, color: HC.ink, margin: 0, fontFamily: "'Inter',sans-serif" };
   const refreshBtn = fn => (
     <button
       onClick={async () => {
@@ -291,7 +291,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
         color: isRefreshing ? HC.orangeDark : HC.brown,
         fontSize: 11, fontWeight: 800,
         cursor: isRefreshing ? 'not-allowed' : 'pointer',
-        fontFamily: "'Nunito',sans-serif",
+        fontFamily: "'Inter',sans-serif",
         transition: 'all 0.2s',
         opacity: isRefreshing ? 0.85 : 1,
         display: 'flex', alignItems: 'center', gap: 5,
@@ -321,7 +321,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
               color: HC.orangeDark,
               fontSize: 12,
               fontWeight: 800,
-              fontFamily: "'Nunito',sans-serif"
+              fontFamily: "'Inter',sans-serif"
             }}>
               {pendingProducts.length} form chờ xử lý
             </span>
@@ -344,7 +344,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
               fontSize: 12,
               fontWeight: 700,
               color: '#166534',
-              fontFamily: "'Nunito Sans',sans-serif",
+              fontFamily: "'Inter',sans-serif",
             }}>
               Tất cả form đã được xử lý — Không có form nào đang chờ duyệt
             </span>
@@ -378,7 +378,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
                         fontSize: 11,
                         fontWeight: 800,
                         color: '#065f46',
-                        fontFamily: "'Nunito',sans-serif",
+                        fontFamily: "'Inter',sans-serif",
                         opacity: processingId === p.id ? 0.7 : 1,
                       }}
                     >
@@ -396,7 +396,7 @@ export default function ProductsSection({ externalViewProduct, setExternalViewPr
                         fontSize: 11,
                         fontWeight: 800,
                         color: '#991b1b',
-                        fontFamily: "'Nunito',sans-serif",
+                        fontFamily: "'Inter',sans-serif",
                         opacity: processingId === p.id ? 0.7 : 1,
                       }}
                     >

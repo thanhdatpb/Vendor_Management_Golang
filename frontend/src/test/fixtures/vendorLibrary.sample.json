@@ -1,0 +1,37 @@
+[
+  {
+    "filename": "HappyC_VendorLibrary_p.happy_2026-06.xlsx",
+    "generalInfo": [
+      { "kyHieu": "VN3", "productType": "Football Jersey", "chatLieu": "Polyester 150gsm", "notes": "Sample OK 2026-05" },
+      { "kyHieu": "VN7", "productType": "Football Jersey", "chatLieu": "Polyester 180gsm", "notes": "Vendor thứ 2 cùng phôi" },
+      { "kyHieu": "VN3", "productType": "Ceramic Mug 11oz", "chatLieu": "Ceramic", "notes": "" }
+    ],
+    "pricing": [
+      { "kyHieu": "VN3", "productType": "Football Jersey", "size": "S",   "pricing1": 8.20, "pricing2": 8.90, "eco_price": 4.10, "eco_total": 12.30, "eco_price_item2": 1.10, "ground_price": 5.40, "ground_total": 13.60, "ground_price_item2": 1.40, "express_price": 9.80, "express_total": 18.00, "express_price_item2": 2.60 },
+      { "kyHieu": "VN3", "productType": "Football Jersey", "size": "M",   "pricing1": 8.20, "pricing2": 8.90, "eco_price": 4.10, "eco_total": 12.30, "eco_price_item2": 1.10, "ground_price": 5.40, "ground_total": 13.60, "ground_price_item2": 1.40, "express_price": 9.80, "express_total": 18.00, "express_price_item2": 2.60 },
+      { "kyHieu": "VN3", "productType": "Football Jersey", "size": "L",   "pricing1": 8.60, "pricing2": 9.30, "eco_price": 4.10, "eco_total": 12.70, "eco_price_item2": 1.10, "ground_price": 5.40, "ground_total": 14.00, "ground_price_item2": 1.40, "express_price": 9.80, "express_total": 18.40, "express_price_item2": 2.60 },
+      { "kyHieu": "VN3", "productType": "Football Jersey", "size": "XL",  "pricing1": 9.10, "pricing2": 9.80, "eco_price": 4.30, "eco_total": 13.40, "eco_price_item2": 1.20, "ground_price": 5.60, "ground_total": 14.70, "ground_price_item2": 1.50, "express_price": 10.20, "express_total": 19.30, "express_price_item2": 2.80 },
+      { "kyHieu": "VN3", "productType": "Football Jersey", "size": "2XL", "pricing1": 9.60, "pricing2": 10.30, "eco_price": 4.30, "eco_total": 13.90, "eco_price_item2": 1.20, "ground_price": 5.60, "ground_total": 15.20, "ground_price_item2": 1.50, "express_price": 10.20, "express_total": 19.80, "express_price_item2": 2.80 },
+
+      { "kyHieu": "VN7", "productType": "Football Jersey", "size": "S",   "pricing1": 7.40, "pricing2": 8.00, "eco_price": 4.60, "eco_total": 12.00, "eco_price_item2": 1.30, "ground_price": 5.90, "ground_total": 13.30, "ground_price_item2": 1.60, "express_price": 10.40, "express_total": 17.80, "express_price_item2": 2.90 },
+      { "kyHieu": "VN7", "productType": "Football Jersey", "size": "M",   "pricing1": 7.40, "pricing2": 8.00, "eco_price": 4.60, "eco_total": 12.00, "eco_price_item2": 1.30, "ground_price": 5.90, "ground_total": 13.30, "ground_price_item2": 1.60, "express_price": 10.40, "express_total": 17.80, "express_price_item2": 2.90 },
+      { "kyHieu": "VN7", "productType": "Football Jersey", "size": "L",   "pricing1": 7.80, "pricing2": 8.40, "eco_price": 4.60, "eco_total": 12.40, "eco_price_item2": 1.30, "ground_price": 5.90, "ground_total": 13.70, "ground_price_item2": 1.60, "express_price": 10.40, "express_total": 18.20, "express_price_item2": 2.90 },
+      { "kyHieu": "VN7", "productType": "Football Jersey", "size": "XL",  "pricing1": 8.30, "pricing2": 8.90, "eco_price": 4.80, "eco_total": 13.10, "eco_price_item2": 1.40, "ground_price": 6.10, "ground_total": 14.40, "ground_price_item2": 1.70, "express_price": 10.80, "express_total": 19.10, "express_price_item2": 3.10 },
+      { "kyHieu": "VN7", "productType": "Football Jersey", "size": "2XL", "pricing1": 8.80, "pricing2": 9.40, "eco_price": 4.80, "eco_total": 13.60, "eco_price_item2": 1.40, "ground_price": 6.10, "ground_total": 14.90, "ground_price_item2": 1.70, "express_price": 10.80, "express_total": 19.60, "express_price_item2": 3.10 },
+
+      { "kyHieu": "VN3", "productType": "Ceramic Mug 11oz", "size": "N/A", "pricing1": 3.40, "pricing2": 3.90, "eco_price": 5.20, "eco_total": 8.60, "eco_price_item2": 2.10, "ground_price": 6.40, "ground_total": 9.80, "ground_price_item2": 2.40, "express_price": 11.00, "express_total": 14.40, "express_price_item2": 3.60 },
+      { "kyHieu": "VN3", "productType": "Ceramic Mug 11oz", "size": "11oz", "pricing1": 3.40, "pricing2": 3.90, "eco_price": 5.20, "eco_total": 8.60, "eco_price_item2": 2.10, "ground_price": 6.40, "ground_total": 9.80, "ground_price_item2": 2.40, "express_price": 11.00, "express_total": 14.40, "express_price_item2": 3.60 },
+      { "kyHieu": "VN3", "productType": "Ceramic Mug 11oz", "size": "15oz", "pricing1": 3.90, "pricing2": 4.40, "eco_price": 5.40, "eco_total": 9.30, "eco_price_item2": 2.20, "ground_price": 6.60, "ground_total": 10.50, "ground_price_item2": 2.50, "express_price": 11.40, "express_total": 15.30, "express_price_item2": 3.80 }
+    ]
+  },
+  {
+    "filename": "HappyC_VendorLibrary_p.creative_2026-06.xlsx",
+    "generalInfo": [
+      { "kyHieu": "CR1", "productType": "Tumbler 20oz", "chatLieu": "Stainless steel", "notes": "" }
+    ],
+    "pricing": [
+      { "kyHieu": "CR1", "productType": "Tumbler 20oz", "size": "20oz", "pricing1": 6.10, "pricing2": 6.70, "eco_price": 6.20, "eco_total": 12.30, "eco_price_item2": 2.40, "ground_price": 7.40, "ground_total": 13.50, "ground_price_item2": 2.70, "express_price": 12.60, "express_total": 18.70, "express_price_item2": 4.20 },
+      { "kyHieu": "CR1", "productType": "Tumbler 20oz", "size": "30oz", "pricing1": 7.20, "pricing2": 7.80, "eco_price": 6.60, "eco_total": 13.80, "eco_price_item2": 2.60, "ground_price": 7.80, "ground_total": 15.00, "ground_price_item2": 2.90, "express_price": 13.20, "express_total": 20.40, "express_price_item2": 4.50 }
+    ]
+  }
+]

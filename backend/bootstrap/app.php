@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'role'  => \App\Http\Middleware\RoleMiddleware::class,
+            // Ghi mốc truy cập cuối. Chỉ dùng SAU auth:sanctum — xem chú thích
+            // trong TouchLastSeen (guard mặc định của dự án là `web`).
+            'seen'  => \App\Http\Middleware\TouchLastSeen::class,
         ]);
 
     })

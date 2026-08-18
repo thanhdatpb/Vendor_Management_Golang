@@ -37,7 +37,7 @@ function RingProgress({ percent, color, size = 46 }) {
         style={{ transition: 'stroke-dasharray 0.6s ease' }}
       />
       <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle"
-        style={{ fontSize: 11, fontWeight: 800, fill: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>
+        style={{ fontSize: 11, fontWeight: 800, fill: '#1A0F00', fontFamily: "'Inter',sans-serif" }}>
         {percent}%
       </text>
     </svg>
@@ -68,8 +68,8 @@ function StatCard({ label, value, icon, color, onClick, subLabel }) {
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#9C7A50', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, fontFamily: "'Nunito',sans-serif" }}>{label}</div>
-          <div style={{ fontSize: 30, fontWeight: 900, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", lineHeight: 1 }}>{value}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#9C7A50', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, fontFamily: "'Inter',sans-serif" }}>{label}</div>
+          <div style={{ fontSize: 30, fontWeight: 900, color: '#1A0F00', fontFamily: "'Inter',sans-serif", lineHeight: 1 }}>{value}</div>
           {subLabel && <div style={{ fontSize: 11, color: '#B8956A', marginTop: 10, fontWeight: 600 }}>{subLabel}</div>}
         </div>
         <div style={{ width: 48, height: 48, borderRadius: 14, background: color + '18', color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{icon}</div>
@@ -122,7 +122,7 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
       <div onClick={onClick} style={{ padding: '16px 20px', borderBottom: '1.5px solid #F0E4CC', display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.2s', cursor: 'pointer' }}>
         <div style={{ width: 34, height: 34, borderRadius: 9, background: meta.color + '15', color: meta.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{meta.icon}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 13, color: '#1A0F00', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#1A0F00', fontFamily: "'Inter',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project}</div>
           <div style={{ fontSize: 11, color: '#9C7A50', fontWeight: 600, marginTop: 2 }}>{stats.total} form · {approvalRate}% duyệt</div>
         </div>
         <RingProgress percent={approvalRate} color={approvalRate >= 50 ? '#10B981' : '#F59E0B'} size={48} />
@@ -139,7 +139,7 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Đã duyệt</span>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{stats.approved}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Inter',sans-serif" }}>{stats.approved}</span>
           </div>
           <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
             <div style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%`, height: '100%', background: '#10B981', borderRadius: 2, transition: 'width 0.6s ease' }} />
@@ -157,7 +157,7 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Chờ duyệt</span>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{pending}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Inter',sans-serif" }}>{pending}</span>
           </div>
           <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
             <div style={{ width: `${stats.total > 0 ? (pending / stats.total) * 100 : 0}%`, height: '100%', background: '#F59E0B', borderRadius: 2, transition: 'width 0.6s ease' }} />
@@ -175,7 +175,7 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }} />
               <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Từ chối</span>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Nunito',sans-serif" }}>{stats.rejected}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827', fontFamily: "'Inter',sans-serif" }}>{stats.rejected}</span>
           </div>
           <div style={{ height: 4, background: '#F3F4F6', borderRadius: 2, overflow: 'hidden' }}>
             <div style={{ width: `${stats.total > 0 ? (stats.rejected / stats.total) * 100 : 0}%`, height: '100%', background: '#EF4444', borderRadius: 2, transition: 'width 0.6s ease' }} />
@@ -474,7 +474,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const TABLE_COLS = ['STT', 'Project', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];
 
   const sHdr = { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' };
-  const h3S = { fontSize: 15, fontWeight: 900, color: HC.ink, margin: 0, fontFamily: "'Nunito',sans-serif" };
+  const h3S = { fontSize: 15, fontWeight: 900, color: HC.ink, margin: 0, fontFamily: "'Inter',sans-serif" };
   const refreshBtn = fn => (
     <button
       onClick={async () => {
@@ -488,7 +488,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         marginLeft: 'auto', padding: '5px 14px', borderRadius: 8,
         fontSize: 11, fontWeight: 800,
         cursor: isRefreshing ? 'not-allowed' : 'pointer',
-        fontFamily: "'Nunito',sans-serif",
+        fontFamily: "'Inter',sans-serif",
         opacity: isRefreshing ? 0.8 : 1,
       }}
     >
@@ -502,7 +502,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   const filteredProjects = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
 
   return (
-    <div style={{ fontFamily: "'Nunito Sans',sans-serif", maxWidth: 1440, margin: '0 auto' }}>
+    <div style={{ fontFamily: "'Inter',sans-serif", maxWidth: 1440, margin: '0 auto' }}>
       <style>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(12px); }
@@ -514,7 +514,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, animation: 'fadeUp 0.5s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#F8F9FA', border: '1.5px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#9C7A50' }}><AimOutlined /></div>
-          <span style={{ fontSize: 15, fontWeight: 800, color: '#1A0F00', fontFamily: "'Nunito',sans-serif" }}>Thống Kê Theo Project</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: '#1A0F00', fontFamily: "'Inter',sans-serif" }}>Thống Kê Theo Project</span>
         </div>
       </div>
 
@@ -551,7 +551,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
               color: HC.orangeDark,
               fontSize: 12,
               fontWeight: 800,
-              fontFamily: "'Nunito',sans-serif"
+              fontFamily: "'Inter',sans-serif"
             }}>
               {pendingProducts.length} form chờ xử lý
             </span>
@@ -579,10 +579,10 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
               <CheckCircleFilled style={{ fontSize: 32, color: '#16a34a' }} />
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#15803d', fontFamily: "'Nunito',sans-serif", marginBottom: 6 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#15803d', fontFamily: "'Inter',sans-serif", marginBottom: 6 }}>
                 Không có form nào đang chờ duyệt
               </div>
-              <div style={{ fontSize: 12, color: '#4d7c5f', fontWeight: 600, fontFamily: "'Nunito Sans',sans-serif" }}>
+              <div style={{ fontSize: 12, color: '#4d7c5f', fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                 Tất cả form đã được xử lý. Hệ thống tự động cập nhật mỗi 15 giây khi có form mới.
               </div>
             </div>

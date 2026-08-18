@@ -38,7 +38,7 @@ export default function AccountChooser({ accounts = [], onSelect, busyId = null,
                 padding: '14px 16px', borderRadius: 14, textAlign: 'left',
                 border: '1.5px solid #FDE8B8', background: busy ? '#FDF3DC' : '#FFFDF9',
                 cursor: anyBusy ? 'default' : 'pointer', opacity: anyBusy && !busy ? 0.55 : 1,
-                transition: 'all 0.15s', fontFamily: "'Nunito', sans-serif",
+                transition: 'all 0.15s', fontFamily: "'Inter', sans-serif",
               }}
               onMouseEnter={(e) => { if (!anyBusy) { e.currentTarget.style.background = '#FDF3DC'; e.currentTarget.style.borderColor = '#F5A623'; } }}
               onMouseLeave={(e) => { if (!anyBusy) { e.currentTarget.style.background = '#FFFDF9'; e.currentTarget.style.borderColor = '#FDE8B8'; } }}

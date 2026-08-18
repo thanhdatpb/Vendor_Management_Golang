@@ -117,7 +117,7 @@ export default function Login() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -190,7 +190,7 @@ export default function Login() {
           background: #FFFDF9;
           color: #1a1208;
           font-size: 14px;
-          font-family: 'Nunito Sans', sans-serif;
+          font-family: 'Inter', sans-serif;
           outline: none;
           transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         }
@@ -207,7 +207,7 @@ export default function Login() {
           padding: 14px;
           border: none;
           border-radius: 14px;
-          font-family: 'Nunito', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 15px;
           font-weight: 800;
           cursor: pointer;
@@ -249,7 +249,7 @@ export default function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "'Nunito', sans-serif",
+        fontFamily: "'Inter', sans-serif",
         background: `radial-gradient(ellipse at 60% 40%, ${ORANGE_MID} 0%, #FFF8EE 45%, #FFFBF4 100%)`,
         position: "relative",
         overflow: "hidden",
@@ -355,7 +355,7 @@ export default function Login() {
             </div>
             <div style={{
               marginTop: 6, fontSize: 13, color: "#9C7A50",
-              fontFamily: "'Nunito Sans', sans-serif", fontWeight: 600,
+              fontFamily: "'Inter', sans-serif", fontWeight: 600,
             }}>
               Đăng nhập để tiếp tục công việc tại Vendor Management
             </div>
@@ -372,7 +372,7 @@ export default function Login() {
               fontSize: 13,
               fontWeight: 600,
               marginBottom: 20,
-              fontFamily: "'Nunito Sans', sans-serif",
+              fontFamily: "'Inter', sans-serif",
               display: "flex",
               alignItems: "center",
               gap: 8,
@@ -388,7 +388,7 @@ export default function Login() {
               <AccountChooser accounts={selection.accounts} onSelect={handleSelectAccount} busyId={selectBusyId} />
               <button
                 onClick={() => { setSelection(null); setSelectBusyId(null); setError(""); }}
-                style={{ display: "block", margin: "18px auto 0", background: "none", border: "none", color: "#9C7A50", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", fontFamily: "'Nunito', sans-serif" }}
+                style={{ display: "block", margin: "18px auto 0", background: "none", border: "none", color: "#9C7A50", fontSize: 12.5, fontWeight: 700, cursor: "pointer", textDecoration: "underline", fontFamily: "'Inter', sans-serif" }}
               >
                 ← Đăng nhập bằng email khác
               </button>
@@ -534,7 +534,7 @@ export default function Login() {
             <p style={{
               textAlign: "center", marginTop: 10,
               fontSize: 10, color: "#C4B49A",
-              fontFamily: "'Nunito Sans', sans-serif", fontWeight: 600,
+              fontFamily: "'Inter', sans-serif", fontWeight: 600,
             }}>
               Dành cho nhân sự — tài khoản phải được Admin cấp phép
             </p>
@@ -550,7 +550,7 @@ export default function Login() {
             textAlign: "center",
             fontSize: 11,
             color: "#d89435",
-            fontFamily: "'Nunito Sans', sans-serif",
+            fontFamily: "'Inter', sans-serif",
             fontWeight: 600,
             letterSpacing: "0.06em",
           }}>

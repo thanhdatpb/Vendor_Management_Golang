@@ -6,6 +6,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import SellerDashboard from "./pages/SellerDashboard";
 import VendorDashboard from "./pages/VendorDashboard";
 import CsfDashboard from "./pages/CsfDashboard";
+import MarvelVendorLibrary from "./components/csfpd/MarvelVendorLibrary";
 import PdDashboard from "./pages/PdDashboard";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -68,7 +69,7 @@ export default function App() {
         element={
           <ProtectedRoute>
             <RoleRoute allow={["marvel"]}>
-              <CsfDashboard roleLabel="Marvel" />
+              <CsfDashboard roleLabel="Marvel" libraryComponent={MarvelVendorLibrary} />
             </RoleRoute>
           </ProtectedRoute>
         }

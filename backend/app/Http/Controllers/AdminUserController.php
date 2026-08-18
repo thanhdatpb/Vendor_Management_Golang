@@ -17,8 +17,18 @@ class AdminUserController extends Controller
     // =========================
     public function index(Request $request)
     {
-        $users = User::select('id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at')
-            ->orderByRaw("FIELD(role, 'admin', 'vendor', 'csf', 'marvel', 'seller', 'pd')")
+        $users = User::select('id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at', 'last_seen_at')
+            // `FIELD()` chỉ có ở MySQL — endpoint này vì thế không test được trên
+            // SQLite (500: no such function: FIELD). CASE cho đúng thứ tự đó và
+            // chạy trên cả hai. `ELSE 0` giữ nguyên hành vi cũ: role lạ xếp đầu.
+            ->orderByRaw("CASE role
+                WHEN 'admin'  THEN 1
+                WHEN 'vendor' THEN 2
+                WHEN 'csf'    THEN 3
+                WHEN 'marvel' THEN 4
+                WHEN 'seller' THEN 5
+                WHEN 'pd'     THEN 6
+                ELSE 0 END")
             ->orderBy('project')
             ->orderBy('full_name')
             ->get()
@@ -30,6 +40,9 @@ class AdminUserController extends Controller
                 'project'   => $u->project,
                 'is_active' => (bool) $u->is_active,
                 'avatar_url'=> $u->avatar_url,
+                // Mốc thao tác gần nhất. null = chưa truy cập lần nào kể từ khi
+                // tính năng này được bật.
+                'last_seen_at' => optional($u->last_seen_at)->toIso8601String(),
             ]);
 
         return response()->json(['users' => $users]);
@@ -48,26 +61,32 @@ class AdminUserController extends Controller
             'full_name' => 'required|string|max:255',
             'role'      => ['required', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf', 'marvel'])],
             'project'   => [
-                Rule::requiredIf(in_array($request->role, ['seller', 'pd'])),
+                // PD tra cứu thư viện của MỌI project nên không cần gán project.
+                // Vẫn nhận nếu Admin có gửi — chỉ là không bắt buộc và không dùng
+                // để phân quyền nữa.
+                Rule::requiredIf(in_array($request->role, ['seller'])),
                 'nullable',
                 Rule::in(self::$VALID_PROJECTS),
             ],
         ], [
-            'project.required_if' => 'Project là bắt buộc khi role là seller hoặc PD',
+            'project.required_if' => 'Project là bắt buộc khi role là seller',
             'project.in'     => 'Project không hợp lệ',
         ]);
 
-        $email        = strtolower(trim($validated['email']));
-        $needsProject = in_array($validated['role'], ['seller', 'pd']);
-        $project      = $needsProject ? $validated['project'] : null;
+        $email = strtolower(trim($validated['email']));
+        // `keepsProject` = role có LƯU project hay không (seller bắt buộc, PD tuỳ ý).
+        // Khác với "cần project để phân quyền" — PD không dùng project nữa.
+        $keepsProject = in_array($validated['role'], ['seller', 'pd']);
+        $project      = $keepsProject ? ($validated['project'] ?? null) : null;
 
         // Chặn trùng ĐÚNG cặp (email + role + project). Cho phép cùng email nếu
         // khác role hoặc khác project.
         $dupQuery = User::where('email', $email)->where('role', $validated['role']);
-        $needsProject ? $dupQuery->where('project', $project) : $dupQuery->whereNull('project');
+        // `where('project', null)` sinh ra `= NULL` — không bao giờ khớp. Phải whereNull.
+        $project !== null ? $dupQuery->where('project', $project) : $dupQuery->whereNull('project');
         if ($dupQuery->exists()) {
             return response()->json([
-                'message' => $needsProject
+                'message' => $project !== null
                     ? 'Email này đã có ở role "' . $validated['role'] . '" cho project này rồi'
                     : 'Email này đã có ở role "' . $validated['role'] . '" rồi',
             ], 422);
@@ -120,7 +139,10 @@ class AdminUserController extends Controller
         ]);
 
         $newRole = $validated['role'] ?? $user->role;
-        $newRoleNeedsProject = in_array($newRole, ['seller', 'pd']);
+        // PD giữ nguyên project đang có trong DB (không ép về null khi Admin sửa
+        // tên) — project của PD không còn dùng để phân quyền, nhưng cũng không
+        // có lý do gì để xoá dữ liệu đang có.
+        $newRoleKeepsProject = in_array($newRole, ['seller', 'pd']);
 
         // Nếu hạ role admin → kiểm tra vẫn còn ít nhất 1 admin active khác
         if ($user->role === 'admin' && $newRole !== 'admin') {
@@ -136,13 +158,13 @@ class AdminUserController extends Controller
             }
         }
 
-        $newProject = $newRoleNeedsProject ? ($validated['project'] ?? $user->project) : null;
+        $newProject = $newRoleKeepsProject ? ($validated['project'] ?? $user->project) : null;
 
         // Không cho đổi thành cặp (email, role, project) đã có ở tài khoản khác.
         $dupQuery = User::where('email', $user->email)
             ->where('role', $newRole)
             ->where('id', '!=', $user->id);
-        $newRoleNeedsProject ? $dupQuery->where('project', $newProject) : $dupQuery->whereNull('project');
+        $newProject !== null ? $dupQuery->where('project', $newProject) : $dupQuery->whereNull('project');
         if ($dupQuery->exists()) {
             return response()->json([
                 'message' => 'Đã có tài khoản khác cùng email ở role/project này',
@@ -155,9 +177,7 @@ class AdminUserController extends Controller
             'full_name' => $validated['full_name'] ?? $user->full_name,
             'name'      => $validated['full_name'] ?? $user->name,
             'role'      => $newRole,
-            'project'   => $newRoleNeedsProject
-                ? ($validated['project'] ?? $user->project)
-                : null,
+            'project'   => $newProject,
         ]);
 
         $this->auditLog($request, 'UPDATE_USER', $before, $user);

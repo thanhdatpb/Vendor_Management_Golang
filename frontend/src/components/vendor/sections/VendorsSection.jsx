@@ -522,9 +522,9 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     } catch (err) { await loadVendors(true); alert(`Lỗi xóa [${err.response?.status}]: ${getDetailedError(err)}`); }
   };
 
-  const inp3 = { padding: '7px 9px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, color: HC.ink2, background: HC.surface2, width: '100%', boxSizing: 'border-box', outline: 'none', fontFamily: "'Nunito Sans',sans-serif", transition: 'border-color 0.2s' };
-  const TH2 = (extra = {}) => ({ padding: '8px 10px', fontWeight: 900, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: extra.textAlign || 'center', color: '#fff', background: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, border: `1px solid ${activeTab === 'bestseller' ? '#C8A000' : HC.orange}`, fontFamily: "'Nunito',sans-serif", verticalAlign: 'middle', ...extra });
-  const TD = (extra = {}) => ({ padding: '9px 10px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`, textAlign: extra.textAlign || 'center', verticalAlign: 'middle', background: HC.surface2, fontFamily: "'Nunito Sans',sans-serif", ...extra });
+  const inp3 = { padding: '7px 9px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, color: HC.ink2, background: HC.surface2, width: '100%', boxSizing: 'border-box', outline: 'none', fontFamily: "'Inter',sans-serif", transition: 'border-color 0.2s' };
+  const TH2 = (extra = {}) => ({ padding: '8px 10px', fontWeight: 900, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: extra.textAlign || 'center', color: '#fff', background: activeTab === 'bestseller' ? HC.gold : HC.orangeDark, border: `1px solid ${activeTab === 'bestseller' ? '#C8A000' : HC.orange}`, fontFamily: "'Inter',sans-serif", verticalAlign: 'middle', ...extra });
+  const TD = (extra = {}) => ({ padding: '9px 10px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`, textAlign: extra.textAlign || 'center', verticalAlign: 'middle', background: HC.surface2, fontFamily: "'Inter',sans-serif", ...extra });
   const TDalt = (extra = {}) => ({ ...TD(extra), background: activeTab === 'bestseller' ? HC.goldLight : HC.orangePale });
   const fmt = n => (n != null && n !== '') ? Number(n).toFixed(2) : '—';
 
@@ -577,7 +577,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
           <div style={{ padding: '18px 22px', background: HC.ink, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(245,166,35,0.15)', border: '1.5px solid rgba(245,166,35,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📥</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Xác nhận Import Vendor</div>
+              <div style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Inter',sans-serif" }}>Xác nhận Import Vendor</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Tìm thấy <b style={{ color: HC.orange }}>{uniqueCount} vendor</b> ({importPreview.length} phân loại)</div>
             </div>
             {!importing && <button onClick={() => { setImportConfirmOpen(false); setImportPreview(null); setImportResult(null); }} style={{ width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.08)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)' }}>✕</button>}
@@ -739,7 +739,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               {activeTab === 'bestseller' ? '⭐' : '📋'}
             </div>
             <div>
-              <div style={{ fontWeight: 900, fontSize: 13, color: '#fff', fontFamily: "'Nunito',sans-serif", lineHeight: 1 }}>
+              <div style={{ fontWeight: 900, fontSize: 13, color: '#fff', fontFamily: "'Inter',sans-serif", lineHeight: 1 }}>
                 {selectedIds.size} vendor đã chọn
               </div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
@@ -786,7 +786,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 24 }}>{vendorModalMode === 'edit' ? '✏️' : (activeTab === 'bestseller' ? '⭐' : '➕')}</span>
                 <div>
-                  <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>{vendorModalMode === 'edit' ? 'Sửa Vendor' : (activeTab === 'bestseller' ? 'Tạo Best Seller Vendor' : 'Thêm mới Vendor')}</div>
+                  <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Inter',sans-serif" }}>{vendorModalMode === 'edit' ? 'Sửa Vendor' : (activeTab === 'bestseller' ? 'Tạo Best Seller Vendor' : 'Thêm mới Vendor')}</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>{vendorModalMode === 'edit' ? 'Chỉnh sửa thông tin nhà cung cấp' : 'Nhập thông tin nhà cung cấp mới'}</div>
                 </div>
               </div>

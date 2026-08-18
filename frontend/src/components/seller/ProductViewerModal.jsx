@@ -200,7 +200,7 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
     toastDiv.style.cssText = `
       position: fixed; bottom: 20px; right: 20px; background: ${bgColor};
       color: white; padding: 12px 20px; border-radius: 8px; z-index: 10000;
-      font-family: 'Nunito Sans', sans-serif; font-size: 13px;
+      font-family: 'Inter', sans-serif; font-size: 13px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out;
     `;
     toastDiv.textContent = message;
@@ -346,10 +346,10 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
               <div style={{ width: 4, height: 22, borderRadius: 99, background: 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito',sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Inter',sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {isMobile ? (product.product_type || `#${product.id}`) : 'Chi tiết sản phẩm'}
               </div>
-              {!isMobile && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>}
+              {!isMobile && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontFamily: "'Inter',sans-serif", marginTop: 1 }}>{product.product_type || `#${product.id}`}</div>}
             </div>
             <Badge status={getStatus(product)} />
             {!isMobile && selectedCount > 0 && <span style={{ padding: '3px 12px', borderRadius: 999, background: 'rgba(22,163,74,0.25)', border: '1px solid rgba(22,163,74,0.5)', color: '#4ade80', fontSize: 11, fontWeight: 800 }}>✓ Đã chọn {selectedCount} nhà cung cấp</span>}

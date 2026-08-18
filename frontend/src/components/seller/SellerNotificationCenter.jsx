@@ -126,7 +126,7 @@ export default function SellerNotificationCenter({
 
             {/* ── Header ── */}
             <div style={{ padding: '14px 18px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 900, fontSize: 15, color: '#fff', fontFamily: "'Inter',sans-serif", display: 'flex', alignItems: 'center', gap: 8 }}>
                 🔔 Thông báo
                 {totalUnread > 0 && (
                   <span style={{ background: 'rgba(255,255,255,0.22)', color: '#fff', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 10px' }}>
@@ -136,7 +136,7 @@ export default function SellerNotificationCenter({
               </span>
               {totalUnread > 0 && (
                 <button onClick={markAllAsRead}
-                  style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '5px 12px', fontFamily: "'Nunito',sans-serif", transition: 'all 0.2s' }}
+                  style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', borderRadius: 8, padding: '5px 12px', fontFamily: "'Inter',sans-serif", transition: 'all 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.28)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
                 >
@@ -161,7 +161,7 @@ export default function SellerNotificationCenter({
                       {isReq(selectedNotif) ? 'Yêu cầu' : 'Tin tức'}
                     </span>
                   </div>
-                  <div style={{ fontWeight: 900, fontSize: 14, color: HC.ink, fontFamily: "'Nunito',sans-serif", lineHeight: 1.4, marginTop: 10, marginBottom: 14 }}>{selectedNotif.title}</div>
+                  <div style={{ fontWeight: 900, fontSize: 14, color: HC.ink, fontFamily: "'Inter',sans-serif", lineHeight: 1.4, marginTop: 10, marginBottom: 14 }}>{selectedNotif.title}</div>
                   <div style={{ background: HC.orangePale, border: `1px solid ${HC.border}`, borderRadius: 12, padding: '14px 16px', fontSize: 13, color: HC.ink2, lineHeight: 1.7, whiteSpace: 'pre-wrap', marginBottom: 16 }}>
                     {selectedNotif.message || '(Không có nội dung)'}
                   </div>
@@ -189,7 +189,7 @@ export default function SellerNotificationCenter({
                     )}
                   </div>
                   {selectedNotif.productId && onRequestClick && isReq(selectedNotif) && (
-                    <button onClick={() => { onRequestClick(selectedNotif); setSelectedNotif(null); setIsOpen(false); }} style={{ marginTop: 20, width: '100%', padding: '10px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, border: 'none', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif" }}>
+                    <button onClick={() => { onRequestClick(selectedNotif); setSelectedNotif(null); setIsOpen(false); }} style={{ marginTop: 20, width: '100%', padding: '10px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, border: 'none', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter',sans-serif" }}>
                       🔍 Xem sản phẩm liên quan
                     </button>
                   )}
@@ -229,7 +229,7 @@ export default function SellerNotificationCenter({
                           <span style={{ fontSize: 9, fontWeight: 800, borderRadius: 99, padding: '2px 7px', background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, whiteSpace: 'nowrap', flexShrink: 0 }}>
                             {meta.icon} {meta.label}
                           </span>
-                          <span style={{ fontWeight: notif.read ? 600 : 800, fontSize: 12.5, color: notif.read ? HC.muted : HC.ink, fontFamily: "'Nunito',sans-serif", flex: 1, lineHeight: 1.3 }}>
+                          <span style={{ fontWeight: notif.read ? 600 : 800, fontSize: 12.5, color: notif.read ? HC.muted : HC.ink, fontFamily: "'Inter',sans-serif", flex: 1, lineHeight: 1.3 }}>
                             {notif.title}
                           </span>
                           {!notif.read && <div style={{ width: 7, height: 7, borderRadius: '50%', background: accentColor, flexShrink: 0, marginTop: 2 }} />}
@@ -255,7 +255,7 @@ export default function SellerNotificationCenter({
 
             {/* ── Footer ── */}
             <div style={{ padding: '9px 16px', borderTop: `1px solid ${HC.border}`, background: HC.cream, textAlign: 'center' }}>
-              <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: HC.orange, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif" }}>
+              <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: HC.orange, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter',sans-serif" }}>
                 Đóng
               </button>
             </div>

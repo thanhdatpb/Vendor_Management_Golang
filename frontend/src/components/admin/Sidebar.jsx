@@ -64,7 +64,7 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
           <div style={{
             fontSize: 13.5, fontWeight: isActive ? 700 : 500,
             color: isActive ? DARK.textActive : hovered ? DARK.text : DARK.textMuted,
-            fontFamily: "'Nunito',sans-serif",
+            fontFamily: "'Inter',sans-serif",
             transition: 'color 0.18s ease', letterSpacing: '0.01em',
           }}>
             {item.label}
@@ -84,7 +84,7 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
           position: 'absolute', left: 'calc(100% + 12px)', top: '50%',
           transform: 'translateY(-50%)',
           background: '#0f172a', color: '#f1f5f9',
-          fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif",
+          fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
           padding: '6px 12px', borderRadius: 8,
           whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 9999,
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
@@ -146,7 +146,7 @@ function CollapsedUserItem({ user, logout }) {
             <div style={{ padding: '4px 6px 10px', borderBottom: `1px solid ${DARK.border}` }}>
               <div style={{
                 fontSize: 13, fontWeight: 700, color: '#f1f5f9',
-                fontFamily: "'Nunito',sans-serif",
+                fontFamily: "'Inter',sans-serif",
               }}>
                 {user?.full_name || user?.name || 'Admin'}
               </div>
@@ -165,7 +165,7 @@ function CollapsedUserItem({ user, logout }) {
                 background: 'rgba(248,113,113,0.08)',
                 border: '1px solid rgba(248,113,113,0.2)',
                 borderRadius: 8, color: '#f87171',
-                fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif",
+                fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif",
                 cursor: 'pointer', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', gap: 7, transition: 'all 0.15s ease',
               }}
@@ -253,7 +253,7 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
           <div style={{ animation: 'hc-fade-in 0.25s ease' }}>
             <div style={{
               color: '#f1f5f9', fontWeight: 800, fontSize: 14.5,
-              fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em', lineHeight: 1.2,
+              fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em', lineHeight: 1.2,
             }}>
               Happy Creative LLC
             </div>
@@ -288,7 +288,7 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontSize: 13, fontWeight: 700, color: '#f1f5f9',
-                fontFamily: "'Nunito',sans-serif",
+                fontFamily: "'Inter',sans-serif",
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
               }}>
                 {user?.full_name || user?.name || 'Admin'}
@@ -326,7 +326,7 @@ export default function Sidebar({ active, setActive, sidebarOpen, setSidebarOpen
               }}
             >
               <LogoutOutlined style={{ fontSize: 12 }} />
-              <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif" }}>
+              <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>
                 Đăng xuất
               </span>
             </div>

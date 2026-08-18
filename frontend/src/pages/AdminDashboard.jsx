@@ -341,7 +341,7 @@ export default function AdminDashboard() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: ${HC.cream}; border-radius: 10px; }
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
         display: 'flex',
         height: '100vh',
         background: `linear-gradient(135deg, ${HC.orangePale} 0%, ${HC.cream} 100%)`,
-        fontFamily: "'Nunito Sans',sans-serif",
+        fontFamily: "'Inter',sans-serif",
         color: HC.ink,
         overflow: 'hidden',
       }}>
@@ -399,7 +399,7 @@ export default function AdminDashboard() {
                 color: HC.ink,
                 fontWeight: 900,
                 fontSize: 16,
-                fontFamily: "'Nunito',sans-serif",
+                fontFamily: "'Inter',sans-serif",
                 letterSpacing: '-0.01em',
               }}>
                 {PAGE_TITLES[active]}

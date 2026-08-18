@@ -1,24 +1,34 @@
 // ════════════════════════════════════════════════════════════════════════════
-//  VENDOR LIBRARY VIEWER — CSF / PD (read-only, ẩn giá, gộp Link Template)
-//  Tái sử dụng dữ liệu Thư Viện Vendor (giống Seller) nhưng:
+//  VENDOR LIBRARY VIEW — bảng DÙNG CHUNG cho các bộ phận read-only.
+//
+//  Component này KHÔNG tự quyết bộ phận nào thấy gì. Nó nhận `department`
+//  (khai báo ở ./departments.js) rồi dựng bảng theo đúng khai báo đó.
+//  → Muốn đổi gì cho MỘT bộ phận: sửa ./departments.js, hoặc file bọc riêng
+//    của bộ phận đó (CsfVendorLibrary / PdVendorLibrary / MarvelVendorLibrary).
+//    KHÔNG sửa file này trừ khi đổi cho tất cả.
+//
+//  Điểm chung của mọi bộ phận dùng view này:
 //   - Không hiển thị BẤT KỲ trường giá nào (Target Cost, Economy Price, Total...)
 //   - Gộp "Thông tin chung về phôi" + "Link Template" (lấy từ phần Về giá) vào 1 bảng duy nhất
 // ════════════════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { HC } from '../../constants/sellerTheme';
 import { vendorLibraryApi } from '../../services/api';
+import { subscribeVendorLibraryChanges } from '../../services/echo';
+import { stripHiddenFields, currentUserRole } from '../../constants/vendorFieldVisibility';
+import { departmentFor } from './departments';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
   padding: '7px 8px', fontWeight: 800, fontSize: 9.5, textTransform: 'uppercase',
   letterSpacing: '0.05em', color: '#fff', background: HC.orangeDark,
-  border: `1px solid ${HC.orange}`, fontFamily: "'Nunito',sans-serif",
+  border: `1px solid ${HC.orange}`, fontFamily: "'Inter',sans-serif",
   verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap', ...extra,
 });
 const TD = (idx, extra = {}) => ({
   padding: '7px 8px', fontSize: 12, color: HC.ink2, border: `1px solid ${HC.border}`,
   background: idx % 2 === 0 ? HC.surface : HC.surface2,
-  fontFamily: "'Nunito Sans',sans-serif", verticalAlign: 'top', wordBreak: 'break-word', overflowWrap: 'break-word', ...extra,
+  fontFamily: "'Inter',sans-serif", verticalAlign: 'top', wordBreak: 'break-word', overflowWrap: 'break-word', ...extra,
 });
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 const naStyle = { background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' };
@@ -115,7 +125,7 @@ function pickLinkTemplate(generalRow, processedPricing, singleVendorFile) {
 }
 
 // ── Bảng gộp: Thông tin chung về phôi + Link Template ─────────────────────────
-function MergedInfoTable({ generalInfo, pricing }) {
+function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
   const rows = generalInfo || [];
   const processedPricing = useMemo(() => withStickyKy(pricing), [pricing]);
 
@@ -138,8 +148,8 @@ function MergedInfoTable({ generalInfo, pricing }) {
             <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Hình ảnh</th>
             <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Chất liệu</th>
             <th style={{ ...TH(), width: '7%', textAlign: 'left' }}>Chi tiết Size</th>
-            <th style={{ ...TH(), width: '9%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
-            <th style={{ ...TH(), width: '8%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
+            {showLeadTime && <th style={{ ...TH(), width: '9%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>}
+            {showLeadTime && <th style={{ ...TH(), width: '8%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>}
             <th style={{ ...TH(), width: '14%', textAlign: 'left' }}>Notes</th>
             <th style={{ ...TH(), width: '8%', textAlign: 'left' }}>Link Folder</th>
             <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Link Template</th>
@@ -179,8 +189,8 @@ function MergedInfoTable({ generalInfo, pricing }) {
                   )}
                   {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
                 </td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>
-                <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>
+                {showLeadTime && <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>}
+                {showLeadTime && <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>}
                 <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{fmtNA(r.notes)}</td>
                 <td style={{ ...TD(i) }}>
                   {folderLink
@@ -205,7 +215,7 @@ function MergedInfoTable({ generalInfo, pricing }) {
 }
 
 // ── Card cho 1 file thư viện ───────────────────────────────────────────────────
-function LibraryCard({ entry, highlighted }) {
+function LibraryCard({ entry, highlighted, showLeadTime }) {
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
 
@@ -245,7 +255,7 @@ function LibraryCard({ entry, highlighted }) {
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontWeight: 800, fontSize: 12.5, color: HC.ink, fontFamily: "'Nunito',sans-serif",
+            fontWeight: 800, fontSize: 12.5, color: HC.ink, fontFamily: "'Inter',sans-serif",
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3,
           }}>
             {entry.filename?.replace(/\.xlsx?$/i, '')}
@@ -272,7 +282,7 @@ function LibraryCard({ entry, highlighted }) {
 
       {expanded && (
         <div style={{ background: HC.surface }}>
-          <MergedInfoTable generalInfo={entry.generalInfo} pricing={entry.pricing} />
+          <MergedInfoTable generalInfo={entry.generalInfo} pricing={entry.pricing} showLeadTime={showLeadTime} />
         </div>
       )}
     </div>
@@ -280,7 +290,10 @@ function LibraryCard({ entry, highlighted }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryCsfPdViewer({ projectKey }) {
+export default function VendorLibraryView({ projectKey, department }) {
+  // Không có khai báo bộ phận → bản chặt nhất (không thấy gì thêm), thay vì
+  // mặc định hiện hết.
+  const dept = departmentFor(department?.key ?? department);
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -298,20 +311,44 @@ export default function VendorLibraryCsfPdViewer({ projectKey }) {
     return s;
   }, [rawFiles]);
 
-  const fetchLibrary = useCallback(async () => {
-    setLoading(true);
+  const fetchLibrary = useCallback(async ({ silent = false } = {}) => {
+    // `silent`: làm mới nền do realtime — không bật spinner để bảng đang đọc
+    // không nhấp nháy dưới tay người dùng.
+    if (!silent) setLoading(true);
     setFetchError(null);
     try {
       const res = await vendorLibraryApi.get('all');
-      setRawFiles(Array.isArray(res.data) ? res.data : []);
+      // Lưới an toàn: server là nơi thực thi việc lọc giá, nhưng nếu một bản
+      // server cũ (hoặc cache của trình duyệt) còn trả giá về thì component
+      // này cũng không có gì để render ra. Quy tắc "role nào thấy giá" nằm ở
+      // constants/vendorFieldVisibility.js — một chỗ duy nhất.
+      const files = Array.isArray(res.data) ? res.data : [];
+      setRawFiles(stripHiddenFields(files, currentUserRole()));
     } catch (err) {
       setFetchError(err?.response?.data?.message || err?.message || 'Không thể kết nối server. Vui lòng thử lại.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchLibrary(); }, [fetchLibrary]);
+  // ─── Đồng bộ thư viện (mục 16) ───────────────────────────────────────────
+  // CSF/PD dùng thư viện làm nguồn tra cứu chính thức khi hỗ trợ khách, nên
+  // xem phải bản mới nhất. Trước đây chỉ tải lúc mount: Vendor import file mới
+  // xong, CSF/PD đang mở tab vẫn tư vấn khách bằng dữ liệu cũ.
+  useEffect(() => {
+    fetchLibrary();
+
+    const refreshWhenVisible = () => { if (!document.hidden) fetchLibrary({ silent: true }); };
+    const unsubscribe = subscribeVendorLibraryChanges(() => fetchLibrary({ silent: true }));
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [fetchLibrary]);
 
   const displayFiles = useMemo(() => {
     let files = rawFiles;
@@ -380,7 +417,7 @@ export default function VendorLibraryCsfPdViewer({ projectKey }) {
               style={{
                 paddingLeft: 12, paddingRight: searchQuery ? 30 : 12, paddingTop: 7, paddingBottom: 7,
                 borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`, background: HC.surface,
-                color: HC.ink, fontSize: 12, fontFamily: "'Nunito Sans',sans-serif", outline: 'none',
+                color: HC.ink, fontSize: 12, fontFamily: "'Inter',sans-serif", outline: 'none',
                 width: 280, boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               }}
             />
@@ -412,7 +449,7 @@ export default function VendorLibraryCsfPdViewer({ projectKey }) {
             </div>
           </div>
         ) : (
-          displayFiles.map(entry => <LibraryCard key={entry.id} entry={entry} />)
+          displayFiles.map(entry => <LibraryCard key={entry.id} entry={entry} showLeadTime={dept.showLeadTime} />)
         )}
       </div>
     </div>

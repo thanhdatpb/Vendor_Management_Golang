@@ -2,11 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { PlusOutlined, EditOutlined, LockOutlined, UnlockOutlined, LoadingOutlined, ExclamationCircleFilled } from '@ant-design/icons';
 import { HC } from '../constants';
 import { adminUserApi } from '../../../services/api';
+import { formatLastSeen } from '../lastSeen';
 
 // ─────────────────────────────────────────────
 const PROJECTS = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
+// PD KHÔNG còn nằm trong tab project: PD tra cứu thư viện của mọi project nên
+// gán project cho PD không còn ý nghĩa. Tab project giờ chỉ còn Seller.
 const TABS = [
   ...PROJECTS.map(p => ({ key: p, label: p.replace(' Project', ''), type: 'seller' })),
+  { key: '__pd__', label: 'PD', type: 'pd' },
   { key: '__csf__', label: 'CSF', type: 'csf' },
   { key: '__marvel__', label: 'Marvel', type: 'marvel' },
   { key: '__admin_vendor__', label: 'Admin & Vendor', type: 'admin_vendor' },
@@ -14,7 +18,7 @@ const TABS = [
 
 // Tab chỉ chứa đúng 1 role → modal Thêm/Sửa khoá cứng role, không cho chọn.
 // `type` của tab trùng luôn với giá trị role để dùng trực tiếp làm fixedRole.
-const SINGLE_ROLE_TABS = ['csf', 'marvel'];
+const SINGLE_ROLE_TABS = ['pd', 'csf', 'marvel'];
 
 const ROLE_BADGE = {
   admin:  { bg: '#FEF3DC', color: HC.orangeDark, label: 'Admin' },
@@ -28,12 +32,12 @@ const ROLE_BADGE = {
 // Role options theo từng loại tab, dùng cho select trong modal Thêm/Sửa nhân sự
 const ROLE_OPTIONS_BY_TAB = {
   admin_vendor: [{ value: 'admin', label: 'Admin' }, { value: 'vendor', label: 'Vendor' }],
-  seller:       [{ value: 'seller', label: 'Seller' }, { value: 'pd', label: 'PD' }],
+  seller:       [{ value: 'seller', label: 'Seller' }],
 };
 
 // Suy ra loại tab tương ứng với 1 role hiện có (dùng khi Sửa nhân sự)
 function tabTypeForRole(role) {
-  if (role === 'seller' || role === 'pd') return 'seller';
+  if (role === 'seller') return 'seller';
   if (SINGLE_ROLE_TABS.includes(role)) return role;
   return 'admin_vendor';
 }
@@ -81,7 +85,7 @@ function Modal({ title, onClose, children }) {
         width: '100%', maxWidth: 460, padding: '28px 32px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>{title}</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: HC.ink, fontFamily: "'Inter',sans-serif" }}>{title}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: HC.muted, lineHeight: 1 }}>✕</button>
         </div>
         {children}
@@ -103,7 +107,7 @@ function FormField({ label, error, children }) {
 const inputStyle = {
   width: '100%', padding: '11px 14px', borderRadius: 10,
   border: `1.5px solid ${HC.border}`, background: HC.surface2,
-  fontSize: 13, color: HC.ink, fontFamily: "'Nunito Sans',sans-serif",
+  fontSize: 13, color: HC.ink, fontFamily: "'Inter',sans-serif",
   outline: 'none', boxSizing: 'border-box',
 };
 
@@ -120,7 +124,8 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const effectiveRole = fixedRole || form.role;
-  const roleNeedsProject = ['seller', 'pd'].includes(effectiveRole);
+  // PD xem mọi project nên không cần gán project; chỉ Seller còn cần.
+  const roleNeedsProject = effectiveRole === 'seller';
 
   const validate = () => {
     const e = {};
@@ -209,13 +214,13 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions
       )}
 
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-        <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 12, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif" }}>
+        <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 12, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter',sans-serif" }}>
           Huỷ
         </button>
         <button
           onClick={handleSubmit}
           disabled={saving}
-          style={{ flex: 2, padding: '11px', borderRadius: 12, border: 'none', background: saving ? HC.muted2 : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          style={{ flex: 2, padding: '11px', borderRadius: 12, border: 'none', background: saving ? HC.muted2 : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Inter',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           {saving ? <><LoadingOutlined spin /> Đang lưu...</> : (mode === 'add' ? 'Thêm nhân sự' : 'Lưu thay đổi')}
         </button>
       </div>
@@ -244,15 +249,27 @@ function ConfirmModal({ user, onConfirm, onClose, saving }) {
         )}
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
-        <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 12, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito',sans-serif" }}>Huỷ</button>
+        <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 12, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter',sans-serif" }}>Huỷ</button>
         <button
           onClick={onConfirm}
           disabled={saving}
-          style={{ flex: 2, padding: '11px', borderRadius: 12, border: 'none', background: willLock ? HC.danger : HC.success, color: '#fff', fontSize: 13, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          style={{ flex: 2, padding: '11px', borderRadius: 12, border: 'none', background: willLock ? HC.danger : HC.success, color: '#fff', fontSize: 13, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: "'Inter',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           {saving ? <><LoadingOutlined spin /> Đang xử lý...</> : (willLock ? 'Xác nhận khoá' : 'Xác nhận mở khoá')}
         </button>
       </div>
     </Modal>
+  );
+}
+
+// ─── Ô "Lần truy cập cuối" ────────────────────
+function LastSeenCell({ iso }) {
+  const { text, stale } = formatLastSeen(iso);
+  return (
+    <span
+      title={iso ? new Date(iso).toLocaleString('vi-VN') : 'Chưa có lần truy cập nào được ghi nhận'}
+      style={{ fontSize: 12, fontWeight: 600, color: stale ? '#94a3b8' : HC.brown, fontVariantNumeric: 'tabular-nums' }}>
+      {text}
+    </span>
   );
 }
 
@@ -275,10 +292,10 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
-              <th style={thStyle}>Gmail</th>
               <th style={thStyle}>Tên nhân sự</th>
+              <th style={thStyle}>Gmail</th>
               {showRoleColumn && <th style={thStyle}>Role</th>}
-              <th style={thStyle}>Trạng thái</th>
+              <th style={thStyle}>Lần truy cập cuối</th>
               <th style={{ ...thStyle, textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
@@ -295,9 +312,6 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
                   onMouseEnter={e => e.currentTarget.style.background = HC.orangePale}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <td style={tdStyle}>
-                    <span style={{ fontFamily: 'monospace', fontSize: 12, color: HC.brown }}>{u.email}</span>
-                  </td>
-                  <td style={tdStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       {u.avatar_url ? (
                         <img src={u.avatar_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${HC.border}` }} />
@@ -307,7 +321,17 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
                         </div>
                       )}
                       <span style={{ fontWeight: 600, color: HC.ink }}>{u.full_name || '—'}</span>
+                      {/* Cột "Trạng thái" đã nhường chỗ cho "Lần truy cập cuối" —
+                          tài khoản bị khoá vẫn phải nhận ra được ngay ở đây. */}
+                      {!u.is_active && (
+                        <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
+                          Đã khoá
+                        </span>
+                      )}
                     </div>
+                  </td>
+                  <td style={tdStyle}>
+                    <span style={{ fontFamily: 'monospace', fontSize: 12, color: HC.brown }}>{u.email}</span>
                   </td>
                   {showRoleColumn && (
                     <td style={tdStyle}>
@@ -317,12 +341,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
                     </td>
                   )}
                   <td style={tdStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: u.is_active ? HC.success : '#94a3b8', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: u.is_active ? HC.success : '#94a3b8' }}>
-                        {u.is_active ? 'Hoạt động' : 'Đã khoá'}
-                      </span>
-                    </div>
+                    <LastSeenCell iso={u.last_seen_at} />
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
@@ -355,7 +374,7 @@ function usersForTab(tab, users) {
   if (!tab) return [];
   if (tab.type === 'admin_vendor') return users.filter(u => u.role === 'admin' || u.role === 'vendor');
   if (SINGLE_ROLE_TABS.includes(tab.type)) return users.filter(u => u.role === tab.type);
-  return users.filter(u => u.project === tab.key && (u.role === 'seller' || u.role === 'pd'));
+  return users.filter(u => u.project === tab.key && u.role === 'seller');
 }
 
 // ─── Main section ─────────────────────────────
@@ -443,11 +462,11 @@ export default function StaffManagementSection() {
   };
 
   return (
-    <div style={{ fontFamily: "'Nunito Sans',sans-serif" }}>
+    <div style={{ fontFamily: "'Inter',sans-serif" }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: HC.ink, fontFamily: "'Nunito',sans-serif" }}>
+          <div style={{ fontSize: 20, fontWeight: 900, color: HC.ink, fontFamily: "'Inter',sans-serif" }}>
             Quản Lý Nhân Sự
           </div>
           <div style={{ fontSize: 12, color: HC.muted, marginTop: 3, fontWeight: 600 }}>
@@ -456,7 +475,7 @@ export default function StaffManagementSection() {
         </div>
         <button
           onClick={openAdd}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito',sans-serif", boxShadow: `0 4px 14px rgba(245,166,35,0.35)`, transition: 'transform 0.15s' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Inter',sans-serif", boxShadow: `0 4px 14px rgba(245,166,35,0.35)`, transition: 'transform 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
           onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
           <PlusOutlined /> Thêm nhân sự
@@ -477,7 +496,7 @@ export default function StaffManagementSection() {
                 background: isActive ? HC.orangeLight : HC.surface,
                 color: isActive ? HC.orangeDark : HC.muted,
                 fontSize: 12, fontWeight: isActive ? 800 : 600,
-                cursor: 'pointer', fontFamily: "'Nunito',sans-serif",
+                cursor: 'pointer', fontFamily: "'Inter',sans-serif",
                 display: 'flex', alignItems: 'center', gap: 7,
                 transition: 'all 0.15s',
               }}>

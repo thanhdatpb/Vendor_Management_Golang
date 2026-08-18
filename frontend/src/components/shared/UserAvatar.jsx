@@ -37,7 +37,7 @@ export default function UserAvatar({ user, size = 36, radius = 10, fontSize }) {
       background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`,
       color: '#fff', fontWeight: 800,
       fontSize: fontSize || Math.round(size * 0.44),
-      fontFamily: "'Nunito',sans-serif",
+      fontFamily: "'Inter',sans-serif",
     }}>
       {letter || <UserOutlined />}
     </div>

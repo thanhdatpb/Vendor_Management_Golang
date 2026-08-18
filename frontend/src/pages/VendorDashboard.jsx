@@ -231,14 +231,14 @@ export default function VendorDashboard() {
         }}>{item.icon}</div>
         {!isCollapsed && (
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: isActive ? 700 : 500, color: isActive ? DARK.textActive : hov ? DARK.text : DARK.textMuted, fontFamily: "'Nunito',sans-serif", transition: 'color 0.18s ease', letterSpacing: '0.01em' }}>{item.label}</div>
+            <div style={{ fontSize: 13.5, fontWeight: isActive ? 700 : 500, color: isActive ? DARK.textActive : hov ? DARK.text : DARK.textMuted, fontFamily: "'Inter',sans-serif", transition: 'color 0.18s ease', letterSpacing: '0.01em' }}>{item.label}</div>
           </div>
         )}
         {!isCollapsed && isActive && (
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: DARK.accent, boxShadow: `0 0 0 3px ${DARK.accent}30`, flexShrink: 0 }} />
         )}
         {isCollapsed && hov && (
-          <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', color: '#f1f5f9', fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif", padding: '6px 12px', borderRadius: 8, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', color: '#f1f5f9', fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", padding: '6px 12px', borderRadius: 8, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)' }}>
             {item.label}
             <div style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', border: '5px solid transparent', borderRightColor: '#0f172a' }} />
           </div>
@@ -250,7 +250,7 @@ export default function VendorDashboard() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         *{box-sizing:border-box;}
         ::-webkit-scrollbar{width:7px;height:7px;}
         ::-webkit-scrollbar-track{background:${HC.cream};border-radius:10px;}
@@ -259,7 +259,7 @@ export default function VendorDashboard() {
         @keyframes vendor-pulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.5);}50%{box-shadow:0 0 0 4px rgba(74,222,128,0);}}
         @keyframes vendor-fadein{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
       `}</style>
-      <div style={{ display: 'flex', height: '100vh', background: HC.orangePale, fontFamily: "'Nunito Sans',sans-serif", color: HC.ink, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', height: '100vh', background: HC.orangePale, fontFamily: "'Inter',sans-serif", color: HC.ink, overflow: 'hidden' }}>
         {/* ── Sidebar ── */}
         <div style={{ width: sidebarOpen ? 260 : 68, background: DARK.bg, display: 'flex', flexDirection: 'column', transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'visible', position: 'relative', boxShadow: '4px 0 24px rgba(0,0,0,0.25)', borderRight: `1px solid ${DARK.border}`, zIndex: 100, flexShrink: 0 }}>
           {/* Logo — click to collapse/expand */}
@@ -269,7 +269,7 @@ export default function VendorDashboard() {
             </div>
             {sidebarOpen && (
               <div style={{ animation: 'vendor-fadein 0.25s ease' }}>
-                <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: 14.5, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em' }}>Happy Creative LLC</div>
+                <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: 14.5, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em' }}>Happy Creative LLC</div>
                 <div style={{ color: HC.orange, fontSize: 9, letterSpacing: '0.2em', fontWeight: 700, textTransform: 'uppercase', marginTop: 3, opacity: 0.85 }}>Vendor Management</div>
               </div>
             )}
@@ -280,7 +280,7 @@ export default function VendorDashboard() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <UserAvatar user={user} size={36} radius={10} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.full_name || user?.name || 'Vendor'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Inter',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.full_name || user?.name || 'Vendor'}</div>
                   <div style={{ fontSize: 10, color: DARK.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}><ShopOutlined style={{ fontSize: 9, color: HC.orange }} /><span>Vendor Account</span></div>
                 </div>
               </div>
@@ -291,7 +291,7 @@ export default function VendorDashboard() {
               {showLogout && (
                 <div onClick={(e) => { e.stopPropagation(); logout(); }} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', cursor: 'pointer', animation: 'vendor-fadein 0.15s ease' }}>
                   <LogoutOutlined style={{ fontSize: 12 }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif" }}>Đăng xuất</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif" }}>Đăng xuất</span>
                 </div>
               )}
             </div>
@@ -308,7 +308,7 @@ export default function VendorDashboard() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ height: 64, background: HC.surface, borderBottom: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, boxShadow: '0 2px 12px rgba(245,166,35,0.06)' }}>
             <div style={{ width: 3, height: 28, borderRadius: 99, background: active === 'library' ? `linear-gradient(to bottom,#FFD700,#FFA500)` : `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})`, flexShrink: 0 }} />
-            <div style={{ flex: 1, color: HC.ink, fontWeight: 900, fontSize: 15, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, color: HC.ink, fontWeight: 900, fontSize: 15, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: 10 }}>
               {PAGE_TITLES[active]}
               {active === 'library' && filterProductType && <span style={{ padding: '2px 10px', borderRadius: 999, background: HC.orangeLight, border: `1.5px solid ${HC.orange}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>🔍 {filterProductType}</span>}
             </div>
@@ -341,11 +341,11 @@ function VendorCollapsedUser({ user, logout }) {
           <div style={{ position: 'absolute', left: 'calc(100% + 12px)', top: '50%', transform: 'translateY(-50%)', background: '#0f172a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '10px', zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.55)', minWidth: 165 }}>
             <div style={{ position: 'absolute', right: '100%', top: '50%', transform: 'translateY(-50%)', border: '6px solid transparent', borderRightColor: '#0f172a' }} />
             <div style={{ padding: '4px 6px 10px', borderBottom: `1px solid ${DARK_LOCAL.border}` }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Nunito',sans-serif" }}>{user?.full_name || user?.name || 'Vendor'}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Inter',sans-serif" }}>{user?.full_name || user?.name || 'Vendor'}</div>
               <div style={{ fontSize: 10, color: DARK_LOCAL.textMuted, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}><ShopOutlined style={{ fontSize: 9, color: '#f97316' }} /><span>Vendor Account</span></div>
             </div>
             <button onClick={(e) => { e.stopPropagation(); logout(); }}
-              style={{ width: '100%', marginTop: 8, padding: '7px 10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, color: '#f87171', fontSize: 12, fontWeight: 600, fontFamily: "'Nunito',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all 0.15s ease' }}
+              style={{ width: '100%', marginTop: 8, padding: '7px 10px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 8, color: '#f87171', fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'all 0.15s ease' }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.16)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}>
               <LogoutOutlined />Đăng xuất
@@ -377,7 +377,7 @@ function SidebarGhostBtn({ onClick, icon, label, danger = false, style = {} }) {
         color: danger ? (hov ? '#f87171' : DARK_BTN.textMuted) : (hov ? DARK_BTN.text : DARK_BTN.textMuted),
         cursor: 'pointer', fontSize: 13,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        transition: 'all 0.18s ease', fontFamily: "'Nunito',sans-serif", fontWeight: 600,
+        transition: 'all 0.18s ease', fontFamily: "'Inter',sans-serif", fontWeight: 600,
         ...style,
       }}
     >

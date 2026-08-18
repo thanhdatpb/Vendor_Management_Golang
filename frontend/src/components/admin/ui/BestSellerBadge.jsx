@@ -8,7 +8,7 @@ export default function BestSellerBadge() {
       background: 'linear-gradient(135deg,#FFF8DC,#FFE97A)',
       border: '1.5px solid #D4A017',
       color: '#B8860B', fontSize: 10, fontWeight: 900,
-      fontFamily: "'Nunito',sans-serif", letterSpacing: '0.04em',
+      fontFamily: "'Inter',sans-serif", letterSpacing: '0.04em',
     }}>
       ⭐ Best Seller
     </span>

@@ -32,13 +32,73 @@ export const SHIP_METHODS = [
 ];
 export const shipMethodLabel = (key) => SHIP_METHODS.find((m) => m.key === key)?.label || '';
 
-/**
- * Tải + gom thư viện vendor (đã lọc theo project) thành index:
- *   { [normProductType]: { productType, vendor, filename, sizes:[...], bySize: { [normSize]: pricingRow } } }
- */
-export async function loadVendorLibraryIndex(projectKey, skip) {
-  const res = await vendorLibraryApi.get('all');
-  const files = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+// ─── Cache theo ETag (mục 17) ─────────────────────────────────────────────
+// Mỗi lần mở một bảng giá là một lần gọi loadVendorLibraryIndex. Trước đây mỗi
+// lần đó tải NGUYÊN blob thư viện — ảnh, notes, generalInfo — chỉ để lấy danh
+// sách size và giá vốn. Giờ giữ bản đã tải kèm ETag: mở bảng thứ hai trở đi chỉ
+// còn một request điều kiện, server trả 304 với body rỗng.
+let _indexCache = { key: null, etag: null, records: null };
+
+/** Dọn cache — dùng trong test, và khi thư viện báo có thay đổi (mục 16). */
+export function resetVendorLibraryIndexCache() {
+  _indexCache = { key: null, etag: null, records: null };
+}
+
+/** Nạp danh sách record gọn. `null` = server chưa có endpoint index. */
+async function loadLeanRecords(projectKey, skip) {
+  if (typeof vendorLibraryApi.index !== 'function') return null;
+
+  const project = skip ? '' : (projectKey || '');
+  const reuse = _indexCache.records && _indexCache.key === project && _indexCache.etag;
+
+  try {
+    const res = await vendorLibraryApi.index(project, reuse ? { 'If-None-Match': _indexCache.etag } : {});
+
+    if (res.status === 304 && reuse) return _indexCache.records;
+
+    const records = Array.isArray(res.data) ? res.data : [];
+    const etag = res.headers?.etag || res.headers?.ETag || null;
+    _indexCache = { key: project, etag, records };
+    return records;
+  } catch (err) {
+    // Server cũ chưa có route này → quay về đường tải blob đầy đủ. Mọi lỗi khác
+    // (401/500) cũng nên thử đường cũ hơn là làm trắng bảng tính giá.
+    console.warn('Không dùng được index thư viện, quay về tải blob đầy đủ:', err?.message || err);
+    return null;
+  }
+}
+
+/** Gom danh sách record gọn của server thành index. */
+function indexFromRecords(records) {
+  const index = {};
+  records.forEach((record) => {
+    const ptName = (record?.productType || '').trim();
+    if (!ptName) return;
+    const key = normalizeKey(ptName);
+    if (!index[key]) {
+      index[key] = {
+        productType: ptName,
+        vendor: (record.vendorCode || '').trim(),
+        filename: (record.filename || '').replace(/\.[^.]+$/, ''),
+        sizes: [],
+        bySize: {},
+      };
+    }
+    (Array.isArray(record.sizes) ? record.sizes : []).forEach((row) => {
+      const sizeLabel = (row?.size || '').toString().trim();
+      if (!sizeLabel || sizeLabel === 'N/A') return;
+      const sKey = normalizeKey(sizeLabel);
+      if (!index[key].bySize[sKey]) {
+        index[key].bySize[sKey] = row;
+        index[key].sizes.push(sizeLabel);
+      }
+    });
+  });
+  return index;
+}
+
+/** Gom blob thư viện đầy đủ thành index (đường lùi cho server chưa có index). */
+function indexFromFiles(files, projectKey, skip) {
   const filtered = (skip || !projectKey) ? files : files.filter((f) => {
     const fp = extractFileProject(f.filename);
     return !fp || projectKey.includes(fp) || fp.includes(projectKey);
@@ -70,6 +130,22 @@ export async function loadVendorLibraryIndex(projectKey, skip) {
     });
   });
   return index;
+}
+
+/**
+ * Tải + gom thư viện vendor (đã lọc theo project) thành index:
+ *   { [normProductType]: { productType, vendor, filename, sizes:[...], bySize: { [normSize]: pricingRow } } }
+ *
+ * Ưu tiên endpoint index gọn; server chưa có thì tải blob đầy đủ như trước.
+ * Hình dạng trả về giống hệt nhau ở cả hai đường.
+ */
+export async function loadVendorLibraryIndex(projectKey, skip) {
+  const records = await loadLeanRecords(projectKey, skip);
+  if (records) return indexFromRecords(records);
+
+  const res = await vendorLibraryApi.get('all');
+  const files = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
+  return indexFromFiles(files, projectKey, skip);
 }
 
 /** Liệt kê Product Type có trong thư viện (đã lọc project) → cho picker chọn. */

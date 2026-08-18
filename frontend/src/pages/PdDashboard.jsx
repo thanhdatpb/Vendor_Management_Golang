@@ -1,46 +1,36 @@
 // ════════════════════════════════════════════════════════
-//  PD DASHBOARD — Xem Thư Viện Vendor của project mình (không thấy giá)
+//  PD DASHBOARD — Xem Thư Viện Vendor của MỌI project (không thấy giá,
+//  và không thấy 2 cột AVG TG).
+//
+//  PD từng bị ghim theo project của tài khoản. Nay PD tra cứu được toàn bộ
+//  project giống CSF: cột `project` trong DB vẫn còn nhưng không dùng để phân
+//  quyền nữa, nên không phải đụng vào dữ liệu tài khoản và không ai bị đăng xuất.
 // ════════════════════════════════════════════════════════
 import { useMemo, useState } from 'react';
 import { ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { HC } from '../constants/sellerTheme';
+import { PROJECTS } from '../constants/projects';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
-import VendorLibraryCsfPdViewer from '../components/csfpd/VendorLibraryCsfPdViewer';
-
-// "Happy Project" → "happy" — khớp với ký hiệu P.xxx dùng trong tên file thư viện
-function projectNameToKey(name) {
-  if (!name) return null;
-  const n = name.toLowerCase();
-  if (n.includes('hapify84')) return 'hapify84';
-  if (n.includes('happy')) return 'happy';
-  if (n.includes('creative')) return 'creative';
-  if (n.includes('global')) return 'global';
-  return null;
-}
+import PdVendorLibrary from '../components/csfpd/PdVendorLibrary';
 
 export default function PdDashboard() {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // 1 nhân sự PD có thể phụ trách NHIỀU project (mỗi project 1 tài khoản cùng email).
-  // Backend trả `projects` = tất cả project của email này ở role PD → sidebar liệt kê
-  // đủ, giống CSF. Fallback về `project` của tài khoản đang đăng nhập (dữ liệu cũ).
-  const projectMenu = useMemo(() => {
-    const names = (user?.projects?.length ? user.projects : [user?.project]).filter(Boolean);
-    return names
-      .map(name => ({ id: projectNameToKey(name), icon: <ShopOutlined />, label: name }))
-      .filter(m => m.id);
-  }, [user?.projects, user?.project]);
+  const projectMenu = useMemo(
+    () => PROJECTS.map(p => ({ id: p.id, icon: <ShopOutlined />, label: p.label })),
+    []
+  );
 
   const [active, setActive] = useState(null);
   const projectKey = active || projectMenu[0]?.id || null;
-  const activeLabel = projectMenu.find(m => m.id === projectKey)?.label || user?.project || '';
+  const activeLabel = projectMenu.find(m => m.id === projectKey)?.label || '';
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: ${HC.cream}; border-radius: 10px; }
@@ -48,7 +38,7 @@ export default function PdDashboard() {
         ::-webkit-scrollbar-thumb:hover { background: ${HC.orange}; }
       `}</style>
 
-      <div style={{ display: 'flex', height: '100vh', background: `linear-gradient(135deg, ${HC.orangePale} 0%, ${HC.cream} 100%)`, fontFamily: "'Nunito Sans',sans-serif", color: HC.ink, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', height: '100vh', background: `linear-gradient(135deg, ${HC.orangePale} 0%, ${HC.cream} 100%)`, fontFamily: "'Inter',sans-serif", color: HC.ink, overflow: 'hidden' }}>
         <CsfPdSidebar
           active={projectKey}
           setActive={setActive}
@@ -58,14 +48,14 @@ export default function PdDashboard() {
           logout={logout}
           menu={projectMenu}
           roleLabel="PD"
-          displayName={user?.full_name || user?.project || 'PD'}
+          displayName={user?.full_name || 'PD'}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ height: 72, background: `linear-gradient(135deg, ${HC.surface}, ${HC.surface2})`, borderBottom: `1.5px solid ${HC.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 32px', gap: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 4, height: 32, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
-              <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Nunito',sans-serif", letterSpacing: '-0.01em' }}>
+              <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em' }}>
                 Thư Viện Vendor {activeLabel ? `— ${activeLabel}` : ''}
               </div>
             </div>
@@ -76,7 +66,7 @@ export default function PdDashboard() {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
             {projectKey ? (
-              <VendorLibraryCsfPdViewer projectKey={projectKey} />
+              <PdVendorLibrary projectKey={projectKey} />
             ) : (
               <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
                 <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>⚠️</div>

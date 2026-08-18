@@ -91,7 +91,7 @@ const NewsModalComponent = React.memo(({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 24, display: 'flex' }}>{editingNews ? <EditOutlined /> : <NotificationOutlined />}</span>
             <div>
-              <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
+              <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Inter',sans-serif" }}>
                 {editingNews ? 'Sửa thông báo' : 'Tạo thông báo mới'}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
@@ -139,7 +139,7 @@ const NewsModalComponent = React.memo(({
                 color: HC.ink2,
                 background: HC.surface2,
                 outline: 'none',
-                fontFamily: "'Nunito Sans',sans-serif",
+                fontFamily: "'Inter',sans-serif",
               }}
             />
             {formErrors.title && (
@@ -168,7 +168,7 @@ const NewsModalComponent = React.memo(({
                 background: HC.surface2,
                 resize: 'vertical',
                 outline: 'none',
-                fontFamily: "'Nunito Sans',sans-serif",
+                fontFamily: "'Inter',sans-serif",
               }}
             />
             {formErrors.message && (

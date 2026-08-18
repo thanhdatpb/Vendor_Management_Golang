@@ -113,7 +113,7 @@ export default function AuthCallback() {
       minHeight: "100vh",
       display: "flex", alignItems: "center", justifyContent: "center",
       background: "radial-gradient(ellipse at 60% 40%, #FDE8B8 0%, #FFF8EE 45%, #FFFBF4 100%)",
-      fontFamily: "'Nunito', sans-serif",
+      fontFamily: "'Inter', sans-serif",
       padding: 16,
     }}>
       <div style={{
@@ -184,7 +184,7 @@ export default function AuthCallback() {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         @keyframes hc-spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }

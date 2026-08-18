@@ -17,7 +17,7 @@ export default function PriceComparisonMatrix({ vendors, productType }) {
 
   return (
     <div style={{ width: '100%', overflowX: 'auto', background: '#fff', borderRadius: 12, border: `1.5px solid ${HC.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: "'Nunito Sans',sans-serif" }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: "'Inter',sans-serif" }}>
         <thead>
           <tr style={{ background: HC.ink, color: '#fff' }}>
             <th style={{ padding: '15px 20px', textAlign: 'left', borderBottom: `2px solid ${HC.orange}`, width: 150 }}>Tiêu chí</th>

@@ -1,13 +1,45 @@
 // ════════════════════════════════════════════════════════
 //  HISTORY PANEL — drawer phải, restyle theo design system mới.
 //  Giữ nguyên hành vi: export từng version, restore (trừ bản mới nhất).
+//
+//  Mục 17: lịch sử KHÔNG còn đi kèm bảng tính giá. Mỗi snapshot là một bản sao
+//  đầy đủ (settings + productTypes) và có tới 20 bản — kéo theo cả bảng thì mở
+//  danh sách nào cũng tải 21 lần nội dung. Giờ nạp đúng lúc mở panel này.
 // ════════════════════════════════════════════════════════
+import { useEffect, useState } from 'react';
 import { PS, marginTone, toneColor } from './tokens';
 import { Btn, IconBtn, Badge, Dot } from './primitives';
 import { usd, pct } from '../../../utils/pricingEngine';
+import { priceSheetApi } from '../../../services/api';
 
 export default function HistoryPanel({ sheet, onClose, onRestore, onExportVersion }) {
-  const hist = sheet.history || [];
+  // Bảng vừa tạo ở máy này (chưa lưu) vẫn mang sẵn history — dùng luôn.
+  const [hist, setHist] = useState(() => sheet.history || []);
+  // Bảng đã lưu trên server thì chắc chắn có một lượt nạp — vào thẳng trạng
+  // thái "đang tải" ngay từ lần render đầu, thay vì setState trong effect.
+  const [loading, setLoading] = useState(() => !!sheet.id);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!sheet.id) return undefined;
+
+    let alive = true;
+    priceSheetApi.versions(sheet.id)
+      .then((res) => {
+        if (!alive) return;
+        setHist(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        // Không xoá những gì đang hiện: thà cho xem bản đang có còn hơn trắng panel.
+        console.warn('Không tải được lịch sử phiên bản:', err?.message || err);
+        setError('Không tải được lịch sử. Kiểm tra kết nối rồi mở lại.');
+      })
+      .finally(() => { if (alive) setLoading(false); });
+
+    return () => { alive = false; };
+  }, [sheet.id]);
+
   return (
     <div className="ps-overlay" onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 2100, display: 'flex', justifyContent: 'flex-end' }}>
@@ -28,7 +60,18 @@ export default function HistoryPanel({ sheet, onClose, onRestore, onExportVersio
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {hist.length === 0 && (
+          {loading && hist.length === 0 && (
+            <div style={{ textAlign: 'center', color: PS.textMuted, padding: 40, fontSize: 13 }}>
+              Đang tải lịch sử…
+            </div>
+          )}
+          {error && (
+            <div role="alert" style={{
+              textAlign: 'center', color: PS.textSecondary, padding: '12px 14px', fontSize: 12.5,
+              border: `1px solid ${PS.border}`, borderRadius: 10, background: PS.bgApp,
+            }}>{error}</div>
+          )}
+          {!loading && !error && hist.length === 0 && (
             <div style={{ textAlign: 'center', color: PS.textMuted, padding: 40, fontSize: 13, lineHeight: 1.6 }}>
               Chưa có phiên bản nào.<br />Bấm "Lưu bảng tính giá" để tạo mốc so sánh.
             </div>

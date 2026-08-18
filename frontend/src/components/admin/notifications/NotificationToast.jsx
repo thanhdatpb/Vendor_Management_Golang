@@ -22,7 +22,7 @@ export default function NotificationToast({ message, onClose }) {
       gap: 12,
       zIndex: 2000,
       animation: 'slideIn 0.3s ease-out',
-      fontFamily: "'Nunito Sans',sans-serif",
+      fontFamily: "'Inter',sans-serif",
       border: `1px solid ${HC.orangeLight}`,
     }}>
       <span style={{ fontSize: 20 }}>📋</span>

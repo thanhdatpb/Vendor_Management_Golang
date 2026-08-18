@@ -64,7 +64,7 @@ export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <span style={{ fontSize: 24, display: 'flex', color: '#fff' }}><NotificationOutlined /></span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>
+              <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Inter',sans-serif" }}>
                 Chi tiết thông báo
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)', marginTop: 2 }}>
@@ -113,7 +113,7 @@ export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
 
           <div style={{
             fontWeight: 900, fontSize: 17, color: HC.ink,
-            fontFamily: "'Nunito',sans-serif", lineHeight: 1.4, marginBottom: 16, wordBreak: 'break-word',
+            fontFamily: "'Inter',sans-serif", lineHeight: 1.4, marginBottom: 16, wordBreak: 'break-word',
           }}>
             {news.title}
           </div>

@@ -147,10 +147,10 @@ export default function ProductDetailModal({ product, productVendors, onClose, g
           }}>
             <div style={{ width: 4, height: 24, borderRadius: 99, background: 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito', sans-serif", letterSpacing: '0.01em' }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Inter', sans-serif", letterSpacing: '0.01em' }}>
                 Chi tiết sản phẩm
               </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontFamily: "'Nunito Sans', sans-serif" }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontFamily: "'Inter', sans-serif" }}>
                 {product.product_type || `#${product.id}`}
               </div>
             </div>
@@ -330,7 +330,7 @@ export default function ProductDetailModal({ product, productVendors, onClose, g
                 display: 'flex', alignItems: 'center', gap: 10,
               }}>
                 <span style={{ fontSize: 16 }}>🏪</span>
-                <span style={{ fontWeight: 800, fontSize: 12, color: '#78350f', fontFamily: "'Nunito', sans-serif" }}>
+                <span style={{ fontWeight: 800, fontSize: 12, color: '#78350f', fontFamily: "'Inter', sans-serif" }}>
                   Nhà phân phối được gán
                 </span>
                 {vendors.length > 0 && (

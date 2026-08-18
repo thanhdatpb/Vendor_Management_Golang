@@ -1,0 +1,51 @@
+{
+  "id": "sheet_legacy_fixture",
+  "name": "Bang gia mau (fixture hoi quy)",
+  "project": "happy",
+  "vendorRef": "VN3",
+  "settings": {
+    "price": 9.9,
+    "quantity": 1,
+    "shipPerOrder": 0,
+    "shipPerItem": 2,
+    "couponUsd": 0,
+    "couponPct": 10,
+    "variableFeePct": 3,
+    "amzFeePct": 17,
+    "importTax": 0.35
+  },
+  "productTypes": [
+    {
+      "id": "pt_legacy_lib",
+      "name": "Football Jersey",
+      "phoi": "0",
+      "shown": true,
+      "shipMethod": "eco",
+      "customizeInfos": [{ "id": "ci_face", "name": "Add Custom Face" }],
+      "sizes": [
+        { "id": "szlib_pt_legacy_lib_s",   "label": "S",   "sizeAdd": "0",    "itemCost": "", "customize": { "ci_face": "3" } },
+        { "id": "szlib_pt_legacy_lib_m",   "label": "M",   "sizeAdd": "0",    "itemCost": "", "customize": { "ci_face": "3" } },
+        { "id": "szlib_pt_legacy_lib_l",   "label": "L",   "sizeAdd": "1.5",  "itemCost": "", "customize": { "ci_face": "3" } },
+        { "id": "szlib_pt_legacy_lib_xl",  "label": "XL",  "sizeAdd": "2.5",  "itemCost": "", "customize": { "ci_face": "3" } },
+        { "id": "szlib_pt_legacy_lib_2xl", "label": "2XL", "sizeAdd": "3.5",  "itemCost": "", "customize": { "ci_face": "3" } }
+      ]
+    },
+    {
+      "id": "pt_legacy_manual",
+      "name": "Custom Tumbler (nhap tay)",
+      "phoi": "1.2",
+      "shown": true,
+      "customizeInfos": [
+        { "id": "ci_engrave", "name": "Laser Engrave" },
+        { "id": "ci_giftbox", "name": "Gift Box" }
+      ],
+      "sizes": [
+        { "id": "sz_manual_20", "label": "20oz", "sizeAdd": "0",   "itemCost": "6.1", "customize": { "ci_engrave": "2", "ci_giftbox": "1.2" } },
+        { "id": "sz_manual_30", "label": "30oz", "sizeAdd": "1.8", "itemCost": "7.2", "customize": { "ci_engrave": "2", "ci_giftbox": "1.2" } }
+      ]
+    }
+  ],
+  "history": [],
+  "createdAt": "2026-07-01T02:11:00.000Z",
+  "updatedAt": "2026-07-18T09:42:00.000Z"
+}

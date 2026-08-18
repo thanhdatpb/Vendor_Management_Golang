@@ -218,8 +218,8 @@ export default function VendorViewerModal({ product, onClose }) {
           <div style={{ padding: '13px 20px', background: 'linear-gradient(135deg,#f59e0b 0%,#d97706 100%)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <div style={{ width: 4, height: 22, borderRadius: 99, background: 'rgba(255,255,255,0.5)', flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Nunito',sans-serif" }}>Chi tiết sản phẩm</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontFamily: "'Nunito Sans',sans-serif", marginTop: 1 }}>
+              <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', fontFamily: "'Inter',sans-serif" }}>Chi tiết sản phẩm</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontFamily: "'Inter',sans-serif", marginTop: 1 }}>
                 {product.product_type || `#${product.id}`}
                 {vendors.length > 0 && <span style={{ marginLeft: 10, padding: '1px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: 10, fontWeight: 800 }}>{vendors.length} vendor</span>}
               </div>
