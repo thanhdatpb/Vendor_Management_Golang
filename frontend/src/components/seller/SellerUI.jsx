@@ -20,7 +20,7 @@ export const EMPTY_FORM = {
 export const MENU = [
   { id: 'products',    icon: <AppstoreOutlined />, label: 'Quản Lý Sản Phẩm', desc: 'Quản lý yêu cầu từ Sales' },
   { id: 'vendors',     icon: <ShopOutlined />,     label: 'Thư Viện Vendor',   desc: 'Danh mục nhà cung cấp' },
-  { id: 'setup_price', icon: <DollarCircleOutlined />, label: 'Thiết Lập Giá', desc: 'Cấu hình giá bán' },
+  { id: 'setup_price', icon: <DollarCircleOutlined />, label: 'Bảng Tính Giá', desc: 'Cấu hình giá bán' },
 ];
 
 // ─── Input style ─────────────────────────────────────────
