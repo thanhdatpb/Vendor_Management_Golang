@@ -134,8 +134,29 @@ class PdProjectScopeTest extends TestCase
         ]);
     }
 
-    /** Hai tài khoản PD cùng email, khác project (dữ liệu cũ) vẫn tồn tại được. */
+    /**
+     * Dữ liệu cũ (2 dòng PD cùng email, khác project, tạo từ trước khi PD tách
+     * khỏi project) không bị migration nào đụng vào — vẫn nằm nguyên trong DB.
+     */
     public function test_du_lieu_pd_cu_nhieu_project_khong_bi_pha(): void
+    {
+        User::factory()->create(['email' => 'pd@happyc.test', 'role' => 'pd', 'project' => 'Happy Project', 'is_active' => true]);
+        User::factory()->create(['email' => 'pd@happyc.test', 'role' => 'pd', 'project' => 'Creative Project', 'is_active' => true]);
+
+        $this->assertSame(2, User::where('email', 'pd@happyc.test')->where('role', 'pd')->count());
+    }
+
+    /**
+     * TẠO MỚI thì không được cho phép trùng nữa — PD không dùng project để phân
+     * biệt tài khoản, nên "PD khác project" giờ chỉ còn là 2 dòng thừa cho cùng
+     * một người.
+     *
+     * Sự cố thật (2026-08-18): 2 dòng PD cùng email hiển thị trùng ở Quản Lý
+     * Nhân Sự — và nguy hiểm hơn, nút Khoá chỉ khoá đúng 1 `id`; dòng còn lại
+     * vẫn đăng nhập được vì AuthController::login lấy $matched->first() khi
+     * trùng role.
+     */
+    public function test_tao_pd_trung_email_bi_chan_du_khac_project(): void
     {
         User::factory()->create(['email' => 'pd@happyc.test', 'role' => 'pd', 'project' => 'Happy Project', 'is_active' => true]);
 
@@ -143,8 +164,46 @@ class PdProjectScopeTest extends TestCase
             ->postJson('/api/admin/users', [
                 'email' => 'pd@happyc.test', 'full_name' => 'PD', 'role' => 'pd', 'project' => 'Creative Project',
             ])
+            ->assertStatus(422);
+
+        $this->assertSame(1, User::where('email', 'pd@happyc.test')->where('role', 'pd')->count());
+    }
+
+    /** Trùng email + không project (case thường gặp nhất kể từ khi PD bỏ project) cũng bị chặn. */
+    public function test_tao_pd_trung_email_bi_chan_khong_project(): void
+    {
+        User::factory()->create(['email' => 'pd@happyc.test', 'role' => 'pd', 'project' => null, 'is_active' => true]);
+
+        $this->actingAs($this->admin())
+            ->postJson('/api/admin/users', [
+                'email' => 'pd@happyc.test', 'full_name' => 'PD', 'role' => 'pd', 'project' => null,
+            ])
+            ->assertStatus(422);
+    }
+
+    /** Cùng email nhưng KHÁC role (vd Seller) thì vẫn tạo được — không phải PD nên không đụng quy tắc này. */
+    public function test_cung_email_khac_role_van_tao_duoc(): void
+    {
+        User::factory()->create(['email' => 'dung.chung@happyc.test', 'role' => 'pd', 'project' => null, 'is_active' => true]);
+
+        $this->actingAs($this->admin())
+            ->postJson('/api/admin/users', [
+                'email' => 'dung.chung@happyc.test', 'full_name' => 'X', 'role' => 'seller', 'project' => 'Happy Project',
+            ])
+            ->assertSuccessful();
+    }
+
+    /** Seller vẫn được trùng email khác project như cũ — quy tắc siết chỉ áp cho PD. */
+    public function test_seller_van_duoc_trung_email_khac_project(): void
+    {
+        User::factory()->create(['email' => 'seller@happyc.test', 'role' => 'seller', 'project' => 'Happy Project', 'is_active' => true]);
+
+        $this->actingAs($this->admin())
+            ->postJson('/api/admin/users', [
+                'email' => 'seller@happyc.test', 'full_name' => 'Seller', 'role' => 'seller', 'project' => 'Creative Project',
+            ])
             ->assertSuccessful();
 
-        $this->assertSame(2, User::where('email', 'pd@happyc.test')->where('role', 'pd')->count());
+        $this->assertSame(2, User::where('email', 'seller@happyc.test')->where('role', 'seller')->count());
     }
 }

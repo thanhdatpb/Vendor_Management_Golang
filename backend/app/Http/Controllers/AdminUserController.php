@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class AdminUserController extends Controller
@@ -17,7 +18,20 @@ class AdminUserController extends Controller
     // =========================
     public function index(Request $request)
     {
-        $users = User::select('id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at', 'last_seen_at')
+        // `last_seen_at` là cột MỚI. Nếu code lên trước khi `php artisan migrate`
+        // chạy, select thẳng nó sẽ ném 1054 Unknown column → 500 → màn hình
+        // Quản Lý Nhân Sự trắng trơn và trông y như đã mất sạch nhân sự.
+        // Chuyện này đã xảy ra thật trên production 2026-08-18.
+        // Thiếu cột thì bỏ qua, chỉ mất đúng một cột hiển thị.
+        $columns = ['id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at'];
+        $hasLastSeen = Schema::hasColumn('users', 'last_seen_at');
+        if ($hasLastSeen) {
+            $columns[] = 'last_seen_at';
+        } else {
+            Log::warning('users.last_seen_at chưa tồn tại — cần chạy php artisan migrate.');
+        }
+
+        $users = User::select($columns)
             // `FIELD()` chỉ có ở MySQL — endpoint này vì thế không test được trên
             // SQLite (500: no such function: FIELD). CASE cho đúng thứ tự đó và
             // chạy trên cả hai. `ELSE 0` giữ nguyên hành vi cũ: role lạ xếp đầu.
@@ -42,7 +56,7 @@ class AdminUserController extends Controller
                 'avatar_url'=> $u->avatar_url,
                 // Mốc thao tác gần nhất. null = chưa truy cập lần nào kể từ khi
                 // tính năng này được bật.
-                'last_seen_at' => optional($u->last_seen_at)->toIso8601String(),
+                'last_seen_at' => $hasLastSeen ? optional($u->last_seen_at)->toIso8601String() : null,
             ]);
 
         return response()->json(['users' => $users]);
@@ -79,17 +93,29 @@ class AdminUserController extends Controller
         $keepsProject = in_array($validated['role'], ['seller', 'pd']);
         $project      = $keepsProject ? ($validated['project'] ?? null) : null;
 
-        // Chặn trùng ĐÚNG cặp (email + role + project). Cho phép cùng email nếu
-        // khác role hoặc khác project.
-        $dupQuery = User::where('email', $email)->where('role', $validated['role']);
-        // `where('project', null)` sinh ra `= NULL` — không bao giờ khớp. Phải whereNull.
-        $project !== null ? $dupQuery->where('project', $project) : $dupQuery->whereNull('project');
+        // PD không còn dùng project để phân biệt tài khoản (mọi dòng PD đều thấy
+        // MỌI project như nhau) — nên với PD, trùng chỉ cần xét email + role, KHÔNG
+        // xét project. Nếu vẫn cho tạo "PD khác project" như trước, Admin lại tạo ra
+        // 2 dòng cho cùng một người: hiển thị trùng ở Quản Lý Nhân Sự, và nguy hiểm
+        // hơn — nút Khoá chỉ khoá đúng 1 `id`, dòng còn lại vẫn đăng nhập được vì
+        // AuthController::login lấy $matched->first() khi trùng role (sự cố thật,
+        // tài khoản "Lam Nguyen" x2 trên production 2026-08-18).
+        //
+        // Role còn lại (seller...) vẫn chặn theo cặp (email + role + project) như cũ:
+        // 1 người làm Seller ở 2 project là hợp lệ, không phải trùng.
+        if ($validated['role'] === 'pd') {
+            $dupQuery = User::where('email', $email)->where('role', 'pd');
+            $dupMessage = 'Email này đã có tài khoản PD rồi — PD không cần tạo riêng theo project.';
+        } else {
+            $dupQuery = User::where('email', $email)->where('role', $validated['role']);
+            // `where('project', null)` sinh ra `= NULL` — không bao giờ khớp. Phải whereNull.
+            $project !== null ? $dupQuery->where('project', $project) : $dupQuery->whereNull('project');
+            $dupMessage = $project !== null
+                ? 'Email này đã có ở role "' . $validated['role'] . '" cho project này rồi'
+                : 'Email này đã có ở role "' . $validated['role'] . '" rồi';
+        }
         if ($dupQuery->exists()) {
-            return response()->json([
-                'message' => $project !== null
-                    ? 'Email này đã có ở role "' . $validated['role'] . '" cho project này rồi'
-                    : 'Email này đã có ở role "' . $validated['role'] . '" rồi',
-            ], 422);
+            return response()->json(['message' => $dupMessage], 422);
         }
 
         // Nếu email đã tồn tại ở tài khoản khác → kế thừa liên kết Google (google_id,

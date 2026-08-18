@@ -389,13 +389,26 @@ export default function StaffManagementSection() {
   const [saving, setSaving]         = useState(false);
   const [serverError, setServerError] = useState('');
 
+  const [loadError, setLoadError] = useState('');
+
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const res = await adminUserApi.list();
       setUsers(res.data?.users || []);
     } catch (err) {
-      console.error('Load users error:', err);
+      // KHÔNG nuốt lỗi thành danh sách rỗng. Trước đây chỉ console.error rồi để
+      // `users` là [], nên mọi tab hiện "0 nhân sự" — Admin nhìn vào tưởng đã
+      // mất sạch tài khoản. Sự cố thật 2026-08-18: API trả 500 vì thiếu cột DB,
+      // dữ liệu còn nguyên, nhưng màn hình trông y như bị xoá.
+      console.error('Load users error:', err?.message || err);
+      setUsers([]);
+      setLoadError(
+        err?.response?.status
+          ? `Không tải được danh sách nhân sự (lỗi ${err.response.status}). Dữ liệu KHÔNG bị mất — đây là lỗi tải.`
+          : 'Không tải được danh sách nhân sự. Kiểm tra kết nối rồi thử lại.'
+      );
     } finally {
       setLoading(false);
     }
@@ -508,6 +521,22 @@ export default function StaffManagementSection() {
           );
         })}
       </div>
+
+      {/* Lỗi tải danh sách — phải nói rõ là LỖI TẢI, không phải mất dữ liệu */}
+      {loadError && (
+        <div role="alert" style={{
+          marginBottom: 12, padding: '12px 16px', borderRadius: 12,
+          background: '#FFF2F2', border: '1.5px solid #FFCDD2', color: HC.danger,
+          fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <ExclamationCircleFilled />
+          <span style={{ flex: 1 }}>{loadError}</span>
+          <button onClick={loadUsers} style={{
+            padding: '5px 14px', borderRadius: 8, border: `1.5px solid ${HC.danger}`,
+            background: HC.surface, color: HC.danger, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}>Thử lại</button>
+        </div>
+      )}
 
       {/* Table card */}
       <div style={card}>
