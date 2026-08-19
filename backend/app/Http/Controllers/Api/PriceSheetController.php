@@ -312,14 +312,26 @@ class PriceSheetController extends Controller
         if ($existing) {
             DB::table('price_sheets')->where('id', $sheet['id'])->update($payload);
         } else {
-            DB::table('price_sheets')->insert(array_merge($payload, [
+            $insert = array_merge($payload, [
                 'id'         => $sheet['id'],
                 'created_at' => now(),
-                // Chỉ ghi ở nhánh TẠO MỚI — cố ý không đưa vào $payload dùng
-                // chung, để lần sửa sau (nhánh update ở trên) không vô tình
-                // ghi đè "người tạo" thành người vừa sửa.
-                'created_by' => (string) ($user->name ?? '') ?: null,
-            ]));
+            ]);
+
+            // Deploy của dự án là thủ công và KHÔNG kèm bước `php artisan
+            // migrate` (CLAUDE.md §7), nên luôn có một khoảng cột mới đã có
+            // trong code mà chưa có trong DB. Thiếu cột lúc GHI nặng hơn lúc
+            // đọc nhiều: đọc chỉ ra null, còn INSERT là lỗi SQL → 500 → Seller
+            // mất hẳn đường lưu bảng, dữ liệu kẹt trong localStorage một máy.
+            // Sự cố thật 2026-08-19; lần đó chỗ đọc đã che mà chỗ ghi thì quên.
+            //
+            // Chỉ ghi ở nhánh TẠO MỚI — cố ý không đưa vào $payload dùng chung,
+            // để lần sửa sau (nhánh update ở trên) không vô tình ghi đè "người
+            // tạo" thành người vừa sửa.
+            if (Schema::hasColumn('price_sheets', 'created_by')) {
+                $insert['created_by'] = (string) ($user->name ?? '') ?: null;
+            }
+
+            DB::table('price_sheets')->insert($insert);
         }
 
         $this->storeVersions((string) $sheet['id'], $incomingHistory);
