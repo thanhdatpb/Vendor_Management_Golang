@@ -49,18 +49,27 @@ export default defineConfig(({ mode }) => {
         entryFileNames: `assets/[name]-[hash]-v6.js`,
         chunkFileNames: `assets/[name]-[hash]-v6.js`,
         assetFileNames: `assets/[name]-[hash]-v6.[ext]`,
+        // ⚠️ TÊN CHUNK KHÔNG ĐƯỢC BẮT ĐẦU BẰNG `vendor`.
+        // Quy trình deploy loại trừ mọi đường dẫn chứa `vendor` để khỏi đồng bộ
+        // `backend/vendor/` của composer, nhưng pattern không neo đầu nên quét
+        // trúng luôn `frontend/dist/assets/vendor-*.js`: file nằm đủ trong git,
+        // commit đúng, mà không bao giờ lên tới server. Trình duyệt nhận lại
+        // index.html (SPA fallback) với Content-Type text/html, bị chặn theo
+        // strict MIME checking cho module script → React không mount → trắng
+        // trang. Sự cố thật 2026-08-19, mất 2 lần deploy mới truy ra vì bundle
+        // chạy hoàn hảo ở local — nơi file vẫn nằm trên đĩa.
         manualChunks: {
           // React core — load đầu tiên, cache lâu dài
-          'vendor-react': ['react', 'react-dom'],
+          'lib-react': ['react', 'react-dom'],
 
           // Ant Design UI — ~800KB, tách riêng để cache lâu dài
-          'vendor-antd': ['antd'],
+          'lib-antd': ['antd'],
 
           // Ant Design icons — ~300KB, tách riêng để cache
-          'vendor-antd-icons': ['@ant-design/icons'],
+          'lib-antd-icons': ['@ant-design/icons'],
 
           // XLSX — ~500KB, chỉ dùng khi export
-          'vendor-xlsx': ['xlsx'],
+          'lib-xlsx': ['xlsx'],
         },
       },
     },
