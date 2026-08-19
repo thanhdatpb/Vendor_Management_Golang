@@ -12,7 +12,9 @@ import { Btn, IconBtn, Badge, Dot } from './primitives';
 import { usd, pct } from '../../../utils/pricingEngine';
 import { priceSheetApi } from '../../../services/api';
 
-export default function HistoryPanel({ sheet, onClose, onRestore, onExportVersion }) {
+// `readOnly`: Admin xem lịch sử của bảng Seller — chỉ Export, không Khôi phục
+// (Admin không được sửa/xoá dữ liệu của Seller).
+export default function HistoryPanel({ sheet, onClose, onRestore, onExportVersion, readOnly = false }) {
   // Bảng vừa tạo ở máy này (chưa lưu) vẫn mang sẵn history — dùng luôn.
   const [hist, setHist] = useState(() => sheet.history || []);
   // Bảng đã lưu trên server thì chắc chắn có một lượt nạp — vào thẳng trạng
@@ -104,7 +106,7 @@ export default function HistoryPanel({ sheet, onClose, onRestore, onExportVersio
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                   <Btn size="sm" onClick={() => onExportVersion(snap)}>⬇ Export</Btn>
-                  {i !== 0 && <Btn size="sm" variant="outline" style={{ color: PS.brandDeep, borderColor: PS.brandBorder }} onClick={() => onRestore(snap)}>↩ Khôi phục</Btn>}
+                  {!readOnly && i !== 0 && <Btn size="sm" variant="outline" style={{ color: PS.brandDeep, borderColor: PS.brandBorder }} onClick={() => onRestore(snap)}>↩ Khôi phục</Btn>}
                 </div>
               </div>
             );

@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Lưu trữ "Bảng tính giá" (Setup Price) trên server, chia sẻ theo project.
@@ -94,13 +95,21 @@ class PriceSheetController extends Controller
             'price_sheets_index_' . $this->cacheVersion() . '_' . md5($scope),
             3600,
             function () use ($scope) {
-                $query = DB::table('price_sheets')
-                    ->select([
-                        'id', 'project', 'name', 'version', 'vendor_ref', 'source_file',
-                        'product_type_names', 'size_count', 'min_price', 'max_price',
-                        'avg_margin', 'updated_by', 'created_at', 'updated_at',
-                    ])
-                    ->orderBy('updated_at', 'desc');
+                $columns = [
+                    'id', 'project', 'name', 'version', 'vendor_ref', 'source_file',
+                    'product_type_names', 'size_count', 'min_price', 'max_price',
+                    'avg_margin', 'updated_by', 'created_at', 'updated_at',
+                ];
+                // `select([...])` liệt kê tường minh — đúng kiểu đã vỡ 500 ở
+                // sự cố `last_seen_at` 2026-08-18 nếu deploy code trước khi
+                // migration của cột mới kịp chạy. Chỉ thêm `created_by` vào
+                // câu SELECT khi cột đã thật sự tồn tại; thiếu thì bỏ qua đúng
+                // một cột hiển thị, không sập cả danh sách.
+                if (Schema::hasColumn('price_sheets', 'created_by')) {
+                    $columns[] = 'created_by';
+                }
+
+                $query = DB::table('price_sheets')->select($columns)->orderBy('updated_at', 'desc');
 
                 if ($scope !== '*') {
                     $query->where(function ($q) use ($scope) {
@@ -171,8 +180,14 @@ class PriceSheetController extends Controller
 
         $stored = (int) DB::table('price_sheet_versions')->where('sheet_id', $id)->count();
 
+        // `updatedBy`/`createdBy` là cột DB, KHÔNG nằm trong blob (client không
+        // tự gửi hai trường này lên) — phải bơm từ $row, cùng cách `version` đã
+        // làm ở dòng dưới. Thiếu bước này thì modal xem của Admin (dùng đúng
+        // endpoint này) sẽ hiện trống ở "Người tạo"/"Cập nhật bởi" dù DB có dữ liệu.
         $sheet['version']      = (int) ($row->version ?? 1);
         $sheet['historyCount'] = $stored > 0 ? $stored : count($blobHistory);
+        $sheet['updatedBy']    = $row->updated_by;
+        $sheet['createdBy']    = $row->created_by ?? null;
 
         return response()->json($sheet);
     }
@@ -300,6 +315,10 @@ class PriceSheetController extends Controller
             DB::table('price_sheets')->insert(array_merge($payload, [
                 'id'         => $sheet['id'],
                 'created_at' => now(),
+                // Chỉ ghi ở nhánh TẠO MỚI — cố ý không đưa vào $payload dùng
+                // chung, để lần sửa sau (nhánh update ở trên) không vô tình
+                // ghi đè "người tạo" thành người vừa sửa.
+                'created_by' => (string) ($user->name ?? '') ?: null,
             ]));
         }
 
@@ -453,6 +472,11 @@ class PriceSheetController extends Controller
             'maxPrice'         => $row->max_price === null ? null : (float) $row->max_price,
             'avgMargin'        => $row->avg_margin === null ? null : (float) $row->avg_margin,
             'updatedBy'        => $row->updated_by,
+            // `??` chặn cảnh báo "undefined property" nếu deploy code này
+            // trước khi migration thêm cột created_by kịp chạy — cùng bài học
+            // từ sự cố last_seen_at 2026-08-18 (khác chỗ: đây không phải SELECT
+            // tường minh tên cột nên không vỡ thành 500, chỉ cần chặn warning).
+            'createdBy'        => $row->created_by ?? null,
             'createdAt'        => $row->created_at,
             'updatedAt'        => $row->updated_at,
             // Cờ để client biết đây là bản rút gọn, phải gọi /price-sheets/{id}

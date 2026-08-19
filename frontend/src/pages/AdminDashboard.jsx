@@ -8,6 +8,7 @@ import Sidebar from '../components/admin/Sidebar';
 import NotificationCenter from '../components/admin/notifications/NotificationCenter';
 import OverviewSection from '../components/admin/sections/OverviewSection';
 import VendorsSection from '../components/admin/sections/VendorsSection';
+import PriceSheetSection from '../components/admin/sections/PriceSheetSection';
 import StaffManagementSection from '../components/admin/sections/StaffManagementSection';
 
 window.sendNewsToAdmin = function (newsData) {
@@ -331,6 +332,8 @@ export default function AdminDashboard() {
         return <OverviewSection externalViewProduct={viewProduct} setExternalViewProduct={setViewProduct} />;
       case 'vendors':
         return <VendorsSection />;
+      case 'pricesheets':
+        return <PriceSheetSection />;
       case 'staff':
         return <StaffManagementSection />;
       default:

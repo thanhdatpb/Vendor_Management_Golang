@@ -25,7 +25,7 @@ const numOrNull = (v) => {
  *   vendorRef: string, sourceFile: string, productTypeNames: string[],
  *   sizeCount: number, minPrice: number|null, maxPrice: number|null,
  *   avgMargin: number|null, updatedAt: string|null, updatedBy: string,
- *   isFull: boolean
+ *   createdBy: string, isFull: boolean
  * } | null}
  */
 export function normalizeSheetRow(row) {
@@ -40,6 +40,7 @@ export function normalizeSheetRow(row) {
     sourceFile: text(row._sourceFile),
     updatedAt: row.updatedAt || null,
     updatedBy: text(row.updatedBy),
+    createdBy: text(row.createdBy),
   };
 
   // Sheet đầy đủ → tính tại chỗ, đúng như bản cũ vẫn làm.
@@ -95,6 +96,7 @@ export function toSummaryRow(normalized) {
     avgMargin: normalized.avgMargin,
     updatedAt: normalized.updatedAt,
     updatedBy: normalized.updatedBy,
+    createdBy: normalized.createdBy,
     _summary: true,
   };
 }
