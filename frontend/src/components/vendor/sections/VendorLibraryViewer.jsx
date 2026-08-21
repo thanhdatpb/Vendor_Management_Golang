@@ -1444,6 +1444,10 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   // Bỏ qua đúng một tín hiệu realtime kế tiếp — dùng khi chính máy này vừa ghi
   // (xem effect đồng bộ ở dưới).
   const skipNextSyncRef = useRef(false);
+  // Đang import/lưu thì KHÔNG cho refresh nền chen vào: nó vừa reset cờ
+  // dataLoaded vừa thay rawFiles ngay dưới tay người dùng, làm thao tác ghi
+  // đang chạy dở tính trên một danh sách khác.
+  const writingRef = useRef(false);
 
   // Danh sách product có vendor được gán (dùng cho dropdown filter)
   const productOptions = useMemo(() => {
@@ -1630,9 +1634,26 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     });
   }, [libraryFiles, mode, bestSellerIds, searchQuery]);
 
-  const fetchLibrary = useCallback(async () => {
+  /**
+   * @param {{ silent?: boolean }} opts
+   *   silent = làm mới NỀN (realtime / quay lại tab). Bản đang hiển thị vẫn
+   *   dùng được nên KHÔNG hạ `dataLoaded` và KHÔNG bật spinner.
+   *
+   * Vì sao quan trọng: mọi nút ghi đều chặn bằng `if (!dataLoaded)`. Trước
+   * đây refresh nền hạ cờ này xuống ngay lập tức rồi mới gọi API, nên trong
+   * lúc chờ mạng mọi thao tác ghi đều bị từ chối.
+   *
+   * Ca lỗi thật (2026-08-21, thư viện 92 file): bấm "Import thư viện Excel"
+   * → hộp thoại chọn file của HĐH mở ra, cửa sổ trình duyệt MẤT focus; chọn
+   * file xong hộp thoại đóng, cửa sổ LẤY LẠI focus → handler focus gọi
+   * fetchLibrary → dataLoaded = false. Sự kiện change của input file bắn ra
+   * ngay sau đó → handleImport thấy cờ false → "Dữ liệu thư viện chưa tải
+   * xong. Vui lòng đợi rồi thử lại." Thư viện càng nhiều file, blob càng lâu
+   * về, càng chắc chắn dính.
+   */
+  const fetchLibrary = useCallback(async ({ silent = false } = {}) => {
     setFetchError(null);
-    setDataLoaded(false);
+    if (!silent) setDataLoaded(false);
     try {
       const res = await vendorLibraryApi.get(mode);
       const data = Array.isArray(res.data) ? res.data : [];
@@ -1643,9 +1664,13 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       if (onLibraryLoaded) onLibraryLoaded(data);
     } catch (err) {
       console.error('Error fetching vendor library:', err);
-      setFetchError(err?.response?.data?.message || err?.message || 'Không thể kết nối server. Vui lòng thử lại.');
+      // Làm mới nền hỏng thì im lặng bỏ qua: bản đang xem vẫn dùng được, không
+      // việc gì phải dựng banner lỗi đỏ lên giữa lúc người dùng đang thao tác.
+      if (!silent) {
+        setFetchError(err?.response?.data?.message || err?.message || 'Không thể kết nối server. Vui lòng thử lại.');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [mode, readOnly, onLibraryLoaded]);
 
@@ -1660,10 +1685,16 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   useEffect(() => {
     fetchLibrary();
 
-    const refreshWhenVisible = () => { if (!document.hidden) fetchLibrary(); };
+    // Lần tải đầu ở trên là loại KHÔNG silent (cần spinner + cờ dataLoaded).
+    // Ba nguồn dưới đây đều là làm mới NỀN.
+    const refreshInBackground = () => {
+      if (writingRef.current) return; // đang import/lưu — đừng thay dữ liệu dưới tay người dùng
+      fetchLibrary({ silent: true });
+    };
+    const refreshWhenVisible = () => { if (!document.hidden) refreshInBackground(); };
     const unsubscribe = subscribeVendorLibraryChanges(() => {
       if (skipNextSyncRef.current) { skipNextSyncRef.current = false; return; }
-      fetchLibrary();
+      refreshInBackground();
     });
     window.addEventListener('focus', refreshWhenVisible);
     document.addEventListener('visibilitychange', refreshWhenVisible);
@@ -1686,6 +1717,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       return false;
     }
     try {
+      writingRef.current = true;
       skipNextSyncRef.current = true; // tín hiệu của chính mình dội về — bỏ qua
       await vendorLibraryApi.save(newData, mode);
       setRawFiles(newData);
@@ -1695,6 +1727,8 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       console.error('Error saving vendor library:', err);
       showToast('error', `Lỗi lưu dữ liệu: ${err?.response?.data?.message || err.message || 'Không thể kết nối server'}`);
       return false;
+    } finally {
+      writingRef.current = false;
     }
   };
 
@@ -1709,6 +1743,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     }
 
     setImporting(true);
+    writingRef.current = true;
     setImportErrors([]);
     const errors = [];
     const newEntries = [];
@@ -1748,6 +1783,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
 
     setImportErrors(errors);
     setImporting(false);
+    writingRef.current = false;
   }, [libraryFiles, dataLoaded]);
 
   const handleDelete = (id) => {
