@@ -318,7 +318,11 @@ class VendorLibraryController extends Controller
         $urls = [];
         foreach ($request->file('images') as $key => $file) {
             $path = $file->store('vendor-library', 'public');
-            $urls[$key] = Storage::url($path);
+            // Không dùng Storage::url(): local disk ghép APP_URL vào URL. Nếu
+            // production còn APP_URL=http://localhost, browser người dùng sẽ
+            // gọi localhost và toàn bộ ảnh Excel bị vỡ. Đường dẫn tương đối
+            // luôn đi qua /storage của đúng domain Vendor Hub hiện tại.
+            $urls[$key] = '/storage/' . ltrim($path, '/');
         }
 
         return response()->json(['urls' => $urls]);

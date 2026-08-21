@@ -1,4 +1,4 @@
-﻿// ════════════════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════
 //  VENDOR LIBRARY VIEWER — Thư Viện File (Happy Creative Format)
 //  Mỗi file Excel import → lưu localStorage → hiển thị thành card riêng
 // ════════════════════════════════════════════════════════════════════════════
@@ -6,6 +6,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate } from '../../../utils/vendorExcel';
 import { vendorLibraryApi } from '../../../services/api';
+import { normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
 import { subscribeVendorLibraryChanges } from '../../../services/echo';
 import AppToast from '../../shared/AppToast';
 
@@ -42,12 +43,13 @@ const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 // Link video YouTube (youtube.com / youtu.be) không phải ảnh → <img> sẽ vỡ.
 const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)/i.test(u);
 // Link Google Drive (drive.google.com) cũng không phải ảnh → hiển thị logo Drive.
-const isGoogleDriveUrl = (u) => typeof u === 'string' && /drive\.google\.com/i.test(u);
+const isGoogleDriveUrl = (u) => typeof u === 'string' && /(?:drive|docs)\.google\.com/i.test(u);
 
 // Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube, link Google Drive
 // → logo Drive (bấm mở); còn lại → ảnh như cũ. Người dùng nhận ra ngay không phải ảnh lỗi.
-function MediaThumb({ url }) {
+export function MediaThumb({ url }) {
   if (isYouTubeUrl(url)) {
+  url = normalizeVendorMediaUrl(url);
     return (
       <a href={url} target="_blank" rel="noreferrer" title="Video YouTube — bấm để mở"
         style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -387,9 +389,13 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                 ) : (
                   <>
                     {r.chiTietSizeImage && (
-                      <a href={r.chiTietSizeImage} target="_blank" rel="noreferrer" style={{ display: 'block', marginBottom: r.chiTietSize ? 6 : 0 }}>
-                        <img src={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
-                      </a>
+                      <div style={{ display: 'block', marginBottom: r.chiTietSize ? 6 : 0 }}>
+                        {isGoogleDriveUrl(r.chiTietSizeImage)
+                          ? <MediaThumb url={r.chiTietSizeImage} />
+                          : <a href={normalizeVendorMediaUrl(r.chiTietSizeImage)} target="_blank" rel="noreferrer">
+                              <img src={normalizeVendorMediaUrl(r.chiTietSizeImage)} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
+                            </a>}
+                      </div>
                     )}
                     {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
                   </>

@@ -2,6 +2,7 @@
  * Chuẩn import/export Vendor Excel — dùng chung Staff B (và Admin nếu cần).
  */
 
+import { isSizeGuideMediaUrl } from './vendorMedia';
 export const VENDOR_TYPES = ['Old', 'New', 'Best Seller'];
 
 export const VENDOR_EXCEL_HEADERS = [
@@ -557,8 +558,11 @@ export async function parseHappyCreativeLibrary(file) {
             if (sizeCell && sizeCell.f) {
               const m = sizeCell.f.match(/image\(\s*["'](.*?)["']\s*\)/i);
               if (m && m[1]) chiTietSizeImage = m[1];
-            } else if (sizeCell && sizeCell.v && cellStr(sizeCell.v).startsWith('http') && cellStr(sizeCell.v).match(/\.(jpeg|jpg|gif|png)$/i)) {
-              chiTietSizeImage = cellStr(sizeCell.v);
+            } else if (sizeCell && sizeCell.v && cellStr(sizeCell.v).startsWith('http')) {
+              const sizeUrl = cellStr(sizeCell.v);
+              if (isSizeGuideMediaUrl(sizeUrl)) {
+                chiTietSizeImage = sizeUrl;
+              }
             }
 
             let chiTietSizeText = cellStr(row[col_chiTietSize]);
