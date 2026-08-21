@@ -479,10 +479,9 @@ export default function StaffManagementSection() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: HC.ink, fontFamily: "'Inter',sans-serif" }}>
-            Quản Lý Nhân Sự
-          </div>
-          <div style={{ fontSize: 12, color: HC.muted, marginTop: 3, fontWeight: 600 }}>
+          {/* Tiêu đề "Quản Lý Nhân Sự" đã có sẵn ở thanh header của trang Admin.
+              Lặp lại trong phần nội dung chỉ chiếm chỗ và trông như hai vùng khác nhau. */}
+          <div style={{ fontSize: 12, color: HC.muted, fontWeight: 600 }}>
             Thêm, sửa hoặc khoá tài khoản nhân sự theo từng dự án
           </div>
         </div>

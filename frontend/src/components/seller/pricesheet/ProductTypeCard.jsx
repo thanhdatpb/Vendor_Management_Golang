@@ -17,6 +17,10 @@ export default function ProductTypeCard({
   onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize,
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Mã vendor hiển thị — ưu tiên `pt.vendorCode` (PT gắn `libRef`, mục 03/04),
+  // rơi về `libEntry.vendor` cho bảng cũ resolve theo tên (đường lùi).
+  const vendorLabel = pt.vendorCode || libEntry?.vendor || '';
+  const recordMissing = pt.warning === 'record-missing';
 
   return (
     <section aria-label={`Product type ${pt.name || 'chưa đặt tên'}`} style={{
@@ -71,8 +75,18 @@ export default function ProductTypeCard({
           )}
         </div>
 
-        {/* Nguồn dữ liệu */}
-        <Badge>{libEntry ? 'Từ thư viện vendor' : 'Nhập thủ công'} · {pt.sizes?.length || 0} size</Badge>
+        {/* Nguồn dữ liệu — kèm mã vendor để phân biệt các block trùng tên phôi
+            (mục 03/04): "Football Jersey · VN3" khác "Football Jersey · VN7". */}
+        <Badge>
+          {libEntry ? 'Từ thư viện vendor' : 'Nhập thủ công'}
+          {vendorLabel ? ` · ${vendorLabel}` : ''} · {pt.sizes?.length || 0} size
+        </Badge>
+        {recordMissing && (
+          <Badge tone="negative" style={{ cursor: 'help' }}
+            title="Record nguồn (vendor + file) không còn trong thư viện — có thể file đã bị xoá hoặc import lại. Giá đang hiện là bản chốt gần nhất (costSnapshot), không tự đổi số. Kiểm tra lại thư viện Vendor.">
+            ⚠ Record nguồn không còn
+          </Badge>
+        )}
 
         {/* Actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>

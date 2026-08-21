@@ -23,7 +23,20 @@ import PriceSheetViewerModal from '../modals/PriceSheetViewerModal';
 import HistoryPanel from '../../seller/pricesheet/HistoryPanel';
 
 const ITEMS_PER_PAGE = 10;
-const projectLabel = (key) => PROJECTS.find((p) => p.id === key)?.label || key;
+// Bảng chưa gán được về project nào (tài khoản Seller chưa điền project, hoặc
+// project cũ đã bỏ). Gom vào một chip riêng thay vì để chúng biến mất khỏi mọi
+// chip — nếu không, tổng các chip nhỏ hơn "Tất cả" mà không ai giải thích được.
+const UNASSIGNED = '__unassigned__';
+
+const projectLabel = (key) => {
+  if (key === UNASSIGNED) return 'Chưa gán project';
+  return PROJECTS.find((p) => p.id === key)?.label || key;
+};
+
+// Dòng thuộc chip nào. `projectKey` do normalizeSheetRow chuẩn hoá từ chuỗi thô
+// trong DB ("Creative Project" / "creative project" / "creative" → creative):
+// cột users.project lưu dạng NHÃN nên so thẳng với id ngắn là trượt hết.
+const chipOf = (row) => row.projectKey || UNASSIGNED;
 
 export default function PriceSheetSection() {
   const [allSheets, setAllSheets] = useState([]);
@@ -68,12 +81,12 @@ export default function PriceSheetSection() {
   // Đếm theo project cho chip lọc — cùng kiểu chip đang dùng ở Thư Viện Vendor.
   const projectCounts = useMemo(() => {
     const counts = {};
-    sheets.forEach((s) => { counts[s.project] = (counts[s.project] || 0) + 1; });
+    sheets.forEach((s) => { const k = chipOf(s); counts[k] = (counts[k] || 0) + 1; });
     return counts;
   }, [sheets]);
 
   const filtered = useMemo(() => {
-    let rows = projectFilter === 'all' ? sheets : sheets.filter((s) => s.project === projectFilter);
+    let rows = projectFilter === 'all' ? sheets : sheets.filter((s) => chipOf(s) === projectFilter);
     rows = rows.filter((s) => matchesSheetSearch(s, search));
     return rows;
   }, [sheets, projectFilter, search]);
@@ -122,7 +135,13 @@ export default function PriceSheetSection() {
 
       {/* Chip lọc theo project — cùng kiểu tab đang dùng ở Thư Viện Vendor / Quản Lý Nhân Sự */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8, flexWrap: 'wrap' }}>
-        {[{ id: 'all', label: 'Tất cả' }, ...PROJECTS].map((p) => {
+        {[
+          { id: 'all', label: 'Tất cả' },
+          ...PROJECTS,
+          // Chip "Chưa gán" chỉ hiện khi thật sự có bảng như vậy — không bày
+          // thêm một chip 0 cho mọi người phải đọc.
+          ...(projectCounts[UNASSIGNED] ? [{ id: UNASSIGNED, label: 'Chưa gán project' }] : []),
+        ].map((p) => {
           const count = p.id === 'all' ? sheets.length : (projectCounts[p.id] || 0);
           const active = projectFilter === p.id;
           return (
@@ -191,7 +210,7 @@ export default function PriceSheetSection() {
                       </td>
                       <td style={{ padding: '10px' }}>
                         <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          {projectLabel(sheet.project) || '—'}
+                          {projectLabel(sheet.projectKey) || sheet.project || '—'}
                         </span>
                       </td>
                       <td style={{ padding: '10px', fontWeight: 600, color: HC.orange }}>{sheet.vendorRef || '—'}</td>

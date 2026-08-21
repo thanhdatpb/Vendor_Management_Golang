@@ -68,31 +68,54 @@ async function loadLeanRecords(projectKey, skip) {
   }
 }
 
-/** Gom danh sách record gọn của server thành index. */
+/**
+ * Gom danh sách record gọn của server thành index.
+ *
+ * PR-A3 (mục 03/04): trước đây mỗi Product Type chỉ giữ ĐÚNG MỘT entry —
+ * 2 vendor cùng tên phôi bị đè nhau, vendor gặp trước thắng, Item Cost và
+ * Profit tính sai mà không ai thấy. Giờ mỗi (file, vendor, product type) là
+ * một RECORD riêng trong index[key].records; index[key] ở cấp ngoài vẫn giữ
+ * hình dạng CŨ (vendor/filename/sizes/bySize của record ĐẦU TIÊN) để
+ * findLibraryEntry và mọi bảng giá cũ tiếp tục chạy đúng như trước — không
+ * có migration nào, không có bảng nào tự đổi số khi mở lại.
+ */
 function indexFromRecords(records) {
-  const index = {};
+  const byKey = {};
   records.forEach((record) => {
     const ptName = (record?.productType || '').trim();
     if (!ptName) return;
     const key = normalizeKey(ptName);
-    if (!index[key]) {
-      index[key] = {
-        productType: ptName,
-        vendor: (record.vendorCode || '').trim(),
-        filename: (record.filename || '').replace(/\.[^.]+$/, ''),
-        sizes: [],
-        bySize: {},
-      };
-    }
+    const vendorCode = (record.vendorCode || '').trim();
+    const filename = (record.filename || '').replace(/\.[^.]+$/, '');
+    const recordKey = record.recordKey || `${filename}::${vendorCode}::${key}`;
+
+    const bySize = {};
+    const sizeLabels = [];
     (Array.isArray(record.sizes) ? record.sizes : []).forEach((row) => {
       const sizeLabel = (row?.size || '').toString().trim();
       if (!sizeLabel || sizeLabel === 'N/A') return;
       const sKey = normalizeKey(sizeLabel);
-      if (!index[key].bySize[sKey]) {
-        index[key].bySize[sKey] = row;
-        index[key].sizes.push(sizeLabel);
-      }
+      if (!bySize[sKey]) { bySize[sKey] = row; sizeLabels.push(sizeLabel); }
     });
+
+    (byKey[key] ||= []).push({
+      recordKey, productType: ptName, vendorCode, vendor: vendorCode,
+      filename, project: record.project, sizes: sizeLabels, bySize,
+    });
+  });
+  return buildLegacyView(byKey);
+}
+
+/** Rút index[key] cấp ngoài (hình dạng CŨ) từ danh sách record đã gom theo productType key. */
+function buildLegacyView(byProductTypeKey) {
+  const index = {};
+  Object.entries(byProductTypeKey).forEach(([key, records]) => {
+    const first = records[0];
+    index[key] = {
+      productType: first.productType, vendor: first.vendor, filename: first.filename,
+      sizes: first.sizes, bySize: first.bySize,
+      records, // MỚI (mục 03/04) — danh sách đầy đủ, mỗi vendor một record riêng
+    };
   });
   return index;
 }
@@ -104,32 +127,45 @@ function indexFromFiles(files, projectKey, skip) {
     return !fp || projectKey.includes(fp) || fp.includes(projectKey);
   });
 
-  const index = {};
+  // byKey: normalizeKey(productType) -> Map(recordKey -> record) — Map giữ đúng
+  // thứ tự gặp trong file để "vendor gặp trước thắng" (đường lùi) không đổi.
+  const byKey = {};
   filtered.forEach((file) => {
     const pricing = Array.isArray(file.pricing) ? file.pricing : [];
+    const filename = (file.filename || '').replace(/\.[^.]+$/, '');
+    const project = extractFileProject(file.filename) || undefined;
+
     pricing.forEach((p) => {
       const ptName = (p.productType || '').trim();
       if (!ptName) return;
       const key = normalizeKey(ptName);
-      if (!index[key]) {
-        index[key] = {
-          productType: ptName,
-          vendor: (p.kyHieu || '').trim(),
-          filename: (file.filename || '').replace(/\.[^.]+$/, ''),
-          sizes: [],
-          bySize: {},
-        };
+      const vendorCode = (p.kyHieu || '').trim();
+      // Khoá record: file + vendor + product type — cho phép 2 vendor cùng tên
+      // phôi (mục 03) tồn tại song song thay vì đè nhau.
+      const recordKey = `${filename}::${vendorCode}::${key}`;
+
+      const bucket = (byKey[key] ||= new Map());
+      if (!bucket.has(recordKey)) {
+        bucket.set(recordKey, {
+          recordKey, productType: ptName, vendorCode, vendor: vendorCode,
+          filename, project, sizes: [], bySize: {},
+        });
       }
+      const rec = bucket.get(recordKey);
+
       const sizeLabel = (p.size && String(p.size).trim() && p.size !== 'N/A') ? String(p.size).trim() : '';
       if (!sizeLabel) return;
       const sKey = normalizeKey(sizeLabel);
-      if (!index[key].bySize[sKey]) {
-        index[key].bySize[sKey] = p;
-        index[key].sizes.push(sizeLabel);
+      if (!rec.bySize[sKey]) {
+        rec.bySize[sKey] = p;
+        rec.sizes.push(sizeLabel);
       }
     });
   });
-  return index;
+
+  const byKeyArrays = {};
+  Object.entries(byKey).forEach(([key, bucket]) => { byKeyArrays[key] = [...bucket.values()]; });
+  return buildLegacyView(byKeyArrays);
 }
 
 /**
@@ -146,6 +182,44 @@ export async function loadVendorLibraryIndex(projectKey, skip) {
   const res = await vendorLibraryApi.get('all');
   const files = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
   return indexFromFiles(files, projectKey, skip);
+}
+
+/**
+ * Liệt kê MỌI record (mỗi vendor một dòng riêng) — nguồn cho picker "Thêm
+ * Product Type" và cho bộ chọn vendor trên Product Type Card (mục 03/04/05).
+ * Khác `listLibraryProductTypes`: KHÔNG gộp theo tên, một tên phôi có 2 vendor
+ * trả về đúng 2 phần tử.
+ */
+export function listLibraryRecords(index, { vendor, q } = {}) {
+  if (!index) return [];
+  const nq = normalizeKey(q);
+  const nv = normalizeKey(vendor);
+  const all = Object.values(index).flatMap((entry) => entry.records || []);
+  return all
+    .filter((r) => {
+      if (nv && normalizeKey(r.vendorCode) !== nv) return false;
+      if (nq && !(normalizeKey(r.productType).includes(nq) || normalizeKey(r.vendorCode).includes(nq))) return false;
+      return true;
+    })
+    .sort((a, b) =>
+      a.productType.localeCompare(b.productType, undefined, { numeric: true, sensitivity: 'base' }) ||
+      a.vendorCode.localeCompare(b.vendorCode, undefined, { numeric: true, sensitivity: 'base' })
+    );
+}
+
+/**
+ * Tìm đúng MỘT record theo recordKey — dùng khi bảng giá đã chốt vendor cụ
+ * thể (`pt.libRef.recordKey`, xem utils/resolveSheet.js). `null` nếu record
+ * đã biến mất khỏi thư viện (file bị xoá/import lại) — nơi gọi tự lo phần
+ * cảnh báo + costSnapshot, KHÔNG được âm thầm đổi số.
+ */
+export function findLibraryRecord(index, recordKey) {
+  if (!index || !recordKey) return null;
+  for (const entry of Object.values(index)) {
+    const found = (entry.records || []).find((r) => r.recordKey === recordKey);
+    if (found) return found;
+  }
+  return null;
 }
 
 /** Liệt kê Product Type có trong thư viện (đã lọc project) → cho picker chọn. */

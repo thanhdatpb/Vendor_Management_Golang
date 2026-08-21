@@ -11,6 +11,7 @@
 //  Thuần logic, không dính React → test được mà không cần render.
 // ════════════════════════════════════════════════════════
 import { summarizeSheet } from './pricingEngine';
+import { projectNameToKey } from '../constants/projects';
 
 const text = (v) => (v ?? '').toString();
 const numOrNull = (v) => {
@@ -21,7 +22,8 @@ const numOrNull = (v) => {
 
 /**
  * @returns {{
- *   id: string, name: string, project: string, version: number|undefined,
+ *   id: string, name: string, project: string, projectKey: string,
+ *   version: number|undefined,
  *   vendorRef: string, sourceFile: string, productTypeNames: string[],
  *   sizeCount: number, minPrice: number|null, maxPrice: number|null,
  *   avgMargin: number|null, updatedAt: string|null, updatedBy: string,
@@ -35,6 +37,13 @@ export function normalizeSheetRow(row) {
     id: row.id,
     name: text(row.name),
     project: text(row.project),
+    // Khoá project đã chuẩn hoá. `price_sheets.project` lưu ĐÚNG chuỗi trong
+    // cột `users.project`, mà màn Quản Lý Nhân Sự cho chọn dạng nhãn
+    // ("Creative Project") → server hạ chữ thường thành "creative project".
+    // Bộ lọc/badge lại dùng id ngắn ("creative"), nên so bằng `===` trượt hết
+    // và mọi chip project đếm 0. Quy về id ngay tại đây, giữ nguyên `project`
+    // thô để không phá cache localStorage và dữ liệu cũ.
+    projectKey: projectNameToKey(row.project) || '',
     version: row.version,
     vendorRef: text(row.vendorRef),
     sourceFile: text(row._sourceFile),
@@ -86,6 +95,7 @@ export function toSummaryRow(normalized) {
     id: normalized.id,
     name: normalized.name,
     project: normalized.project,
+    projectKey: normalized.projectKey,
     version: normalized.version,
     vendorRef: normalized.vendorRef,
     _sourceFile: normalized.sourceFile,

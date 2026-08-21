@@ -19,6 +19,21 @@ vi.mock('../../../../services/api', () => ({
   },
 }));
 
+// XLSX.writeFile GHI FILE THẬT ra đĩa khi chạy trong Node — hai file
+// HC_Gia_*.xlsx từng rơi vào thư mục frontend/ chính vì test export ở dưới.
+// Mock ở tầng thư viện: không đụng đĩa, mà còn kiểm được tên file xuất ra.
+const xlsxMock = vi.hoisted(() => ({ writeFile: vi.fn() }));
+vi.mock('xlsx', () => ({
+  default: {
+    utils: {
+      aoa_to_sheet: () => ({}),
+      book_new: () => ({ SheetNames: [], Sheets: {} }),
+      book_append_sheet: () => {},
+    },
+    writeFile: xlsxMock.writeFile,
+  },
+}));
+
 // jsdom không cài sẵn URL.createObjectURL — sheetExport gọi khi export Excel.
 beforeEach(() => {
   globalThis.URL.createObjectURL = vi.fn(() => 'blob:mock');
@@ -48,6 +63,7 @@ const fullSheet = (overrides = {}) => ({
 beforeEach(() => {
   priceSheetApi.list.mockReset();
   priceSheetApi.get.mockReset();
+  xlsxMock.writeFile.mockClear();
 });
 
 describe('danh sách — trộn nhiều project', () => {
@@ -168,6 +184,9 @@ describe('chỉ xem — không có đường sửa/xoá', () => {
     await user.click(await screen.findByTitle('Export Excel'));
 
     await waitFor(() => expect(priceSheetApi.get).toHaveBeenCalledWith('sheet_1'));
+    await waitFor(() => expect(xlsxMock.writeFile).toHaveBeenCalled());
+    // Xuất ĐÚNG tên file quy ước, và đi qua mock nên không rơi file vào repo.
+    expect(xlsxMock.writeFile.mock.calls[0][1]).toMatch(/^HC_Gia_.*.xlsx$/);
     expect(screen.queryByText('Chỉ xem — Admin không sửa hay xoá bảng tính giá của Seller ở đây.')).not.toBeInTheDocument();
   });
 });
@@ -211,5 +230,107 @@ describe('tìm kiếm', () => {
     // Tên bảng "Night Light" lặp lại ở chip productType cùng dòng.
     expect(screen.getAllByText('Night Light').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('1 bảng')).toBeInTheDocument();
+  });
+});
+
+// ════════════════════════════════════════════════════════
+//  Lỗi thật trên production 21/08/2026: "Tất cả 44" nhưng mọi chip project
+//  đều đếm 0. Nguyên nhân: `users.project` lưu dạng NHÃN ("Creative Project"),
+//  server hạ chữ thường thành "creative project" rồi ghi vào
+//  `price_sheets.project`, trong khi chip lọc dùng id ngắn ("creative").
+//  Fixture cũ của file này dùng sẵn id ngắn nên không bắt được.
+// ════════════════════════════════════════════════════════
+describe('project lưu dạng nhãn — regression 2026-08', () => {
+  it('chip đếm đúng dù DB lưu "Creative Project" / "creative project" / "creative"', async () => {
+    priceSheetApi.list.mockResolvedValue({
+      data: [
+        summaryRow({ id: 's1', project: 'Creative Project' }),
+        summaryRow({ id: 's2', project: 'creative project' }),
+        summaryRow({ id: 's3', project: 'creative' }),
+        summaryRow({ id: 's4', project: 'Happy Project' }),
+      ],
+    });
+
+    render(<PriceSheetSection />);
+    await screen.findByText('4 bảng');
+
+    expect(screen.getByRole('button', { name: /^Creative Project/ })).toHaveTextContent('3');
+    expect(screen.getByRole('button', { name: /^Happy Project/ })).toHaveTextContent('1');
+  });
+
+  it('bấm chip lọc ra đúng các bảng, không còn danh sách rỗng', async () => {
+    const user = userEvent.setup();
+    priceSheetApi.list.mockResolvedValue({
+      data: [
+        summaryRow({ id: 's1', name: 'Bang Creative', project: 'creative project' }),
+        summaryRow({ id: 's2', name: 'Bang Happy', project: 'Happy Project' }),
+      ],
+    });
+
+    render(<PriceSheetSection />);
+    await screen.findByText('Bang Creative');
+
+    await user.click(screen.getByRole('button', { name: /^Creative Project/ }));
+    expect(screen.getByText('Bang Creative')).toBeInTheDocument();
+    expect(screen.queryByText('Bang Happy')).not.toBeInTheDocument();
+    expect(screen.getByText('1 bảng')).toBeInTheDocument();
+  });
+
+  it('badge cột Project hiện nhãn chuẩn, không hiện chuỗi thô của DB', async () => {
+    priceSheetApi.list.mockResolvedValue({ data: [summaryRow({ id: 's1', project: 'hapify84 project' })] });
+
+    render(<PriceSheetSection />);
+    await screen.findByText('1 bảng');
+
+    // Nhãn xuất hiện ở cả chip lọc lẫn badge của dòng → đếm số lần, không dùng có/không.
+    expect(screen.getAllByText('Hapify84 Project').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('hapify84 project')).not.toBeInTheDocument();
+  });
+
+  it('tổng các chip bằng đúng chip "Tất cả" — bảng chưa gán project có chỗ đứng', async () => {
+    priceSheetApi.list.mockResolvedValue({
+      data: [
+        summaryRow({ id: 's1', project: 'Happy Project' }),
+        summaryRow({ id: 's2', project: '' }),
+        summaryRow({ id: 's3', project: 'Zeta Project' }),
+      ],
+    });
+
+    render(<PriceSheetSection />);
+    await screen.findByText('3 bảng');
+
+    const countOf = (name) => Number(screen.getByRole('button', { name }).textContent.match(/(\d+)$/)[1]);
+    const all = countOf(/^Tất cả/);
+    const perChip = [/^Happy Project/, /^Creative Project/, /^Global Project/, /^Hapify84 Project/, /^Chưa gán project/]
+      .reduce((sum, name) => sum + countOf(name), 0);
+
+    expect(perChip).toBe(all);
+    expect(countOf(/^Chưa gán project/)).toBe(2);   // project rỗng + project lạ
+  });
+
+  it('không có bảng nào chưa gán thì KHÔNG bày thêm chip rỗng', async () => {
+    priceSheetApi.list.mockResolvedValue({ data: [summaryRow({ id: 's1', project: 'Happy Project' })] });
+
+    render(<PriceSheetSection />);
+    await screen.findByText('1 bảng');
+
+    expect(screen.queryByRole('button', { name: /Chưa gán project/ })).not.toBeInTheDocument();
+  });
+
+  it('chip "Chưa gán project" lọc ra đúng những bảng không nhận diện được project', async () => {
+    const user = userEvent.setup();
+    priceSheetApi.list.mockResolvedValue({
+      data: [
+        summaryRow({ id: 's1', name: 'Bang Happy', project: 'Happy Project' }),
+        summaryRow({ id: 's2', name: 'Bang La', project: 'Zeta Project' }),
+      ],
+    });
+
+    render(<PriceSheetSection />);
+    await screen.findByText('Bang Happy');
+
+    await user.click(screen.getByRole('button', { name: /^Chưa gán project/ }));
+    expect(screen.getByText('Bang La')).toBeInTheDocument();
+    expect(screen.queryByText('Bang Happy')).not.toBeInTheDocument();
   });
 });

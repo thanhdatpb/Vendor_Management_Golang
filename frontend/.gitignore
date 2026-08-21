@@ -17,6 +17,10 @@ dist-ssr
 .env.*
 !.env.example
 
+# File Excel do người dùng export (và do test export sinh ra khi chạy trong Node).
+# Hai file HC_Gia_*.xlsx từng lọt vào repo vì test gọi XLSX.writeFile thật.
+HC_Gia_*.xlsx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

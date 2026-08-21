@@ -188,3 +188,55 @@ describe('sheetInProject', () => {
     expect(sheetInProject(row, 'creative', false)).toBe(false);
   });
 });
+
+// ════════════════════════════════════════════════════════
+//  Chuẩn hoá khoá project (lỗi "chip project nào cũng đếm 0")
+//
+//  `price_sheets.project` lưu đúng chuỗi trong cột `users.project`, mà màn
+//  Quản Lý Nhân Sự cho chọn dạng NHÃN ("Creative Project") → server hạ chữ
+//  thường thành "creative project". Bộ lọc của Admin lại dùng id ngắn
+//  ("creative"), nên so bằng `===` trượt hết: danh sách "Tất cả" có 44 bảng
+//  nhưng mọi chip project đều hiện 0.
+// ════════════════════════════════════════════════════════
+describe('normalizeSheetRow — projectKey', () => {
+  const keyOf = (project) => normalizeSheetRow(summaryRow({ project })).projectKey;
+
+  it('nhận cả dạng nhãn, dạng nhãn hạ chữ thường, và id ngắn', () => {
+    expect(keyOf('Creative Project')).toBe('creative');
+    expect(keyOf('creative project')).toBe('creative');
+    expect(keyOf('creative')).toBe('creative');
+  });
+
+  it('phủ đủ 4 project đang có', () => {
+    expect(keyOf('Happy Project')).toBe('happy');
+    expect(keyOf('Global Project')).toBe('global');
+    expect(keyOf('Hapify84 Project')).toBe('hapify84');
+  });
+
+  it('không để id ngắn nuốt id dài — "hapify84" KHÔNG được hiểu thành "happy"', () => {
+    expect(keyOf('hapify84 project')).toBe('hapify84');
+    expect(keyOf('Hapify84')).toBe('hapify84');
+  });
+
+  it('project rỗng hoặc lạ trả chuỗi rỗng, không đoán bừa', () => {
+    expect(keyOf('')).toBe('');
+    expect(keyOf('Zeta Project')).toBe('');
+    expect(normalizeSheetRow(summaryRow({ project: undefined })).projectKey).toBe('');
+  });
+
+  it('giữ nguyên chuỗi thô ở `project` để không phá dữ liệu cũ và cache', () => {
+    const row = normalizeSheetRow(summaryRow({ project: 'Creative Project' }));
+    expect(row.project).toBe('Creative Project');
+    expect(row.projectKey).toBe('creative');
+  });
+
+  it('sheet đầy đủ (cache cũ / vừa lưu) cũng có projectKey', () => {
+    expect(normalizeSheetRow(fullSheet({ project: 'Global Project' })).projectKey).toBe('global');
+  });
+
+  it('toSummaryRow mang theo projectKey để cache không mất khoá đã chuẩn hoá', () => {
+    const cached = toSummaryRow(normalizeSheetRow(summaryRow({ project: 'Happy Project' })));
+    expect(cached.projectKey).toBe('happy');
+    expect(normalizeSheetRow(cached).projectKey).toBe('happy');
+  });
+});

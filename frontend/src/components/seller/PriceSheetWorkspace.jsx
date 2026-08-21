@@ -14,7 +14,7 @@ import {
   summarizeSheet, num, pct,
   makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
-import { loadVendorLibraryIndex, findLibraryEntry, normalizeKey } from '../../utils/vendorLibraryIndex';
+import { loadVendorLibraryIndex, findLibraryEntry, findLibraryRecord } from '../../utils/vendorLibraryIndex';
 import { resolveSheet, baseSizesOf as baseSizesOfLib, libSizesOf } from '../../utils/resolveSheet';
 import { exportSheetToExcel } from '../../utils/sheetExport';
 
@@ -73,15 +73,19 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const patchPT = (ptId, patch) => setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, ...patch } : pt)));
   const toggleShown = (ptId) => setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, shown: !pt.shown } : pt)));
   const addPT = () => setProductTypes((p) => [...p, makeProductType(`Product Type ${p.length + 1}`)]);
-  // Thêm product type bằng cách CHỌN từ thư viện vendor: dùng đúng tên trong thư viện
-  // → findLibraryEntry khớp chính xác, sizes + Item Cost tự nạp, tên khoá không sửa.
-  const addPTFromLibrary = (nameFromLib) => {
-    const libEntry = findLibraryEntry(libIndex, nameFromLib);
-    const pt = { ...makeProductType(nameFromLib), shown: true };
+  // Thêm product type bằng cách CHỌN MỘT RECORD cụ thể từ thư viện vendor
+  // (mục 03/04) — record đã gồm sẵn vendor + file nguồn, gắn thẳng vào
+  // `pt.libRef` để resolveSheet tra đúng record đó, không tra lại theo tên.
+  // Nhờ vậy 2 vendor cùng tên phôi thêm được thành 2 block riêng, không đè nhau.
+  const addPTFromLibrary = (record) => {
+    const pt = {
+      ...makeProductType(record.productType), shown: true,
+      libRef: { recordKey: record.recordKey, vendorCode: record.vendorCode, filename: record.filename },
+    };
     // Nạp sẵn size của thư viện vào state (giống luồng tạo bảng ở SetupPriceSection)
     // — nếu để mặc định 1 size rỗng thì các dòng size hiển thị chỉ là dữ liệu dựng
     // tạm của draftSheet, không có trong state để sửa.
-    if (libEntry?.sizes?.length) pt.sizes = libSizesOf(pt, libEntry);
+    if (record?.sizes?.length) pt.sizes = libSizesOf(pt, record);
     setProductTypes((p) => [...p, pt]);
     setShowAddPTDialog(false);
   };
@@ -267,7 +271,11 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
             </div>
           )}
           {draftSheet.productTypes.filter(pt => pt.shown).map((pt) => {
-            const libEntry = findLibraryEntry(libIndex, pt.name);
+            // PT gắn `libRef` (mục 03/04) tra ĐÚNG record đã chốt, không tra lại
+            // theo tên — 2 block cùng tên phôi mới không lấy nhầm vendor của nhau.
+            const libEntry = pt.libRef?.recordKey
+              ? findLibraryRecord(libIndex, pt.libRef.recordKey)
+              : findLibraryEntry(libIndex, pt.name);
             return (
               <ProductTypeCard key={pt.id} pt={pt} settings={settings} libEntry={libEntry}
                 onPT={patchPT} onRemovePT={removePT}
@@ -333,7 +341,6 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       {showAddPTDialog && (
         <AddProductTypeModal
           libIndex={libIndex}
-          existingKeys={new Set(productTypes.map((pt) => normalizeKey(pt.name)))}
           onPick={addPTFromLibrary}
           onManual={() => { addPT(); setShowAddPTDialog(false); }}
           onClose={() => setShowAddPTDialog(false)}
