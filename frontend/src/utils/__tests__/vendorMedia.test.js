@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaThumb } from '../../components/vendor/sections/VendorLibraryViewer';
+import api from '../../services/api';
 import { isGoogleDriveUrl, isSizeGuideMediaUrl, normalizeVendorMediaUrl } from '../vendorMedia';
 
 describe('vendor media URLs', () => {
@@ -17,12 +18,9 @@ describe('vendor media URLs', () => {
       .toBe('/api/vendor-library/images/a.jpg');
   });
 
-  it('tải ảnh nội bộ bằng token đăng nhập', async () => {
-    vi.stubGlobal('localStorage', { getItem: vi.fn(() => 'secret-token') });
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      blob: async () => new Blob(['image']),
-    });
+  it('tải ảnh nội bộ qua API client có interceptor xác thực', async () => {
+    const imageBlob = new Blob(['image']);
+    const apiMock = vi.spyOn(api, 'get').mockResolvedValue({ data: imageBlob });
     vi.stubGlobal('URL', {
       createObjectURL: vi.fn(() => 'blob:vendor-image'),
       revokeObjectURL: vi.fn(),
@@ -33,10 +31,11 @@ describe('vendor media URLs', () => {
     }));
 
     await waitFor(() => expect(document.querySelector('img')).toHaveAttribute('src', 'blob:vendor-image'));
-    expect(fetchMock).toHaveBeenCalledWith('/api/vendor-library/images/a.jpg', expect.objectContaining({
-      headers: { Authorization: 'Bearer secret-token' },
+    expect(apiMock).toHaveBeenCalledWith('/vendor-library/images/a.jpg', expect.objectContaining({
+      responseType: 'blob',
     }));
   });
+
   it('giữ nguyên URL ngoài storage', () => {
     expect(normalizeVendorMediaUrl('https://cdn.example.com/a.jpg'))
       .toBe('https://cdn.example.com/a.jpg');

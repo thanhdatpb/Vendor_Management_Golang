@@ -5,7 +5,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate } from '../../../utils/vendorExcel';
-import { vendorLibraryApi } from '../../../services/api';
+import api, { vendorLibraryApi } from '../../../services/api';
 import { normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
 import { subscribeVendorLibraryChanges } from '../../../services/echo';
 import AppToast from '../../shared/AppToast';
@@ -58,20 +58,15 @@ function AuthenticatedImage({ url, ...props }) {
     }
 
     const controller = new AbortController();
-    const token = localStorage.getItem('auth_token');
-    fetch(normalizedUrl, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: controller.signal,
-    })
+    const apiPath = normalizedUrl.replace(/^\/api/, '');
+    api.get(apiPath, { responseType: 'blob', signal: controller.signal })
       .then((response) => {
-        if (!response.ok) throw new Error(`Image request failed: ${response.status}`);
-        return response.blob();
-      })
-      .then((blob) => {
-        if (!controller.signal.aborted) setObjectUrl(URL.createObjectURL(blob));
+        if (!controller.signal.aborted) setObjectUrl(URL.createObjectURL(response.data));
       })
       .catch((error) => {
-        if (error.name !== 'AbortError') console.error('Không thể tải ảnh Vendor Library:', error);
+        if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED') {
+          console.error('Không thể tải ảnh Vendor Library:', error);
+        }
       });
 
     return () => {
