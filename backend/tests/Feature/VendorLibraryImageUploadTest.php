@@ -18,8 +18,9 @@ class VendorLibraryImageUploadTest extends TestCase
         config(['app.url' => 'http://localhost']);
 
         $vendor = User::factory()->create(['role' => 'vendor', 'is_active' => true]);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
         $response = $this->actingAs($vendor)->post('/api/vendor-library/upload-images', [
-            'images' => [UploadedFile::fake()->image('croptop.jpg', 200, 200)],
+            'images' => [UploadedFile::fake()->createWithContent('croptop.png', $png)],
         ]);
 
         $response->assertOk();
