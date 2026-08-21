@@ -14,6 +14,11 @@ export const normalizeVendorMediaUrl = (url) => {
   if (!url || typeof url !== 'string') return url;
   const trimmed = url.trim();
   const storageIndex = trimmed.toLowerCase().indexOf('/storage/');
-  if (storageIndex >= 0) return trimmed.slice(storageIndex);
+  if (storageIndex >= 0) {
+    const storagePath = trimmed.slice(storageIndex);
+    const match = storagePath.match(/^\/storage\/vendor-library\/([^/?#]+)/i);
+    if (match) return `/api/vendor-library/images/${encodeURIComponent(decodeURIComponent(match[1]))}`;
+    return storagePath;
+  }
   return trimmed;
 };

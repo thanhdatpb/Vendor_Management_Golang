@@ -12,7 +12,7 @@ class VendorLibraryImageUploadTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_excel_image_upload_returns_same_origin_storage_url(): void
+    public function test_excel_image_upload_returns_authenticated_image_endpoint(): void
     {
         Storage::fake('public');
         config(['app.url' => 'http://localhost']);
@@ -26,8 +26,17 @@ class VendorLibraryImageUploadTest extends TestCase
         $response->assertOk();
         $url = $response->json('urls.0');
 
-        $this->assertStringStartsWith('/storage/vendor-library/', $url);
+        $this->assertStringStartsWith('/api/vendor-library/images/', $url);
         $this->assertStringNotContainsString('localhost', $url);
-        Storage::disk('public')->assertExists(str_replace('/storage/', '', $url));
+        $filename = basename($url);
+        Storage::disk('public')->assertExists('vendor-library/' . $filename);
+
+
+        $this->actingAs($vendor)->get($url)->assertOk();
+    }
+
+    public function test_excel_image_endpoint_requires_authentication(): void
+    {
+        $this->getJson('/api/vendor-library/images/missing.png')->assertUnauthorized();
     }
 }

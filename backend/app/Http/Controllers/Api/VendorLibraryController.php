@@ -318,14 +318,24 @@ class VendorLibraryController extends Controller
         $urls = [];
         foreach ($request->file('images') as $key => $file) {
             $path = $file->store('vendor-library', 'public');
-            // Không dùng Storage::url(): local disk ghép APP_URL vào URL. Nếu
-            // production còn APP_URL=http://localhost, browser người dùng sẽ
-            // gọi localhost và toàn bộ ảnh Excel bị vỡ. Đường dẫn tương đối
-            // luôn đi qua /storage của đúng domain Vendor Hub hiện tại.
-            $urls[$key] = '/storage/' . ltrim($path, '/');
+            $urls[$key] = '/api/vendor-library/images/' . rawurlencode(basename($path));
         }
 
         return response()->json(['urls' => $urls]);
+    }
+
+    public function image(string $filename)
+    {
+        if (basename($filename) !== $filename || !preg_match('/^[A-Za-z0-9._-]+$/', $filename)) {
+            abort(404);
+        }
+
+        $path = 'vendor-library/' . $filename;
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path, null, [
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
     }
 
     public function restoreBackup()

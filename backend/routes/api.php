@@ -159,6 +159,8 @@ Route::middleware(['auth:sanctum', 'seen'])->group(function () {
     // Upload hàng loạt ảnh trích xuất từ Excel (ảnh nhúng trực tiếp vào ô) khi import
     Route::post('/vendor-library/upload-images', [VendorLibraryController::class, 'uploadImages'])
         ->middleware('role:staff_b,vendor');
+    Route::get('/vendor-library/images/{filename}', [VendorLibraryController::class, 'image'])
+        ->where('filename', '[A-Za-z0-9._-]+');
 
     // =========================
     // PRICE SHEETS (Bảng tính giá) — lưu server, chia sẻ theo project

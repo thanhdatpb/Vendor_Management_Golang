@@ -45,6 +45,46 @@ const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)
 // Link Google Drive (drive.google.com) cũng không phải ảnh → hiển thị logo Drive.
 const isGoogleDriveUrl = (u) => typeof u === 'string' && /(?:drive|docs)\.google\.com/i.test(u);
 
+function AuthenticatedImage({ url, ...props }) {
+  const normalizedUrl = normalizeVendorMediaUrl(url);
+  const requiresAuth = typeof normalizedUrl === 'string' &&
+    normalizedUrl.startsWith('/api/vendor-library/images/');
+  const [objectUrl, setObjectUrl] = useState(null);
+
+  useEffect(() => {
+    if (!requiresAuth) {
+      setObjectUrl(null);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const token = localStorage.getItem('auth_token');
+    fetch(normalizedUrl, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Image request failed: ${response.status}`);
+        return response.blob();
+      })
+      .then((blob) => {
+        if (!controller.signal.aborted) setObjectUrl(URL.createObjectURL(blob));
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') console.error('Không thể tải ảnh Vendor Library:', error);
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [normalizedUrl, requiresAuth]);
+
+  useEffect(() => () => {
+    if (objectUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(objectUrl);
+  }, [objectUrl]);
+
+  return <img src={requiresAuth ? (objectUrl || undefined) : normalizedUrl} {...props} />;
+}
 // Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube, link Google Drive
 // → logo Drive (bấm mở); còn lại → ảnh như cũ. Người dùng nhận ra ngay không phải ảnh lỗi.
 export function MediaThumb({ url }) {
@@ -77,7 +117,7 @@ export function MediaThumb({ url }) {
   }
   return (
     <a href={url} target="_blank" rel="noreferrer">
-      <img src={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+      <AuthenticatedImage url={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
     </a>
   );
 }
@@ -393,7 +433,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                         {isGoogleDriveUrl(r.chiTietSizeImage)
                           ? <MediaThumb url={r.chiTietSizeImage} />
                           : <a href={normalizeVendorMediaUrl(r.chiTietSizeImage)} target="_blank" rel="noreferrer">
-                              <img src={normalizeVendorMediaUrl(r.chiTietSizeImage)} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
+                              <AuthenticatedImage url={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
                             </a>}
                       </div>
                     )}
