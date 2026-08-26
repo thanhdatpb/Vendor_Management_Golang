@@ -1,8 +1,8 @@
 /**
  * Chuẩn import/export Vendor Excel — dùng chung Staff B (và Admin nếu cần).
  */
-
 import { isSizeGuideMediaUrl } from './vendorMedia';
+
 export const VENDOR_TYPES = ['Old', 'New', 'Best Seller'];
 
 export const VENDOR_EXCEL_HEADERS = [
@@ -333,18 +333,30 @@ export function downloadVendorLibraryTemplate() {
 //  includePricing=false (CSF/PD/Marvel) → bỏ hẳn khối "Về giá", KHÔNG chỉ ẩn
 //  giá trị — theo đúng yêu cầu "không được public giá cho CSF/PD" ở CLAUDE.md.
 // ─────────────────────────────────────────────────────────────────────────────
-const TEMPLATE_COL_COUNT = 16; // A..P
+// Độ rộng cột A..P LẤY NGUYÊN từ xl/styles.xml + sheet1.xml của chính file mẫu
+// (không đoán từ ảnh) — đơn vị "ký tự" giống hệt cách Excel lưu.
 const TEMPLATE_COL_WIDTHS = [
-  { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-  { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 14 },
-  { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 20 },
+  { wch: 33.57 }, { wch: 33.57 }, { wch: 33.57 }, { wch: 33.57 }, { wch: 33.57 },
+  { wch: 22.86 }, { wch: 14.43 }, { wch: 14.43 }, { wch: 11.43 }, { wch: 11.43 },
+  { wch: 11.43 }, { wch: 21.29 }, { wch: 11.43 }, { wch: 11.43 }, { wch: 11.43 }, { wch: 11.43 },
 ];
 
-function padTemplateRow(arr) {
-  const row = (arr || []).slice(0, TEMPLATE_COL_COUNT);
-  while (row.length < TEMPLATE_COL_COUNT) row.push('');
-  return row;
-}
+// Màu/font lấy đúng theo xl/styles.xml của file mẫu (fill FCE5CD/B6D7A8, font đỏ FF0000).
+const FONT_TITLE = { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FF0000' } };
+const FONT_LABEL = { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FF0000' } };
+const FONT_HEADER = { name: 'Calibri', sz: 11, bold: true, color: { rgb: '000000' } };
+const FONT_DEFAULT = { name: 'Calibri', sz: 11 };
+
+const FILL_LABEL = { patternType: 'solid', fgColor: { rgb: 'FCE5CD' } };
+const FILL_HEADER = { patternType: 'solid', fgColor: { rgb: 'B6D7A8' } };
+
+const THIN_BLACK = { style: 'thin', color: { rgb: '000000' } };
+const BORDER_BOX = { top: THIN_BLACK, bottom: THIN_BLACK, left: THIN_BLACK, right: THIN_BLACK };
+
+const STYLE_TITLE = { font: FONT_TITLE, alignment: { horizontal: 'center', vertical: 'center' } };
+const STYLE_LABEL = { font: FONT_LABEL, fill: FILL_LABEL, border: BORDER_BOX, alignment: { horizontal: 'left', vertical: 'center' } };
+const STYLE_HEADER = { font: FONT_HEADER, fill: FILL_HEADER, border: BORDER_BOX, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
+const STYLE_DATA = { font: FONT_DEFAULT, border: BORDER_BOX, alignment: { vertical: 'center', wrapText: true } };
 
 /** Gom generalInfo + pricing của 1 file thư viện thành các nhóm theo Product Type. */
 function groupLibraryFileByProductType(file) {
@@ -363,102 +375,143 @@ function groupLibraryFileByProductType(file) {
   return [...groups.values()];
 }
 
-/** Dựng 1 sheet (AOA + merges) cho 1 nhóm (file × Product Type). */
-function buildVendorTemplateSheet(group, includePricing) {
-  const rows = [];
-  const push = (arr) => rows.push(padTemplateRow(arr));
+function setCell(ws, XLSX, r, c, value, style) {
+  const addr = XLSX.utils.encode_cell({ r, c });
+  const isNum = typeof value === 'number';
+  ws[addr] = { v: value ?? '', t: isNum ? 'n' : 's', s: style };
+}
 
-  push([]);
-  push(['', '', '', group.productType || 'Template Vendor mẫu']);
-  push([]);
-  push([]);
-  push(['Thông tin chung về phôi']);
-  push([
-    'Vendor Name', 'Product Type', 'Hình ảnh đại diện - Video', '', '', '',
-    'Chất liệu', 'Chi tiết Size', 'AVG thời gian sx+ ship theo vendor', '',
-    'AVG thời gian sx+ ship thực tế', 'Notes', '', '', '', 'Link Folder',
-  ]);
+/** Tô style cho nguyên 1 vùng ô (dùng cho cả 1 ô lẫn vùng merge) — không đụng giá trị đã set. */
+function paintRange(ws, XLSX, r1, c1, r2, c2, style) {
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+      ws[addr].s = style;
+    }
+  }
+}
 
-  const generalRows = group.generalInfo.length ? group.generalInfo : [{}];
-  generalRows.forEach((r) => {
-    push([
-      r.vendorName || '',
-      r.productType || group.productType || '',
-      (r.images && r.images[0]) || '',
-      '', '', '',
-      r.chatLieu || '',
-      r.chiTietSize || '',
-      r.avgTimeVendor || '',
-      '',
-      r.avgTimeActual || '',
-      r.notes || '',
-      '', '', '',
-      r.linkFolder || '',
-    ]);
-  });
+/** Ghi 1 hàng dữ liệu (16 cột) với cùng 1 style — dùng cho hàng general-info/pricing. */
+function writeDataRow(ws, XLSX, r, values, style) {
+  for (let c = 0; c < 16; c++) setCell(ws, XLSX, r, c, values[c] ?? '', style);
+}
 
-  const merges = [
-    { s: { r: 1, c: 3 }, e: { r: 1, c: 15 } },
-    { s: { r: 2, c: 3 }, e: { r: 2, c: 15 } },
-    { s: { r: 4, c: 0 }, e: { r: 4, c: 15 } },
+/**
+ * Dựng 1 sheet (đã tô màu/border/bold đúng file mẫu) cho 1 nhóm (file × Product Type).
+ * Bố cục hàng giữ NGUYÊN vị trí như bản cũ (để parseHappyCreativeLibrary đọc lại đúng),
+ * chỉ thêm style — không đổi cấu trúc.
+ */
+function buildVendorTemplateSheet(XLSX, group, includePricing) {
+  const ws = {};
+  const merges = [];
+
+  // Hàng 1 (r=1): tiêu đề, merge D:P.
+  setCell(ws, XLSX, 1, 3, group.productType || 'Template Vendor mẫu', STYLE_TITLE);
+  merges.push({ s: { r: 1, c: 3 }, e: { r: 1, c: 15 } });
+
+  // Hàng 4 (r=4): nhãn "Thông tin chung về phôi", merge A:P, nền cam đậm.
+  setCell(ws, XLSX, 4, 0, 'Thông tin chung về phôi', STYLE_LABEL);
+  merges.push({ s: { r: 4, c: 0 }, e: { r: 4, c: 15 } });
+  paintRange(ws, XLSX, 4, 0, 4, 15, STYLE_LABEL);
+
+  // Hàng 5 (r=5): header section 1, nền xanh, bold.
+  paintRange(ws, XLSX, 5, 0, 5, 15, STYLE_HEADER);
+  setCell(ws, XLSX, 5, 0, 'Vendor Name', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 1, 'Product Type', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 2, 'Hình ảnh đại diện - Video', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 6, 'Chất liệu', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 7, 'Chi tiết Size', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 8, 'AVG thời gian sx+ ship theo vendor', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 10, 'AVG thời gian sx+ ship thực tế', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 11, 'Notes', STYLE_HEADER);
+  setCell(ws, XLSX, 5, 15, 'Link Folder', STYLE_HEADER);
+  merges.push(
     { s: { r: 5, c: 2 }, e: { r: 5, c: 5 } },
     { s: { r: 5, c: 8 }, e: { r: 5, c: 9 } },
     { s: { r: 5, c: 11 }, e: { r: 5, c: 14 } },
-  ];
+  );
+
+  // Dữ liệu section 1 — bắt đầu từ hàng 6.
+  const generalRows = group.generalInfo.length ? group.generalInfo : [{}];
+  let r = 6;
+  generalRows.forEach((row) => {
+    writeDataRow(ws, XLSX, r, [
+      row.vendorName || '', row.productType || group.productType || '',
+      (row.images && row.images[0]) || '', '', '', '',
+      row.chatLieu || '', row.chiTietSize || '',
+      row.avgTimeVendor || '', '', row.avgTimeActual || '',
+      row.notes || '', '', '', '', row.linkFolder || '',
+    ], STYLE_DATA);
+    r++;
+  });
 
   if (includePricing) {
-    const label2Row = rows.length;
-    push(['Về giá']);
+    // Nhãn "Về giá".
+    const label2Row = r;
+    setCell(ws, XLSX, label2Row, 0, 'Về giá', STYLE_LABEL);
+    merges.push({ s: { r: label2Row, c: 0 }, e: { r: label2Row, c: 15 } });
+    paintRange(ws, XLSX, label2Row, 0, label2Row, 15, STYLE_LABEL);
+    r++;
 
-    const header2TopRow = rows.length;
-    push([
-      '', `Product Type (${group.productType || ''})`, 'Detail', '', 'Pricing 1', 'Pricing 2',
-      'Shipping cost: Economy', '', 'Shipping cost: Fast', '', 'Shipping cost: Express', '',
-      'Shipping cost: Overnight', '', 'Link Template', '',
-    ]);
+    // Header section 2 — 2 hàng (nhóm + chi tiết).
+    const headerTop = r;
+    const headerSub = r + 1;
+    paintRange(ws, XLSX, headerTop, 0, headerSub, 15, STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 1, `Product Type (${group.productType || ''})`, STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 2, 'Detail', STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 4, 'Pricing 1', STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 5, 'Pricing 2', STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 6, 'Shipping cost: Economy', STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 8, 'Shipping cost: Fast', STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 10, 'Shipping cost: Express', STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 12, 'Shipping cost: Overnight', STYLE_HEADER);
+    setCell(ws, XLSX, headerTop, 14, 'Link Template', STYLE_HEADER);
 
-    const header2SubRow = rows.length;
-    push([
-      'Vendor Name', '', 'Size', 'Optional', '', '',
-      'Price Ship', 'Total Price (fulfill)', 'Price Ship', 'Total Price (fulfill)',
-      'Price Ship', 'Total Price (fulfill)', 'Price Ship', 'Total Price (fulfill)', '', '',
-    ]);
-
-    group.pricing.forEach((p) => {
-      push([
-        p.kyHieu || '',
-        '',
-        p.size || '',
-        p.optional || '',
-        p.pricing1 ?? '',
-        p.pricing2 ?? '',
-        p.eco_price ?? '',
-        p.eco_total ?? '',
-        p.ground_price ?? p.fast_price ?? '',
-        p.ground_total ?? p.fast_total ?? '',
-        p.express_price ?? '',
-        p.express_total ?? '',
-        p.overnight_price ?? '',
-        p.overnight_total ?? '',
-        '', '',
-      ]);
-    });
+    setCell(ws, XLSX, headerSub, 0, 'Vendor Name', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 2, 'Size', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 3, 'Optional', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 6, 'Price Ship', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 7, 'Total Price (fulfill)', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 8, 'Price Ship', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 9, 'Total Price (fulfill)', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 10, 'Price Ship', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 11, 'Total Price (fulfill)', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 12, 'Price Ship', STYLE_HEADER);
+    setCell(ws, XLSX, headerSub, 13, 'Total Price (fulfill)', STYLE_HEADER);
 
     merges.push(
-      { s: { r: label2Row, c: 0 }, e: { r: label2Row, c: 15 } },
-      { s: { r: header2TopRow, c: 1 }, e: { r: header2SubRow, c: 1 } },
-      { s: { r: header2TopRow, c: 2 }, e: { r: header2TopRow, c: 3 } },
-      { s: { r: header2TopRow, c: 4 }, e: { r: header2SubRow, c: 4 } },
-      { s: { r: header2TopRow, c: 5 }, e: { r: header2SubRow, c: 5 } },
-      { s: { r: header2TopRow, c: 6 }, e: { r: header2TopRow, c: 7 } },
-      { s: { r: header2TopRow, c: 8 }, e: { r: header2TopRow, c: 9 } },
-      { s: { r: header2TopRow, c: 10 }, e: { r: header2TopRow, c: 11 } },
-      { s: { r: header2TopRow, c: 12 }, e: { r: header2TopRow, c: 13 } },
-      { s: { r: header2TopRow, c: 14 }, e: { r: header2SubRow, c: 15 } },
+      { s: { r: headerTop, c: 1 }, e: { r: headerSub, c: 1 } },
+      { s: { r: headerTop, c: 2 }, e: { r: headerTop, c: 3 } },
+      { s: { r: headerTop, c: 4 }, e: { r: headerSub, c: 4 } },
+      { s: { r: headerTop, c: 5 }, e: { r: headerSub, c: 5 } },
+      { s: { r: headerTop, c: 6 }, e: { r: headerTop, c: 7 } },
+      { s: { r: headerTop, c: 8 }, e: { r: headerTop, c: 9 } },
+      { s: { r: headerTop, c: 10 }, e: { r: headerTop, c: 11 } },
+      { s: { r: headerTop, c: 12 }, e: { r: headerTop, c: 13 } },
+      { s: { r: headerTop, c: 14 }, e: { r: headerSub, c: 15 } },
     );
+    r = headerSub + 1;
+
+    group.pricing.forEach((p) => {
+      writeDataRow(ws, XLSX, r, [
+        p.kyHieu || '', '', p.size || '', p.optional || '',
+        p.pricing1 ?? '', p.pricing2 ?? '',
+        p.eco_price ?? '', p.eco_total ?? '',
+        p.ground_price ?? p.fast_price ?? '', p.ground_total ?? p.fast_total ?? '',
+        p.express_price ?? '', p.express_total ?? '',
+        p.overnight_price ?? '', p.overnight_total ?? '', '', '',
+      ], STYLE_DATA);
+      r++;
+    });
   }
 
-  return { aoa: rows, merges };
+  ws['!merges'] = merges;
+  ws['!cols'] = TEMPLATE_COL_WIDTHS;
+  ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(r - 1, 15), c: 15 } });
+  ws['!rows'] = [, , , , , { hpt: 30 }, { hpt: 42 }];
+
+  return ws;
 }
 
 function templateSheetName(base, used) {
@@ -480,10 +533,7 @@ function buildVendorWorkbookForFile(XLSX, file, includePricing) {
   const usedNames = new Set();
 
   groups.forEach((group) => {
-    const { aoa, merges } = buildVendorTemplateSheet(group, includePricing);
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!merges'] = merges;
-    ws['!cols'] = TEMPLATE_COL_WIDTHS;
+    const ws = buildVendorTemplateSheet(XLSX, group, includePricing);
     XLSX.utils.book_append_sheet(wb, ws, templateSheetName(group.productType, usedNames));
   });
 
@@ -510,7 +560,9 @@ export async function exportVendorLibraryFiles(files, { includePricing = true } 
     throw new Error('Chưa chọn file nào để xuất.');
   }
 
-  const xlsxModule = await import('xlsx');
+  // xlsx-js-style: fork của SheetJS Community Edition, thêm hỗ trợ GHI style
+  // (màu nền, font, border) — bản `xlsx` thường chỉ đọc được style, không ghi.
+  const xlsxModule = await import('xlsx-js-style');
   const XLSX = xlsxModule.default ?? xlsxModule;
 
   if (list.length === 1) {
@@ -784,11 +836,8 @@ export async function parseHappyCreativeLibrary(file) {
             if (sizeCell && sizeCell.f) {
               const m = sizeCell.f.match(/image\(\s*["'](.*?)["']\s*\)/i);
               if (m && m[1]) chiTietSizeImage = m[1];
-            } else if (sizeCell && sizeCell.v && cellStr(sizeCell.v).startsWith('http')) {
-              const sizeUrl = cellStr(sizeCell.v);
-              if (isSizeGuideMediaUrl(sizeUrl)) {
-                chiTietSizeImage = sizeUrl;
-              }
+            } else if (sizeCell && sizeCell.v && cellStr(sizeCell.v).startsWith('http') && cellStr(sizeCell.v).match(/\.(jpeg|jpg|gif|png)$/i)) {
+              chiTietSizeImage = cellStr(sizeCell.v);
             }
 
             let chiTietSizeText = cellStr(row[col_chiTietSize]);
