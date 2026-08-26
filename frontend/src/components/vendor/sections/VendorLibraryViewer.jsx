@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { HC } from '../utils/constants';
-import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate } from '../../../utils/vendorExcel';
+import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate, exportVendorLibraryToTemplate } from '../../../utils/vendorExcel';
 import api, { vendorLibraryApi } from '../../../services/api';
 import { normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
 import { subscribeVendorLibraryChanges } from '../../../services/echo';
@@ -1457,6 +1457,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [dataLoaded, setDataLoaded] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState([]);
+  const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
@@ -1810,6 +1811,18 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     writingRef.current = false;
   }, [libraryFiles, dataLoaded]);
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportVendorLibraryToTemplate(displayFiles, { includePricing: true });
+      showToast('success', '📤 Đã xuất file Excel theo file mẫu');
+    } catch (err) {
+      showToast('error', err.message || 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDelete = (id) => {
     setDeleteConfirm({ type: 'single', id });
   };
@@ -1927,8 +1940,24 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
             )}
           </div>
         </div>
-        {!readOnly && (
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            title="Xuất thư viện Vendor đang hiển thị ra Excel theo file mẫu"
+            style={{
+              padding: '9px 18px', borderRadius: 10,
+              border: `1.5px solid ${HC.orangeMid}`,
+              background: HC.surface, color: HC.orangeDark,
+              fontSize: 12, fontWeight: 800, cursor: exporting ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 7,
+              transition: 'all 0.15s', opacity: exporting ? 0.6 : 1,
+            }}
+          >
+            {exporting ? 'Đang xuất...' : '📤 Export'}
+          </button>
+          {!readOnly && (
+          <>
             <button
               onClick={() => setShowManualAdd(true)}
               style={{
@@ -1963,8 +1992,9 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
             >
               {importing ? 'Đang import...' : 'Import thư viện Excel'}
             </button>
-          </div>
-        )}
+          </>
+          )}
+        </div>
       </div>
 
       {/* API fetch error banner */}
@@ -2003,7 +2033,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
               <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
                 <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{isSearch ? '🔍' : (mode === 'bestseller' || mode === 'best_seller') ? '⭐' : '📂'}</div>
                 <div style={{ fontWeight: 800, color: HC.muted, fontSize: 14 }}>
-                  {isSearch ? `Không tìm thấy file nào khớp với "${searchQuery}"` : (mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor nào'}
+                  {isSearch ? `Không tìm thấy file nào khớp với "${searchQuery}"` : (mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor mới'}
                 </div>
                 {isSearch
                   ? <button onClick={() => setSearchQuery('')} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 20, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>Xóa tìm kiếm</button>

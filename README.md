@@ -1,6 +1,6 @@
 # HappyC-Hub Vendor Management
 
-Hệ thống nội bộ **số hoá quy trình quản lý nhà cung cấp (Vendor) và thẩm định giá sản phẩm** cho **Happy Creative LLC** 
+Hệ thống nội bộ **số hoá quy trình quản lý nhà cung cấp (Vendor) và thẩm định giá sản phẩm** cho **Happy Creative** 
 
 Production: [vendorhub.viehana.com](https://vendorhub.viehana.com)
 

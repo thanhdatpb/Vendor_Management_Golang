@@ -325,6 +325,190 @@ export function downloadVendorLibraryTemplate() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  Export Thư viện Vendor → file Excel theo đúng layout của
+//  "HC_Template vendor mẫu_by Đạt Trần_22_06_2026.xlsx" (2 khối: "Thông tin
+//  chung về phôi" + "Về giá"). Mỗi (file × loại sản phẩm) → 1 sheet riêng,
+//  vì bản mẫu chỉ thiết kế cho 1 loại sản phẩm / sheet.
+//
+//  includePricing=false (CSF/PD/Marvel) → bỏ hẳn khối "Về giá", KHÔNG chỉ ẩn
+//  giá trị — theo đúng yêu cầu "không được public giá cho CSF/PD" ở CLAUDE.md.
+// ─────────────────────────────────────────────────────────────────────────────
+const TEMPLATE_COL_COUNT = 16; // A..P
+const TEMPLATE_COL_WIDTHS = [
+  { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+  { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 14 },
+  { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 20 },
+];
+
+function padTemplateRow(arr) {
+  const row = (arr || []).slice(0, TEMPLATE_COL_COUNT);
+  while (row.length < TEMPLATE_COL_COUNT) row.push('');
+  return row;
+}
+
+/** Gom generalInfo + pricing của 1 file thư viện thành các nhóm theo Product Type. */
+function groupLibraryFileByProductType(file) {
+  const groups = new Map();
+  const keyFor = (productType) => (productType || file.title || file.filename || 'Khác').toString().trim() || 'Khác';
+
+  const getGroup = (productType) => {
+    const key = keyFor(productType);
+    if (!groups.has(key)) groups.set(key, { productType: key, generalInfo: [], pricing: [] });
+    return groups.get(key);
+  };
+
+  (file.generalInfo || []).forEach((row) => getGroup(row.productType).generalInfo.push(row));
+  (file.pricing || []).forEach((row) => getGroup(row.productType).pricing.push(row));
+
+  return [...groups.values()];
+}
+
+/** Dựng 1 sheet (AOA + merges) cho 1 nhóm (file × Product Type). */
+function buildVendorTemplateSheet(group, includePricing) {
+  const rows = [];
+  const push = (arr) => rows.push(padTemplateRow(arr));
+
+  push([]);
+  push(['', '', '', group.productType || 'Template Vendor mẫu']);
+  push([]);
+  push([]);
+  push(['Thông tin chung về phôi']);
+  push([
+    'Vendor Name', 'Product Type', 'Hình ảnh đại diện - Video', '', '', '',
+    'Chất liệu', 'Chi tiết Size', 'AVG thời gian sx+ ship theo vendor', '',
+    'AVG thời gian sx+ ship thực tế', 'Notes', '', '', '', 'Link Folder',
+  ]);
+
+  const generalRows = group.generalInfo.length ? group.generalInfo : [{}];
+  generalRows.forEach((r) => {
+    push([
+      r.vendorName || '',
+      r.productType || group.productType || '',
+      (r.images && r.images[0]) || '',
+      '', '', '',
+      r.chatLieu || '',
+      r.chiTietSize || '',
+      r.avgTimeVendor || '',
+      '',
+      r.avgTimeActual || '',
+      r.notes || '',
+      '', '', '',
+      r.linkFolder || '',
+    ]);
+  });
+
+  const merges = [
+    { s: { r: 1, c: 3 }, e: { r: 1, c: 15 } },
+    { s: { r: 2, c: 3 }, e: { r: 2, c: 15 } },
+    { s: { r: 4, c: 0 }, e: { r: 4, c: 15 } },
+    { s: { r: 5, c: 2 }, e: { r: 5, c: 5 } },
+    { s: { r: 5, c: 8 }, e: { r: 5, c: 9 } },
+    { s: { r: 5, c: 11 }, e: { r: 5, c: 14 } },
+  ];
+
+  if (includePricing) {
+    const label2Row = rows.length;
+    push(['Về giá']);
+
+    const header2TopRow = rows.length;
+    push([
+      '', `Product Type (${group.productType || ''})`, 'Detail', '', 'Pricing 1', 'Pricing 2',
+      'Shipping cost: Economy', '', 'Shipping cost: Fast', '', 'Shipping cost: Express', '',
+      'Shipping cost: Overnight', '', 'Link Template', '',
+    ]);
+
+    const header2SubRow = rows.length;
+    push([
+      'Vendor Name', '', 'Size', 'Optional', '', '',
+      'Price Ship', 'Total Price (fulfill)', 'Price Ship', 'Total Price (fulfill)',
+      'Price Ship', 'Total Price (fulfill)', 'Price Ship', 'Total Price (fulfill)', '', '',
+    ]);
+
+    group.pricing.forEach((p) => {
+      push([
+        p.kyHieu || '',
+        '',
+        p.size || '',
+        p.optional || '',
+        p.pricing1 ?? '',
+        p.pricing2 ?? '',
+        p.eco_price ?? '',
+        p.eco_total ?? '',
+        p.ground_price ?? p.fast_price ?? '',
+        p.ground_total ?? p.fast_total ?? '',
+        p.express_price ?? '',
+        p.express_total ?? '',
+        p.overnight_price ?? '',
+        p.overnight_total ?? '',
+        '', '',
+      ]);
+    });
+
+    merges.push(
+      { s: { r: label2Row, c: 0 }, e: { r: label2Row, c: 15 } },
+      { s: { r: header2TopRow, c: 1 }, e: { r: header2SubRow, c: 1 } },
+      { s: { r: header2TopRow, c: 2 }, e: { r: header2TopRow, c: 3 } },
+      { s: { r: header2TopRow, c: 4 }, e: { r: header2SubRow, c: 4 } },
+      { s: { r: header2TopRow, c: 5 }, e: { r: header2SubRow, c: 5 } },
+      { s: { r: header2TopRow, c: 6 }, e: { r: header2TopRow, c: 7 } },
+      { s: { r: header2TopRow, c: 8 }, e: { r: header2TopRow, c: 9 } },
+      { s: { r: header2TopRow, c: 10 }, e: { r: header2TopRow, c: 11 } },
+      { s: { r: header2TopRow, c: 12 }, e: { r: header2TopRow, c: 13 } },
+      { s: { r: header2TopRow, c: 14 }, e: { r: header2SubRow, c: 15 } },
+    );
+  }
+
+  return { aoa: rows, merges };
+}
+
+function templateSheetName(base, used) {
+  const clean = String(base || 'Sheet').replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 31) || 'Sheet';
+  let final = clean;
+  let i = 2;
+  while (used.has(final)) {
+    const suffix = ` (${i++})`;
+    final = clean.slice(0, 31 - suffix.length) + suffix;
+  }
+  used.add(final);
+  return final;
+}
+
+/**
+ * Export danh sách file thư viện vendor đang hiển thị ra 1 workbook .xlsx theo
+ * đúng layout file mẫu — mỗi (file × Product Type) là 1 sheet.
+ *
+ * @param {Array} files       danh sách file thư viện (đã filter theo tab/search/project)
+ * @param {Object} opts
+ * @param {boolean} opts.includePricing  false → bỏ hẳn khối "Về giá" (CSF/PD/Marvel không được xem giá)
+ * @param {string}  opts.filenamePrefix
+ */
+export async function exportVendorLibraryToTemplate(files, { includePricing = true, filenamePrefix = 'HC_Vendor_Library' } = {}) {
+  const xlsxModule = await import('xlsx');
+  const XLSX = xlsxModule.default ?? xlsxModule;
+
+  const groups = [];
+  (files || []).forEach((file) => groups.push(...groupLibraryFileByProductType(file)));
+
+  if (groups.length === 0) {
+    throw new Error('Không có dữ liệu để xuất file.');
+  }
+
+  const wb = XLSX.utils.book_new();
+  const usedNames = new Set();
+
+  groups.forEach((group) => {
+    const { aoa, merges } = buildVendorTemplateSheet(group, includePricing);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!merges'] = merges;
+    ws['!cols'] = TEMPLATE_COL_WIDTHS;
+    XLSX.utils.book_append_sheet(wb, ws, templateSheetName(group.productType, usedNames));
+  });
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `${filenamePrefix}_${stamp}.xlsx`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  parseHappyCreativeLibrary — parse định dạng "Happy Creative" vendor library
 //  Trả về: { title, generalInfo: [], pricing: [] }
 // ─────────────────────────────────────────────────────────────────────────────

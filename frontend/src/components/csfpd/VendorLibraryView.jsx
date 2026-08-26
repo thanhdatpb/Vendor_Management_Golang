@@ -17,6 +17,8 @@ import { vendorLibraryApi } from '../../services/api';
 import { subscribeVendorLibraryChanges } from '../../services/echo';
 import { stripHiddenFields, currentUserRole } from '../../constants/vendorFieldVisibility';
 import { departmentFor } from './departments';
+import { exportVendorLibraryToTemplate } from '../../utils/vendorExcel';
+import AppToast from '../shared/AppToast';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -292,6 +294,12 @@ export default function VendorLibraryView({ projectKey, department }) {
   const [fetchError, setFetchError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3500);
+  };
   // Best Seller lưu trên server (field `bestSeller` trong từng dòng generalInfo)
   // → derive từ dữ liệu fetch về, không đọc localStorage nữa.
   const bestSellerIds = useMemo(() => {
@@ -373,6 +381,18 @@ export default function VendorLibraryView({ projectKey, department }) {
     });
   }, [rawFiles, projectKey, activeTab, searchQuery, bestSellerIds]);
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportVendorLibraryToTemplate(displayFiles, { includePricing: false });
+      showToast('success', '📤 Đã xuất file Excel theo file mẫu');
+    } catch (err) {
+      showToast('error', err.message || 'Xuất file thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const TabButton = ({ id, label }) => (
     <button
       onClick={() => setActiveTab(id)}
@@ -390,6 +410,7 @@ export default function VendorLibraryView({ projectKey, department }) {
 
   return (
     <div>
+      <AppToast toast={toast} onClose={() => setToast(null)} />
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8, flexWrap: 'wrap' }}>
         <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" />
         <TabButton id="new_products" label="New Arrivals" />
@@ -419,6 +440,21 @@ export default function VendorLibraryView({ projectKey, department }) {
             )}
           </div>
         </div>
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          title="Xuất thư viện Vendor đang hiển thị ra Excel theo file mẫu"
+          style={{
+            padding: '9px 18px', borderRadius: 10,
+            border: `1.5px solid ${HC.orangeMid}`,
+            background: HC.surface, color: HC.orangeDark,
+            fontSize: 12, fontWeight: 800, cursor: exporting ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', gap: 7,
+            transition: 'all 0.15s', opacity: exporting ? 0.6 : 1,
+          }}
+        >
+          {exporting ? 'Đang xuất...' : '📤 Export'}
+        </button>
       </div>
 
       {fetchError && (

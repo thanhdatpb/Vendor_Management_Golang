@@ -64,7 +64,7 @@ export const inp3 = {
   width: '100%', 
   boxSizing: 'border-box', 
   outline: 'none', 
-  fontFamily: "'Inter',sans-serif", 
+  fontFamily: "'Inter',sans-serif",
   transition: 'border-color 0.2s' 
 };
 
