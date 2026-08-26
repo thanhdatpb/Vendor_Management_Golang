@@ -419,7 +419,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
   );
 }
 
-// Trả về danh sách user thuộc 1 tab (project tab gồm cả Seller lẫn PD)
+// Trả về danh sách user thuộc 1 tab (project tab chỉ còn Seller — PD có tab riêng)
 function usersForTab(tab, users) {
   if (!tab) return [];
   if (tab.type === 'admin_vendor') return users.filter(u => u.role === 'admin' || u.role === 'vendor');

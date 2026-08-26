@@ -439,16 +439,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                               ⚡ Gán nhanh ({availableCount})
                             </button>
                           )}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteProduct(p); }}
-                            style={{
-                              padding: '5px 10px', borderRadius: 7,
-                              border: '1.5px solid #fecaca', background: '#fef2f2',
-                              cursor: 'pointer', fontSize: 11, fontWeight: 800, color: HC.danger
-                            }}
-                          >
-                            🗑 Xóa
-                          </button>
                         </div>
                       </td>
                     </tr>
