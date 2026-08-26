@@ -167,13 +167,24 @@ class PriceSheetVersionBackfillTest extends TestCase
     /**
      * Lần LƯU đầu tiên sau khi deploy cũng chính là một lần backfill: client cũ
      * còn gửi cả 20 snapshot, server nhận và khử trùng thay vì tạo bản sao.
+     *
+     * Dùng LẠI đúng 1 bộ `$payload` cho cả seed lẫn gửi lại — gọi `sheetData()`
+     * hai lần độc lập (bản cũ) sinh `savedAt` khác nhau vì mỗi lần tính `now()`
+     * mới; nếu lệnh backfill ở giữa tốn đủ 1 giây thật (dễ xảy ra trên CI chạy
+     * MySQL thật, hiếm khi xảy ra ở SQLite tại chỗ) thì khoá khử trùng (chỉ
+     * chính xác tới giây — xem SnapshotTime) không nhận ra trùng → ghi thêm
+     * 5 bản mới → đếm ra 10 thay vì 5. Dùng chung 1 bộ dữ liệu loại bỏ hẳn phụ
+     * thuộc vào đồng hồ thật.
      */
     public function test_luu_lai_khong_nhan_doi_lich_su_da_backfill(): void
     {
-        $this->seedSheet('sheet_1', 5);
+        $payload = $this->sheetData('sheet_1', 5);
+        DB::table('price_sheets')->insert([
+            'id' => 'sheet_1', 'project' => 'happy', 'name' => 'Bang gia sheet_1',
+            'data' => json_encode($payload), 'created_at' => now(), 'updated_at' => now(),
+        ]);
         $this->artisan('pricesheets:backfill-versions')->assertSuccessful();
 
-        $payload = $this->sheetData('sheet_1', 5);
         $this->actingAs($this->seller())->postJson('/api/price-sheets', $payload)->assertOk();
 
         $this->assertSame(5, DB::table('price_sheet_versions')->where('sheet_id', 'sheet_1')->count());

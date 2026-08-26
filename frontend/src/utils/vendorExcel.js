@@ -473,26 +473,9 @@ function templateSheetName(base, used) {
   return final;
 }
 
-/**
- * Export danh sách file thư viện vendor đang hiển thị ra 1 workbook .xlsx theo
- * đúng layout file mẫu — mỗi (file × Product Type) là 1 sheet.
- *
- * @param {Array} files       danh sách file thư viện (đã filter theo tab/search/project)
- * @param {Object} opts
- * @param {boolean} opts.includePricing  false → bỏ hẳn khối "Về giá" (CSF/PD/Marvel không được xem giá)
- * @param {string}  opts.filenamePrefix
- */
-export async function exportVendorLibraryToTemplate(files, { includePricing = true, filenamePrefix = 'HC_Vendor_Library' } = {}) {
-  const xlsxModule = await import('xlsx');
-  const XLSX = xlsxModule.default ?? xlsxModule;
-
-  const groups = [];
-  (files || []).forEach((file) => groups.push(...groupLibraryFileByProductType(file)));
-
-  if (groups.length === 0) {
-    throw new Error('Không có dữ liệu để xuất file.');
-  }
-
+/** Dựng 1 workbook (nhiều sheet, mỗi sheet 1 Product Type) cho ĐÚNG 1 file thư viện. */
+function buildVendorWorkbookForFile(XLSX, file, includePricing) {
+  const groups = groupLibraryFileByProductType(file);
   const wb = XLSX.utils.book_new();
   const usedNames = new Set();
 
@@ -504,8 +487,67 @@ export async function exportVendorLibraryToTemplate(files, { includePricing = tr
     XLSX.utils.book_append_sheet(wb, ws, templateSheetName(group.productType, usedNames));
   });
 
+  return wb;
+}
+
+const sanitizeFilename = (name) => String(name || 'vendor').replace(/[\\/:*?"<>|]/g, ' ').trim() || 'vendor';
+
+/**
+ * Export CÁC FILE thư viện vendor người dùng đã chọn ra .xlsx theo đúng layout
+ * file mẫu (mỗi Product Type trong file = 1 sheet). Giữ đúng TÊN FILE gốc như
+ * hiển thị ở Thư viện Vendor:
+ *  - Chọn đúng 1 file  → tải thẳng 1 file .xlsx tên = tên file đó.
+ *  - Chọn nhiều file   → nén thành 1 file .zip, mỗi .xlsx bên trong vẫn giữ
+ *    đúng tên file gốc (không gộp chung 1 workbook để khỏi lẫn tên).
+ *
+ * @param {Array} files       danh sách file thư viện ĐÃ CHỌN để export
+ * @param {Object} opts
+ * @param {boolean} opts.includePricing  false → bỏ hẳn khối "Về giá" (CSF/PD/Marvel không được xem giá)
+ */
+export async function exportVendorLibraryFiles(files, { includePricing = true } = {}) {
+  const list = (files || []).filter(Boolean);
+  if (list.length === 0) {
+    throw new Error('Chưa chọn file nào để xuất.');
+  }
+
+  const xlsxModule = await import('xlsx');
+  const XLSX = xlsxModule.default ?? xlsxModule;
+
+  if (list.length === 1) {
+    const file = list[0];
+    const wb = buildVendorWorkbookForFile(XLSX, file, includePricing);
+    XLSX.writeFile(wb, `${sanitizeFilename(file.filename || file.title)}.xlsx`);
+    return;
+  }
+
+  const zipModule = await import('jszip');
+  const JSZip = zipModule.default ?? zipModule;
+  const zip = new JSZip();
+  const usedZipNames = new Set();
+
+  for (const file of list) {
+    const wb = buildVendorWorkbookForFile(XLSX, file, includePricing);
+    const wbArray = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+    const base = sanitizeFilename(file.filename || file.title);
+    let name = `${base}.xlsx`;
+    let i = 2;
+    while (usedZipNames.has(name)) name = `${base} (${i++}).xlsx`;
+    usedZipNames.add(name);
+
+    zip.file(name, wbArray);
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
   const stamp = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `${filenamePrefix}_${stamp}.xlsx`);
+  const url = URL.createObjectURL(zipBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Vendor_Export_${stamp}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

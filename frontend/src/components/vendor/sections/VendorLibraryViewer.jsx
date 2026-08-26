@@ -4,11 +4,12 @@
 // ════════════════════════════════════════════════════════════════════════════
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { HC } from '../utils/constants';
-import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate, exportVendorLibraryToTemplate } from '../../../utils/vendorExcel';
+import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate, exportVendorLibraryFiles } from '../../../utils/vendorExcel';
 import api, { vendorLibraryApi } from '../../../services/api';
 import { normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
 import { subscribeVendorLibraryChanges } from '../../../services/echo';
 import AppToast from '../../shared/AppToast';
+import ExportVendorFilesModal from '../../shared/ExportVendorFilesModal';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -1458,6 +1459,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState([]);
   const [exporting, setExporting] = useState(false);
+  const [showExportPicker, setShowExportPicker] = useState(false);
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
@@ -1811,11 +1813,13 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     writingRef.current = false;
   }, [libraryFiles, dataLoaded]);
 
-  const handleExport = async () => {
+  const handleExportSelected = async (selectedIds) => {
+    const selectedFiles = displayFiles.filter((f) => selectedIds.includes(f.id));
     setExporting(true);
     try {
-      await exportVendorLibraryToTemplate(displayFiles, { includePricing: true });
-      showToast('success', '📤 Đã xuất file Excel theo file mẫu');
+      await exportVendorLibraryFiles(selectedFiles, { includePricing: true });
+      showToast('success', `📤 Đã xuất ${selectedFiles.length} file Excel theo file mẫu`);
+      setShowExportPicker(false);
     } catch (err) {
       showToast('error', err.message || 'Xuất file thất bại');
     } finally {
@@ -1897,6 +1901,16 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
 
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
+      {showExportPicker && (
+        <ExportVendorFilesModal
+          HC={HC}
+          files={displayFiles}
+          exporting={exporting}
+          onConfirm={handleExportSelected}
+          onClose={() => setShowExportPicker(false)}
+        />
+      )}
+
       {/* Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -1942,9 +1956,9 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <button
-            onClick={handleExport}
+            onClick={() => setShowExportPicker(true)}
             disabled={exporting}
-            title="Xuất thư viện Vendor đang hiển thị ra Excel theo file mẫu"
+            title="Chọn file Vendor cần xuất ra Excel theo file mẫu"
             style={{
               padding: '9px 18px', borderRadius: 10,
               border: `1.5px solid ${HC.orangeMid}`,
@@ -1954,7 +1968,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
               transition: 'all 0.15s', opacity: exporting ? 0.6 : 1,
             }}
           >
-            {exporting ? 'Đang xuất...' : '📤 Export'}
+            📤 Export file Vendor
           </button>
           {!readOnly && (
           <>

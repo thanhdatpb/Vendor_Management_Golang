@@ -17,8 +17,9 @@ import { vendorLibraryApi } from '../../services/api';
 import { subscribeVendorLibraryChanges } from '../../services/echo';
 import { stripHiddenFields, currentUserRole } from '../../constants/vendorFieldVisibility';
 import { departmentFor } from './departments';
-import { exportVendorLibraryToTemplate } from '../../utils/vendorExcel';
+import { exportVendorLibraryFiles } from '../../utils/vendorExcel';
 import AppToast from '../shared/AppToast';
+import ExportVendorFilesModal from '../shared/ExportVendorFilesModal';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -295,6 +296,7 @@ export default function VendorLibraryView({ projectKey, department }) {
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [showExportPicker, setShowExportPicker] = useState(false);
   const [toast, setToast] = useState(null);
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -381,11 +383,13 @@ export default function VendorLibraryView({ projectKey, department }) {
     });
   }, [rawFiles, projectKey, activeTab, searchQuery, bestSellerIds]);
 
-  const handleExport = async () => {
+  const handleExportSelected = async (selectedIds) => {
+    const selectedFiles = displayFiles.filter((f) => selectedIds.includes(f.id));
     setExporting(true);
     try {
-      await exportVendorLibraryToTemplate(displayFiles, { includePricing: false });
-      showToast('success', '📤 Đã xuất file Excel theo file mẫu');
+      await exportVendorLibraryFiles(selectedFiles, { includePricing: false });
+      showToast('success', `📤 Đã xuất ${selectedFiles.length} file Excel theo file mẫu`);
+      setShowExportPicker(false);
     } catch (err) {
       showToast('error', err.message || 'Xuất file thất bại');
     } finally {
@@ -441,9 +445,9 @@ export default function VendorLibraryView({ projectKey, department }) {
           </div>
         </div>
         <button
-          onClick={handleExport}
+          onClick={() => setShowExportPicker(true)}
           disabled={exporting}
-          title="Xuất thư viện Vendor đang hiển thị ra Excel theo file mẫu"
+          title="Chọn file Vendor cần xuất ra Excel theo file mẫu"
           style={{
             padding: '9px 18px', borderRadius: 10,
             border: `1.5px solid ${HC.orangeMid}`,
@@ -453,9 +457,19 @@ export default function VendorLibraryView({ projectKey, department }) {
             transition: 'all 0.15s', opacity: exporting ? 0.6 : 1,
           }}
         >
-          {exporting ? 'Đang xuất...' : '📤 Export'}
+          📤 Export file Vendor
         </button>
       </div>
+
+      {showExportPicker && (
+        <ExportVendorFilesModal
+          HC={HC}
+          files={displayFiles}
+          exporting={exporting}
+          onConfirm={handleExportSelected}
+          onClose={() => setShowExportPicker(false)}
+        />
+      )}
 
       {fetchError && (
         <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: '#fef2f2', border: '1.5px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
