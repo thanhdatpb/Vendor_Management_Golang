@@ -23,7 +23,7 @@ class AdminUserController extends Controller
         // Quản Lý Nhân Sự trắng trơn và trông y như đã mất sạch nhân sự.
         // Chuyện này đã xảy ra thật trên production 2026-08-18.
         // Thiếu cột thì bỏ qua, chỉ mất đúng một cột hiển thị.
-        $columns = ['id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at'];
+        $columns = ['id', 'email', 'full_name', 'name', 'role', 'project', 'pd_projects', 'is_active', 'avatar_url', 'created_at'];
         $hasLastSeen = Schema::hasColumn('users', 'last_seen_at');
         if ($hasLastSeen) {
             $columns[] = 'last_seen_at';
@@ -47,12 +47,13 @@ class AdminUserController extends Controller
             ->orderBy('full_name')
             ->get()
             ->map(fn($u) => [
-                'id'        => $u->id,
-                'email'     => $u->email,
-                'full_name' => $u->full_name ?: $u->name,
-                'role'      => $u->role,
-                'project'   => $u->project,
-                'is_active' => (bool) $u->is_active,
+                'id'          => $u->id,
+                'email'       => $u->email,
+                'full_name'   => $u->full_name ?: $u->name,
+                'role'        => $u->role,
+                'project'     => $u->project,
+                'pd_projects' => $u->pd_projects ?? [],
+                'is_active'   => (bool) $u->is_active,
                 'avatar_url'=> $u->avatar_url,
                 // Mốc thao tác gần nhất. null = chưa truy cập lần nào kể từ khi
                 // tính năng này được bật.
@@ -82,9 +83,15 @@ class AdminUserController extends Controller
                 'nullable',
                 Rule::in(self::$VALID_PROJECTS),
             ],
+            // Danh sách project PD được tick chọn ở Quản Lý Nhân Sự — PD chỉ
+            // thấy đúng các project này (khác với `project` ở trên, vốn không
+            // dùng để phân quyền PD nữa).
+            'pd_projects'   => ['nullable', 'array'],
+            'pd_projects.*' => [Rule::in(self::$VALID_PROJECTS)],
         ], [
             'project.required_if' => 'Project là bắt buộc khi role là seller',
             'project.in'     => 'Project không hợp lệ',
+            'pd_projects.*.in' => 'Project không hợp lệ',
         ]);
 
         $email = strtolower(trim($validated['email']));
@@ -92,6 +99,7 @@ class AdminUserController extends Controller
         // Khác với "cần project để phân quyền" — PD không dùng project nữa.
         $keepsProject = in_array($validated['role'], ['seller', 'pd']);
         $project      = $keepsProject ? ($validated['project'] ?? null) : null;
+        $pdProjects   = $validated['role'] === 'pd' ? array_values($validated['pd_projects'] ?? []) : null;
 
         // PD không còn dùng project để phân biệt tài khoản (mọi dòng PD đều thấy
         // MỌI project như nhau) — nên với PD, trùng chỉ cần xét email + role, KHÔNG
@@ -123,15 +131,16 @@ class AdminUserController extends Controller
         $sibling = User::where('email', $email)->whereNotNull('google_id')->first();
 
         $user = User::create([
-            'email'      => $email,
-            'full_name'  => $validated['full_name'],
-            'name'       => $validated['full_name'],
-            'role'       => $validated['role'],
-            'project'    => $project,
-            'is_active'  => true,
-            'password'   => null,
-            'google_id'  => $sibling?->google_id,
-            'avatar_url' => $sibling?->avatar_url,
+            'email'       => $email,
+            'full_name'   => $validated['full_name'],
+            'name'        => $validated['full_name'],
+            'role'        => $validated['role'],
+            'project'     => $project,
+            'pd_projects' => $pdProjects,
+            'is_active'   => true,
+            'password'    => null,
+            'google_id'   => $sibling?->google_id,
+            'avatar_url'  => $sibling?->avatar_url,
         ]);
 
         $this->auditLog($request, 'CREATE_USER', null, $user);
@@ -139,12 +148,13 @@ class AdminUserController extends Controller
         return response()->json([
             'message' => 'Thêm nhân sự thành công',
             'user'    => [
-                'id'        => $user->id,
-                'email'     => $user->email,
-                'full_name' => $user->full_name,
-                'role'      => $user->role,
-                'project'   => $user->project,
-                'is_active' => true,
+                'id'          => $user->id,
+                'email'       => $user->email,
+                'full_name'   => $user->full_name,
+                'role'        => $user->role,
+                'project'     => $user->project,
+                'pd_projects' => $user->pd_projects ?? [],
+                'is_active'   => true,
             ],
         ], 201);
     }
@@ -159,9 +169,13 @@ class AdminUserController extends Controller
         $actor = $request->user();
 
         $validated = $request->validate([
-            'full_name' => 'sometimes|string|max:255',
-            'role'      => ['sometimes', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf', 'marvel'])],
-            'project'   => ['nullable', Rule::in(array_merge(self::$VALID_PROJECTS, [null]))],
+            'full_name'     => 'sometimes|string|max:255',
+            'role'          => ['sometimes', Rule::in(['admin', 'vendor', 'seller', 'pd', 'csf', 'marvel'])],
+            'project'       => ['nullable', Rule::in(array_merge(self::$VALID_PROJECTS, [null]))],
+            'pd_projects'   => ['sometimes', 'nullable', 'array'],
+            'pd_projects.*' => [Rule::in(self::$VALID_PROJECTS)],
+        ], [
+            'pd_projects.*.in' => 'Project không hợp lệ',
         ]);
 
         $newRole = $validated['role'] ?? $user->role;
@@ -185,6 +199,12 @@ class AdminUserController extends Controller
         }
 
         $newProject = $newRoleKeepsProject ? ($validated['project'] ?? $user->project) : null;
+        // Chỉ ghi đè khi role mới là PD; nếu không phải PD, giữ nguyên dữ liệu
+        // cũ (tương tự cách xử lý `project` ở trên) — không xoá khi Admin chỉ
+        // đổi tên/khoá tài khoản.
+        $newPdProjects = $newRole === 'pd'
+            ? array_values($validated['pd_projects'] ?? $user->pd_projects ?? [])
+            : $user->pd_projects;
 
         // Không cho đổi thành cặp (email, role, project) đã có ở tài khoản khác.
         $dupQuery = User::where('email', $user->email)
@@ -197,13 +217,14 @@ class AdminUserController extends Controller
             ], 422);
         }
 
-        $before = $user->only(['full_name', 'role', 'project']);
+        $before = $user->only(['full_name', 'role', 'project', 'pd_projects']);
 
         $user->update([
-            'full_name' => $validated['full_name'] ?? $user->full_name,
-            'name'      => $validated['full_name'] ?? $user->name,
-            'role'      => $newRole,
-            'project'   => $newProject,
+            'full_name'   => $validated['full_name'] ?? $user->full_name,
+            'name'        => $validated['full_name'] ?? $user->name,
+            'role'        => $newRole,
+            'project'     => $newProject,
+            'pd_projects' => $newPdProjects,
         ]);
 
         $this->auditLog($request, 'UPDATE_USER', $before, $user);
@@ -271,7 +292,7 @@ class AdminUserController extends Controller
             'target_id' => $target->id,
             'target_email' => $target->email,
             'before'    => $before,
-            'after'     => $target->only(['full_name', 'role', 'project', 'is_active']),
+            'after'     => $target->only(['full_name', 'role', 'project', 'pd_projects', 'is_active']),
             'ip'        => $request->ip(),
             'at'        => now()->toISOString(),
         ]);

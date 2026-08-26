@@ -21,10 +21,11 @@ class User extends Authenticatable {
         'seller_name',
         'full_name',
         'project',
+        'pd_projects',
         'google_id',
         'avatar_url',
     ];
-    
+
     protected $hidden   = ['password', 'remember_token'];
     protected $casts    = [
         'is_active' => 'boolean',
@@ -32,6 +33,9 @@ class User extends Authenticatable {
         // và không chỗ nào ghi. Thay bằng cột thật `last_seen_at` — mốc thao
         // tác gần nhất, do middleware TouchLastSeen cập nhật.
         'last_seen_at' => 'datetime',
+        // Danh sách project PD được Admin tick chọn — mảng tên project, ví dụ
+        // ["Happy Project", "Global Project"].
+        'pd_projects' => 'array',
     ];
 
     public function isAdmin(): bool { 

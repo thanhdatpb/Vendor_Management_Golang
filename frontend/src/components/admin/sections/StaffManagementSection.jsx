@@ -114,18 +114,27 @@ const inputStyle = {
 // ─── Add / Edit Modal ─────────────────────────
 function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions, onSave, onClose, saving, serverError }) {
   const [form, setForm] = useState({
-    email:     initialData?.email     || '',
-    full_name: initialData?.full_name || '',
-    role:      initialData?.role      || fixedRole || roleOptions?.[0]?.value || 'admin',
-    project:   initialData?.project   || fixedProject || '',
+    email:       initialData?.email       || '',
+    full_name:   initialData?.full_name   || '',
+    role:        initialData?.role        || fixedRole || roleOptions?.[0]?.value || 'admin',
+    project:     initialData?.project     || fixedProject || '',
+    pd_projects: initialData?.pd_projects || [],
   });
   const [errors, setErrors] = useState({});
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const togglePdProject = (p) => setForm(prev => ({
+    ...prev,
+    pd_projects: prev.pd_projects.includes(p)
+      ? prev.pd_projects.filter(x => x !== p)
+      : [...prev.pd_projects, p],
+  }));
 
   const effectiveRole = fixedRole || form.role;
-  // PD xem mọi project nên không cần gán project; chỉ Seller còn cần.
+  // Seller cần gán đúng 1 project. PD không dùng `project` (xem theo danh sách
+  // `pd_projects` được tick bên dưới) nên không rơi vào nhánh này.
   const roleNeedsProject = effectiveRole === 'seller';
+  const isPd = effectiveRole === 'pd';
 
   const validate = () => {
     const e = {};
@@ -142,10 +151,11 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions
   const handleSubmit = () => {
     if (!validate()) return;
     onSave({
-      email:     form.email.trim().toLowerCase(),
-      full_name: form.full_name.trim(),
-      role:      effectiveRole,
-      project:   roleNeedsProject ? (fixedProject || form.project) : null,
+      email:       form.email.trim().toLowerCase(),
+      full_name:   form.full_name.trim(),
+      role:        effectiveRole,
+      project:     roleNeedsProject ? (fixedProject || form.project) : null,
+      pd_projects: isPd ? form.pd_projects : undefined,
     });
   };
 
@@ -213,6 +223,29 @@ function UserFormModal({ mode, initialData, fixedProject, fixedRole, roleOptions
         </FormField>
       )}
 
+      {isPd && (
+        <FormField label="Project được truy cập">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {PROJECTS.map(p => (
+              <label key={p} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: HC.ink, cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={form.pd_projects.includes(p)}
+                  onChange={() => togglePdProject(p)}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: HC.orange }}
+                />
+                {p}
+              </label>
+            ))}
+          </div>
+          {form.pd_projects.length === 0 && (
+            <div style={{ marginTop: 6, fontSize: 11, color: HC.muted }}>
+              Chưa tick project nào — PD sẽ chưa thấy Thư Viện Vendor của project nào.
+            </div>
+          )}
+        </FormField>
+      )}
+
       <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
         <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 12, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter',sans-serif" }}>
           Huỷ
@@ -276,6 +309,7 @@ function LastSeenCell({ iso }) {
 // ─── User table ───────────────────────────────
 function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
   const showRoleColumn = tabType === 'admin_vendor' || tabType === 'seller';
+  const showPdProjectsColumn = tabType === 'pd';
 
   if (loading) {
     return (
@@ -295,6 +329,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
               <th style={thStyle}>Tên nhân sự</th>
               <th style={thStyle}>Gmail</th>
               {showRoleColumn && <th style={thStyle}>Role</th>}
+              {showPdProjectsColumn && <th style={thStyle}>Project được truy cập</th>}
               <th style={thStyle}>Lần truy cập cuối</th>
               <th style={{ ...thStyle, textAlign: 'right' }}>Thao tác</th>
             </tr>
@@ -302,7 +337,7 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={showRoleColumn ? 5 : 4} style={{ ...tdStyle, textAlign: 'center', color: HC.muted, padding: '48px 16px' }}>
+                <td colSpan={4 + (showRoleColumn ? 1 : 0) + (showPdProjectsColumn ? 1 : 0)} style={{ ...tdStyle, textAlign: 'center', color: HC.muted, padding: '48px 16px' }}>
                   Chưa có nhân sự nào trong nhóm này
                 </td>
               </tr>
@@ -338,6 +373,21 @@ function UserTable({ users, tabType, onAdd, onEdit, onToggle, loading }) {
                       <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: ROLE_BADGE[u.role]?.bg, color: ROLE_BADGE[u.role]?.color }}>
                         {ROLE_BADGE[u.role]?.label || u.role}
                       </span>
+                    </td>
+                  )}
+                  {showPdProjectsColumn && (
+                    <td style={tdStyle}>
+                      {(u.pd_projects || []).length === 0 ? (
+                        <span style={{ fontSize: 11, color: HC.muted, fontStyle: 'italic' }}>Chưa gán project</span>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {u.pd_projects.map(p => (
+                            <span key={p} style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, background: '#F3E8FF', color: '#7e22ce', whiteSpace: 'nowrap' }}>
+                              {p.replace(' Project', '')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                   )}
                   <td style={tdStyle}>

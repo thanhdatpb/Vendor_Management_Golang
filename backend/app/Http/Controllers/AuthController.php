@@ -22,6 +22,9 @@ class AuthController extends Controller
             // Tất cả project mà email này được cấp CÙNG vai trò — để UI (vd PD)
             // hiển thị đủ các project ở sidebar, giống CSF.
             'projects'    => self::projectsFor($user),
+            // Project PD được Admin tick chọn ở Quản Lý Nhân Sự — PdDashboard
+            // chỉ hiện đúng các project này trong sidebar.
+            'pd_projects' => $user->pd_projects ?? [],
             'seller_name' => $user->seller_name,
             'avatar_url'  => $user->avatar_url,
         ];

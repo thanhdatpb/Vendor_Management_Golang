@@ -1,16 +1,16 @@
 // ════════════════════════════════════════════════════════
-//  PD DASHBOARD — Xem Thư Viện Vendor của MỌI project (không thấy giá,
-//  và không thấy 2 cột AVG TG).
+//  PD DASHBOARD — Xem Thư Viện Vendor của các project được Admin tick chọn
+//  (không thấy giá, và không thấy 2 cột AVG TG).
 //
-//  PD từng bị ghim theo project của tài khoản. Nay PD tra cứu được toàn bộ
-//  project giống CSF: cột `project` trong DB vẫn còn nhưng không dùng để phân
-//  quyền nữa, nên không phải đụng vào dữ liệu tài khoản và không ai bị đăng xuất.
+//  PD từng xem được TOÀN BỘ project (không phân biệt). Nay Admin tick chọn
+//  project theo từng tài khoản PD ở Quản Lý Nhân Sự (`user.pd_projects`) —
+//  sidebar chỉ liệt kê đúng các project đó, không hiện project chưa được cấp.
 // ════════════════════════════════════════════════════════
 import { useMemo, useState } from 'react';
 import { ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { HC } from '../constants/sellerTheme';
-import { PROJECTS } from '../constants/projects';
+import { PROJECTS, projectNameToKey } from '../constants/projects';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import PdVendorLibrary from '../components/csfpd/PdVendorLibrary';
 
@@ -18,10 +18,12 @@ export default function PdDashboard() {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const projectMenu = useMemo(
-    () => PROJECTS.map(p => ({ id: p.id, icon: <ShopOutlined />, label: p.label })),
-    []
-  );
+  const projectMenu = useMemo(() => {
+    const allowedKeys = new Set((user?.pd_projects || []).map(projectNameToKey).filter(Boolean));
+    return PROJECTS
+      .filter(p => allowedKeys.has(p.id))
+      .map(p => ({ id: p.id, icon: <ShopOutlined />, label: p.label }));
+  }, [user?.pd_projects]);
 
   const [active, setActive] = useState(null);
   const projectKey = active || projectMenu[0]?.id || null;

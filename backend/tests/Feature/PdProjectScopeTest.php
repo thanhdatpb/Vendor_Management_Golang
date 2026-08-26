@@ -206,4 +206,169 @@ class PdProjectScopeTest extends TestCase
 
         $this->assertSame(2, User::where('email', 'seller@happyc.test')->where('role', 'seller')->count());
     }
+
+    // ── `pd_projects` — checkbox chọn project truy cập ở Quản Lý Nhân Sự ────
+    // PD một số người làm 2+ project cùng lúc: Admin tick chọn project nào
+    // PD đó được xem, lưu vào cột `pd_projects` (khác `project` ở trên, vốn
+    // không dùng để phân quyền PD nữa). Sidebar PdDashboard chỉ hiện đúng các
+    // project được tick.
+
+    /** Tạo PD kèm pd_projects — lưu đúng, trả về đúng trong response tạo mới. */
+    public function test_tao_pd_kem_pd_projects_luu_dung(): void
+    {
+        $response = $this->actingAs($this->admin())
+            ->postJson('/api/admin/users', [
+                'email' => 'pd.multi@happyc.test', 'full_name' => 'PD Multi', 'role' => 'pd',
+                'pd_projects' => ['Happy Project', 'Global Project'],
+            ])
+            ->assertSuccessful();
+
+        $response->assertJsonPath('user.pd_projects', ['Happy Project', 'Global Project']);
+        $this->assertDatabaseHas('users', ['email' => 'pd.multi@happyc.test', 'role' => 'pd']);
+        $saved = User::where('email', 'pd.multi@happyc.test')->first();
+        $this->assertSame(['Happy Project', 'Global Project'], $saved->pd_projects);
+    }
+
+    /** Không gửi pd_projects → mặc định rỗng, không lỗi 422. */
+    public function test_tao_pd_khong_gui_pd_projects_mac_dinh_rong(): void
+    {
+        $this->actingAs($this->admin())
+            ->postJson('/api/admin/users', [
+                'email' => 'pd.rong@happyc.test', 'full_name' => 'PD Rong', 'role' => 'pd',
+            ])
+            ->assertSuccessful();
+
+        $saved = User::where('email', 'pd.rong@happyc.test')->first();
+        $this->assertSame([], $saved->pd_projects);
+    }
+
+    /** Tên project không hợp lệ trong pd_projects → 422, không tạo tài khoản. */
+    public function test_tao_pd_pd_projects_sai_ten_bi_tu_choi(): void
+    {
+        $this->actingAs($this->admin())
+            ->postJson('/api/admin/users', [
+                'email' => 'pd.sai@happyc.test', 'full_name' => 'PD Sai', 'role' => 'pd',
+                'pd_projects' => ['Happy Project', 'Project Khong Ton Tai'],
+            ])
+            ->assertStatus(422);
+
+        $this->assertDatabaseMissing('users', ['email' => 'pd.sai@happyc.test']);
+    }
+
+    /** Sửa PD: cập nhật đúng danh sách pd_projects mới. */
+    public function test_sua_pd_cap_nhat_pd_projects(): void
+    {
+        $pd = User::factory()->create([
+            'role' => 'pd', 'full_name' => 'PD Cu', 'pd_projects' => ['Happy Project'], 'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/admin/users/{$pd->id}", [
+                'full_name' => 'PD Cu', 'role' => 'pd', 'pd_projects' => ['Creative Project', 'Hapify84 Project'],
+            ])
+            ->assertSuccessful();
+
+        $this->assertSame(['Creative Project', 'Hapify84 Project'], $pd->fresh()->pd_projects);
+    }
+
+    /**
+     * "Share thêm" — giống thêm quyền truy cập file Drive: PD đã có Happy,
+     * Admin tick thêm Global → cả 2 cùng còn, không mất Happy.
+     */
+    public function test_sua_pd_share_them_1_project_giu_nguyen_project_cu(): void
+    {
+        $pd = User::factory()->create(['role' => 'pd', 'pd_projects' => ['Happy Project'], 'is_active' => true]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/admin/users/{$pd->id}", [
+                'role' => 'pd', 'pd_projects' => ['Happy Project', 'Global Project'],
+            ])
+            ->assertSuccessful();
+
+        $this->assertSame(['Happy Project', 'Global Project'], $pd->fresh()->pd_projects);
+    }
+
+    /**
+     * "Thu hồi 1 quyền" — giống bỏ share 1 file Drive nhưng vẫn giữ share file
+     * khác: PD có Happy+Creative+Global, Admin bỏ tick Creative → chỉ mất
+     * đúng Creative, Happy và Global còn nguyên (không phải xoá sạch rồi tạo lại).
+     */
+    public function test_sua_pd_thu_hoi_1_project_giu_nguyen_cac_project_con_lai(): void
+    {
+        $pd = User::factory()->create([
+            'role' => 'pd', 'pd_projects' => ['Happy Project', 'Creative Project', 'Global Project'], 'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/admin/users/{$pd->id}", [
+                'role' => 'pd', 'pd_projects' => ['Happy Project', 'Global Project'],
+            ])
+            ->assertSuccessful();
+
+        $this->assertSame(['Happy Project', 'Global Project'], $pd->fresh()->pd_projects);
+    }
+
+    /**
+     * Thu hồi HẾT → còn mảng rỗng (không phải null lơ lửng gây lỗi cast ở FE),
+     * và PD đó (giả lập đăng nhập lại) không còn thấy project nào — giống thu
+     * hồi hết quyền truy cập Drive, không xoá tài khoản.
+     */
+    public function test_sua_pd_thu_hoi_het_project_con_lai_mang_rong(): void
+    {
+        $pd = User::factory()->create([
+            'role' => 'pd', 'email' => 'pd.thuhoihet@happyc.test',
+            'pd_projects' => ['Happy Project', 'Creative Project'],
+            'password' => bcrypt('matkhau123'), 'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/admin/users/{$pd->id}", ['role' => 'pd', 'pd_projects' => []])
+            ->assertSuccessful();
+
+        $this->assertSame([], $pd->fresh()->pd_projects);
+
+        // Đăng nhập lại → payload phản ánh đúng: đã bị thu hồi hết, không phải lỗi ẩn.
+        $login = $this->postJson('/api/login', ['email' => $pd->email, 'password' => 'matkhau123'])->assertOk();
+        $login->assertJsonPath('user.pd_projects', []);
+    }
+
+    /** Sửa PD chỉ đổi tên (không gửi pd_projects) → giữ nguyên danh sách cũ. */
+    public function test_sua_pd_khong_gui_pd_projects_giu_nguyen(): void
+    {
+        $pd = User::factory()->create([
+            'role' => 'pd', 'full_name' => 'Ten Cu', 'pd_projects' => ['Happy Project', 'Global Project'], 'is_active' => true,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->patchJson("/api/admin/users/{$pd->id}", ['full_name' => 'Ten Moi', 'role' => 'pd'])
+            ->assertSuccessful();
+
+        $fresh = $pd->fresh();
+        $this->assertSame('Ten Moi', $fresh->full_name);
+        $this->assertSame(['Happy Project', 'Global Project'], $fresh->pd_projects);
+    }
+
+    /** GET /api/admin/users trả pd_projects cho từng dòng PD. */
+    public function test_index_tra_ve_pd_projects(): void
+    {
+        User::factory()->create(['role' => 'pd', 'full_name' => 'PD A', 'pd_projects' => ['Creative Project'], 'is_active' => true]);
+
+        $rows = $this->actingAs($this->admin())->getJson('/api/admin/users')->assertOk()->json('users');
+        $row = collect($rows)->firstWhere('full_name', 'PD A');
+
+        $this->assertSame(['Creative Project'], $row['pd_projects']);
+    }
+
+    /** Login trả về pd_projects trong user payload — PdDashboard cần field này để lọc sidebar. */
+    public function test_login_tra_ve_pd_projects_trong_payload(): void
+    {
+        $pd = User::factory()->create([
+            'role' => 'pd', 'email' => 'pd.login@happyc.test', 'pd_projects' => ['Global Project'],
+            'password' => bcrypt('matkhau123'), 'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/api/login', ['email' => $pd->email, 'password' => 'matkhau123'])->assertOk();
+
+        $response->assertJsonPath('user.pd_projects', ['Global Project']);
+    }
 }
