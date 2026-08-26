@@ -312,9 +312,6 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   const isVendorUser = isCurrentUserVendor();
   const canToggleSample = isVendorUser && typeof onSampleStatusChange === 'function';
 
-  // Chỉ hiện cột Ký Hiệu khi Staff B (không readOnly) hoặc có ít nhất 1 row có kyHieu
-  const showKyHieu = !readOnly || rows.some(r => r.kyHieu);
-
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
       <thead>
@@ -336,7 +333,6 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
           })()}
           <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Vendor Name</th>
           <th style={{ ...TH(), width: '10%', textAlign: 'left' }}>Product Type</th>
-          {showKyHieu && <th style={{ ...TH(), width: '4%' }}>Ký hiệu</th>}
           <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Hình ảnh</th>
           <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Chất liệu</th>
           <th style={{ ...TH(), width: '7%', textAlign: 'left' }}>Chi tiết Size</th>
@@ -384,17 +380,6 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                     : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
                 )}
               </td>
-              {showKyHieu && (
-                <td style={{ ...TD(i), textAlign: 'center' }}>
-                  {isEditing ? (
-                    <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark, boxSizing: 'border-box' }} />
-                  ) : (
-                    r.kyHieu
-                      ? <span style={{ fontWeight: 900, color: HC.orangeDark }}>{r.kyHieu}</span>
-                      : <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' }}>N/A</span>
-                  )}
-                </td>
-              )}
               <td style={{ ...TD(i) }}>
                 {isEditing ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1371,10 +1356,9 @@ function ManualAddModal({ onClose, onSave, mode }) {
                       <button onClick={() => setGeneralRows(prev => prev.filter(x => x._key !== r._key))} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>✕ Xóa dòng</button>
                     )}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: 12, marginBottom: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr', gap: 12, marginBottom: 12 }}>
                     <FieldGroup label="Vendor Name"><input type="text" placeholder="Tên vendor..." value={r.vendorName} onChange={e => updateGeneral(r._key, 'vendorName', e.target.value)} style={inputSt()} /></FieldGroup>
                     <FieldGroup label="Product Type"><input type="text" placeholder="Loại sản phẩm..." value={r.productType} onChange={e => updateGeneral(r._key, 'productType', e.target.value)} style={inputSt()} /></FieldGroup>
-                    <FieldGroup label="Ký hiệu"><input type="text" placeholder="A, B..." value={r.kyHieu} onChange={e => updateGeneral(r._key, 'kyHieu', e.target.value)} style={inputSt({ textAlign: 'center', fontWeight: 900, color: HC.orangeDark })} /></FieldGroup>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                     <FieldGroup label="AVG TG (Vendor)"><input type="text" placeholder="VD: 3-5 ngày" value={r.avgTimeVendor} onChange={e => updateGeneral(r._key, 'avgTimeVendor', e.target.value)} style={inputSt({ color: HC.success })} /></FieldGroup>
@@ -1419,8 +1403,7 @@ function ManualAddModal({ onClose, onSave, mode }) {
                       <button onClick={() => setPricingRows(prev => prev.filter(x => x._key !== r._key))} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>✕ Xóa dòng</button>
                     )}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-                    <FieldGroup label="Ký hiệu"><input type="text" placeholder="A, B..." value={r.kyHieu} onChange={e => updatePricing(r._key, 'kyHieu', e.target.value)} style={inputSt({ textAlign: 'center', fontWeight: 900, color: HC.orangeDark })} /></FieldGroup>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
                     <FieldGroup label="Product Type"><input type="text" placeholder="Loại sản phẩm..." value={r.productType} onChange={e => updatePricing(r._key, 'productType', e.target.value)} style={inputSt()} /></FieldGroup>
                     <FieldGroup label="Size"><input type="text" placeholder="S/M/L..." value={r.size} onChange={e => updatePricing(r._key, 'size', e.target.value)} style={inputSt({ textAlign: 'center' })} /></FieldGroup>
                     <FieldGroup label="Optional"><input type="text" placeholder="Optional..." value={r.optional} onChange={e => updatePricing(r._key, 'optional', e.target.value)} style={inputSt({ textAlign: 'center' })} /></FieldGroup>

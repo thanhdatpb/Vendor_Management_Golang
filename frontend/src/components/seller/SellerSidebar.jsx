@@ -186,28 +186,8 @@ function CollapsedUserItem({ user, logout }) {
 }
 
 export default function SellerSidebar({ active, setActive, sidebarOpen, setSidebarOpen, user, logout }) {
-  const [lastActiveTime, setLastActiveTime] = useState(
-    () => localStorage.getItem(`LAST_ACTIVE_${user?.role || 'seller'}`) || Date.now().toString()
-  );
   const [showLogout, setShowLogout] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
-
-  useEffect(() => {
-    const roleKey = `LAST_ACTIVE_${user?.role || 'seller'}`;
-    let timeout;
-    const handleActivity = () => {
-      if (!timeout) {
-        const now = Date.now().toString();
-        localStorage.setItem(roleKey, now);
-        setLastActiveTime(now);
-        timeout = setTimeout(() => { timeout = null; }, 60000);
-      }
-    };
-    const handleStorage = (e) => { if (e.key === roleKey && e.newValue) setLastActiveTime(e.newValue); };
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('storage', handleStorage);
-    return () => { window.removeEventListener('click', handleActivity); window.removeEventListener('storage', handleStorage); };
-  }, [user?.role]);
 
   useEffect(() => { if (!sidebarOpen) setShowLogout(false); }, [sidebarOpen]);
 
@@ -224,11 +204,6 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
 
   // Drawer mobile không có trạng thái "thu gọn" — luôn hiện đầy đủ nhãn khi mở
   const showExpanded = isMobile ? true : sidebarOpen;
-
-  const formatLastActive = (ts) => {
-    const d = new Date(Number(ts));
-    return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
-  };
 
   const displayName = user?.project || user?.name || 'Seller';
   const personName  = user?.full_name || user?.sellerName || user?.seller_name || '';
@@ -332,18 +307,6 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
                 <span>{personName || 'Seller Account'}</span>
               </div>
             </div>
-          </div>
-
-          <div style={{
-            fontSize: 10, color: '#4ade80', marginTop: 10, paddingTop: 10,
-            borderTop: `1px solid ${DARK.border}`,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            <div style={{
-              width: 6, height: 6, borderRadius: '50%', background: '#4ade80',
-              animation: 'seller-pulse 2.5s ease-in-out infinite', flexShrink: 0,
-            }} />
-            <span style={{ fontWeight: 600 }}>Online · {formatLastActive(lastActiveTime)}</span>
           </div>
 
           {showLogout && (

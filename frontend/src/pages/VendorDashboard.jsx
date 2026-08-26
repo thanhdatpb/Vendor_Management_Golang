@@ -27,29 +27,6 @@ const DARK = {
 
 export default function VendorDashboard() {
   const { user, logout } = useAuth();
-  const [lastActiveTime, setLastActiveTime] = useState(() => localStorage.getItem(`LAST_ACTIVE_${user?.role || 'staffb'}`) || Date.now().toString());
-
-  useEffect(() => {
-    const roleKey = `LAST_ACTIVE_${user?.role || 'staffb'}`;
-    let timeout;
-    const handleActivity = () => {
-      if (!timeout) {
-        const now = Date.now().toString();
-        localStorage.setItem(roleKey, now);
-        setLastActiveTime(now);
-        timeout = setTimeout(() => { timeout = null; }, 60000);
-      }
-    };
-    const handleStorage = (e) => { if (e.key === roleKey && e.newValue) setLastActiveTime(e.newValue); };
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('storage', handleStorage);
-    return () => { window.removeEventListener('click', handleActivity); window.removeEventListener('storage', handleStorage); };
-  }, [user?.role]);
-
-  const formatLastActive = (ts) => {
-    const d = new Date(Number(ts));
-    return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
-  };
   const [active, setActive] = useState('products');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogout, setShowLogout] = useState(false);
@@ -283,10 +260,6 @@ export default function VendorDashboard() {
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9', fontFamily: "'Inter',sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.full_name || user?.name || 'Vendor'}</div>
                   <div style={{ fontSize: 10, color: DARK.textMuted, display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}><ShopOutlined style={{ fontSize: 9, color: HC.orange }} /><span>Vendor Account</span></div>
                 </div>
-              </div>
-              <div style={{ fontSize: 10, color: '#4ade80', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${DARK.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'vendor-pulse 2.5s ease-in-out infinite', flexShrink: 0 }} />
-                <span style={{ fontWeight: 600 }}>Online · {formatLastActive(lastActiveTime)}</span>
               </div>
               {showLogout && (
                 <div onClick={(e) => { e.stopPropagation(); logout(); }} style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', gap: 8, color: '#f87171', cursor: 'pointer', animation: 'vendor-fadein 0.15s ease' }}>

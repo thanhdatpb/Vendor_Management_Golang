@@ -63,35 +63,10 @@ function NavItem({ item, isActive, isCollapsed, onClick }) {
 }
 
 export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSidebarOpen, user, logout, menu, roleLabel, displayName }) {
-  const [lastActiveTime, setLastActiveTime] = useState(
-    () => localStorage.getItem(`LAST_ACTIVE_${user?.role || 'csfpd'}`) || Date.now().toString()
-  );
   const [showLogout, setShowLogout] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
 
-  useEffect(() => {
-    const roleKey = `LAST_ACTIVE_${user?.role || 'csfpd'}`;
-    let timeout;
-    const handleActivity = () => {
-      if (!timeout) {
-        const now = Date.now().toString();
-        localStorage.setItem(roleKey, now);
-        setLastActiveTime(now);
-        timeout = setTimeout(() => { timeout = null; }, 60000);
-      }
-    };
-    const handleStorage = (e) => { if (e.key === roleKey && e.newValue) setLastActiveTime(e.newValue); };
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('storage', handleStorage);
-    return () => { window.removeEventListener('click', handleActivity); window.removeEventListener('storage', handleStorage); };
-  }, [user?.role]);
-
   useEffect(() => { if (!sidebarOpen) setShowLogout(false); }, [sidebarOpen]);
-
-  const formatLastActive = (ts) => {
-    const d = new Date(Number(ts));
-    return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ${d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
-  };
 
   const nameToShow = displayName || user?.full_name || user?.name || roleLabel;
 
@@ -136,10 +111,6 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
                 <span>{roleLabel}</span>
               </div>
             </div>
-          </div>
-          <div style={{ fontSize: 10, color: '#4ade80', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${DARK.border}`, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', flexShrink: 0 }} />
-            <span style={{ fontWeight: 600 }}>Online · {formatLastActive(lastActiveTime)}</span>
           </div>
           {showLogout && (
             <div

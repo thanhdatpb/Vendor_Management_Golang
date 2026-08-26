@@ -135,7 +135,6 @@ function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
   const fileLevelLink = uniqueLinks.length === 1 ? uniqueLinks[0] : null;
 
   const singleVendorFile = rows.length === 1;
-  const showKyHieu = rows.some(r => r.kyHieu);
 
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -144,7 +143,6 @@ function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
           <tr>
             <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Vendor Name</th>
             <th style={{ ...TH(), width: '10%', textAlign: 'left' }}>Product Type</th>
-            {showKyHieu && <th style={{ ...TH(), width: '4%' }}>Ký hiệu</th>}
             <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Hình ảnh</th>
             <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Chất liệu</th>
             <th style={{ ...TH(), width: '7%', textAlign: 'left' }}>Chi tiết Size</th>
@@ -168,11 +166,6 @@ function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
                 <td style={{ ...TD(i) }}>
                   {r.productType ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.productType}</span> : <span style={naStyle}>N/A</span>}
                 </td>
-                {showKyHieu && (
-                  <td style={{ ...TD(i), textAlign: 'center' }}>
-                    {r.kyHieu ? <span style={{ fontWeight: 900, color: HC.orangeDark }}>{r.kyHieu}</span> : <span style={naStyle}>N/A</span>}
-                  </td>
-                )}
                 <td style={{ ...TD(i) }}>
                   <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                     {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
