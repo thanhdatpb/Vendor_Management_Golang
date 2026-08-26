@@ -18,17 +18,25 @@ class AdminUserController extends Controller
     // =========================
     public function index(Request $request)
     {
-        // `last_seen_at` là cột MỚI. Nếu code lên trước khi `php artisan migrate`
-        // chạy, select thẳng nó sẽ ném 1054 Unknown column → 500 → màn hình
-        // Quản Lý Nhân Sự trắng trơn và trông y như đã mất sạch nhân sự.
-        // Chuyện này đã xảy ra thật trên production 2026-08-18.
-        // Thiếu cột thì bỏ qua, chỉ mất đúng một cột hiển thị.
-        $columns = ['id', 'email', 'full_name', 'name', 'role', 'project', 'pd_projects', 'is_active', 'avatar_url', 'created_at'];
+        // `last_seen_at` và `pd_projects` là cột MỚI. Nếu code lên trước khi
+        // `php artisan migrate` chạy, select thẳng chúng sẽ ném 1054 Unknown
+        // column → 500 → màn hình Quản Lý Nhân Sự trắng trơn và trông y như đã
+        // mất sạch nhân sự. Chuyện này đã xảy ra thật trên production
+        // 2026-08-18 (với last_seen_at) rồi lặp lại lần nữa với pd_projects
+        // (2026-08-26) — deploy thủ công không đảm bảo migrate chạy cùng lúc
+        // với code. Thiếu cột thì bỏ qua, chỉ mất đúng cột hiển thị đó.
+        $columns = ['id', 'email', 'full_name', 'name', 'role', 'project', 'is_active', 'avatar_url', 'created_at'];
         $hasLastSeen = Schema::hasColumn('users', 'last_seen_at');
         if ($hasLastSeen) {
             $columns[] = 'last_seen_at';
         } else {
             Log::warning('users.last_seen_at chưa tồn tại — cần chạy php artisan migrate.');
+        }
+        $hasPdProjects = Schema::hasColumn('users', 'pd_projects');
+        if ($hasPdProjects) {
+            $columns[] = 'pd_projects';
+        } else {
+            Log::warning('users.pd_projects chưa tồn tại — cần chạy php artisan migrate.');
         }
 
         $users = User::select($columns)
@@ -52,7 +60,7 @@ class AdminUserController extends Controller
                 'full_name'   => $u->full_name ?: $u->name,
                 'role'        => $u->role,
                 'project'     => $u->project,
-                'pd_projects' => $u->pd_projects ?? [],
+                'pd_projects' => $hasPdProjects ? ($u->pd_projects ?? []) : [],
                 'is_active'   => (bool) $u->is_active,
                 'avatar_url'=> $u->avatar_url,
                 // Mốc thao tác gần nhất. null = chưa truy cập lần nào kể từ khi
@@ -99,7 +107,12 @@ class AdminUserController extends Controller
         // Khác với "cần project để phân quyền" — PD không dùng project nữa.
         $keepsProject = in_array($validated['role'], ['seller', 'pd']);
         $project      = $keepsProject ? ($validated['project'] ?? null) : null;
-        $pdProjects   = $validated['role'] === 'pd' ? array_values($validated['pd_projects'] ?? []) : null;
+        // Cột `pd_projects` có thể CHƯA tồn tại nếu deploy code trước khi chạy
+        // migrate (xem chú thích ở index()) — insert thẳng tên cột không có
+        // thật sẽ ném 1054 Unknown column. Thiếu cột thì bỏ qua, PD vẫn tạo
+        // được (chỉ là chưa gán được project truy cập cho tới khi migrate).
+        $hasPdProjects = Schema::hasColumn('users', 'pd_projects');
+        $pdProjects   = $hasPdProjects && $validated['role'] === 'pd' ? array_values($validated['pd_projects'] ?? []) : null;
 
         // PD không còn dùng project để phân biệt tài khoản (mọi dòng PD đều thấy
         // MỌI project như nhau) — nên với PD, trùng chỉ cần xét email + role, KHÔNG
@@ -131,16 +144,16 @@ class AdminUserController extends Controller
         $sibling = User::where('email', $email)->whereNotNull('google_id')->first();
 
         $user = User::create([
-            'email'       => $email,
-            'full_name'   => $validated['full_name'],
-            'name'        => $validated['full_name'],
-            'role'        => $validated['role'],
-            'project'     => $project,
-            'pd_projects' => $pdProjects,
-            'is_active'   => true,
-            'password'    => null,
-            'google_id'   => $sibling?->google_id,
-            'avatar_url'  => $sibling?->avatar_url,
+            'email'      => $email,
+            'full_name'  => $validated['full_name'],
+            'name'       => $validated['full_name'],
+            'role'       => $validated['role'],
+            'project'    => $project,
+            ...($hasPdProjects ? ['pd_projects' => $pdProjects] : []),
+            'is_active'  => true,
+            'password'   => null,
+            'google_id'  => $sibling?->google_id,
+            'avatar_url' => $sibling?->avatar_url,
         ]);
 
         $this->auditLog($request, 'CREATE_USER', null, $user);
@@ -153,7 +166,7 @@ class AdminUserController extends Controller
                 'full_name'   => $user->full_name,
                 'role'        => $user->role,
                 'project'     => $user->project,
-                'pd_projects' => $user->pd_projects ?? [],
+                'pd_projects' => $hasPdProjects ? ($user->pd_projects ?? []) : [],
                 'is_active'   => true,
             ],
         ], 201);
@@ -199,6 +212,10 @@ class AdminUserController extends Controller
         }
 
         $newProject = $newRoleKeepsProject ? ($validated['project'] ?? $user->project) : null;
+        // Cột `pd_projects` có thể CHƯA tồn tại nếu deploy code trước khi chạy
+        // migrate (xem chú thích ở index()) — update thẳng tên cột không có
+        // thật sẽ ném 1054 Unknown column. Thiếu cột thì bỏ qua field này.
+        $hasPdProjects = Schema::hasColumn('users', 'pd_projects');
         // Chỉ ghi đè khi role mới là PD; nếu không phải PD, giữ nguyên dữ liệu
         // cũ (tương tự cách xử lý `project` ở trên) — không xoá khi Admin chỉ
         // đổi tên/khoá tài khoản.
@@ -220,11 +237,11 @@ class AdminUserController extends Controller
         $before = $user->only(['full_name', 'role', 'project', 'pd_projects']);
 
         $user->update([
-            'full_name'   => $validated['full_name'] ?? $user->full_name,
-            'name'        => $validated['full_name'] ?? $user->name,
-            'role'        => $newRole,
-            'project'     => $newProject,
-            'pd_projects' => $newPdProjects,
+            'full_name' => $validated['full_name'] ?? $user->full_name,
+            'name'      => $validated['full_name'] ?? $user->name,
+            'role'      => $newRole,
+            'project'   => $newProject,
+            ...($hasPdProjects ? ['pd_projects' => $newPdProjects] : []),
         ]);
 
         $this->auditLog($request, 'UPDATE_USER', $before, $user);
