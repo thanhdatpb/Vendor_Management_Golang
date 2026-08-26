@@ -13,6 +13,12 @@ const ITEMS_PER_PAGE = 10;
 const LS_A_SELECTIONS = 'STAFF_A_SELECTIONS_V1';
 const LS_B_SELECTIONS = 'STAFF_B_SELECTIONS_V1';
 
+const parseAssignedVendors = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw); } catch { return []; }
+};
+
 function ThumbnailImg({ src, size = 72 }) {
   const [broken, setBroken] = useState(false);
   if (!src || broken) return null;
@@ -252,7 +258,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
   if (loading) return <Spinner />;
 
-  const TH = s => ({ padding: '11px 13px', fontWeight: 900, fontSize: 11, color: HC.brown, borderBottom: `1.5px solid ${HC.border}`, background: HC.cream, fontFamily: "'Inter',sans-serif", textAlign: 'left', whiteSpace: 'nowrap', ...s });
+  const TH = s => ({ padding: '11px 13px', fontWeight: 900, fontSize: 11, color: HC.brown, borderBottom: `1.5px solid ${HC.border}`, background: HC.cream, fontFamily: "'Nunito',sans-serif", textAlign: 'left', whiteSpace: 'nowrap', ...s });
 
   const toastMeta = {
     success: { bg: '#f0fdf4', border: '#86efac', color: '#166534', dot: '#22c55e', icon: (
@@ -350,7 +356,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   <th style={TH()}>Request Date</th>
                   <th style={TH()}>Deadline Date</th>
                   <th style={TH()}>Status</th>
-                  <th style={TH()}>Supplier</th>
+                  <th style={TH()}>Vendor</th>
                   <th style={TH()}>Actions</th>
                 </tr>
               </thead>
@@ -358,8 +364,10 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                 {pagedProducts.map((p, i) => {
                   const allUrls = getMediaUrls(p);
                   const mediaSrc = allUrls.length > 0 ? allUrls[0] : null;
-                  const assignedVendors = productVendors[p.id] || [];
-                  const uniqueVendorCount = new Set(assignedVendors.map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim()).filter(Boolean)).size || assignedVendors.length;
+                  const apiAssignedVendors = parseAssignedVendors(p.assigned_vendors);
+                  const assignedVendors = apiAssignedVendors.length > 0 ? apiAssignedVendors : (productVendors[p.id] || []);
+                  const vendorNames = [...new Set(assignedVendors.map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim()).filter(Boolean))];
+                  const uniqueVendorCount = vendorNames.length || assignedVendors.length;
                   const hasVendors = assignedVendors.length > 0;
                   const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
                   const aSelectedCount = Object.values(aSelections).filter(s => s?.checked).length;
@@ -406,7 +414,9 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                       <td style={{ padding: '12px 13px' }}>
                         {hasVendors ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            <span style={{ fontSize: 12, fontWeight: 600 }}>Assigned: {uniqueVendorCount} vendor</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: HC.ink }}>
+                              {vendorNames.length > 0 ? vendorNames.join(', ') : `${uniqueVendorCount} vendor`}
+                            </span>
                             {aSelectedCount > 0 && <span style={{ fontSize: 11, color: HC.success, fontWeight: 600 }}>✓ A đã chọn {aSelectedCount}</span>}
                           </div>
                         ) : <span style={{ color: HC.muted2, fontSize: 12, fontStyle: 'italic' }}>—</span>}
@@ -465,7 +475,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       {feedbackOpen && feedbackProduct && (
         <div onClick={() => setFeedbackOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 999, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 480, background: HC.surface, borderRadius: 20, padding: 28, boxShadow: '0 32px 80px rgba(26,15,0,0.25)', border: `1.5px solid ${HC.border}` }}>
-            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>💬 Gửi phản hồi</div>
+            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, marginBottom: 6, fontFamily: "'Nunito',sans-serif" }}>💬 Gửi phản hồi</div>
             <div style={{ height: 3, background: `linear-gradient(90deg,${HC.orange},${HC.orangeLight})`, borderRadius: 99, marginBottom: 16 }} />
             <div style={{ fontSize: 12, color: HC.muted, marginBottom: 18 }}>Sản phẩm: <b style={{ color: HC.ink2 }}>{feedbackProduct.product_type || '—'}</b></div>
             <Field label="Nội dung phản hồi" required><textarea placeholder="Nhập nội dung phản hồi..." value={feedbackText} onChange={e => setFeedbackText(e.target.value)} style={{ ...inp, minHeight: 110, resize: 'vertical' }} {...focusStyle} autoFocus /></Field>
@@ -479,7 +489,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       {confirmDeleteProduct && (
         <div onClick={() => !deletingId && setConfirmDeleteProduct(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1001, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 420, background: HC.surface, borderRadius: 20, padding: 28, boxShadow: '0 32px 80px rgba(26,15,0,0.25)', border: '1.5px solid #fecaca' }}>
-            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, marginBottom: 6, fontFamily: "'Inter',sans-serif" }}>
+            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, marginBottom: 6, fontFamily: "'Nunito',sans-serif" }}>
               🗑 Xác nhận xóa form
             </div>
             <div style={{ height: 3, background: 'linear-gradient(90deg,#dc2626,#fca5a5)', borderRadius: 99, marginBottom: 16 }} />
@@ -515,7 +525,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       {deadlineModalOpen && deadlineProduct && (
         <div onClick={() => setDeadlineModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: 420, background: HC.surface, borderRadius: 20, padding: 28, boxShadow: '0 32px 80px rgba(26,15,0,0.25)', border: `1.5px solid ${HC.border}` }}>
-            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, marginBottom: 6, fontFamily: "'Inter',sans-serif", display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div style={{ fontWeight: 900, fontSize: 16, color: HC.ink, marginBottom: 6, fontFamily: "'Nunito',sans-serif", display: 'flex', alignItems: 'center', gap: 9 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={HC.orange} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               Tạo Deadline Date
             </div>
