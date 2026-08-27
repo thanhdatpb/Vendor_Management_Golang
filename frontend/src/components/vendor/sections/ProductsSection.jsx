@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
 import { lsGet, lsSet, fmtDate, getMediaUrls } from '../utils/helpers';
-import { Spinner, EmptyState, Pagination, Field, inp, focusStyle } from '../ui/VendorUI';
+import { Spinner, EmptyState, Field, inp, focusStyle } from '../ui/VendorUI';
 import VendorViewerModal from '../components/VendorViewerModal';
 import { productApi } from '../../../services/api';
 import { subscribeProductChanges } from '../../../services/echo';
@@ -9,7 +9,6 @@ import { SearchOutlined } from '@ant-design/icons';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
-const ITEMS_PER_PAGE = 10;
 const LS_A_SELECTIONS = 'STAFF_A_SELECTIONS_V1';
 const LS_B_SELECTIONS = 'STAFF_B_SELECTIONS_V1';
 
@@ -38,7 +37,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState('');
   const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackProduct, setFeedbackProduct] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
@@ -266,13 +264,9 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
     return !search || hay.includes(search.toLowerCase());
   });
 
-  useEffect(() => { setCurrentPage(1); }, [search]);
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const pagedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
   if (loading) return <Spinner />;
 
-  const TH = s => ({ padding: '11px 13px', fontWeight: 900, fontSize: 11, color: HC.brown, borderBottom: `1.5px solid ${HC.border}`, background: HC.cream, fontFamily: "'Nunito',sans-serif", textAlign: 'left', whiteSpace: 'nowrap', ...s });
+  const TH = s => ({ padding: '11px 13px', fontWeight: 900, fontSize: 11, color: HC.brown, borderBottom: `1.5px solid ${HC.border}`, background: HC.cream, fontFamily: "'Inter',sans-serif", textAlign: 'left', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1, ...s });
 
   const toastMeta = {
     success: { bg: '#f0fdf4', border: '#86efac', color: '#166534', dot: '#22c55e', icon: (
@@ -359,7 +353,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       {filteredProducts.length === 0
         ? <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào được Admin duyệt' : 'Không tìm thấy kết quả phù hợp'} />
         : <>
-          <div style={{ overflowX: 'auto', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
+          <div style={{ overflow: 'auto', maxHeight: '65vh', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 13, background: HC.surface }}>
               <thead>
                 <tr>
@@ -375,7 +369,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                 </tr>
               </thead>
               <tbody>
-                {pagedProducts.map((p, i) => {
+                {filteredProducts.map((p, i) => {
                   const allUrls = getMediaUrls(p);
                   const mediaSrc = allUrls.length > 0 ? allUrls[0] : null;
                   const apiAssignedVendors = parseAssignedVendors(p.assigned_vendors);
@@ -391,7 +385,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   return (
                     <tr key={p.id || i} style={{ borderBottom: `1px solid ${HC.border}`, cursor: 'pointer' }} onClick={() => setViewVendorProduct(p)} onMouseEnter={e => e.currentTarget.style.background = HC.orangePale} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <td style={{ padding: '12px 13px', color: HC.muted, fontWeight: 700 }}>
-                        {(currentPage - 1) * ITEMS_PER_PAGE + i + 1}
+                        {i + 1}
                       </td>
 
                       <td style={{ padding: '12px 13px', fontWeight: 800, color: HC.orangeDark }}>
@@ -474,7 +468,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
               </tbody>
             </table>
           </div>
-          <Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filteredProducts.length} onPageChange={setCurrentPage} />
         </>
       }
       {viewVendorProduct && (
