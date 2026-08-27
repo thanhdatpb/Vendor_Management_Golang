@@ -53,12 +53,15 @@ const isGoogleDriveUrl = (u) => typeof u === 'string' && /(?:drive|docs)\.google
 // khiến trình duyệt tự tải file xuống thay vì cho xem. Mở trong Lightbox tại
 // chỗ (chỉ render <img>, không điều hướng) thì luôn xem được, bất kể header
 // CDN gốc trả gì.
-function AuthenticatedImage({ url, style, ...rest }) {
+function AuthenticatedImage({ url, siblingUrls, index, style, ...rest }) {
   const normalizedUrl = normalizeVendorMediaUrl(url);
   const requiresAuth = typeof normalizedUrl === 'string' &&
     normalizedUrl.startsWith('/api/vendor-library/images/');
   const [objectUrl, setObjectUrl] = useState(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxUrls, setLightboxUrls] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const lightboxObjectUrlsRef = useRef([]);
 
   useEffect(() => {
     if (!requiresAuth) {
@@ -87,25 +90,69 @@ function AuthenticatedImage({ url, style, ...rest }) {
     if (objectUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(objectUrl);
   }, [objectUrl]);
 
+  // Dọn blob URL Lightbox lúc unmount đột ngột (trường hợp thường revoke ở closeLightbox).
+  useEffect(() => () => {
+    lightboxObjectUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+    lightboxObjectUrlsRef.current = [];
+  }, []);
+
   const src = requiresAuth ? (objectUrl || undefined) : normalizedUrl;
+
+  // Mở Lightbox với TOÀN BỘ ảnh anh em (siblingUrls) thay vì chỉ ảnh vừa bấm,
+  // để có nút chuyển qua/về khi ô có từ 2 ảnh trở lên. Ảnh cần auth phải fetch
+  // blob riêng cho từng ảnh (thumbnail chỉ tự fetch ảnh của chính nó).
+  const openLightbox = async () => {
+    const list = (siblingUrls && siblingUrls.length > 0) ? siblingUrls : [url];
+    const targetIdx = index || 0;
+    const resolved = await Promise.all(list.map(async (u) => {
+      const norm = normalizeVendorMediaUrl(u);
+      if (typeof norm === 'string' && norm.startsWith('/api/vendor-library/images/')) {
+        try {
+          const apiPath = norm.replace(/^\/api/, '');
+          const response = await api.get(apiPath, { responseType: 'blob' });
+          const objUrl = URL.createObjectURL(response.data);
+          lightboxObjectUrlsRef.current.push(objUrl);
+          return objUrl;
+        } catch (error) {
+          console.error('Không thể tải ảnh Vendor Library:', error);
+          return null;
+        }
+      }
+      return norm;
+    }));
+
+    const valid = resolved.map((r, i) => ({ r, i })).filter((e) => e.r);
+    if (!valid.length) return;
+    const newIndex = valid.findIndex((e) => e.i === targetIdx);
+    setLightboxUrls(valid.map((e) => e.r));
+    setLightboxIndex(newIndex >= 0 ? newIndex : 0);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    lightboxObjectUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+    lightboxObjectUrlsRef.current = [];
+    setLightboxUrls(null);
+  };
 
   return (
     <>
       <img
         src={src}
         style={{ cursor: src ? 'zoom-in' : undefined, ...style }}
-        onClick={(e) => { e.stopPropagation(); if (src) setLightboxOpen(true); }}
+        onClick={(e) => { e.stopPropagation(); if (src) openLightbox(); }}
         {...rest}
       />
-      {lightboxOpen && src && (
-        <Lightbox mediaUrls={[src]} initialIndex={0} onClose={() => setLightboxOpen(false)} />
+      {lightboxOpen && lightboxUrls && lightboxUrls.length > 0 && (
+        <Lightbox mediaUrls={lightboxUrls} initialIndex={lightboxIndex} onClose={closeLightbox} />
       )}
     </>
   );
 }
 // Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube, link Google Drive
 // → logo Drive (bấm mở); còn lại → ảnh như cũ. Người dùng nhận ra ngay không phải ảnh lỗi.
-export function MediaThumb({ url }) {
+export function MediaThumb({ url, siblingUrls, index }) {
   if (isYouTubeUrl(url)) {
   url = normalizeVendorMediaUrl(url);
     return (
@@ -134,7 +181,7 @@ export function MediaThumb({ url }) {
     );
   }
   return (
-    <AuthenticatedImage url={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+    <AuthenticatedImage url={url} siblingUrls={siblingUrls} index={index} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
   );
 }
 
@@ -411,7 +458,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                 ) : (
                   <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                     {r.images && r.images.length > 0 ? r.images.map((img, idx) => (
-                      <MediaThumb key={idx} url={img} />
+                      <MediaThumb key={idx} url={img} siblingUrls={r.images} index={idx} />
                     )) : <span style={{ color: HC.muted, fontSize: 10, fontStyle: 'italic' }}>Không có ảnh</span>}
                   </div>
                 )}

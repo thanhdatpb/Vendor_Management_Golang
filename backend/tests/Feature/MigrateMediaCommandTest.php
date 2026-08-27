@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Product;
+use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -163,5 +164,42 @@ class MigrateMediaCommandTest extends TestCase
         $data = json_decode($row->data, true);
         $urlAfter = $data['files'][0]['generalInfo'][0]['images'][0];
         $this->assertSame('/api/vendor-library/images/abc123.jpg', $urlAfter);
+    }
+
+    public function test_vendor_media_url_dang_legacy_media_php_van_tim_thay_va_copy_len_dung_key(): void
+    {
+        // Endpoint import cũ (VendorImportController, route /vendors/import, đã
+        // ngừng dùng trên UI) từng ghi ảnh thẳng ra 'storage/app/vendors/{file}'
+        // — KHÔNG thuộc disk 'public' ('storage/app/public/...') như
+        // products/vendors/vendor-library bình thường — và lưu URL dạng
+        // 'APP_URL/media.php?f={file}'. Nếu lệnh migrate không nhận diện được
+        // dạng URL này, ảnh sẽ mắc kẹt vĩnh viễn ở local disk, không lên R2.
+        Storage::fake('s3');
+        $legacyDir = storage_path('app/vendors');
+        if (!is_dir($legacyDir)) {
+            mkdir($legacyDir, 0755, true);
+        }
+        $legacyFile = $legacyDir . '/vendor_legacy_test_123.jpg';
+        file_put_contents($legacyFile, 'noidung-anh-legacy');
+
+        $vendor = Vendor::create([
+            'name'         => 'Legacy Vendor',
+            'product_type' => 'AOP',
+            'media_url'    => 'http://localhost/media.php?f=vendor_legacy_test_123.jpg',
+        ]);
+
+        try {
+            $this->artisan('app:migrate-media-to-object-storage', ['--disk' => 's3'])
+                ->assertExitCode(0);
+
+            Storage::disk('s3')->assertExists('vendors/vendor_legacy_test_123.jpg');
+            $this->assertFileExists($legacyFile, 'File gốc PHẢI còn nguyên trên đĩa server (chỉ copy, không xoá)');
+
+            $urlAfter = $vendor->fresh()->media_url;
+            $this->assertStringContainsString('vendors/vendor_legacy_test_123.jpg', $urlAfter);
+            $this->assertStringNotContainsString('media.php', $urlAfter, 'URL sau migrate phải hết phụ thuộc media.php (local disk)');
+        } finally {
+            @unlink($legacyFile);
+        }
     }
 }

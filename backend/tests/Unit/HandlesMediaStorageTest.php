@@ -25,6 +25,11 @@ class HandlesMediaStorageHarness
         return $this->storeMedia($file, $folder);
     }
 
+    public function callStoreMediaFromPath(string $absolutePath, string $folder): array
+    {
+        return $this->storeMediaFromPath($absolutePath, $folder);
+    }
+
     public function callMediaKeyFromAnyUrl(?string $url): ?string
     {
         return $this->mediaKeyFromAnyUrl($url);
@@ -90,5 +95,29 @@ class HandlesMediaStorageTest extends \Tests\TestCase
         $this->assertStringStartsWith('products/', $result['path']);
         $this->assertStringStartsWith('/storage/products/', $result['url']);
         Storage::disk('public')->assertExists($result['path']);
+    }
+
+    public function test_store_media_from_path_doc_file_co_san_tren_dia_va_luu_dung_folder(): void
+    {
+        // Dùng cho luồng import Vendor qua script Node ngoài (VendorImportController):
+        // file ảnh đã được ghi sẵn ra 1 đường dẫn tạm trên đĩa (không phải
+        // UploadedFile của request HTTP) — cần đọc lại rồi lưu vào disk đang
+        // cấu hình (MEDIA_DISK), thay vì mãi nằm ở đường dẫn tạm đó.
+        config(['filesystems.media' => 'public']);
+        Storage::fake('public');
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'hms_test_') . '.jpg';
+        file_put_contents($tmpPath, 'noidung-anh-tam');
+
+        try {
+            $result = $this->harness->callStoreMediaFromPath($tmpPath, 'vendors');
+
+            $this->assertSame('vendors/' . basename($tmpPath), $result['path']);
+            $this->assertStringStartsWith('/storage/vendors/', $result['url']);
+            Storage::disk('public')->assertExists($result['path']);
+            $this->assertSame('noidung-anh-tam', Storage::disk('public')->get($result['path']));
+        } finally {
+            @unlink($tmpPath);
+        }
     }
 }

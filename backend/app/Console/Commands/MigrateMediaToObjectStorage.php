@@ -170,6 +170,77 @@ class MigrateMediaToObjectStorage extends Command
     }
 
     /**
+     * Ảnh vendor import qua endpoint cũ VendorImportController (route /vendors/
+     * import, đã ngừng dùng trên UI nhưng dữ liệu cũ trong DB có thể còn) được
+     * ghi thẳng ra 'storage/app/vendors/{file}' — KHÔNG nằm trong disk 'public'
+     * ('storage/app/public/...') như products/vendors/vendor-library bình
+     * thường, và URL lưu trong DB có dạng 'APP_URL/media.php?f={file}' chứ
+     * không theo mẫu URL chung. Cần nhận diện + copy riêng, đọc thẳng bằng
+     * file_get_contents() thay vì qua disk 'public' vì file không nằm ở đó.
+     */
+    private function legacyVendorImportFilename(string $url): ?string
+    {
+        if (preg_match('#/media\.php\?f=([^&]+)#i', $url, $m)) {
+            $filename = urldecode($m[1]);
+            // Cùng bộ ký tự an toàn media.php tự kiểm tra khi phục vụ file.
+            if (preg_match('/^[A-Za-z0-9_.-]+$/', $filename)) {
+                return $filename;
+            }
+        }
+
+        return null;
+    }
+
+    private function copyLegacyVendorImportFile(string $filename): ?string
+    {
+        $localPath = storage_path('app/vendors/' . $filename);
+        if (!file_exists($localPath)) {
+            $this->filesMissing++;
+            $this->line("    <fg=yellow>không thấy file (legacy vendor import):</> {$filename}");
+            return null;
+        }
+
+        $key = 'vendors/' . $filename;
+        $newUrl = rtrim(Storage::disk($this->target)->url($key), '/');
+
+        if ($this->dryRun) {
+            $this->filesCopied++;
+            return $newUrl;
+        }
+
+        if (Storage::disk($this->target)->exists($key)) {
+            $this->filesSkipped++;
+            return $newUrl;
+        }
+
+        Storage::disk($this->target)->put($key, file_get_contents($localPath));
+        $this->filesCopied++;
+
+        return $newUrl;
+    }
+
+    /**
+     * Migrate 1 URL media_url/media_urls của Vendor — thử nhận diện dạng legacy
+     * (media.php?f=...) trước, không khớp thì rơi về đường xử lý chung.
+     */
+    private function migrateVendorMediaUrl(?string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        if ($filename = $this->legacyVendorImportFilename($url)) {
+            return $this->copyLegacyVendorImportFile($filename);
+        }
+
+        if ($key = $this->localKeyFromUrl($url)) {
+            return $this->copyToTarget($key);
+        }
+
+        return null;
+    }
+
+    /**
      * Tách key media ra khỏi URL bất kỳ bằng cách tìm tên thư mục media trong
      * đường dẫn — không phụ thuộc nhà cung cấp.
      *
@@ -271,11 +342,7 @@ class MigrateMediaToObjectStorage extends Command
                     $urls = $vendor->media_urls ?? [];
                     if (is_array($urls)) {
                         foreach ($urls as $i => $url) {
-                            $key = $this->localKeyFromUrl($url);
-                            if (!$key) {
-                                continue;
-                            }
-                            if ($newUrl = $this->copyToTarget($key)) {
+                            if ($newUrl = $this->migrateVendorMediaUrl($url)) {
                                 $urls[$i] = $newUrl;
                                 $changed = true;
                             }
@@ -283,11 +350,9 @@ class MigrateMediaToObjectStorage extends Command
                     }
 
                     $single = $vendor->media_url;
-                    if ($key = $this->localKeyFromUrl($single)) {
-                        if ($newUrl = $this->copyToTarget($key)) {
-                            $single = $newUrl;
-                            $changed = true;
-                        }
+                    if ($newUrl = $this->migrateVendorMediaUrl($single)) {
+                        $single = $newUrl;
+                        $changed = true;
                     }
 
                     if ($changed) {

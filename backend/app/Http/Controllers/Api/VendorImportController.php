@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Vendor;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Support\HandlesMediaStorage;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
 class VendorImportController extends BaseApiController {
+    use HandlesMediaStorage;
 
     public function import(Request $request) {
         $request->validate([
@@ -58,11 +60,18 @@ class VendorImportController extends BaseApiController {
             $notes         = $v['notes'] ?? null;
             $imageFilename = $v['image_filename'] ?? null;
 
-            // Image was already written to $imageDir by extract_excel.cjs —
-            // just build the URL, no base64 decode needed here.
-            $mediaUrl = $imageFilename
-                ? rtrim(env('APP_URL'), '/') . '/media.php?f=' . $imageFilename
-                : null;
+            // extract_excel.cjs ghi ảnh ra $imageDir (đĩa server) chỉ như file tạm
+            // để trích xuất — đẩy ngay lên disk đang cấu hình (MEDIA_DISK) rồi xoá
+            // bản tạm, không để ảnh nằm vĩnh viễn trên đĩa server / phục vụ qua
+            // media.php không xác thực như trước.
+            $mediaUrl = null;
+            if ($imageFilename) {
+                $localImagePath = $imageDir . '/' . $imageFilename;
+                if (file_exists($localImagePath)) {
+                    $mediaUrl = $this->storeMediaFromPath($localImagePath, 'vendors')['url'];
+                    @unlink($localImagePath);
+                }
+            }
 
             // Common vendor-level fields (shared across all products of this vendor)
             $vendorCommon = [

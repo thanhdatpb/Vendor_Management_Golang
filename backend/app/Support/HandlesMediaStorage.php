@@ -85,6 +85,22 @@ trait HandlesMediaStorage
     }
 
     /**
+     * Lưu 1 file đã có sẵn trên đĩa (không phải UploadedFile từ request HTTP —
+     * vd file do 1 tiến trình ngoài như script Node.js ghi ra) vào thư mục
+     * $folder trên disk đang cấu hình, dùng đúng tên file gốc.
+     *
+     * @return array{path: string, url: string} path = key trên disk, url = giá trị ghi vào DB
+     */
+    protected function storeMediaFromPath(string $absolutePath, string $folder): array
+    {
+        $disk = $this->mediaDisk();
+        $path = $folder . '/' . basename($absolutePath);
+        Storage::disk($disk)->put($path, file_get_contents($absolutePath));
+
+        return ['path' => $path, 'url' => $this->mediaUrlFor($path, $disk)];
+    }
+
+    /**
      * Tách key media (vd 'products/abc.jpg') ra khỏi URL bất kỳ, bằng cách tìm tên
      * thư mục media trong đường dẫn. Cách này không phụ thuộc nhà cung cấp nên vẫn
      * đúng với '/storage/products/x', URL Supabase, URL R2 hay key trần.
