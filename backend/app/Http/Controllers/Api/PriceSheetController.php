@@ -250,6 +250,13 @@ class PriceSheetController extends Controller
 
         $existing = DB::table('price_sheets')->where('id', $sheet['id'])->first();
 
+        // Không cho ghi vào bảng của project khác — thiếu check này thì user
+        // biết id vẫn đè/"cướp" được bảng project khác (show/versions/destroy
+        // đều check canAccess, upsert trước đây thì không).
+        if ($existing && !$this->canAccess($user, $existing)) {
+            return response()->json(['message' => 'Bạn không có quyền sửa bảng này.'], 403);
+        }
+
         // ── Chống ghi đè mất dữ liệu (mục 16) ───────────────────────────────
         // Client mới gửi kèm `expectedVersion` = version nó đọc được lúc mở
         // bảng. Lệch nghĩa là có người khác đã lưu ở giữa → trả 409 kèm bản

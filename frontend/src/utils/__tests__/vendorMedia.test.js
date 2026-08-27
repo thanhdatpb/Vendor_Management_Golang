@@ -61,7 +61,7 @@ describe('vendor media URLs', () => {
     expect(document.querySelector('img')).toBeNull();
   });
 
-  it('bấm ảnh link ngoài mở lightbox tại chỗ, không bọc thẻ <a> điều hướng ra ngoài', () => {
+  it('bấm ảnh link ngoài mở lightbox tại chỗ, không bọc thẻ <a> điều hướng ra ngoài', async () => {
     // Một số CDN ngoài trả Content-Disposition: attachment cho link ảnh dán
     // trong Excel — nếu còn bọc <a href target=_blank>, bấm vào sẽ bị tải
     // file xuống thay vì xem ngay. Ảnh phải render qua <img> (mở lightbox khi
@@ -74,7 +74,9 @@ describe('vendor media URLs', () => {
 
     fireEvent.click(document.querySelector('img'));
 
-    expect(document.querySelectorAll('img')).toHaveLength(2);
+    // openLightbox resolve sibling URLs qua Promise.all (mục nút chuyển ảnh
+    // qua/về) nên mở ra là bất đồng bộ — phải đợi thay vì assert ngay.
+    await waitFor(() => expect(document.querySelectorAll('img')).toHaveLength(2));
   });
 
   it('nhận diện link Google Drive là media của Chi tiết Size', () => {

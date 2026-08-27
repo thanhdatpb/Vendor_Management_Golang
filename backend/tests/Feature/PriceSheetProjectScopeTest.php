@@ -104,6 +104,23 @@ class PriceSheetProjectScopeTest extends TestCase
         $this->assertSame(0, DB::table('price_sheets')->count());
     }
 
+    public function test_seller_khong_ghi_de_duoc_bang_gia_cua_project_khac(): void
+    {
+        $this->seedSheet('sheet_creative', 'creative', ['name' => 'Ten goc']);
+
+        $this->actingAs($this->user('seller', 'happy'))
+            ->postJson('/api/price-sheets', [
+                'id'           => 'sheet_creative',   // id của project khác
+                'name'         => 'Bi cuop',
+                'settings'     => [],
+                'productTypes' => [],
+            ])
+            ->assertStatus(403);
+
+        $this->assertSame('creative', DB::table('price_sheets')->where('id', 'sheet_creative')->value('project'));
+        $this->assertSame('Ten goc', DB::table('price_sheets')->where('id', 'sheet_creative')->value('name'));
+    }
+
     public function test_seller_khong_xoa_duoc_bang_gia_cua_project_khac(): void
     {
         $this->seedSheet('sheet_creative', 'creative');
