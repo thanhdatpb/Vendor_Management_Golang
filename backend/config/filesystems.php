@@ -17,6 +17,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Media Disk (ảnh/video Product, Vendor, Vendor Library)
+    |--------------------------------------------------------------------------
+    |
+    | Mặc định 'public' = lưu trên đĩa server như trước. Đổi thành 's3' để đẩy
+    | media lên object storage (Cloudflare R2 / AWS S3) — khi đó đổi/chuyển
+    | server không làm mất ảnh, vì file không còn nằm trên đĩa máy chủ.
+    |
+    | Đổi giá trị này CHỈ ảnh hưởng file upload MỚI. Muốn chuyển dữ liệu cũ,
+    | chạy: php artisan app:migrate-media-to-object-storage
+    |
+    */
+
+    'media' => env('MEDIA_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -56,8 +72,13 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw' => false,
-            'report' => false,
+
+            // BẮT BUỘC true: với throw=false, khi credential/endpoint R2 sai thì
+            // lệnh upload thất bại ÂM THẦM — code vẫn ghi URL vào DB nhưng file
+            // không hề tồn tại trên R2, tạo ra ảnh chết mà không có log nào.
+            // Thà trả lỗi 500 để biết ngay còn hơn mất dữ liệu trong im lặng.
+            'throw' => true,
+            'report' => true,
         ],
 
     ],

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\VendorLibraryChanged;
 use App\Http\Controllers\Controller;
+use App\Support\HandlesMediaStorage;
 use App\Support\VendorFieldVisibility;
 use App\Support\VendorLibraryIndexBuilder;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Storage;
 
 class VendorLibraryController extends Controller
 {
+    use HandlesMediaStorage;
+
     private function getRow()
     {
         return DB::table('vendor_library')->orderBy('id')->first();
@@ -317,8 +320,11 @@ class VendorLibraryController extends Controller
 
         $urls = [];
         foreach ($request->file('images') as $key => $file) {
-            $path = $file->store('vendor-library', 'public');
-            $urls[$key] = '/api/vendor-library/images/' . rawurlencode(basename($path));
+            // Lưu theo disk đang cấu hình (MEDIA_DISK — đĩa server hoặc R2), nhưng
+            // URL trả về LUÔN là route xác thực dưới đây — bất kể ảnh nằm ở đâu,
+            // người xem vẫn phải đăng nhập mới tải được (không đổi ngược PR #264/266/268).
+            $stored = $this->storeMedia($file, 'vendor-library');
+            $urls[$key] = '/api/vendor-library/images/' . rawurlencode(basename($stored['path']));
         }
 
         return response()->json(['urls' => $urls]);
@@ -331,9 +337,10 @@ class VendorLibraryController extends Controller
         }
 
         $path = 'vendor-library/' . $filename;
-        abort_unless(Storage::disk('public')->exists($path), 404);
+        $disk = Storage::disk($this->mediaDisk());
+        abort_unless($disk->exists($path), 404);
 
-        return Storage::disk('public')->response($path, null, [
+        return $disk->response($path, null, [
             'Cache-Control' => 'private, max-age=86400',
         ]);
     }

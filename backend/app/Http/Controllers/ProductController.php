@@ -12,9 +12,12 @@ use App\Services\NotificationService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use App\Events\ProductChanged;
+use App\Support\HandlesMediaStorage;
 
 class ProductController extends Controller
 {
+    use HandlesMediaStorage;
+
     private function productCacheVersion(): string
     {
         return 'v' . Cache::get('products_cache_version', 0);
@@ -31,23 +34,18 @@ class ProductController extends Controller
     private function addMediaUrlsToProduct($product)
     {
         if ($product->media_path) {
-            $relUrl = '/storage/' . $product->media_path;
+            // media_path là key trên disk (vd 'products/abc.jpg') → sinh URL theo
+            // disk đang cấu hình: '/storage/...' khi lưu local, URL R2 khi dùng s3.
+            $relUrl = $this->mediaUrlFor($product->media_path);
             $product->media_url = $relUrl;
 
             if (empty($product->media_urls)) {
                 $product->media_urls = [$relUrl];
             } else {
-                $product->media_urls = array_map(function($url) {
-                    // Normalize absolute domain URLs → relative /storage/... paths
-                    if (str_starts_with($url, 'http') && str_contains($url, '/storage/')) {
-                        return substr($url, strpos($url, '/storage/'));
-                    }
-                    if (str_starts_with($url, '/storage/')) {
-                        return $url;
-                    }
-                    // Bare relative path like products/uuid.jpg
-                    return '/storage/' . $url;
-                }, $product->media_urls);
+                $product->media_urls = array_map(
+                    fn ($url) => $this->normalizeMediaUrl($url),
+                    $product->media_urls
+                );
             }
         } else {
             $product->media_url = null;
@@ -176,10 +174,10 @@ public function store(Request $request)
         foreach ($files as $file) {
             $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
             $kind = in_array($ext, ['mp4', 'webm'], true) ? 'video' : 'image';
-            $path = $file->store('products', 'public');
-            $mediaUrls[] = '/storage/' . $path;
+            $stored = $this->storeMedia($file, 'products');
+            $mediaUrls[] = $stored['url'];
             if (!$mediaPath) {
-                $mediaPath = $path;
+                $mediaPath = $stored['path'];
                 $mediaKind = $kind;
             }
         }
@@ -285,14 +283,14 @@ public function update(Request $request, $id)
             if (!in_array($idx, $indices)) {
                 $keepUrls[] = $url;
             } else {
-                $relativePath = str_replace('/storage/', '', $url);
-                Storage::disk('public')->delete($relativePath);
+                $this->deleteMediaByUrl($url);
             }
         }
         $product->media_urls = $keepUrls;
         if (!empty($keepUrls)) {
             $firstUrl = $keepUrls[0];
-            $product->media_path = str_replace('/storage/', '', $firstUrl);
+            $product->media_path = $this->mediaKeyFromAnyUrl($firstUrl)
+                ?? str_replace('/storage/', '', $firstUrl);
             $ext = pathinfo($firstUrl, PATHINFO_EXTENSION);
             $product->media_kind = in_array(strtolower($ext), ['mp4', 'webm']) ? 'video' : 'image';
         } else {
@@ -310,10 +308,10 @@ public function update(Request $request, $id)
         $newUrls = $product->media_urls ?? [];
         foreach ($files as $file) {
             $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension());
-            $path = $file->store('products', 'public');
-            $newUrls[] = '/storage/' . $path;
+            $stored = $this->storeMedia($file, 'products');
+            $newUrls[] = $stored['url'];
             if (empty($product->media_path)) {
-                $product->media_path = $path;
+                $product->media_path = $stored['path'];
                 $product->media_kind = in_array($ext, ['mp4', 'webm']) ? 'video' : 'image';
             }
         }
@@ -381,11 +379,10 @@ public function update(Request $request, $id)
         // Xóa tất cả file media
         $mediaUrls = $product->media_urls ?? [];
         foreach ($mediaUrls as $url) {
-            $relativePath = str_replace('/storage/', '', $url);
-            Storage::disk('public')->delete($relativePath);
+            $this->deleteMediaByUrl($url);
         }
         if ($product->media_path) {
-            Storage::disk('public')->delete($product->media_path);
+            Storage::disk($this->mediaDisk())->delete($product->media_path);
         }
 
         $product->delete();

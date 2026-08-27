@@ -8,9 +8,12 @@ use App\Models\Product;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use App\Support\HandlesMediaStorage;
 
 class VendorController extends Controller
 {
+    use HandlesMediaStorage;
+
     private function vendorCacheVersion(): string
     {
         return 'v' . Cache::get('vendors_cache_version', 0);
@@ -214,9 +217,7 @@ class VendorController extends Controller
         $newUrls = [];
 
         foreach ($request->file('media') as $file) {
-            $path    = $file->store('vendors', 'public');
-            $fullUrl = Storage::url($path);
-            $newUrls[] = $fullUrl;
+            $newUrls[] = $this->storeMedia($file, 'vendors')['url'];
         }
 
         $allUrls = array_merge($currentUrls, $newUrls);
@@ -258,9 +259,8 @@ class VendorController extends Controller
         }
 
         $urlToDelete = $currentUrls[$index];
-        // Xóa file vật lý
-        $relativePath = ltrim(str_replace('/storage', '', parse_url($urlToDelete, PHP_URL_PATH)), '/');
-        Storage::disk('public')->delete($relativePath);
+        // Xóa file vật lý (tự nhận biết file nằm ở đĩa server hay object storage)
+        $this->deleteMediaByUrl($urlToDelete);
 
         array_splice($currentUrls, $index, 1);
 
