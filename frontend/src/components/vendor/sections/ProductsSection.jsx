@@ -44,6 +44,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const [viewVendorProduct, setViewVendorProduct] = useState(null);
   const [productVendors, setProductVendors] = useState(() => lsGet(LS_PRODUCT_VENDORS, {}));
   const [libraryVendorCounts, setLibraryVendorCounts] = useState({});
+  const [libraryVendorNames, setLibraryVendorNames] = useState({});
 
   const [deadlineModalOpen, setDeadlineModalOpen] = useState(false);
   const [deadlineProduct, setDeadlineProduct] = useState(null);
@@ -68,11 +69,19 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       try {
         const list = JSON.parse(localStorage.getItem('STAFF_VENDOR_LIST_V1') || '[]');
         const counts = {};
+        const names = {};
         list.forEach(v => {
           const type = (v.product_type || '').toLowerCase();
-          if(type) counts[type] = (counts[type] || 0) + 1;
+          if(!type) return;
+          counts[type] = (counts[type] || 0) + 1;
+          const vName = (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim();
+          if (vName) {
+            if (!names[type]) names[type] = [];
+            if (!names[type].includes(vName)) names[type].push(vName);
+          }
         });
         setLibraryVendorCounts(counts);
+        setLibraryVendorNames(names);
       } catch(e){}
       try {
         const saved = localStorage.getItem(LS_SELLER_PRODUCTS);
@@ -353,7 +362,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       {filteredProducts.length === 0
         ? <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào được Admin duyệt' : 'Không tìm thấy kết quả phù hợp'} />
         : <>
-          <div style={{ overflow: 'auto', maxHeight: '65vh', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
+          <div style={{ overflowX: 'auto', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 13, background: HC.surface }}>
               <thead>
                 <tr>
@@ -381,6 +390,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   const aSelectedCount = Object.values(aSelections).filter(s => s?.checked).length;
                   const pTypeLower = (p.product_type || '').toLowerCase();
                   const availableCount = libraryVendorCounts[pTypeLower] || 0;
+                  const libraryNames = libraryVendorNames[pTypeLower] || [];
 
                   return (
                     <tr key={p.id || i} style={{ borderBottom: `1px solid ${HC.border}`, cursor: 'pointer' }} onClick={() => setViewVendorProduct(p)} onMouseEnter={e => e.currentTarget.style.background = HC.orangePale} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -429,6 +439,11 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                               {vendorNames.length > 0 ? vendorNames.join(', ') : `${uniqueVendorCount} vendor`}
                             </span>
                             {aSelectedCount > 0 && <span style={{ fontSize: 11, color: HC.success, fontWeight: 600 }}>✓ A đã chọn {aSelectedCount}</span>}
+                          </div>
+                        ) : libraryNames.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: HC.orangeDark }}>{libraryNames.join(', ')}</span>
+                            <span style={{ fontSize: 10, color: HC.muted, fontStyle: 'italic' }}>📚 Đã có trong thư viện</span>
                           </div>
                         ) : <span style={{ color: HC.muted2, fontSize: 12, fontStyle: 'italic' }}>—</span>}
                       </td>
