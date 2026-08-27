@@ -307,7 +307,14 @@ class MigrateMediaToObjectStorage extends Command
 
     /**
      * Ảnh nhúng từ Excel nằm rải rác trong blob JSON vendor_library.data
-     * (mỗi dòng generalInfo có mảng images). Thay URL ngay trong blob.
+     * (mỗi dòng generalInfo có mảng images).
+     *
+     * KHÔNG được ghi đè URL trong blob bằng URL raw của disk đích: ảnh Vendor
+     * Library luôn serve qua route xác thực '/api/vendor-library/images/
+     * {filename}' (Hướng A, PR #264/266/268) — route tự chọn disk theo
+     * MEDIA_DISK tại thời điểm request, nên blob giữ nguyên URL route bất kể
+     * file vật lý đang nằm ở disk nào. Ghi URL raw R2 vào đây sẽ lộ ảnh công
+     * khai không qua xác thực, phá vỡ đúng thiết kế bảo mật đã chọn.
      */
     private function migrateVendorLibrary(): void
     {
@@ -325,35 +332,26 @@ class MigrateMediaToObjectStorage extends Command
             return;
         }
 
-        $replaced = 0;
-        $walk = function (&$node) use (&$walk, &$replaced) {
+        $copied = 0;
+        $walk = function ($node) use (&$walk, &$copied) {
             if (is_array($node)) {
-                foreach ($node as $k => &$v) {
+                foreach ($node as $v) {
                     if (is_string($v)) {
                         $key = $this->localKeyFromUrl($v);
                         // Chỉ đụng tới URL trỏ vào thư mục ảnh của thư viện vendor
                         if ($key && str_starts_with($key, 'vendor-library/')) {
-                            if ($newUrl = $this->copyToTarget($key)) {
-                                $v = $newUrl;
-                                $replaced++;
+                            if ($this->copyToTarget($key) !== null) {
+                                $copied++;
                             }
                         }
                     } elseif (is_array($v)) {
                         $walk($v);
                     }
                 }
-                unset($v);
             }
         };
         $walk($data);
 
-        if ($replaced > 0 && !$this->dryRun) {
-            DB::table('vendor_library')->where('id', $row->id)->update([
-                'data'       => json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                'updated_at' => now(),
-            ]);
-        }
-
-        $this->line("  → {$replaced} URL ảnh trong thư viện được cập nhật.");
+        $this->line("  → {$copied} file ảnh trong thư viện đã copy lên đích (URL trong DB giữ nguyên route xác thực).");
     }
 }

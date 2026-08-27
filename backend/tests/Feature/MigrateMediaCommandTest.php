@@ -156,10 +156,12 @@ class MigrateMediaCommandTest extends TestCase
         Storage::disk('s3')->assertExists('vendor-library/abc123.jpg');
         Storage::disk('s3')->assertMissing('vendor-library/images/abc123.jpg');
 
+        // Blob DB PHẢI giữ NGUYÊN URL route xác thực — route tự chọn disk theo
+        // MEDIA_DISK lúc request, ghi URL raw của disk đích vào đây sẽ lộ ảnh
+        // công khai không qua xác thực (phá vỡ thiết kế bảo mật Hướng A).
         $row = DB::table('vendor_library')->first();
         $data = json_decode($row->data, true);
-        $newUrl = $data['files'][0]['generalInfo'][0]['images'][0];
-        $this->assertStringContainsString('vendor-library/abc123.jpg', $newUrl);
-        $this->assertStringNotContainsString('vendor-library/images/abc123.jpg', $newUrl);
+        $urlAfter = $data['files'][0]['generalInfo'][0]['images'][0];
+        $this->assertSame('/api/vendor-library/images/abc123.jpg', $urlAfter);
     }
 }
