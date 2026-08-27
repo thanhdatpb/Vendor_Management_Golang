@@ -106,14 +106,34 @@ function indexFromRecords(records) {
   return buildLegacyView(byKey);
 }
 
-/** Rút index[key] cấp ngoài (hình dạng CŨ) từ danh sách record đã gom theo productType key. */
+/**
+ * Rút index[key] cấp ngoài (hình dạng CŨ) từ danh sách record đã gom theo productType key.
+ *
+ * `sizes`/`bySize` GỘP từ MỌI record cùng tên phôi (không chỉ record đầu) — nếu
+ * không, PT chưa gắn `libRef` (bảng cũ, resolve theo tên) bị giới hạn đúng
+ * bằng bộ size của vendor gặp trước, còn size chỉ vendor khác mới có thì biến
+ * mất khỏi bảng dù thư viện có đủ (bug thật: chọn phôi có 8 size trong thư
+ * viện nhưng bảng chỉ hiện 1 size — vì vendor gặp trước chỉ có 1 size). Size
+ * trùng tên giữa các record vẫn giữ giá trị của record gặp trước — KHÔNG đổi
+ * field đã tính, chỉ bổ sung thêm size mà record đầu chưa có.
+ */
 function buildLegacyView(byProductTypeKey) {
   const index = {};
   Object.entries(byProductTypeKey).forEach(([key, records]) => {
     const first = records[0];
+    const bySize = {};
+    const sizes = [];
+    records.forEach((record) => {
+      (record.sizes || []).forEach((label) => {
+        const sKey = normalizeKey(label);
+        if (bySize[sKey]) return;
+        bySize[sKey] = record.bySize[sKey];
+        sizes.push(label);
+      });
+    });
     index[key] = {
       productType: first.productType, vendor: first.vendor, filename: first.filename,
-      sizes: first.sizes, bySize: first.bySize,
+      sizes, bySize,
       records, // MỚI (mục 03/04) — danh sách đầy đủ, mỗi vendor một record riêng
     };
   });
