@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
 import { lsGet, lsSet, fmtDate, getMediaUrls } from '../utils/helpers';
-import { Spinner, EmptyState, Pagination, Badge, Field, inp, focusStyle } from '../ui/VendorUI';
+import { Spinner, EmptyState, Pagination, Field, inp, focusStyle } from '../ui/VendorUI';
 import VendorViewerModal from '../components/VendorViewerModal';
 import { productApi } from '../../../services/api';
 import { subscribeProductChanges } from '../../../services/echo';
@@ -61,6 +61,8 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const [confirmDeleteProduct, setConfirmDeleteProduct] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const processedProductIdRef = useRef(null);
+  const [sellerNamesMap, setSellerNamesMap] = useState({});
+  const LS_SELLER_PRODUCTS = 'SELLER_PRODUCTS_V1';
 
   useEffect(() => {
     const sync = () => {
@@ -74,12 +76,26 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
         });
         setLibraryVendorCounts(counts);
       } catch(e){}
+      try {
+        const saved = localStorage.getItem(LS_SELLER_PRODUCTS);
+        if (saved) setSellerNamesMap(JSON.parse(saved));
+      } catch(e){}
     };
     sync();
     window.addEventListener('storage', sync);
     const id = setInterval(sync, 5000);
     return () => { window.removeEventListener('storage', sync); clearInterval(id); };
   }, []);
+
+  const getSellerName = useCallback((product) => {
+    if (product.seller_name) return product.seller_name;
+    if (product.sellerName) return product.sellerName;
+    if (product.user_name) return product.user_name;
+    if (product.userName) return product.userName;
+    const fromLocal = sellerNamesMap[product.id];
+    if (fromLocal) return fromLocal.seller_name || fromLocal.sellerName || '—';
+    return '—';
+  }, [sellerNamesMap]);
 
   const handleQuickAssign = (product) => {
     try {
@@ -108,8 +124,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
       alert('Có lỗi xảy ra khi gán nhanh!');
     }
   };
-
-  const getStatus = p => { const s = p.status || 'draft'; return s === 'rejected' ? 'reject' : s; };
 
   const handleOpenDeadlineModal = (product) => {
     setDeadlineProduct(product);
@@ -351,13 +365,13 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                 <tr>
                   <th style={TH()}>ID</th>
                   <th style={TH({ color: HC.orange })}>Project</th>
+                  <th style={TH()}>Nhân sự request</th>
                   <th style={TH()}>Product Type</th>
-                  <th style={TH()}>Image</th>
-                  <th style={TH()}>Request Date</th>
+                  <th style={TH()}>Ảnh</th>
+                  <th style={TH()}>Ngày request</th>
                   <th style={TH()}>Deadline Date</th>
-                  <th style={TH()}>Status</th>
                   <th style={TH()}>Vendor</th>
-                  <th style={TH()}>Actions</th>
+                  <th style={TH()}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -382,6 +396,10 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
                       <td style={{ padding: '12px 13px', fontWeight: 800, color: HC.orangeDark }}>
                         {p.project || '—'}
+                      </td>
+
+                      <td style={{ padding: '12px 13px', fontWeight: 700, color: HC.ink2 }}>
+                        {getSellerName(p)}
                       </td>
 
                       <td style={{ padding: '12px 13px', fontWeight: 800, color: HC.ink2 }}>
@@ -409,7 +427,6 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
                       <td style={{ padding: '12px 13px', color: HC.ink2 }}>{fmtDate(p.created_at) || '—'}</td>
                       <td style={{ padding: '12px 13px', color: HC.ink2 }}>{fmtDate(p.deadline_date) || '—'}</td>
-                      <td style={{ padding: '12px 13px' }}><Badge status={getStatus(p)} /></td>
 
                       <td style={{ padding: '12px 13px' }}>
                         {hasVendors ? (
