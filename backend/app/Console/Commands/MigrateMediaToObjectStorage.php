@@ -190,6 +190,17 @@ class MigrateMediaToObjectStorage extends Command
             : $url;
         $path = ltrim($path, '/');
 
+        // Route xác thực ảnh Vendor Library (PR #264/266/268): 'api/vendor-library/
+        // images/{filename}'. "images" ở đây CHỈ LÀ segment URL của route, không
+        // phải tên thư mục con trên đĩa — file thật nằm ở 'vendor-library/{filename}'
+        // (không có 'images/' ở giữa). Xét nhánh này TRƯỚC vòng lặp bên dưới, nếu
+        // không sẽ suy nhầm ra 'vendor-library/images/{filename}' và không bao giờ
+        // tìm thấy file để copy — dry-run trên production 2026-08-27 lộ đúng lỗi
+        // này: cả 6 file đều báo "không tìm thấy" dù file còn nguyên trên đĩa.
+        if (preg_match('#^api/vendor-library/images/([^/?]+)#', $path, $m)) {
+            return 'vendor-library/' . $m[1];
+        }
+
         foreach (['products', 'vendors', 'vendor-library'] as $folder) {
             if (str_starts_with($path, $folder . '/')) {
                 return $path;

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -120,5 +121,45 @@ class MigrateMediaCommandTest extends TestCase
         $urlAfterSecond = $product->fresh()->media_urls[0];
 
         $this->assertSame($urlAfterFirst, $urlAfterSecond, 'Chạy lại phải cho cùng 1 kết quả (idempotent)');
+    }
+
+    public function test_vendor_library_url_dang_route_xac_thuc_van_tim_thay_va_copy_duoc(): void
+    {
+        // Khoá lại lỗi thật đã lộ qua dry-run trên production 2026-08-27: URL
+        // ảnh Vendor Library đi qua route xác thực '/api/vendor-library/images/
+        // {filename}' (PR #264/266/268) bị suy NHẦM ra key đĩa
+        // 'vendor-library/images/{filename}' (thừa 'images/') trong khi file
+        // thật nằm ở 'vendor-library/{filename}' — khiến cả 6 file báo "không
+        // tìm thấy" dù còn nguyên trên đĩa.
+        Storage::fake('public');
+        Storage::fake('s3');
+        Storage::disk('public')->put('vendor-library/abc123.jpg', 'noidung-anh-that');
+
+        DB::table('vendor_library')->insert([
+            'data' => json_encode([
+                'files' => [[
+                    'generalInfo' => [[
+                        'images' => ['/api/vendor-library/images/abc123.jpg'],
+                    ]],
+                ]],
+            ]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->artisan('app:migrate-media-to-object-storage', ['--disk' => 's3'])
+            ->assertExitCode(0);
+
+        // File gốc PHẢI còn nguyên, và bản copy PHẢI nằm đúng key 'vendor-library/
+        // abc123.jpg' — không phải 'vendor-library/images/abc123.jpg'.
+        Storage::disk('public')->assertExists('vendor-library/abc123.jpg');
+        Storage::disk('s3')->assertExists('vendor-library/abc123.jpg');
+        Storage::disk('s3')->assertMissing('vendor-library/images/abc123.jpg');
+
+        $row = DB::table('vendor_library')->first();
+        $data = json_decode($row->data, true);
+        $newUrl = $data['files'][0]['generalInfo'][0]['images'][0];
+        $this->assertStringContainsString('vendor-library/abc123.jpg', $newUrl);
+        $this->assertStringNotContainsString('vendor-library/images/abc123.jpg', $newUrl);
     }
 }
