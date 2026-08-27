@@ -10,7 +10,6 @@ import { normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
 import { subscribeVendorLibraryChanges } from '../../../services/echo';
 import AppToast from '../../shared/AppToast';
 import ExportVendorFilesModal from '../../shared/ExportVendorFilesModal';
-import Lightbox from '../components/Lightbox';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -47,18 +46,11 @@ const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)
 // Link Google Drive (drive.google.com) cũng không phải ảnh → hiển thị logo Drive.
 const isGoogleDriveUrl = (u) => typeof u === 'string' && /(?:drive|docs)\.google\.com/i.test(u);
 
-// Ảnh link ngoài (vd CDN của công cụ khác dán vào ô Excel) không đưa lên
-// storage của mình — nhưng bấm xem KHÔNG được điều hướng thẳng (target=_blank)
-// tới link đó, vì server CDN gốc có thể trả Content-Disposition: attachment
-// khiến trình duyệt tự tải file xuống thay vì cho xem. Mở trong Lightbox tại
-// chỗ (chỉ render <img>, không điều hướng) thì luôn xem được, bất kể header
-// CDN gốc trả gì.
-function AuthenticatedImage({ url, style, ...rest }) {
+function AuthenticatedImage({ url, ...props }) {
   const normalizedUrl = normalizeVendorMediaUrl(url);
   const requiresAuth = typeof normalizedUrl === 'string' &&
     normalizedUrl.startsWith('/api/vendor-library/images/');
   const [objectUrl, setObjectUrl] = useState(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!requiresAuth) {
@@ -87,21 +79,7 @@ function AuthenticatedImage({ url, style, ...rest }) {
     if (objectUrl && typeof URL.revokeObjectURL === 'function') URL.revokeObjectURL(objectUrl);
   }, [objectUrl]);
 
-  const src = requiresAuth ? (objectUrl || undefined) : normalizedUrl;
-
-  return (
-    <>
-      <img
-        src={src}
-        style={{ cursor: src ? 'zoom-in' : undefined, ...style }}
-        onClick={(e) => { e.stopPropagation(); if (src) setLightboxOpen(true); }}
-        {...rest}
-      />
-      {lightboxOpen && src && (
-        <Lightbox mediaUrls={[src]} initialIndex={0} onClose={() => setLightboxOpen(false)} />
-      )}
-    </>
-  );
+  return <img src={requiresAuth ? (objectUrl || undefined) : normalizedUrl} {...props} />;
 }
 // Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube, link Google Drive
 // → logo Drive (bấm mở); còn lại → ảnh như cũ. Người dùng nhận ra ngay không phải ảnh lỗi.
@@ -134,7 +112,9 @@ export function MediaThumb({ url }) {
     );
   }
   return (
-    <AuthenticatedImage url={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+    <a href={url} target="_blank" rel="noreferrer">
+      <AuthenticatedImage url={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+    </a>
   );
 }
 
@@ -433,7 +413,9 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                       <div style={{ display: 'block', marginBottom: r.chiTietSize ? 6 : 0 }}>
                         {isGoogleDriveUrl(r.chiTietSizeImage)
                           ? <MediaThumb url={r.chiTietSizeImage} />
-                          : <AuthenticatedImage url={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />}
+                          : <a href={normalizeVendorMediaUrl(r.chiTietSizeImage)} target="_blank" rel="noreferrer">
+                              <AuthenticatedImage url={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
+                            </a>}
                       </div>
                     )}
                     {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
