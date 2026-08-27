@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import AppToast from '../shared/AppToast';
 import { DeleteOutlined, SearchOutlined, SendOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
-import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, LS_A_SELECTIONS, EMPTY_FORM } from '../../constants/sellerTheme';
+import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, EMPTY_FORM } from '../../constants/sellerTheme';
 import { lsGet, fmtDate, fmtDateTime, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
 import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../utils/productExcel';
 import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field, AutoGrowTextarea } from './SellerUI';
@@ -609,15 +609,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     } finally { setProcessingId(null); }
   };
 
-  const toggleSelect = (id, e) => {
-    e.stopPropagation();
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
   const openExportModal = () => {
     if (submittedProducts.length === 0) {
       showToast('error', '⚠️ Không có dữ liệu', 'Chưa có sản phẩm nào để xuất');
@@ -660,34 +651,18 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const hasFilter = search || filterStatus;
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const pagedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-  const allFiltered = filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.has(p.id));
-  const someFiltered = !allFiltered && filteredProducts.some(p => selectedIds.has(p.id));
-
-  const toggleSelectAll = () => {
-    if (allFiltered) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredProducts.map(p => p.id)));
-    }
-  };
-
-  const renderVendorBadge = (p) => {
+  const renderVendorCell = (p) => {
     // Ưu tiên assigned_vendors từ API, fallback về localStorage
     let av = p.assigned_vendors;
     if (typeof av === 'string') { try { av = JSON.parse(av); } catch { av = []; } }
     const vendors = (Array.isArray(av) && av.length ? av : null) || productVendors[p.id] || [];
-    const uniqueNames = new Set(vendors.map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim()).filter(Boolean));
-    const count = uniqueNames.size || vendors.length;
-    const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
-    const selectedCount = Object.values(aSelections).filter(s => s?.checked).length;
-    if (count === 0) return <span style={{ color: HC.muted2, fontSize: 11, fontStyle: 'italic' }}>Chưa gán</span>;
+    const names = Array.from(new Set(vendors.map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim()).filter(Boolean)));
+    if (names.length === 0) return <span style={{ color: HC.muted2, fontSize: 11, fontStyle: 'italic' }}>Chưa gán</span>;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 22, height: 22, borderRadius: 999, background: HC.orange, color: '#fff', fontSize: 11, fontWeight: 900, padding: '0 7px' }}>{count}</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: HC.ink2 }}>vendor đã gán</span>
-        </div>
-        {selectedCount > 0 && <span style={{ fontSize: 10, color: HC.success, fontWeight: 700 }}>✓ Đã chọn {selectedCount}</span>}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {names.map((name, idx) => (
+          <span key={idx} style={{ padding: '3px 9px', borderRadius: 999, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{name}</span>
+        ))}
       </div>
     );
   };
@@ -872,7 +847,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                           <div style={{ fontSize: 12, color: HC.ink2, fontWeight: 700 }}>{p.deadline_date ? fmtDate(p.deadline_date) : '—'}</div>
                         </div>
                       </div>
-                      <div style={{ marginTop: 8 }}>{renderVendorBadge(p)}</div>
+                      <div style={{ marginTop: 8 }}>{renderVendorCell(p)}</div>
                     </div>
                   </div>
 
@@ -927,32 +902,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff' }}>
               <thead>
                 <tr style={{ background: '#fafafa' }}>
-                  {/* Checkbox chọn tất cả */}
-                  <th style={{ padding: '14px 16px', borderBottom: `1.5px solid #e5e7eb`, width: 44, textAlign: 'center' }}>
-                    <div
-                      onClick={toggleSelectAll}
-                      style={{
-                        width: 18, height: 18, borderRadius: 5, cursor: 'pointer',
-                        border: `2px solid ${allFiltered ? '#16a34a' : someFiltered ? '#16a34a' : '#d1d5db'}`,
-                        background: allFiltered ? '#16a34a' : someFiltered ? 'rgba(22,163,74,0.15)' : '#fff',
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {allFiltered && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1, fontWeight: 900 }}>✓</span>}
-                      {someFiltered && !allFiltered && <span style={{ color: '#16a34a', fontSize: 11, lineHeight: 1, fontWeight: 900 }}>—</span>}
-                    </div>
-                  </th>
                   {[
-                    { label: 'No',            w: 48 },
-                    { label: 'Product Type',  w: 180 },
-                    { label: 'Image',         w: 90 },
-                    { label: 'Date Request',  w: 130 },
-                    { label: 'Deadline',      w: 110 },
-                    { label: 'Status',        w: 120 },
-                    { label: 'Note',          w: 170 },
-                    { label: 'Distributor',   w: 150 },
-                    { label: 'Actions',       w: 180 },
+                    { label: 'STT',              w: 48 },
+                    { label: 'Product Type',     w: 180 },
+                    { label: 'Ảnh',              w: 90 },
+                    { label: 'Ngày request',     w: 130 },
+                    { label: 'Deadline',         w: 110 },
+                    { label: 'Status',           w: 120 },
+                    { label: 'Nhân sự request',  w: 170 },
+                    { label: 'Vendor',           w: 150 },
+                    { label: 'Actions',          w: 180 },
                   ].map(h => (
                     <th key={h.label} style={{
                       textAlign: 'left', padding: '14px 18px',
@@ -988,21 +947,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = rowBg}
                     >
-                      {/* Checkbox */}
-                      <td style={{ padding: '22px 16px', borderBottom: '1px solid #e5e7eb', textAlign: 'center' }}>
-                        <div
-                          onClick={e => toggleSelect(p.id, e)}
-                          style={{
-                            width: 18, height: 18, borderRadius: 5, cursor: 'pointer',
-                            border: `2px solid ${selectedIds.has(p.id) ? '#16a34a' : '#cbd5e1'}`,
-                            background: selectedIds.has(p.id) ? '#16a34a' : '#fff',
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 0.15s', flexShrink: 0,
-                          }}
-                        >
-                          {selectedIds.has(p.id) && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1, fontWeight: 900 }}>✓</span>}
-                        </div>
-                      </td>
                       {/* # */}
                       <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 8, background: '#f1f5f9', color: '#64748b', fontWeight: 700, fontSize: 11 }}>
@@ -1055,20 +999,16 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                         </span>
                       </td>
 
-                      {/* Note / Rejection reason */}
+                      {/* Nhân sự request */}
                       <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb', maxWidth: 180 }}>
-                        {isRejected && (p.rejection_reason || p.reason) ? (
-                          <div style={{ fontSize: 12, color: HC.danger, fontWeight: 600, lineHeight: 1.4 }}>
-                            {(p.rejection_reason || p.reason).length > 60
-                              ? (p.rejection_reason || p.reason).slice(0, 60) + '…'
-                              : (p.rejection_reason || p.reason)}
-                          </div>
-                        ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
+                        {p.seller_name
+                          ? <div style={{ fontSize: 12, color: HC.ink2, fontWeight: 700 }}>{p.seller_name}</div>
+                          : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
 
-                      {/* Vendor badge */}
+                      {/* Vendor */}
                       <td style={{ padding: '22px 18px', borderBottom: '1px solid #e5e7eb' }}>
-                        {renderVendorBadge(p)}
+                        {renderVendorCell(p)}
                       </td>
 
                       {/* Actions */}
