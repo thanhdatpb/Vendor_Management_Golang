@@ -103,7 +103,7 @@ function indexFromRecords(records) {
       filename, project: record.project, sizes: sizeLabels, bySize,
     });
   });
-  return buildLegacyView(byKey);
+  return buildLegacyView(mergeBlankVendorRecords(byKey));
 }
 
 /**
@@ -138,6 +138,50 @@ function buildLegacyView(byProductTypeKey) {
     };
   });
   return index;
+}
+
+/**
+ * Gộp record "vendor trống" (kyHieu rỗng — carry-forward vendor khi import Excel
+ * bị lệch dòng, thường do merge cell) vào record CÙNG FILE + CÙNG TÊN PHÔI có
+ * vendor tên rõ ràng, CHỈ KHI file đó chỉ có đúng 1 vendor được đặt tên.
+ *
+ * Bug thật: phôi "Canvas 1,5"" trong 1 file bị tách thành 2 record — 1 record
+ * "US3" chỉ 1 size + 1 record vendor trống 7 size (tổng đúng 8 size của US3,
+ * nhưng bị chia làm đôi khi liệt kê ở picker → chọn record nào cũng thiếu
+ * size). 2+ vendor tên khác nhau thật sự thì GIỮ NGUYÊN tách riêng (đúng thiết
+ * kế PR-A3) — không đoán được size trống thuộc vendor nào trong trường hợp đó.
+ */
+function mergeBlankVendorRecords(byProductTypeKey) {
+  Object.keys(byProductTypeKey).forEach((key) => {
+    const byFile = {};
+    byProductTypeKey[key].forEach((r) => { (byFile[r.filename] ||= []).push(r); });
+
+    const merged = [];
+    Object.values(byFile).forEach((group) => {
+      const named = group.filter((r) => r.vendorCode);
+      const blank = group.filter((r) => !r.vendorCode);
+      const distinctVendors = [...new Set(named.map((r) => r.vendorCode))];
+
+      if (blank.length && distinctVendors.length === 1) {
+        const target = named[0];
+        blank.forEach((b) => {
+          b.sizes.forEach((label) => {
+            const sKey = normalizeKey(label);
+            if (!target.bySize[sKey]) {
+              target.bySize[sKey] = b.bySize[sKey];
+              target.sizes.push(label);
+            }
+          });
+        });
+        merged.push(target, ...named.slice(1));
+      } else {
+        merged.push(...group);
+      }
+    });
+
+    byProductTypeKey[key] = merged;
+  });
+  return byProductTypeKey;
 }
 
 /** Gom blob thư viện đầy đủ thành index (đường lùi cho server chưa có index). */
@@ -185,7 +229,7 @@ function indexFromFiles(files, projectKey, skip) {
 
   const byKeyArrays = {};
   Object.entries(byKey).forEach(([key, bucket]) => { byKeyArrays[key] = [...bucket.values()]; });
-  return buildLegacyView(byKeyArrays);
+  return buildLegacyView(mergeBlankVendorRecords(byKeyArrays));
 }
 
 /**
