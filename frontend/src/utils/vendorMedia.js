@@ -10,15 +10,23 @@ export const isSizeGuideMediaUrl = (url) =>
 
 // Production từng lưu URL upload theo APP_URL (ví dụ http://localhost/storage/...).
 // Luôn đưa asset storage về cùng origin để browser gọi đúng Vendor Hub hiện tại.
+//
+// Ảnh Vendor Library LUÔN phải đi qua route xác thực /api/vendor-library/images/{file}
+// — bất kể đang lưu ở đĩa server ('/storage/vendor-library/...') hay object storage
+// (Cloudflare R2/S3, URL dạng 'https://<bucket-host>/vendor-library/...' KHÔNG có tiền
+// tố '/storage/'). Bắt theo segment '/vendor-library/' bất kể host đứng trước, để không
+// bỏ sót case R2 — bỏ sót sẽ lộ ảnh thẳng qua URL công khai của R2, không cần đăng nhập.
 export const normalizeVendorMediaUrl = (url) => {
   if (!url || typeof url !== 'string') return url;
   const trimmed = url.trim();
-  const storageIndex = trimmed.toLowerCase().indexOf('/storage/');
-  if (storageIndex >= 0) {
-    const storagePath = trimmed.slice(storageIndex);
-    const match = storagePath.match(/^\/storage\/vendor-library\/([^/?#]+)/i);
-    if (match) return `/api/vendor-library/images/${encodeURIComponent(decodeURIComponent(match[1]))}`;
-    return storagePath;
+
+  const vendorLibraryMatch = trimmed.match(/\/vendor-library\/([^/?#]+)(?:[?#]|$)/i);
+  if (vendorLibraryMatch) {
+    return `/api/vendor-library/images/${encodeURIComponent(decodeURIComponent(vendorLibraryMatch[1]))}`;
   }
+
+  const storageIndex = trimmed.toLowerCase().indexOf('/storage/');
+  if (storageIndex >= 0) return trimmed.slice(storageIndex);
+
   return trimmed;
 };

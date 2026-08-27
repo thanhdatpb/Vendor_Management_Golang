@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function Lightbox({ mediaUrls, initialIndex, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -9,7 +10,12 @@ export default function Lightbox({ mediaUrls, initialIndex, onClose }) {
 
   if (!mediaUrls.length) return null;
 
-  return (
+  // Portal thẳng ra document.body: nếu render tại chỗ, một ancestor bất kỳ có
+  // transform/filter/backdrop-filter/contain (rất nhiều overlay trong dự án
+  // dùng backdropFilter cho hiệu ứng kính mờ) sẽ biến thành containing block
+  // của position:fixed — khiến lightbox bị kẹt/lệch trong khung cha thay vì
+  // phủ toàn màn hình, nhìn như trắng/vỡ dù <img> vẫn load đúng.
+  return createPortal((
     <div
       onClick={onClose}
       style={{
@@ -69,5 +75,5 @@ export default function Lightbox({ mediaUrls, initialIndex, onClose }) {
         </button>
       </div>
     </div>
-  );
+  ), document.body);
 }

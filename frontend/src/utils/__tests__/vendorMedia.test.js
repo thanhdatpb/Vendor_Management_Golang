@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaThumb } from '../../components/vendor/sections/VendorLibraryViewer';
 import api from '../../services/api';
@@ -41,6 +41,17 @@ describe('vendor media URLs', () => {
       .toBe('https://cdn.example.com/a.jpg');
   });
 
+  it('đưa URL object storage (Cloudflare R2/S3, không có tiền tố /storage/) về endpoint có xác thực', () => {
+    // Ảnh Vendor Library khi MEDIA_DISK=s3 được lưu URL R2 công khai dạng
+    // 'https://<bucket-host>/vendor-library/a.jpg' — không đi qua '/storage/' như
+    // đĩa server. Nếu không nhận diện được case này, ảnh sẽ lộ thẳng qua URL R2
+    // công khai thay vì route xác thực.
+    expect(normalizeVendorMediaUrl('https://pub-xxxx.r2.dev/vendor-library/a.jpg'))
+      .toBe('/api/vendor-library/images/a.jpg');
+    expect(normalizeVendorMediaUrl('https://cdn.vendorhub.viehana.com/vendor-library/a%20b.jpg?X-Amz-Signature=abc'))
+      .toBe('/api/vendor-library/images/a%20b.jpg');
+  });
+
   it('hiển thị logo Drive thay vì thẻ ảnh bị vỡ', () => {
     render(React.createElement(MediaThumb, {
       url: 'https://drive.google.com/file/d/abc/view?usp=drive_link',
@@ -48,6 +59,22 @@ describe('vendor media URLs', () => {
 
     expect(screen.getByLabelText('Google Drive')).toBeInTheDocument();
     expect(document.querySelector('img')).toBeNull();
+  });
+
+  it('bấm ảnh link ngoài mở lightbox tại chỗ, không bọc thẻ <a> điều hướng ra ngoài', () => {
+    // Một số CDN ngoài trả Content-Disposition: attachment cho link ảnh dán
+    // trong Excel — nếu còn bọc <a href target=_blank>, bấm vào sẽ bị tải
+    // file xuống thay vì xem ngay. Ảnh phải render qua <img> (mở lightbox khi
+    // bấm), không được điều hướng thẳng tới link CDN gốc.
+    render(React.createElement(MediaThumb, {
+      url: 'https://cdn.example.com/anh-tham-khao.png',
+    }));
+
+    expect(document.querySelector('a')).toBeNull();
+
+    fireEvent.click(document.querySelector('img'));
+
+    expect(document.querySelectorAll('img')).toHaveLength(2);
   });
 
   it('nhận diện link Google Drive là media của Chi tiết Size', () => {
