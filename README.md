@@ -51,7 +51,7 @@ flowchart LR
 
     subgraph Data["🗄️ Dữ liệu"]
         DB[("MySQL 8.0")]
-        Disk["Local Disk<br/>(ảnh/video vendor)"]
+        Disk["Local Disk hoặc<br/>Cloudflare R2<br/>(ảnh/video vendor)"]
     end
 
     Login -->|token| Auth
@@ -114,7 +114,7 @@ sequenceDiagram
 ## 4. Tính năng chính
 
 - **Quản lý Product Request** — Staff A tạo yêu cầu, Admin duyệt, Staff B tiếp nhận và xử lý. Trường **Total Cost** nhận **khoảng giá** dạng tự do (`100-150`), không chỉ một con số — vì Seller gộp Base + Shipping nên thường ra khoảng. Các trường mô tả dài (Vùng In, Packaging, Đặc tính KT, Review) hiển thị trong ô cố định chiều cao có cuộn, tránh form dài vô tận.
-- **Thư viện Vendor** — Import danh sách vendor từ file Excel (định dạng Happy Creative), lưu thông tin phôi, size và bảng giá theo từng project. Ba tab: **Tổng quan Vendor & Sản phẩm**, **New Arrivals**, **Best Seller**.
+- **Thư viện Vendor** — Import danh sách vendor từ file Excel (định dạng Happy Creative), lưu thông tin phôi, size, bảng giá và **ghi chú (Notes)** theo từng project. Ba tab: **Tổng quan Vendor & Sản phẩm**, **New Arrivals**, **Best Seller**.
 - **New Arrivals** — file upload mới hiển thị ở tab riêng kèm badge **"Mới"** trong **tuần** được upload (tuần tính từ **thứ Hai**); sang thứ Hai tuần kế tiếp tự trở về "Tổng quan" như file thường, không cần thao tác tay.
 - **Best Seller** — Vendor đánh dấu ⭐ dòng sản phẩm nổi bật; **lưu ở DB** (không còn localStorage) nên Seller/CSF/PD trên mọi thiết bị đều thấy giống nhau.
 - **Sửa nhanh tại chỗ** — trong bảng giá của Thư viện Vendor, Vendor sửa được các ô **giá** và **Product Type / Size / Optional** bằng click-để-sửa; Seller/CSF/PD chỉ xem.
@@ -143,7 +143,9 @@ sheet
       └─ sizes[]              → mỗi size: sizeAdd, itemCost (giá vốn), customize{}
 ```
 
-`+ Thêm Product Type` **chọn từ Thư viện Vendor bằng picker** (không gõ tay) → tự nạp size và Item Cost theo phương thức ship (Economy / Ground / Express / 2 Days / Overnight).
+`+ Thêm Product Type` **chọn từ Thư viện Vendor bằng picker** (không gõ tay) → tự nạp size và Item Cost theo phương thức ship (Economy / Ground / Express / 2 Days / Overnight). Picker **gộp các vendor trùng** (collapse duplicate), hiển thị kèm thông tin phôi và **nhãn so sánh (compare label)** để chọn đúng vendor giữa nhiều lựa chọn tương đương.
+
+Bảng size hỗ trợ **copy/paste theo cột** cho Item Cost và các Customize Info (dán nhanh một dải giá trị xuống nhiều dòng), đã bỏ cột "Bộ tổng hợp" cũ.
 
 ### Công thức (khớp 1:1 với sheet gốc)
 
@@ -190,7 +192,7 @@ Lưu server, chia sẻ theo project qua API `/api/price-sheets` (xem mục 7).
 ### Backend
 - **Framework:** Laravel 12 — REST API.
 - **Auth:** Laravel Sanctum (token) + Laravel Socialite (Google OAuth), phân quyền qua `RoleMiddleware` / `AdminMiddleware`.
-- **Database:** MySQL 8.0 · **Storage:** đĩa local (symlink `storage:link`).
+- **Database:** MySQL 8.0 · **Storage:** đĩa local (symlink `storage:link`) hoặc **Cloudflare R2** (S3-compatible, qua `FILESYSTEM_DISK=s3` + `AWS_*` env trỏ endpoint R2).
 
 ### Phân lớp Backend
 
