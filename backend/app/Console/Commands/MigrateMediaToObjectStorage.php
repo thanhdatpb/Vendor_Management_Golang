@@ -24,6 +24,7 @@ class MigrateMediaToObjectStorage extends Command
 {
     protected $signature = 'app:migrate-media-to-object-storage
         {--dry-run : Chỉ xem trước, không upload và không ghi DB}
+        {--fail-on-missing : Trả exit code 1 nếu có file nguồn không tìm thấy}
         {--disk=s3 : Disk đích (mặc định s3 — trỏ tới R2 qua biến môi trường AWS_*)}';
 
     protected $description = 'Copy media từ đĩa server lên object storage (R2/S3) và cập nhật URL trong DB';
@@ -65,6 +66,11 @@ class MigrateMediaToObjectStorage extends Command
         } else {
             $this->info('Xong. File gốc trên đĩa server vẫn được GIỮ NGUYÊN làm bản dự phòng.');
             $this->warn('Bước cuối: đặt MEDIA_DISK=' . $this->target . ' trong .env để upload MỚI cũng đi thẳng lên object storage.');
+        }
+
+        if ($this->option('fail-on-missing') && $this->filesMissing > 0) {
+            $this->error("Migration chưa đạt gate: còn {$this->filesMissing} file nguồn không tìm thấy.");
+            return self::FAILURE;
         }
 
         return self::SUCCESS;
@@ -290,7 +296,7 @@ class MigrateMediaToObjectStorage extends Command
         $this->info('— Products (ảnh/video sản phẩm)');
         $updated = 0;
 
-        Product::whereNotNull('media_urls')->orWhereNotNull('media_path')
+        Product::whereNotNull('media_urls')->orWhereNotNull('media_path')->orWhereNotNull('media_url')
             ->chunkById(50, function ($products) use (&$updated) {
                 foreach ($products as $product) {
                     $changed = false;
@@ -309,10 +315,22 @@ class MigrateMediaToObjectStorage extends Command
                         }
                     }
 
-                    // media_path là KEY (không phải URL) nên giữ nguyên — URL sẽ được
-                    // sinh lại theo MEDIA_DISK. Chỉ cần chắc file đã có trên đích.
+                    if (!empty($product->media_url)) {
+                        $key = $this->localKeyFromUrl($product->media_url);
+                        if ($key && ($newUrl = $this->copyToTarget($key))) {
+                            $product->media_url = $newUrl;
+                            $changed = true;
+                        }
+                    }
+
+                    // Chuẩn hoá cả media_path legacy (/storage/... hoặc URL cũ)
+                    // về key thuần để runtime R2-only không còn phải đoán local URL.
                     if (!empty($product->media_path)) {
-                        $this->copyToTarget($this->localKeyFromUrl($product->media_path) ?? $product->media_path);
+                        $mediaPathKey = $this->localKeyFromUrl($product->media_path) ?? ltrim($product->media_path, '/');
+                        if ($this->copyToTarget($mediaPathKey) !== null && $product->media_path !== $mediaPathKey) {
+                            $product->media_path = $mediaPathKey;
+                            $changed = true;
+                        }
                     }
 
                     if ($changed) {

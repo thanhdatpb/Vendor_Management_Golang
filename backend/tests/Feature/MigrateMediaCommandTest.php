@@ -40,6 +40,7 @@ class MigrateMediaCommandTest extends TestCase
             'product_type' => 'AOP',
             'total_cost'   => 12.00,
             'status'       => 'draft',
+            'media_url'    => '/storage/products/a.jpg',
             'media_urls'   => ['/storage/products/a.jpg'],
         ]);
 
@@ -76,6 +77,24 @@ class MigrateMediaCommandTest extends TestCase
         Storage::disk('s3')->assertMissing('products/a.jpg');
     }
 
+    public function test_fail_on_missing_tra_exit_code_1_de_chan_cutover(): void
+    {
+        Storage::fake('public');
+        Storage::fake('s3');
+        Product::create([
+            'product_type' => 'AOP',
+            'total_cost'   => 12.00,
+            'status'       => 'draft',
+            'media_urls'   => ['/storage/products/missing.jpg'],
+        ]);
+
+        $this->artisan('app:migrate-media-to-object-storage', [
+            '--disk' => 's3',
+            '--dry-run' => true,
+            '--fail-on-missing' => true,
+        ])->assertExitCode(1);
+    }
+
     public function test_copy_that_thi_cap_nhat_url_va_giu_nguyen_ban_goc(): void
     {
         Storage::fake('public');
@@ -85,6 +104,7 @@ class MigrateMediaCommandTest extends TestCase
             'product_type' => 'AOP',
             'total_cost'   => 12.00,
             'status'       => 'draft',
+            'media_url'    => '/storage/products/a.jpg',
             'media_urls'   => ['/storage/products/a.jpg'],
         ]);
 
@@ -97,6 +117,7 @@ class MigrateMediaCommandTest extends TestCase
         // Điều thật sự cần đảm bảo: file có mặt ở CẢ HAI nơi sau migrate.
         $newUrls = $product->fresh()->media_urls;
         $this->assertStringContainsString('products/a.jpg', $newUrls[0]);
+        $this->assertStringContainsString('products/a.jpg', $product->fresh()->media_url);
 
         // Bản gốc trên đĩa server PHẢI còn nguyên — đây là lưới an toàn chính.
         Storage::disk('public')->assertExists('products/a.jpg');
