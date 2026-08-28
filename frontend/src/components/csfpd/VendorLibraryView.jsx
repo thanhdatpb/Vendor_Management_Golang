@@ -21,6 +21,7 @@ import { exportVendorLibraryFiles } from '../../utils/vendorExcel';
 import AppToast from '../shared/AppToast';
 import ExportVendorFilesModal from '../shared/ExportVendorFilesModal';
 import { renderChiTietSizeText } from '../vendor/sections/VendorLibraryViewer';
+import { fileVisibleToProject } from '../../constants/projects';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -74,16 +75,10 @@ function MediaThumb({ url }) {
   );
 }
 
-// ── Project filter helpers (giống logic của VendorLibraryViewer) ──────────────
-function extractFileProject(filename) {
-  if (!filename) return null;
-  const fn = filename.toLowerCase();
-  if (fn.includes('p.hapify84')) return 'hapify84';
-  if (fn.includes('p.happy')) return 'happy';
-  if (fn.includes('p.creative')) return 'creative';
-  if (fn.includes('p.global')) return 'global';
-  return null;
-}
+// ── Project filter ────────────────────────────────────────────────────────────
+// Quy tắc "project nào xem được file" nằm ở constants/projects.js, dùng chung với
+// VendorLibraryViewer: ưu tiên danh sách chia sẻ tường minh `file.projects` do
+// Vendor/Admin đặt, file chưa chia sẻ thì vẫn theo ký hiệu `P.xxx` trong tên.
 
 // New Arrivals chỉ hiệu lực trong TUẦN upload (tuần bắt đầu thứ Hai) — giống logic
 // của VendorLibraryViewer. Sang thứ Hai tuần kế tiếp, file rời khỏi tab này.
@@ -357,12 +352,10 @@ export default function VendorLibraryView({ projectKey, department }) {
   const displayFiles = useMemo(() => {
     let files = rawFiles;
 
-    // Lọc theo project được chọn — file không có ký hiệu P.xxx thì hiện cho mọi project
+    // Lọc theo project được chọn — file chưa chia sẻ và không có ký hiệu P.xxx
+    // thì hiện cho mọi project (giữ nguyên hành vi cũ).
     if (projectKey) {
-      files = files.filter(f => {
-        const fp = extractFileProject(f.filename);
-        return !fp || fp === projectKey;
-      });
+      files = files.filter(f => fileVisibleToProject(f, projectKey));
     }
 
     if (activeTab === 'best_seller') {

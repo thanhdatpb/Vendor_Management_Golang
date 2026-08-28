@@ -29,7 +29,10 @@ export default function VendorsSection() {
         <TabButton id="best_seller" label="Best Seller" />
       </div>
 
-      <VendorLibraryViewer readOnly={true} mode={activeTab} />
+      {/* readOnly: Admin không sửa trực tiếp ô trong bảng.
+          canManage: nhưng vẫn có toàn quyền quản lý thư viện — thêm vendor, tải
+          template, import Excel và chia sẻ file cho project, giống Vendor. */}
+      <VendorLibraryViewer readOnly={true} canManage={true} mode={activeTab} />
     </div>
   );
 }

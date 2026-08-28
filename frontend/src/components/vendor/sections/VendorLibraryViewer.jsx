@@ -10,7 +10,9 @@ import { normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
 import { subscribeVendorLibraryChanges } from '../../../services/echo';
 import AppToast from '../../shared/AppToast';
 import ExportVendorFilesModal from '../../shared/ExportVendorFilesModal';
+import ShareProjectsModal from '../../shared/ShareProjectsModal';
 import Lightbox from '../components/Lightbox';
+import { fileSharedProjects, fileVisibleToProject, PROJECTS } from '../../../constants/projects';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -330,16 +332,9 @@ function EditableText({ value, display, onCommit, readOnly, align = 'left', plac
 }
 
 // ── Project visibility helpers ────────────────────────────────────────────────
-// Trả về project key từ tên file, hoặc null nếu không có ký hiệu (= hiện cho tất cả).
-function extractFileProject(filename) {
-  if (!filename) return null;
-  const fn = filename.toLowerCase();
-  if (fn.includes('p.hapify84')) return 'hapify84';
-  if (fn.includes('p.happy')) return 'happy';
-  if (fn.includes('p.creative')) return 'creative';
-  if (fn.includes('p.global')) return 'global';
-  return null;
-}
+// Quy tắc "file này project nào thấy" nằm ở constants/projects.js (dùng chung với
+// bản CSF/PD và index bảng tính giá): ưu tiên danh sách chia sẻ tường minh
+// `file.projects`, không có thì lùi về ký hiệu `P.xxx` trong tên file.
 
 // Lấy project string của user hiện tại từ localStorage.
 // Ưu tiên: user.project → user.name → user.seller_name (để không cần re-login)
@@ -1054,7 +1049,36 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
 }
 
 // ── Single Library File Card ──────────────────────────────────────────────────
-function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, onSampleStatusChange }) {
+// Nút chia sẻ nhỏ trên header card — mũi tên cong sang phải (biểu tượng "share").
+// Thay cho nút đổi tên file: quyền xem theo project giờ khai báo tường minh chứ
+// không suy từ ký hiệu `P.xxx` trong tên file nữa.
+function ShareButton({ onClick, title }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label="Chia sẻ file cho project"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+        border: `1px solid ${hover ? HC.orangeMid : HC.border}`,
+        background: hover ? HC.orangeLight : '#f4f4f5',
+        color: hover ? HC.orangeDark : '#3f3f46',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', padding: 0, transition: 'all 0.15s',
+      }}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5V18a7.5 7.5 0 0 1 7.5-7.5h6" />
+        <polyline points="13.5 6 18 10.5 13.5 15" />
+      </svg>
+    </button>
+  );
+}
+
+function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, onSampleStatusChange }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
@@ -1062,37 +1086,22 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
   useEffect(() => {
     if (highlighted) setExpanded(true);
   }, [highlighted]);
-  const [renamingFile, setRenamingFile] = useState(false);
-  const [renameValue, setRenameValue] = useState('');
-  const renameInputRef = useRef(null);
-
-  const startRename = (e) => {
-    e.stopPropagation();
-    setRenameValue(entry.filename.replace(/\.xlsx?$/i, ''));
-    setRenamingFile(true);
-    setTimeout(() => renameInputRef.current?.focus(), 50);
-  };
-
-  const commitRename = () => {
-    const trimmed = renameValue.trim();
-    if (trimmed && trimmed !== entry.filename) {
-      onUpdate({ ...entry, filename: trimmed });
-    }
-    setRenamingFile(false);
-  };
-
-  const handleRenameKeyDown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
-    if (e.key === 'Escape') { setRenamingFile(false); }
-  };
 
   const fileRowIds = entry.generalInfo?.map(r => r.id) || [];
-  const selectedInFile = fileRowIds.filter(id => selectedIds?.has(id)).length;
-  const allInFileSelected = fileRowIds.length > 0 && fileRowIds.every(id => selectedIds?.has(id));
 
   const handleSelectAllInFile = () => {
     if (onSelectAll) onSelectAll(fileRowIds);
   };
+
+  // Nhãn "ai thấy file này" — chỉ hiện cho người có quyền chia sẻ (Vendor/Admin).
+  const sharedProjects = fileSharedProjects(entry);
+  const shareLabel = (() => {
+    if (!sharedProjects) return null; // file cũ: vẫn theo ký hiệu P.xxx trong tên
+    if (sharedProjects.length === 0) return 'Mọi project';
+    return sharedProjects
+      .map(id => PROJECTS.find(p => p.id === id)?.label || id)
+      .join(', ');
+  })();
 
   const importDate = new Date(entry.importedAt).toLocaleString('vi-VN', {
     day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -1135,47 +1144,14 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Filename */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-            {renamingFile ? (
-              <input
-                ref={renameInputRef}
-                type="text"
-                value={renameValue}
-                onChange={e => setRenameValue(e.target.value)}
-                onBlur={commitRename}
-                onKeyDown={handleRenameKeyDown}
-                onClick={e => e.stopPropagation()}
-                style={{
-                  flex: 1, padding: '3px 8px', fontSize: 12.5, fontWeight: 800,
-                  fontFamily: "'Inter',sans-serif", borderRadius: 6,
-                  border: `1.5px solid ${HC.orange}`,
-                  boxShadow: `0 0 0 3px ${HC.orangeGlow}`,
-                  outline: 'none', color: HC.ink,
-                  background: '#fffbeb',
-                }}
-              />
-            ) : (
-              <span style={{
-                fontWeight: 800, fontSize: 12.5, color: HC.ink,
-                fontFamily: "'Inter',sans-serif",
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                flex: 1, minWidth: 0,
-              }}>
-                {entry.filename.replace(/\.xlsx?$/i, '')}
-              </span>
-            )}
-            {!readOnly && !renamingFile && (
-              <button
-                onClick={startRename}
-                title="Đổi tên file"
-                style={{
-                  flexShrink: 0, padding: '2px 7px', borderRadius: 5,
-                  border: `1px solid ${HC.orangeMid}`,
-                  background: HC.orangeLight, color: HC.orangeDark,
-                  fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                  lineHeight: 1.4, transition: 'all 0.15s',
-                }}
-              >✏️</button>
-            )}
+            <span style={{
+              fontWeight: 800, fontSize: 12.5, color: HC.ink,
+              fontFamily: "'Inter',sans-serif",
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              flex: 1, minWidth: 0,
+            }}>
+              {entry.filename.replace(/\.xlsx?$/i, '')}
+            </span>
           </div>
 
           {/* Meta row */}
@@ -1197,39 +1173,33 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, readOnly, selectable,
             <span style={{ fontSize: 10.5, color: HC.muted2 }}>
               {entry.generalInfo?.length || 0} sản phẩm · {entry.pricing?.length || 0} dòng giá
             </span>
+            {canShare && shareLabel && (
+              <span
+                title={`Project được xem file này: ${shareLabel}`}
+                style={{
+                  padding: '1px 8px', borderRadius: 99,
+                  background: sharedProjects.length === 0 ? '#ecfdf5' : '#eff6ff',
+                  border: `1px solid ${sharedProjects.length === 0 ? '#a7f3d0' : '#bfdbfe'}`,
+                  color: sharedProjects.length === 0 ? '#047857' : '#1d4ed8',
+                  fontSize: 9.5, fontWeight: 800, maxWidth: 260,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}
+              >
+                {sharedProjects.length === 0 ? '🌐 Mọi project' : `👥 ${shareLabel}`}
+              </span>
+            )}
           </div>
         </div>
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          {selectable && fileRowIds.length > 0 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleSelectAllInFile(); }}
-              title={allInFileSelected ? 'Bỏ chọn tất cả trong file này' : 'Chọn tất cả trong file này'}
-              style={{
-                padding: '4px 10px', borderRadius: 6,
-                border: `1px solid ${allInFileSelected ? HC.orange : HC.border}`,
-                background: allInFileSelected ? HC.orangeLight : '#f8fafc',
-                color: allInFileSelected ? HC.orangeDark : HC.muted,
-                fontSize: 10.5, fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
-              <div style={{
-                width: 12, height: 12, borderRadius: 3,
-                border: `1.5px solid ${allInFileSelected ? HC.orange : HC.muted2}`,
-                background: allInFileSelected ? HC.orange : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                {allInFileSelected && <span style={{ color: '#fff', fontSize: 8, fontWeight: 900, lineHeight: 1 }}>✓</span>}
-              </div>
-              {allInFileSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${fileRowIds.length})`}
-              {selectedInFile > 0 && !allInFileSelected && (
-                <span style={{ padding: '0 5px', borderRadius: 99, background: HC.orangeLight, color: HC.orangeDark, fontSize: 9.5, fontWeight: 800 }}>
-                  {selectedInFile}/{fileRowIds.length}
-                </span>
-              )}
-            </button>
+          {canShare && (
+            <ShareButton
+              onClick={(e) => { e.stopPropagation(); onShare(entry); }}
+              title={shareLabel
+                ? `Chia sẻ file — đang cho: ${shareLabel}`
+                : 'Chia sẻ file cho project (hiện đang theo ký hiệu P.xxx trong tên file)'}
+            />
           )}
           {!readOnly && (
             <button
@@ -1570,7 +1540,13 @@ function ManualAddModal({ onClose, onSave, mode }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryViewer({ readOnly = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared }) {
+/**
+ * @param {boolean} readOnly   không cho sửa dữ liệu trong bảng (Seller/Admin).
+ * @param {boolean} canManage  vẫn được dùng các thao tác quản lý THƯ VIỆN (thêm
+ *   vendor, tải template, import Excel, chia sẻ project) kể cả khi readOnly.
+ *   Admin xem read-only nhưng có toàn quyền quản lý thư viện nên bật cờ này.
+ */
+export default function VendorLibraryViewer({ readOnly = false, canManage = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared }) {
   // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1583,6 +1559,9 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
+  // File đang mở hộp thoại "Chia sẻ cho project" (null = đóng)
+  const [shareTarget, setShareTarget] = useState(null);
+  const [sharingSave, setSharingSave] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // Filter theo product trong chế độ readOnly
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -1762,15 +1741,15 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     }
     // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B/Admin thấy tất cả).
     // Tab "New Arrivals" (new_products): vendor upload lên đây phải hiển thị cho TẤT CẢ
-    // project/seller, không lọc theo ký hiệu P.xxx trong tên file.
+    // project/seller, không lọc theo project.
+    //
+    // File đã được chia sẻ tường minh (`projects`) đi theo danh sách đó; file chưa
+    // chia sẻ giữ NGUYÊN cách cũ là suy theo ký hiệu P.xxx trong tên file, nên các
+    // project đang tra cứu không bị mất file nào khi tính năng này lên.
     if (readOnly && mode !== 'new_products') {
       const { skip, key: userProjectKey } = getCurrentUserProject();
       if (!skip && userProjectKey) {
-        files = files.filter(file => {
-          const fp = extractFileProject(file.filename);
-          if (!fp) return true; // không có P.xxx → hiện cho tất cả project
-          return userProjectKey.includes(fp) || fp.includes(userProjectKey);
-        });
+        files = files.filter(file => fileVisibleToProject(file, userProjectKey));
       }
     }
     // File mới upload nhất lên đầu
@@ -1852,6 +1831,10 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [fetchLibrary]);
+
+  // Quản lý thư viện = thêm vendor / template / import Excel / chia sẻ project.
+  // Vendor (không readOnly) và Admin (readOnly nhưng canManage) đều được.
+  const canManageLibrary = !readOnly || canManage;
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -1998,6 +1981,23 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
     }
   };
 
+  // Lưu danh sách project được xem file — ghi thẳng field `projects` của file đó.
+  // Mảng rỗng vẫn được ghi (khác với "chưa có field"): đó là ý "chia sẻ cho mọi
+  // project", trong khi vắng field nghĩa là file cũ còn theo tên P.xxx.
+  const handleShareSave = async (projects) => {
+    if (!shareTarget) return;
+    setSharingSave(true);
+    const updated = rawFiles.map(f => (f.id === shareTarget.id ? { ...f, projects } : f));
+    const saved = await saveLibrary(updated);
+    setSharingSave(false);
+    if (saved) {
+      setShareTarget(null);
+      showToast('success', projects.length
+        ? `🔗 Đã chia sẻ file cho ${projects.length} project`
+        : '🌐 Đã chia sẻ file cho mọi project');
+    }
+  };
+
   const handleManualAdd = async (entry) => {
     const updated = [...rawFiles, entry];
     const saved = await saveLibrary(updated);
@@ -2090,7 +2090,7 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           >
             📤 Export file Vendor
           </button>
-          {!readOnly && (
+          {canManageLibrary && (
           <>
             <button
               onClick={() => setShowManualAdd(true)}
@@ -2184,6 +2184,8 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
                 idx={idx}
                 onDelete={handleDelete}
                 onUpdate={handleUpdateEntry}
+                onShare={setShareTarget}
+                canShare={canManageLibrary}
                 readOnly={readOnly}
                 selectable={selectable}
                 selectedIds={selectedIds}
@@ -2199,6 +2201,17 @@ export default function VendorLibraryViewer({ readOnly = false, mode = 'all', se
           ));
         })()}
       </div>
+
+      {/* Share to projects Modal */}
+      {shareTarget && (
+        <ShareProjectsModal
+          HC={HC}
+          entry={shareTarget}
+          saving={sharingSave}
+          onConfirm={handleShareSave}
+          onClose={() => { if (!sharingSave) setShareTarget(null); }}
+        />
+      )}
 
       {/* Manual Add Modal */}
       {showManualAdd && (

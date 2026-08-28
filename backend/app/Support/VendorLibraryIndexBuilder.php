@@ -38,21 +38,78 @@ final class VendorLibraryIndexBuilder
     }
 
     /**
+     * Danh sách project được chia sẻ TƯỜNG MINH cho file (Vendor/Admin đặt trong
+     * hộp thoại Chia sẻ), hoặc null nếu file chưa từng được chia sẻ.
+     *
+     * Khớp `fileSharedProjects` bên frontend (constants/projects.js).
+     */
+    public static function fileSharedProjects(array $file): ?array
+    {
+        $list = $file['projects'] ?? null;
+        if (!is_array($list)) {
+            return null;
+        }
+
+        $ids = [];
+        foreach ($list as $id) {
+            $id = strtolower(trim((string) $id));
+            if ($id !== '') {
+                $ids[] = $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
      * File có thuộc phạm vi project của user không.
+     *
+     * Ưu tiên danh sách chia sẻ tường minh; mảng RỖNG = chia sẻ cho mọi project.
+     * File chưa chia sẻ thì giữ NGUYÊN cách cũ là suy theo ký hiệu `P.xxx` trong
+     * tên file — nhờ vậy các file đã import từ trước không đổi phạm vi hiển thị.
      * File không suy ra được project → dùng chung (giống frontend).
      */
-    public static function fileInProject(?string $filename, ?string $projectKey): bool
+    public static function fileVisibleToProject(array $file, ?string $projectKey): bool
     {
         if ($projectKey === null || $projectKey === '') {
             return true;
         }
 
-        $fileProject = self::fileProject($filename);
-        if ($fileProject === null) {
-            return true;
+        $matches = static fn (string $id): bool =>
+            str_contains($projectKey, $id) || str_contains($id, $projectKey);
+
+        $shared = self::fileSharedProjects($file);
+        if ($shared !== null) {
+            if ($shared === []) {
+                return true;
+            }
+
+            foreach ($shared as $id) {
+                if ($matches($id)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        return str_contains($projectKey, $fileProject) || str_contains($fileProject, $projectKey);
+        $fileProject = self::fileProject((string) ($file['filename'] ?? ''));
+
+        return $fileProject === null || $matches($fileProject);
+    }
+
+    /**
+     * Nhãn project của file dùng cho index: chỉ có nghĩa khi file thuộc đúng MỘT
+     * project, còn lại null (= dùng chung).
+     */
+    public static function fileProjectTag(array $file): ?string
+    {
+        $shared = self::fileSharedProjects($file);
+        if ($shared !== null) {
+            return count($shared) === 1 ? $shared[0] : null;
+        }
+
+        return self::fileProject((string) ($file['filename'] ?? ''));
     }
 
     /**
@@ -134,7 +191,7 @@ final class VendorLibraryIndexBuilder
             }
 
             $filename = (string) ($file['filename'] ?? '');
-            if (!self::fileInProject($filename, $projectKey)) {
+            if (!self::fileVisibleToProject($file, $projectKey)) {
                 continue;
             }
 
@@ -163,7 +220,7 @@ final class VendorLibraryIndexBuilder
                         'productType'   => $productType,
                         'vendorCode'    => $vendorCode,
                         'filename'      => $filename,
-                        'project'       => self::fileProject($filename),
+                        'project'       => self::fileProjectTag($file),
                         'sizes'         => [],
                         'chatLieu'      => $general['chatLieu'] ?? '',
                         'chiTietSize'   => $general['chiTietSize'] ?? '',

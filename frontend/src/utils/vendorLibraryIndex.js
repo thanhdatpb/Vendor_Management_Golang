@@ -5,17 +5,17 @@
 //  từ cột "Total (Fulfill)" tương ứng trong thư viện.
 // ════════════════════════════════════════════════════════
 import { vendorLibraryApi } from '../services/api';
+import { extractFileProject, fileSharedProjects, fileVisibleToProject } from '../constants/projects';
 
 export const normalizeKey = (s) => (s ?? '').toString().trim().toLowerCase();
 
-function extractFileProject(filename) {
-  if (!filename) return null;
-  const fn = filename.toLowerCase();
-  if (fn.includes('p.hapify84')) return 'hapify84';
-  if (fn.includes('p.happy')) return 'happy';
-  if (fn.includes('p.creative')) return 'creative';
-  if (fn.includes('p.global')) return 'global';
-  return null;
+// Project của một file: ưu tiên danh sách chia sẻ tường minh do Vendor/Admin đặt
+// (`file.projects`), file chưa chia sẻ thì vẫn suy theo ký hiệu `P.xxx` trong tên.
+// Trả về id project khi file thuộc đúng MỘT project, còn lại null (= dùng chung).
+function fileProjectTag(file) {
+  const shared = fileSharedProjects(file);
+  if (shared) return shared.length === 1 ? shared[0] : null;
+  return extractFileProject(file?.filename);
 }
 
 // Khai báo phương thức ship → field tương ứng trong pricing row của thư viện.
@@ -199,10 +199,9 @@ function mergeBlankVendorRecords(byProductTypeKey) {
 
 /** Gom blob thư viện đầy đủ thành index (đường lùi cho server chưa có index). */
 function indexFromFiles(files, projectKey, skip) {
-  const filtered = (skip || !projectKey) ? files : files.filter((f) => {
-    const fp = extractFileProject(f.filename);
-    return !fp || projectKey.includes(fp) || fp.includes(projectKey);
-  });
+  const filtered = (skip || !projectKey)
+    ? files
+    : files.filter((f) => fileVisibleToProject(f, projectKey));
 
   // byKey: normalizeKey(productType) -> Map(recordKey -> record) — Map giữ đúng
   // thứ tự gặp trong file để "vendor gặp trước thắng" (đường lùi) không đổi.
@@ -210,7 +209,7 @@ function indexFromFiles(files, projectKey, skip) {
   filtered.forEach((file) => {
     const pricing = Array.isArray(file.pricing) ? file.pricing : [];
     const filename = (file.filename || '').replace(/\.[^.]+$/, '');
-    const project = extractFileProject(file.filename) || undefined;
+    const project = fileProjectTag(file) || undefined;
 
     // Info phôi (mục 02) không nằm trong `pricing` — gom theo `kyHieu`, vendor
     // gặp trước thắng, cùng quy ước với backend (VendorLibraryIndexBuilder).
