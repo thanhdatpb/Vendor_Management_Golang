@@ -131,10 +131,9 @@ describe('summarizeSheet', () => {
     expect(summarizeSheet(null).count).toBe(0);
   });
 
-  // Hành vi HIỆN TẠI, ghi lại để thấy rõ vì sao mục 02 cần cờ `excluded`:
-  // dòng chưa nhập giá (sizeAdd = 0, profit âm) vẫn được tính vào avgMargin
-  // → con số trên dashboard danh sách bảng giá lệch có hệ thống.
-  // Khi PR-A4 xong: xem sizeExcluded.pending.test.js.
+  // Dòng chưa nhập giá (sizeAdd = 0, profit âm) vẫn được tính vào avgMargin —
+  // không có cờ nào loại trừ khỏi tổng hợp (đã bỏ mục "Bỏ tổng hợp"), muốn số
+  // liệu chuẩn thì phải dọn size dư bằng cách xoá hẳn dòng.
   it('avgMargin hiện tính trên MỌI dòng, kể cả dòng chưa nhập giá', () => {
     const withJunk = {
       settings,

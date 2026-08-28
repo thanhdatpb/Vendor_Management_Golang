@@ -10,12 +10,19 @@
 //
 //  PR-A4 (mục 02/05/06): Product Type lấy từ thư viện KHÔNG còn bị khoá cấu
 //  trúc. Seller sửa được tên size (ghi vào `overrides.label`), xoá được size
-//  dư, tick "bỏ khỏi tổng hợp", và đổi được thứ tự dòng / thứ tự cột Customize.
-//  Mọi thao tác chỉ sống trong bảng tính giá — thư viện Vendor không bị ghi.
+//  dư, và đổi được thứ tự dòng / thứ tự cột Customize. Mọi thao tác chỉ sống
+//  trong bảng tính giá — thư viện Vendor không bị ghi.
 //
 //  ⚠ Kéo để SẮP XẾP phải đi qua tay cầm ⠿ riêng ở cột đầu. Ô "Giá Size" đã
 //  dùng mousedown cho việc chọn vùng (PR-A1); bắt thêm sự kiện kéo trên cả
 //  dòng sẽ đập vỡ đúng tính năng vừa sửa xong.
+//
+//  PR-A5 (2026-08): vùng chọn + Fill Down + paste kiểu Google Sheet KHÔNG còn
+//  giới hạn ở cột Giá Size — Item Cost và mọi cột Customize dùng chung hạ tầng
+//  thuần đã có sẵn ở fillDown.js (field 'itemCost' / 'customize:<ciId>'), chỉ
+//  còn thiếu phần nối UI. Item Cost của dòng thư viện (`sz.isLib`) vẫn CHỈ ĐỌC
+//  — vùng chọn có thể phủ qua dòng đó để kéo liền mạch, nhưng Fill Down/Xoá/
+//  paste phải LỌC BỎ dòng đó khỏi patch (xem `filterEditablePatches`).
 // ════════════════════════════════════════════════════════
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { PS, marginTone, toneColor } from './tokens';
@@ -24,6 +31,7 @@ import { computeSizeRow, usd, pct, num } from '../../../utils/pricingEngine';
 import { normalizeKey } from '../../../utils/vendorLibraryIndex';
 import {
   selectionIds, computeFillDown, computeFillRight, computeClear, computeUndoPatches, pushUndo,
+  computePasteDown, computePasteToSelection,
 } from './fillDown';
 
 // ─── Bulk paste giá size (GIỮ NGUYÊN logic cũ) ───────────
@@ -210,19 +218,25 @@ export default function PriceTable({
   const sizes = useMemo(() => pt.sizes || [], [pt.sizes]);
   const rows = useMemo(() => sizes.map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) })), [sizes, settings, pt]);
 
-  // ── Vùng chọn qua cột "Giá Size" (PR-A1) ──
+  // ── Vùng chọn qua CỘT NHẬP (PR-A1, tổng quát hoá ở PR-A5) ──
   // Kéo CHỈ đánh dấu vùng — không còn nhánh nào ghi giá trị khi thả chuột.
-  const [selection, setSelection] = useState(null); // { anchor, focus } theo chỉ số dòng
+  // `field` xác định ĐANG chọn cột nào ('sizeAdd' | 'itemCost' | 'customize:<ciId>');
+  // kéo lệch sang cột khác giữa chừng bị bỏ qua để vùng chọn luôn nằm gọn 1 cột.
+  const [selection, setSelection] = useState(null); // { field, anchor, focus } theo chỉ số dòng
   const draggingRef = useRef(false);
 
-  const onPriceMouseDown = (idx) => {
+  const onCellMouseDown = (field, idx) => {
     draggingRef.current = true;
-    setSelection({ anchor: idx, focus: idx });
+    setSelection({ field, anchor: idx, focus: idx });
   };
-  const onPriceMouseEnter = (idx, e) => {
+  const onCellMouseEnter = (field, idx, e) => {
     if (!draggingRef.current) return;
     if (e.buttons !== 1) { draggingRef.current = false; return; }
-    setSelection((sel) => (sel ? { ...sel, focus: idx } : { anchor: idx, focus: idx }));
+    setSelection((sel) => {
+      if (!sel) return { field, anchor: idx, focus: idx };
+      if (sel.field !== field) return sel; // cursor trôi sang cột khác — giữ nguyên vùng cũ
+      return { ...sel, focus: idx };
+    });
     // Kéo chuột dễ vô tình bôi đen chữ của trang (native text selection) và để
     // lại focus trên ô vừa rời qua — dọn cả hai để trải nghiệm giống bảng tính.
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -239,7 +253,16 @@ export default function PriceTable({
     [selection, sizes]
   );
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const isCellSelected = (field, szId) => selection?.field === field && selectedIdSet.has(szId);
   const clearSelection = useCallback(() => setSelection(null), []);
+
+  // Item Cost của dòng thư viện chỉ đọc (giá vốn thuộc thư viện) — vùng chọn
+  // được phép phủ qua dòng đó (kéo liền mạch), nhưng patch ghi thật sự phải
+  // loại nó ra, dù đi qua Fill Down, Xoá hay paste.
+  const filterEditablePatches = useCallback((patches, field) => {
+    if (field !== 'itemCost') return patches;
+    return patches.filter((p) => !sizes.find((s) => s.id === p.id)?.isLib);
+  }, [sizes]);
 
   // ── Undo / Redo cho thao tác hàng loạt (Ctrl+Z / Ctrl+Shift+Z, tối đa 20 bước) ──
   const [undoStack, setUndoStack] = useState([]);
@@ -253,8 +276,46 @@ export default function PriceTable({
     patches.forEach(({ id, patch }) => onUpdateSize(pt.id, id, patch));
   }, [sizes, pt.id, onUpdateSize]);
 
-  const runFillDown = useCallback(() => applyBulk(computeFillDown(sizes, selectedIds, 'sizeAdd')), [applyBulk, sizes, selectedIds]);
-  const runClear = useCallback(() => applyBulk(computeClear(sizes, selectedIds, 'sizeAdd')), [applyBulk, sizes, selectedIds]);
+  const runFillDown = useCallback(
+    () => applyBulk(filterEditablePatches(computeFillDown(sizes, selectedIds, selection?.field), selection?.field)),
+    [applyBulk, sizes, selectedIds, selection, filterEditablePatches]
+  );
+  const runClear = useCallback(
+    () => applyBulk(filterEditablePatches(computeClear(sizes, selectedIds, selection?.field), selection?.field)),
+    [applyBulk, sizes, selectedIds, selection, filterEditablePatches]
+  );
+
+  /**
+   * Dán (Ctrl+V) vào 1 ô của cột nhập — dùng chung cho Giá Size / Item Cost /
+   * Customize. Google Sheets: dán 1 dòng 1 giá trị thì để trình duyệt tự điền
+   * vào đúng ô đang focus; dán NHIỀU dòng thì rải tuần tự xuống dưới; dán 1
+   * giá trị trong lúc đang có vùng chọn nhiều ô thì điền cho CẢ vùng.
+   */
+  const handleColumnPaste = useCallback((field, rowSz) => (e) => {
+    const raw = e.clipboardData.getData('text');
+    const entries = parsePastedPrices(raw);
+    if (!entries.length) return; // để trình duyệt tự xử lý (VD dán chữ không phải số)
+
+    const multiSelectActive = selection?.field === field && selectedIdSet.has(rowSz.id) && selectedIds.length > 1;
+    if (entries.length === 1 && multiSelectActive) {
+      e.preventDefault();
+      applyBulk(filterEditablePatches(computePasteToSelection(sizes, selectedIds, field, entries[0].price), field));
+      return;
+    }
+    if (entries.length > 1) {
+      e.preventDefault();
+      if (field === 'sizeAdd') {
+        // Giữ nguyên logic match-theo-tên-size cũ (distributeSizeAddValues) —
+        // chỉ đổi chỗ nhận patch để đi qua applyBulk, có Undo như Fill Down.
+        const patches = [];
+        distributeSizeAddValues(pt, entries, rowSz.id, (ptId, szId, patch) => patches.push({ id: szId, patch }));
+        applyBulk(patches);
+        return;
+      }
+      const values = entries.map((en) => en.price);
+      applyBulk(filterEditablePatches(computePasteDown(sizes, field, values, rowSz.id), field));
+    }
+  }, [selection, selectedIdSet, selectedIds, sizes, pt, applyBulk, filterEditablePatches]);
 
   // ⚠ KHÔNG gọi onUpdateSize (setState của component cha) bên trong hàm
   // updater của setUndoStack/setRedoStack — React coi updater phải THUẦN,
@@ -389,7 +450,7 @@ export default function PriceTable({
               <th colSpan={nAuto} className="ps-divider-l" style={thTier1Out}>
                 <ZoneDot color={PS.outDot} />Giá tính được
               </th>
-              <th colSpan={2} style={{ ...thTier1Out, width: 110 }} aria-label="Thao tác" />
+              <th colSpan={1} style={{ ...thTier1Out, width: 60 }} aria-label="Thao tác" />
             </tr>
             {/* Tầng 2: tên cột */}
             <tr>
@@ -429,19 +490,16 @@ export default function PriceTable({
               <th style={{ ...thTier2Out, minWidth: 84 }}>Profit</th>
               <th style={{ ...thTier2Out, minWidth: 84 }}>Margin</th>
               <th style={{ ...thTier2Out, minWidth: 96 }}>After Promo</th>
-              <th style={{ ...thTier2Out, textAlign: 'center', minWidth: 74 }}
-                title="Dòng được tick sẽ KHÔNG tính vào Avg Margin / khoảng giá của bảng, nhưng vẫn hiện ở đây và trong file export.">Bỏ tổng hợp</th>
               <th style={{ ...thTier2Out, textAlign: 'center' }}>Xoá</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(({ sz, calc }, i) => {
-              const selected = selectedIdSet.has(sz.id);
+              const priceSelected = isCellSelected('sizeAdd', sz.id);
               return (
                 <tr key={sz.id} className="ps-tr"
                   onDragOver={(e) => { if (dragSizeId.current) e.preventDefault(); }}
-                  onDrop={() => onSizeDrop(i)}
-                  style={sz.excluded ? { opacity: 0.62 } : undefined}>
+                  onDrop={() => onSizeDrop(i)}>
                   {/* Tay cầm sắp xếp — cột riêng, KHÔNG đụng thao tác chọn vùng */}
                   <td className="ps-cell" style={{ width: 62 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -474,43 +532,50 @@ export default function PriceTable({
                       vùng (tô sáng) — thả chuột không ghi gì. Mọi thay đổi hàng loạt đi
                       qua thanh hành động phía trên hoặc phím tắt, luôn hoàn tác được. */}
                   <td className="ps-cell"
-                    onMouseDown={() => onPriceMouseDown(i)} onMouseEnter={(e) => onPriceMouseEnter(i, e)}
-                    style={{ background: selected ? PS.brandSubtle : undefined }}>
+                    onMouseDown={() => onCellMouseDown('sizeAdd', i)} onMouseEnter={(e) => onCellMouseEnter('sizeAdd', i, e)}
+                    style={{ background: priceSelected ? PS.brandSubtle : undefined }}>
                     <input type="number" step="0.01" value={sz.sizeAdd} aria-label={`Giá size ${sz.label || i + 1}`}
                       onChange={(e) => onUpdateSize(pt.id, sz.id, { sizeAdd: e.target.value })}
                       onWheel={(e) => e.target.blur()}
-                      onPaste={(e) => {
-                        const raw = e.clipboardData.getData('text');
-                        const entries = parsePastedPrices(raw);
-                        if (entries.length > 1) {
-                          e.preventDefault();
-                          distributeSizeAddValues(pt, entries, sz.id, onUpdateSize);
-                        }
-                      }}
-                      title="Kéo dọc qua nhiều ô để CHỌN VÙNG (không xoá) — dùng Fill Down hoặc Ctrl+D để điền. Dán nhiều giá cùng lúc cũng được."
+                      onPaste={handleColumnPaste('sizeAdd', sz)}
+                      title="Kéo dọc qua nhiều ô để CHỌN VÙNG (không xoá) — dùng Fill Down hoặc Ctrl+D để điền. Dán nhiều giá/nhiều dòng cũng tự điền xuống."
                       placeholder="0"
                       className={`ps-input ps-input--num${num(sz.sizeAdd) < 0 ? ' ps-input--invalid' : ''}`}
-                      style={selected ? { background: 'transparent', borderColor: PS.brand } : undefined} />
+                      style={priceSelected ? { background: 'transparent', borderColor: PS.brand } : undefined} />
                   </td>
 
-                  {/* Customize inputs */}
-                  {customs.map((ci) => (
-                    <td key={ci.id} className="ps-cell">
-                      <input type="number" step="0.01" value={sz.customize?.[ci.id] ?? ''} aria-label={`${ci.name || 'Customize'} — size ${sz.label || i + 1}`}
-                        onChange={(e) => onUpdateCustomize(pt.id, sz.id, ci.id, e.target.value)}
-                        onWheel={(e) => e.target.blur()} placeholder="0"
-                        className="ps-input ps-input--num" style={{ padding: '5px 8px', fontSize: 12.5 }} />
-                    </td>
-                  ))}
+                  {/* Customize inputs — cùng hạ tầng vùng chọn/Fill Down/paste như Giá Size. */}
+                  {customs.map((ci) => {
+                    const field = `customize:${ci.id}`;
+                    const ciSelected = isCellSelected(field, sz.id);
+                    return (
+                      <td key={ci.id} className="ps-cell"
+                        onMouseDown={() => onCellMouseDown(field, i)} onMouseEnter={(e) => onCellMouseEnter(field, i, e)}
+                        style={{ background: ciSelected ? PS.brandSubtle : undefined }}>
+                        <input type="number" step="0.01" value={sz.customize?.[ci.id] ?? ''} aria-label={`${ci.name || 'Customize'} — size ${sz.label || i + 1}`}
+                          onChange={(e) => onUpdateCustomize(pt.id, sz.id, ci.id, e.target.value)}
+                          onWheel={(e) => e.target.blur()}
+                          onPaste={handleColumnPaste(field, sz)}
+                          title="Kéo dọc để CHỌN VÙNG — Fill Down/Ctrl+D để điền cả cột, dán nhiều dòng để điền tuần tự."
+                          placeholder="0"
+                          className="ps-input ps-input--num" style={{ padding: '5px 8px', fontSize: 12.5, ...(ciSelected ? { background: 'transparent', borderColor: PS.brand } : {}) }} />
+                      </td>
+                    );
+                  })}
 
                   {/* Item Cost — dòng thư viện lấy giá vốn từ thư viện (chỉ đọc), dòng
-                      Seller tự thêm phải nhập tay, nếu không Profit của dòng đó sai. */}
-                  <td className="ps-cell">
+                      Seller tự thêm phải nhập tay, nếu không Profit của dòng đó sai. Vùng
+                      chọn/Fill Down/paste được phép phủ qua dòng thư viện để kéo liền mạch,
+                      nhưng patch ghi thật sự bị lọc bỏ ở dòng đó (filterEditablePatches). */}
+                  <td className="ps-cell"
+                    onMouseDown={() => onCellMouseDown('itemCost', i)} onMouseEnter={(e) => onCellMouseEnter('itemCost', i, e)}
+                    style={{ background: isCellSelected('itemCost', sz.id) ? PS.brandSubtle : undefined }}>
                     <input type="number" step="0.01" value={sz.itemCost ?? ''} aria-label={`Item cost — size ${sz.label || i + 1}`}
                       onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })}
                       onWheel={(e) => e.target.blur()} placeholder="0" readOnly={sz.isLib}
-                      title={sz.isLib ? 'Giá vốn lấy từ thư viện Vendor (cột P1) — không sửa ở đây' : undefined}
-                      className="ps-input ps-input--num" style={{ padding: '5px 8px', fontSize: 12.5 }} />
+                      onPaste={sz.isLib ? undefined : handleColumnPaste('itemCost', sz)}
+                      title={sz.isLib ? 'Giá vốn lấy từ thư viện Vendor (cột P1) — không sửa ở đây' : 'Kéo dọc để CHỌN VÙNG — Fill Down/Ctrl+D để điền cả cột, dán nhiều dòng để điền tuần tự.'}
+                      className="ps-input ps-input--num" style={{ padding: '5px 8px', fontSize: 12.5, ...(isCellSelected('itemCost', sz.id) && !sz.isLib ? { background: 'transparent', borderColor: PS.brand } : {}) }} />
                   </td>
 
                   {/* ── Nhóm computed: nền subtle, chữ mảnh, KHÔNG nền màu đậm ── */}
@@ -526,14 +591,6 @@ export default function PriceTable({
                     style={{ fontWeight: 650, color: calc.profitAfter >= 0 ? PS.text : PS.negative }}>{usd(calc.profitAfter)}</td>
                   <td className="ps-cell-auto"><MarginCell value={calc.margin} /></td>
                   <td className="ps-cell-auto"><MarginCell value={calc.marginAfter} /></td>
-
-                  {/* Loại khỏi tổng hợp — giữ dòng lại nhưng không kéo tụt Avg Margin */}
-                  <td className="ps-cell" style={{ textAlign: 'center' }}>
-                    <input type="checkbox" checked={!!sz.excluded}
-                      aria-label={`Loại size ${sz.label || i + 1} khỏi tổng hợp`}
-                      onChange={(e) => onUpdateSize(pt.id, sz.id, { excluded: e.target.checked })}
-                      style={{ width: 15, height: 15, cursor: 'pointer', accentColor: PS.brand }} />
-                  </td>
 
                   {/* Xoá size — dùng được cho CẢ dòng thư viện: phôi dùng chung nhiều
                       project có size dư là bình thường, xoá ở đây KHÔNG đụng file thư

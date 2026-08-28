@@ -4,13 +4,11 @@
 //
 //  Hôm nay: với Product Type lấy từ thư viện, `libSizesOf` dựng lại danh sách
 //  size CHỈ theo thư viện → size Seller tự thêm biến mất, tên size bị khoá,
-//  và dòng biến thể dư thừa không xoá được. Kèm theo đó, `summarizeSheet` tính
-//  avgMargin trên mọi dòng nên dòng rác kéo tụt số liệu cả bảng.
+//  và dòng biến thể dư thừa không xoá được.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { loadVendorLibraryIndex } from '../vendorLibraryIndex';
 import { resolveSheet } from '../resolveSheet';
-import { summarizeSheet } from '../pricingEngine';
 import { roundTrip } from '../../test/roundTrip';
 
 vi.mock('../../services/api', () => import('../../test/apiMock.js'));
@@ -82,30 +80,5 @@ describe('Mục 02 — override cục bộ dòng lấy từ thư viện', () => 
     const restored = restoreFromLibrary(pt, libIndex);
     expect(restored.sizes.map((s) => s.label)).toEqual(['S', 'M', 'L', 'XL', '2XL']);
     expect(restored.sizes.every((s) => !s.overrides)).toBe(true);
-  });
-});
-
-describe('Mục 02 — dòng bị loại khỏi phần tổng hợp', () => {
-  const settings = { price: 9.9, quantity: 1, shipPerItem: 2, shipPerOrder: 0, amzFeePct: 17, importTax: 0.35, couponUsd: 0, couponPct: 0, variableFeePct: 3 };
-  const sheet = (excluded) => ({ settings, productTypes: [{
-    id: 'pt', name: 'PT', phoi: '0', customizeInfos: [], sizes: [
-      { id: 'a', label: 'M', sizeAdd: '5', itemCost: '5', customize: {} },
-      { id: 'b', label: 'XS', sizeAdd: '0', itemCost: '5', customize: {}, excluded },
-    ],
-  }] });
-
-  it('avgMargin bỏ qua dòng excluded', () => {
-    const withJunk = summarizeSheet(sheet(false)).avgMargin;
-    const excludedOut = summarizeSheet(sheet(true)).avgMargin;
-    expect(excludedOut).toBeGreaterThan(withJunk);
-    expect(summarizeSheet(sheet(true)).count).toBe(1);
-  });
-
-  it('dòng excluded vẫn còn trong file export nhưng có cột đánh dấu', async () => {
-    const { buildSheetAoa } = await import('../sheetExport');
-    const rows = buildSheetAoa(sheet(true));
-    const header = rows[5];
-    expect(header).toContain('Loại khỏi tổng hợp');
-    expect(rows.filter((r) => r[1] === 'XS')).toHaveLength(1);
   });
 });

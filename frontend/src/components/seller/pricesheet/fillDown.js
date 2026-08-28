@@ -104,6 +104,46 @@ export function computeClear(sizes, selected, field = 'sizeAdd') {
 }
 
 /**
+ * Dán tuần tự xuống 1 cột, bắt đầu từ dòng đang đứng — đúng kiểu Google Sheets
+ * dán 1 cột nhiều dòng: điền lần lượt xuống dưới, hết dòng thì dừng (không tạo
+ * dòng mới, không match theo tên như paste riêng của cột Giá Size).
+ * @param {Array} sizes    — danh sách size đang hiển thị (đúng thứ tự)
+ * @param {string} field   — 'sizeAdd' | 'itemCost' | 'customize:<ciId>'
+ * @param {string[]} values — giá trị theo đúng thứ tự các dòng đã copy
+ * @param {string} startId — id dòng đang đứng (bắt đầu điền từ đây)
+ */
+export function computePasteDown(sizes, field, values, startId) {
+  const list = sizes || [];
+  const vals = values || [];
+  if (!list.length || !vals.length) return [];
+  const startIdx = startId ? Math.max(0, list.findIndex((s) => s.id === startId)) : 0;
+  const patches = [];
+  for (let i = 0; i < vals.length; i++) {
+    const sz = list[startIdx + i];
+    if (!sz) break;
+    if (readCell(sz, field) === vals[i]) continue;
+    patches.push({ id: sz.id, patch: writeCellPatch(sz, field, vals[i]) });
+  }
+  return patches;
+}
+
+/**
+ * Dán 1 giá trị cho TOÀN BỘ vùng đang chọn — Google Sheets: dán 1 ô vào nhiều
+ * ô đã bôi đen thì tất cả nhận cùng giá trị đó (khác computePasteDown, vốn rải
+ * tuần tự nhiều giá trị xuống nhiều dòng).
+ */
+export function computePasteToSelection(sizes, selected, field, value) {
+  const byId = new Map((sizes || []).map((s) => [s.id, s]));
+  return (selected || []).reduce((patches, id) => {
+    const sz = byId.get(id);
+    if (!sz) return patches;
+    if (readCell(sz, field) === value) return patches;
+    patches.push({ id, patch: writeCellPatch(sz, field, value) });
+    return patches;
+  }, []);
+}
+
+/**
  * Patch nghịch đảo của một thao tác hàng loạt — đẩy vào undo stack TRƯỚC khi áp.
  * Nghịch đảo tính trên trạng thái sizes hiện tại (trước khi áp patches).
  */

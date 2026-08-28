@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   selectionIds, computeFillDown, computeFillRight, computeClear,
   computeUndoPatches, applyPatches, pushUndo, UNDO_LIMIT, readCell,
+  computePasteDown, computePasteToSelection,
 } from '../fillDown';
 
 const sizes = () => ([
@@ -126,6 +127,60 @@ describe('Undo', () => {
     for (let i = 0; i < UNDO_LIMIT + 5; i++) stack = pushUndo(stack, { step: i });
     expect(stack).toHaveLength(UNDO_LIMIT);
     expect(stack[0]).toEqual({ step: UNDO_LIMIT + 4 });
+  });
+});
+
+describe('computePasteDown — dán nhiều dòng kiểu Google Sheets (tuần tự, không match tên)', () => {
+  it('rải giá trị xuống dưới bắt đầu từ dòng đang đứng', () => {
+    expect(computePasteDown(sizes(), 'itemCost', ['9', '8'], 's2')).toEqual([
+      { id: 's2', patch: { itemCost: '9' } },
+      { id: 's3', patch: { itemCost: '8' } },
+    ]);
+  });
+
+  it('dán nhiều hơn số dòng còn lại thì cắt, không tạo dòng mới', () => {
+    expect(computePasteDown(sizes(), 'sizeAdd', ['1', '2', '3', '4', '5'], 's3')).toEqual([
+      { id: 's3', patch: { sizeAdd: '1' } },
+      { id: 's4', patch: { sizeAdd: '2' } },
+    ]);
+  });
+
+  it('không truyền startId thì bắt đầu từ dòng đầu tiên', () => {
+    expect(computePasteDown(sizes(), 'itemCost', ['9'], null)).toEqual([{ id: 's1', patch: { itemCost: '9' } }]);
+  });
+
+  it('dán được vào cột customize', () => {
+    expect(computePasteDown(sizes(), 'customize:ci1', ['9'], 's2')).toEqual([
+      { id: 's2', patch: { customize: { ci1: '9' } } },
+    ]);
+  });
+
+  it('không có dòng hoặc không có giá trị dán thì trả mảng rỗng', () => {
+    expect(computePasteDown([], 'itemCost', ['1'], null)).toEqual([]);
+    expect(computePasteDown(sizes(), 'itemCost', [], null)).toEqual([]);
+  });
+});
+
+describe('computePasteToSelection — dán 1 giá trị cho cả vùng đã chọn', () => {
+  it('mọi ô trong vùng chọn nhận cùng 1 giá trị', () => {
+    expect(computePasteToSelection(sizes(), ['s1', 's2', 's3'], 'itemCost', '9')).toEqual([
+      { id: 's1', patch: { itemCost: '9' } },
+      { id: 's2', patch: { itemCost: '9' } },
+      { id: 's3', patch: { itemCost: '9' } },
+    ]);
+  });
+
+  it('ô đã đúng giá trị thì không sinh patch thừa', () => {
+    const list = [{ id: 'a', itemCost: '9' }, { id: 'b', itemCost: '1' }];
+    expect(computePasteToSelection(list, ['a', 'b'], 'itemCost', '9')).toEqual([{ id: 'b', patch: { itemCost: '9' } }]);
+  });
+
+  it('giữ nguyên các cột customize khác khi dán vào 1 cột customize', () => {
+    const list = [{ id: 'a', customize: { c1: '1', c2: '9' } }, { id: 'b', customize: { c1: '2', c2: '7' } }];
+    expect(computePasteToSelection(list, ['a', 'b'], 'customize:c1', '5')).toEqual([
+      { id: 'a', patch: { customize: { c1: '5', c2: '9' } } },
+      { id: 'b', patch: { customize: { c1: '5', c2: '7' } } },
+    ]);
   });
 });
 

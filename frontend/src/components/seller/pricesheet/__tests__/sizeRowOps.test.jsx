@@ -10,12 +10,10 @@
 //  `describe.each` chạy cùng một bộ assertion cho cả 2 loại Product Type: bất
 //  cứ gate nào quay lại chỉ ở một chế độ đều bị bắt ngay.
 // ════════════════════════════════════════════════════════
-import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import PriceTable from '../PriceTable';
 import ProductTypeCard from '../ProductTypeCard';
-import { summarizeSheet } from '../../../../utils/pricingEngine';
 
 const settings = { price: 10, quantity: 1, shipPerOrder: 0, shipPerItem: 0, couponUsd: 0, couponPct: 0, variableFeePct: 0, amzFeePct: 17, importTax: 0 };
 
@@ -87,14 +85,6 @@ describe.each([
     expect(onRemoveSize).toHaveBeenCalledWith('pt1', 's1');
   });
 
-  it('ô "Loại khỏi tổng hợp" có ở mọi dòng và ghi đúng cờ excluded', () => {
-    const { onUpdateSize } = renderTable(isLib);
-    const boxes = screen.getAllByLabelText(/^Loại size .* khỏi tổng hợp$/);
-    expect(boxes).toHaveLength(3);
-
-    fireEvent.click(boxes[1]);
-    expect(onUpdateSize).toHaveBeenCalledWith('pt1', 's2', { excluded: true });
-  });
 });
 
 describe('Sửa tên size', () => {
@@ -151,39 +141,5 @@ describe('Khôi phục theo thư viện', () => {
 
     fireEvent.click(screen.getByText('Khôi phục'));
     expect(onRestoreFromLibrary).toHaveBeenCalledWith('pt1');
-  });
-});
-
-describe('Avg Margin ở phần tổng hợp bỏ qua dòng đã tick', () => {
-  /** Harness state thật: tick ô "Loại khỏi tổng hợp" rồi đọc lại số tổng hợp. */
-  function Harness() {
-    const [pt, setPt] = useState(() => ({
-      id: 'pt1', name: 'PT', phoi: '0', customizeInfos: [], sizes: [
-        { id: 'a', label: 'M', sizeAdd: '5', itemCost: '5', customize: {} },
-        { id: 'b', label: 'XS', sizeAdd: '0', itemCost: '5', customize: {} },   // dòng chưa nhập giá
-      ],
-    }));
-    const summary = summarizeSheet({ settings, productTypes: [pt] });
-    return (
-      <>
-        <div data-testid="avg">{summary.avgMargin.toFixed(4)}</div>
-        <div data-testid="count">{summary.count}</div>
-        <PriceTable pt={pt} settings={settings}
-          onUpdateSize={(ptId, szId, patch) => setPt((p) => ({ ...p, sizes: p.sizes.map((s) => (s.id === szId ? { ...s, ...patch } : s)) }))}
-          onRemoveSize={vi.fn()} onUpdateCustomize={vi.fn()}
-          onRenameCustomize={vi.fn()} onRemoveCustomize={vi.fn()} />
-      </>
-    );
-  }
-
-  it('tick dòng rác → Avg Margin tăng và số dòng tính giảm', () => {
-    render(<Harness />);
-    const before = Number(screen.getByTestId('avg').textContent);
-    expect(screen.getByTestId('count').textContent).toBe('2');
-
-    fireEvent.click(screen.getByLabelText('Loại size XS khỏi tổng hợp'));
-
-    expect(Number(screen.getByTestId('avg').textContent)).toBeGreaterThan(before);
-    expect(screen.getByTestId('count').textContent).toBe('1');
   });
 });

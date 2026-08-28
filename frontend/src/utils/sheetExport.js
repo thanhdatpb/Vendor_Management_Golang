@@ -39,16 +39,9 @@ export function buildSheetAoa(sheet) {
   aoa.push([]);
 
   const allCustomize = collectCustomizeColumns(sheet);
-  // Mục 02: dòng "Loại khỏi tổng hợp" vẫn phải có mặt trong file (Seller cần
-  // thấy size dư của phôi dùng chung), nhưng phải phân biệt được với dòng tính
-  // vào Avg Margin. Cột đánh dấu chỉ xuất hiện khi bảng THỰC SỰ có dòng như
-  // vậy — không nhét thêm một cột trống vào file của mọi bảng giá khác, và
-  // nhờ vậy chỉ số cột của bảng thường giữ nguyên y như trước.
-  const hasExcluded = (sheet?.productTypes || []).some((pt) => (pt.sizes || []).some((sz) => sz?.excluded));
   const header = ['Product Type', 'Size', 'Giá Phôi', 'Giá Size',
     ...allCustomize.map((c) => c.name || 'Customize'),
-    'Item Cost', 'Total Price', 'AMZ Fee', 'Coupon', 'Variable', 'Profit', 'Margin %', 'After Promo %',
-    ...(hasExcluded ? ['Loại khỏi tổng hợp'] : [])];
+    'Item Cost', 'Total Price', 'AMZ Fee', 'Coupon', 'Variable', 'Profit', 'Margin %', 'After Promo %'];
   aoa.push(header);
 
   (sheet?.productTypes || []).forEach((pt) => {
@@ -62,7 +55,6 @@ export function buildSheetAoa(sheet) {
         pt.name, sz.label, num(pt.phoi), num(sz.sizeAdd), ...custVals, num(sz.itemCost),
         +r.totalPrice.toFixed(2), +r.amzFee.toFixed(2), +r.couponAmt.toFixed(2),
         +r.variableFee.toFixed(2), +r.profitAfter.toFixed(2), +r.margin.toFixed(2), +r.marginAfter.toFixed(2),
-        ...(hasExcluded ? [sz.excluded ? 'x' : ''] : []),
       ]);
     });
   });
