@@ -70,11 +70,13 @@ describe('resolveSheet — Product Type lấy từ thư viện', () => {
   });
 
   it('lọc bỏ size thư viện nếu nằm trong danh sách deletedSizes', () => {
+    // State size KHÔNG có isLib — isLib chỉ được resolveSheet gắn khi render.
+    // deletedSizes lưu nhãn gốc của size cần ẩn đi.
     const sheet = {
       productTypes: [libPT({
         sizes: [
-          { id: 'szlib_pt_lib_s', label: 'S', sizeAdd: '4.5', isLib: true },
-          { id: 'szlib_pt_lib_m', label: 'M', sizeAdd: '5', isLib: true },
+          { id: 'szlib_pt_lib_s', label: 'S', sizeAdd: '4.5' },
+          { id: 'szlib_pt_lib_m', label: 'M', sizeAdd: '5' },
         ],
         deletedSizes: ['S'],
       })],
@@ -86,9 +88,10 @@ describe('resolveSheet — Product Type lấy từ thư viện', () => {
   });
 
   it('“Khôi phục theo thư viện” khôi phục cả size thư viện đã bị xoá', () => {
+    // State size không có isLib — giống trạng thái thực tế sau khi lưu
     const pt = libPT({
       sizes: [
-        { id: 'szlib_pt_lib_m', label: 'M', sizeAdd: '5', isLib: true },
+        { id: 'szlib_pt_lib_m', label: 'M', sizeAdd: '5' },
       ],
       deletedSizes: ['S'],
     });

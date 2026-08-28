@@ -113,11 +113,15 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       const toRemove = currentSizes.find((s) => s.id === szId);
       if (!toRemove) return pt;
 
-      const isLib = toRemove.isLib;
+      // Lưu ý: `isLib` chỉ được resolveSheet gắn vào khi render (draftSheet),
+      // KHÔNG tồn tại trên state pt gốc. Cách nhận biết size thư viện tin cậy
+      // nhất là kiểm tra prefix ID — libSizeId() luôn tạo ra `szlib_<ptId>_<...>`,
+      // trong khi size tự thêm dùng uid('sz') = `sz_<timestamp>_<random>`.
+      const isLibSize = szId.startsWith('szlib_');
       const label = libLabelOf(toRemove);
 
       const nextDeletedSizes = [...(pt.deletedSizes || [])];
-      if (isLib && label && !nextDeletedSizes.includes(label)) {
+      if (isLibSize && label && !nextDeletedSizes.includes(label)) {
         nextDeletedSizes.push(label);
       }
 
