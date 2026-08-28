@@ -20,6 +20,7 @@ import { departmentFor } from './departments';
 import { exportVendorLibraryFiles } from '../../utils/vendorExcel';
 import AppToast from '../shared/AppToast';
 import ExportVendorFilesModal from '../shared/ExportVendorFilesModal';
+import { renderChiTietSizeText } from '../vendor/sections/VendorLibraryViewer';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -183,7 +184,7 @@ function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
                       <img src={r.chiTietSizeImage} alt="Size Guide" loading="lazy" style={{ width: '100%', maxWidth: '100%', borderRadius: 4, border: `1px solid ${HC.border}`, objectFit: 'contain' }} />
                     </a>
                   )}
-                  {r.chiTietSize ? r.chiTietSize : (!r.chiTietSizeImage ? '—' : '')}
+                  {r.chiTietSize ? renderChiTietSizeText(r.chiTietSize) : (!r.chiTietSizeImage ? '—' : '')}
                 </td>
                 {showLeadTime && <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.success }}>{fmtNA(r.avgTimeVendor)}</td>}
                 {showLeadTime && <td style={{ ...TD(i), whiteSpace: 'pre-wrap', lineHeight: 1.4, color: HC.warning }}>{fmtNA(r.avgTimeActual)}</td>}
