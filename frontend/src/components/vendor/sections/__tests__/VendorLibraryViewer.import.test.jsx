@@ -67,7 +67,7 @@ beforeEach(() => {
   vendorLibraryApi.save.mockResolvedValue({ data: { message: 'ok' } });
   parseHappyCreativeLibrary.mockResolvedValue({
     title: 'New Vendor',
-    generalInfo: [{ id: 'g9', kyHieu: 'VN9', productType: 'Mug' }],
+    generalInfo: [{ id: 'g9', kyHieu: 'VN9', productType: 'Mug', notes: 'Ghi chú từ Excel' }],
     pricing: [{ kyHieu: 'VN9', productType: 'Mug', size: '11oz', pricing1: 3.4 }],
   });
 });
@@ -120,6 +120,18 @@ describe('Import Excel sau khi cửa sổ lấy lại focus — regression 2026-
     const names = saved.map((f) => f.filename);
     expect(names).toContain('HC_Pillow_P.Happy_18.08');            // file cũ còn nguyên
     expect(names).toContain('HC_NewVendor_P.Happy_21.08');         // file mới đã vào
+  });
+
+  it('giữ nguyên Notes đã parse trong payload lưu thư viện', async () => {
+    render(<VendorLibraryViewer />);
+    await waitFirstLoad();
+
+    fireEvent.change(fileInput(), { target: { files: [xlsxFile()] } });
+
+    await waitFor(() => expect(vendorLibraryApi.save).toHaveBeenCalled());
+    const [saved] = vendorLibraryApi.save.mock.calls[0];
+    const imported = saved.find((f) => f.filename === 'HC_NewVendor_P.Happy_21.08');
+    expect(imported.generalInfo[0].notes).toBe('Ghi chú từ Excel');
   });
 
   it('quay lại tab (visibilitychange) cũng không chặn import', async () => {

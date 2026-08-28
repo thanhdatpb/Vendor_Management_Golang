@@ -634,6 +634,12 @@ export async function parseHappyCreativeLibrary(file) {
 
         // ── Tiện ích ─────────────────────────────────────────────────────────
         const cellStr = (v) => String(v ?? '').trim();
+        const headerStr = (v) => cellStr(v)
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/\s+/g, ' ')
+          .trim();
         const parseN = (val) => {
           if (val === 'N/A' || val === '' || val === null || val === undefined) return null;
           const str = cellStr(val).replace(',', '.');
@@ -751,12 +757,13 @@ export async function parseHappyCreativeLibrary(file) {
           let imagesHeaderFound = false;
           let col_vendorName = -1;
           let col_productType1 = -1;
+          let notesHeaderFound = false;
 
           // Pass 1: detect explicit 'ký hiệu' label → takes priority over old 'product type' fallback
           let kyHieuExplicit = -1;
           hRow.forEach((h, c) => {
             const s = cellStr(h).toLowerCase();
-            const sNorm = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+            const sNorm = headerStr(h);
             if (sNorm.includes('ky hieu') || sNorm.includes('ki hieu') || s.includes('ký hiệu') || s.includes('kí hiệu')) {
               kyHieuExplicit = c;
             }
@@ -766,7 +773,7 @@ export async function parseHappyCreativeLibrary(file) {
           // Pass 2: map all other columns by keyword
           hRow.forEach((h, c) => {
             const s = cellStr(h).toLowerCase();
-            const sNorm = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+            const sNorm = headerStr(h);
             // product type / loại sản phẩm
             const isProductType = s.includes('product type') || sNorm.includes('loai san pham') || s.includes('loại sản phẩm');
             if (isProductType) {
@@ -778,10 +785,18 @@ export async function parseHappyCreativeLibrary(file) {
             if (s.includes('chi tiết size') || s.includes('chi tiet size')) col_chiTietSize = c;
             if (s.includes('avg') && (s.includes('vendor') || s.includes('theo vendor'))) col_avgVendor = c;
             if (s.includes('avg') && (s.includes('thực tế') || s.includes('thuc te'))) col_avgActual = c;
-            if (s.includes('notes') || s.includes('ghi chú') || s.includes('ghi chu')) col_notes = c;
+            if (/^(note|notes)(\b|\s|:)/.test(sNorm) || sNorm.includes('ghi chu')) {
+              col_notes = c;
+              notesHeaderFound = true;
+            }
             if (s.includes('link folder') || s.includes('thư mục') || s.includes('thu muc')) col_linkFolder = c;
             if (s.includes('tên vendor') || s.includes('ten vendor') || s.includes('vendor name') || s.includes('nhà cung cấp')) col_vendorName = c;
           });
+
+          // Layout hiện hành có cột "Vendor Name" riêng và đặt Notes ở cột L
+          // (index 11). Layout cũ đặt Notes ở cột K (index 10). Chỉ fallback
+          // khi không nhận diện được header để không đọc nhầm AVG thực tế.
+          if (!notesHeaderFound) col_notes = col_vendorName >= 0 ? 11 : 10;
 
           // Nếu không có header "Hình ảnh" tường minh mà cột chatLieu xuất hiện sớm (col ≤ 5),
           // suy ra các cột trước chatLieu là cột ảnh → bắt đầu từ col 0
