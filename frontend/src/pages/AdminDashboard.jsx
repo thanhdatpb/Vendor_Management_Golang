@@ -18,7 +18,7 @@ window.sendNewsToAdmin = function (newsData) {
       id: `news_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       type: 'news',
       icon: newsData.icon || '📰',
-      title: newsData.title || 'Thông báo mới từ Staff B',
+      title: newsData.title || 'Thông báo mới từ Staff B',    
       message: newsData.message || '',
       author: newsData.author || 'Staff B',
       timestamp: new Date().toISOString(),
@@ -40,14 +40,27 @@ window.sendNewsToAdmin = function (newsData) {
   }
 };
 
+// Bấm "Quay lại" từ /price-sheets/:id (hay bất kỳ route khác) remount lại
+// AdminDashboard — useState('overview') sẽ luôn thắng nếu không nhớ tab cuối,
+// nên Admin xem bảng tính giá xong quay lại luôn rớt về Tổng quan thay vì
+// đúng tab Bảng tính giá đang xem. sessionStorage: nhớ trong phiên làm việc,
+// không rò rỉ giữa các tài khoản khác nhau mở trình duyệt sau đó.
+const ADMIN_ACTIVE_TAB_KEY = 'ADMIN_ACTIVE_TAB';
+
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
-  const [active, setActive] = useState('overview');
+  const [active, setActive] = useState(() => {
+    try { return sessionStorage.getItem(ADMIN_ACTIVE_TAB_KEY) || 'overview'; } catch { return 'overview'; }
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [requestNotifications, setRequestNotifications] = useState([]);
   const [newsNotifications, setNewsNotifications] = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
   const [viewProduct, setViewProduct] = useState(null);
+
+  useEffect(() => {
+    try { sessionStorage.setItem(ADMIN_ACTIVE_TAB_KEY, active); } catch { /* private mode — bỏ qua */ }
+  }, [active]);
 
   const loadPendingProducts = useCallback(async () => {
     try {
