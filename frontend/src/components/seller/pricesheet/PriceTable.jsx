@@ -6,11 +6,20 @@
 //  thống lại hiểu là xoá, không hoàn tác được). Kéo giờ CHỈ chọn vùng; mọi
 //  thay đổi hàng loạt đi qua thanh hành động nổi hoặc phím tắt, và luôn hoàn
 //  tác được (Ctrl+Z / Ctrl+Shift+Z, tối đa 20 bước — xem pricesheet/fillDown.js).
-//  Giữ nguyên 100%: bulk-paste TSV từ Google Sheet, onWheel blur, lib-locked size.
+//  Giữ nguyên 100%: bulk-paste TSV từ Google Sheet, onWheel blur.
+//
+//  PR-A4 (mục 02/05/06): Product Type lấy từ thư viện KHÔNG còn bị khoá cấu
+//  trúc. Seller sửa được tên size (ghi vào `overrides.label`), xoá được size
+//  dư, tick "bỏ khỏi tổng hợp", và đổi được thứ tự dòng / thứ tự cột Customize.
+//  Mọi thao tác chỉ sống trong bảng tính giá — thư viện Vendor không bị ghi.
+//
+//  ⚠ Kéo để SẮP XẾP phải đi qua tay cầm ⠿ riêng ở cột đầu. Ô "Giá Size" đã
+//  dùng mousedown cho việc chọn vùng (PR-A1); bắt thêm sự kiện kéo trên cả
+//  dòng sẽ đập vỡ đúng tính năng vừa sửa xong.
 // ════════════════════════════════════════════════════════
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { PS, marginTone, toneColor } from './tokens';
-import { Dot, IconBtn, Btn } from './primitives';
+import { Dot, IconBtn, Btn, ConfirmDialog } from './primitives';
 import { computeSizeRow, usd, pct, num } from '../../../utils/pricingEngine';
 import { normalizeKey } from '../../../utils/vendorLibraryIndex';
 import {
@@ -87,6 +96,12 @@ function isTypingTarget(el) {
   return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
 }
 
+/** Dòng đã có dữ liệu người dùng nhập → xoá phải hỏi lại (mục 02). */
+function sizeRowHasData(sz) {
+  const filled = (v) => v !== '' && v !== null && v !== undefined;
+  return filled(sz?.sizeAdd) || Object.values(sz?.customize || {}).some(filled);
+}
+
 // ─── Styles dùng chung — header theo 2 vùng màu ──────────
 const thTier1Base = {
   padding: '7px 12px', fontSize: 11, fontWeight: 650, letterSpacing: '0.08em',
@@ -152,7 +167,45 @@ function SelectionToolbar({ count, onFillDown, onClear, onDismiss }) {
   );
 }
 
-export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRemoveSize, onUpdateCustomize, onRenameCustomize, onRemoveCustomize }) {
+/** Nút nhỏ dùng cho ▲ ▼ ◀ ▶ của thao tác sắp xếp. */
+const arrowBtnStyle = {
+  width: 18, height: 16, padding: 0, lineHeight: 1, fontSize: 9,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  border: `1px solid ${PS.border}`, borderRadius: 4, background: PS.bgSurface,
+  color: PS.textSecondary, cursor: 'pointer', flexShrink: 0,
+};
+
+/**
+ * Tay cầm kéo-sắp-xếp (mục 05/06). Ba đường vào cho cùng một kết quả: kéo bằng
+ * chuột, nút mũi tên, và Alt+mũi tên khi tay cầm đang giữ focus. Đặt riêng ở
+ * cột đầu / đầu ô header để không đụng thao tác chọn vùng ở cột "Giá Size".
+ */
+function DragHandle({ label, onDragStart, onKeyMove }) {
+  return (
+    <span
+      draggable
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      title={`${label} — kéo, hoặc Alt + mũi tên khi đang chọn tay cầm này`}
+      onDragStart={onDragStart}
+      onKeyDown={onKeyMove}
+      style={{
+        cursor: 'grab', userSelect: 'none', color: PS.textMuted,
+        fontSize: 13, lineHeight: 1, padding: '2px 3px', borderRadius: 4, flexShrink: 0,
+      }}
+    >⠿</span>
+  );
+}
+
+export default function PriceTable({
+  // `libEntry` không còn quyết định cột nào hiện nữa (PR-A4): mọi cột thao tác
+  // đều mở cho cả hai loại Product Type, khác biệt nằm ở từng DÒNG (`sz.isLib`).
+  pt, settings, onUpdateSize, onRemoveSize, onUpdateCustomize,
+  onRenameCustomize, onRemoveCustomize,
+  onMoveSize = () => {}, onReorderSizes = () => {},
+  onMoveCustomize = () => {}, onReorderCustomize = () => {},
+}) {
   const customs = pt.customizeInfos || [];
   const sizes = useMemo(() => pt.sizes || [], [pt.sizes]);
   const rows = useMemo(() => sizes.map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) })), [sizes, settings, pt]);
@@ -268,9 +321,56 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selection, selectedIds, undoStack, redoStack, undo, redo, runFillDown, runClear, applyBulk, sizes, clearSelection]);
 
-  // Số cột 2 nhóm. Nhóm computed = Coupon + Total + AMZ + Profit + Margin + AfterPromo = 6 (cả 2 chế độ).
-  const nInput = 2 + customs.length + (libEntry ? 0 : 1);
+  // ── Sắp xếp dòng size & cột customize (mục 05/06) ──
+  // Kéo bằng HTML5 drag: tay cầm là nguồn kéo, cả dòng / ô header là đích thả.
+  const dragSizeId = useRef(null);
+  const dragCiId = useRef(null);
+
+  const onSizeDrop = (toIndex) => {
+    const id = dragSizeId.current;
+    dragSizeId.current = null;
+    if (id) onReorderSizes(pt.id, id, toIndex);
+  };
+  const onCustomizeDrop = (toIndex) => {
+    const id = dragCiId.current;
+    dragCiId.current = null;
+    if (id) onReorderCustomize(pt.id, id, toIndex);
+  };
+  // Alt+↑/↓ (dòng) và Alt+←/→ (cột) — React giữ nguyên node DOM khi đổi thứ tự
+  // theo key nên focus ở lại đúng tay cầm vừa di chuyển, gõ liên tiếp được.
+  const sizeKeyMove = (szId) => (e) => {
+    if (!e.altKey) return;
+    const delta = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+    if (!delta) return;
+    e.preventDefault();
+    onMoveSize(pt.id, szId, delta);
+  };
+  const customizeKeyMove = (ciId) => (e) => {
+    if (!e.altKey) return;
+    const delta = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+    if (!delta) return;
+    e.preventDefault();
+    onMoveCustomize(pt.id, ciId, delta);
+  };
+
+  // ── Xoá dòng: hỏi lại khi dòng đã có dữ liệu (mục 02) ──
+  const [confirmDeleteSz, setConfirmDeleteSz] = useState(null);
+  const requestRemoveSize = (sz) => {
+    if (sizeRowHasData(sz)) setConfirmDeleteSz(sz);
+    else onRemoveSize(pt.id, sz.id);
+  };
+
+  // Tên size: dòng thư viện ghi vào `overrides.label` để còn khôi phục được,
+  // dòng tự thêm ghi thẳng vào `label`.
+  const changeLabel = (sz, value) => {
+    if (sz.isLib) onUpdateSize(pt.id, sz.id, { overrides: { ...(sz.overrides || {}), label: value } });
+    else onUpdateSize(pt.id, sz.id, { label: value });
+  };
+
+  // Số cột 2 nhóm. Nhóm computed = Coupon + Total + AMZ + Profit + Margin + AfterPromo = 6.
+  const nInput = 3 + customs.length;   // Size · Giá Size · Item Cost + các cột customize
   const nAuto = 6;
+  const canDelete = sizes.length > 1;
 
   return (
     <div>
@@ -278,34 +378,50 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
         <SelectionToolbar count={selectedIds.length} onFillDown={runFillDown} onClear={runClear} onDismiss={clearSelection} />
       )}
       <div style={{ overflowX: 'auto' }}>
-        <table className="ps-table" style={{ minWidth: 880 }}>
+        <table className="ps-table" style={{ minWidth: 980 }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
             {/* Tầng 1: nhóm cột — tint theo vùng + chấm tròn nhận diện */}
             <tr>
+              <th style={{ ...thTier1In, width: 62 }} aria-label="Thứ tự dòng" />
               <th colSpan={nInput} style={thTier1In}>
                 <ZoneDot color={PS.inDot} />Thông tin giá cần nhập
               </th>
               <th colSpan={nAuto} className="ps-divider-l" style={thTier1Out}>
                 <ZoneDot color={PS.outDot} />Giá tính được
               </th>
-              {!libEntry && <th style={{ ...thTier1Out, width: 44 }} aria-label="Thao tác" />}
+              <th colSpan={2} style={{ ...thTier1Out, width: 110 }} aria-label="Thao tác" />
             </tr>
             {/* Tầng 2: tên cột */}
             <tr>
+              <th style={{ ...thTier2In, textAlign: 'center', width: 62 }}
+                title="Kéo tay cầm ⠿ hoặc dùng nút ▲ ▼ để đổi thứ tự size">Thứ tự</th>
               <th className="ps-sticky-col" style={{ ...thTier2In, textAlign: 'left', minWidth: 76, zIndex: 3, left: 0, position: 'sticky' }}>Size</th>
               <th style={{ ...thTier2In, minWidth: 96 }}>Giá Size ($)</th>
-              {customs.map((ci) => (
-                <th key={ci.id} style={{ ...thTier2In, minWidth: 100, padding: '4px 6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {customs.map((ci, ciIdx) => (
+                <th key={ci.id} style={{ ...thTier2In, minWidth: 132, padding: '4px 6px' }}
+                  onDragOver={(e) => { if (dragCiId.current) e.preventDefault(); }}
+                  onDrop={() => onCustomizeDrop(ciIdx)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <DragHandle label={`Đổi thứ tự cột ${ci.name || 'customize'}`}
+                      onDragStart={() => { dragCiId.current = ci.id; }}
+                      onKeyMove={customizeKeyMove(ci.id)} />
                     <input value={ci.name} onChange={(e) => onRenameCustomize(pt.id, ci.id, e.target.value)}
                       placeholder="Tên (VD: Color: Black)" aria-label="Tên cột customize"
                       className="ps-input" style={{ fontSize: 11, fontWeight: 650, padding: '4px 6px', textTransform: 'none' }} />
+                    <button type="button" aria-label={`Chuyển cột ${ci.name || 'customize'} sang trái`}
+                      title="Sang trái (Alt+←)" disabled={ciIdx === 0}
+                      onClick={() => onMoveCustomize(pt.id, ci.id, -1)}
+                      style={{ ...arrowBtnStyle, opacity: ciIdx === 0 ? 0.35 : 1 }}>◀</button>
+                    <button type="button" aria-label={`Chuyển cột ${ci.name || 'customize'} sang phải`}
+                      title="Sang phải (Alt+→)" disabled={ciIdx === customs.length - 1}
+                      onClick={() => onMoveCustomize(pt.id, ci.id, 1)}
+                      style={{ ...arrowBtnStyle, opacity: ciIdx === customs.length - 1 ? 0.35 : 1 }}>▶</button>
                     <IconBtn variant="dangerghost" title="Xoá cột" onClick={() => onRemoveCustomize(pt.id, ci.id)}
                       style={{ width: 22, height: 22, fontSize: 11, flexShrink: 0 }}>✕</IconBtn>
                   </div>
                 </th>
               ))}
-              {!libEntry && <th style={{ ...thTier2In, minWidth: 90 }}>Item Cost ($)</th>}
+              <th style={{ ...thTier2In, minWidth: 90 }}>Item Cost ($)</th>
 
               <th className="ps-divider-l" style={{ ...thTier2Out, minWidth: 90 }}>Coupon ($)</th>
               <th style={{ ...thTier2Out, minWidth: 96 }}>Total Price</th>
@@ -313,18 +429,44 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
               <th style={{ ...thTier2Out, minWidth: 84 }}>Profit</th>
               <th style={{ ...thTier2Out, minWidth: 84 }}>Margin</th>
               <th style={{ ...thTier2Out, minWidth: 96 }}>After Promo</th>
-              {!libEntry && <th style={{ ...thTier2Out, textAlign: 'center' }}>Xoá</th>}
+              <th style={{ ...thTier2Out, textAlign: 'center', minWidth: 74 }}
+                title="Dòng được tick sẽ KHÔNG tính vào Avg Margin / khoảng giá của bảng, nhưng vẫn hiện ở đây và trong file export.">Bỏ tổng hợp</th>
+              <th style={{ ...thTier2Out, textAlign: 'center' }}>Xoá</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(({ sz, calc }, i) => {
               const selected = selectedIdSet.has(sz.id);
               return (
-                <tr key={sz.id} className="ps-tr">
-                  {/* Size — sticky trái, semibold */}
+                <tr key={sz.id} className="ps-tr"
+                  onDragOver={(e) => { if (dragSizeId.current) e.preventDefault(); }}
+                  onDrop={() => onSizeDrop(i)}
+                  style={sz.excluded ? { opacity: 0.62 } : undefined}>
+                  {/* Tay cầm sắp xếp — cột riêng, KHÔNG đụng thao tác chọn vùng */}
+                  <td className="ps-cell" style={{ width: 62 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <DragHandle label={`Đổi thứ tự size ${sz.label || i + 1}`}
+                        onDragStart={() => { dragSizeId.current = sz.id; }}
+                        onKeyMove={sizeKeyMove(sz.id)} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <button type="button" aria-label={`Chuyển size ${sz.label || i + 1} lên trên`}
+                          title="Lên trên (Alt+↑)" disabled={i === 0}
+                          onClick={() => onMoveSize(pt.id, sz.id, -1)}
+                          style={{ ...arrowBtnStyle, opacity: i === 0 ? 0.35 : 1 }}>▲</button>
+                        <button type="button" aria-label={`Chuyển size ${sz.label || i + 1} xuống dưới`}
+                          title="Xuống dưới (Alt+↓)" disabled={i === rows.length - 1}
+                          onClick={() => onMoveSize(pt.id, sz.id, 1)}
+                          style={{ ...arrowBtnStyle, opacity: i === rows.length - 1 ? 0.35 : 1 }}>▼</button>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Size — sticky trái, semibold. Dòng thư viện sửa được tên (ghi
+                      vào overrides.label), nút ↺ trên card lấy lại tên gốc. */}
                   <td className="ps-cell ps-sticky-col" style={{ minWidth: 76 }}>
-                    <input value={sz.label} onChange={(e) => onUpdateSize(pt.id, sz.id, { label: e.target.value })}
-                      placeholder="S / M / L…" readOnly={sz.isLib} aria-label="Tên size"
+                    <input value={sz.label} onChange={(e) => changeLabel(sz, e.target.value)}
+                      placeholder="S / M / L…" aria-label="Tên size"
+                      title={sz.isLib ? 'Tên size của thư viện — sửa ở đây chỉ đổi trong bảng tính giá này' : undefined}
                       className="ps-input" style={{ fontWeight: 650, padding: '5px 8px', fontSize: 12.5 }} />
                   </td>
 
@@ -361,15 +503,15 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                     </td>
                   ))}
 
-                  {/* Item Cost (nhập tay) */}
-                  {!libEntry && (
-                    <td className="ps-cell">
-                      <input type="number" step="0.01" value={sz.itemCost} aria-label={`Item cost — size ${sz.label || i + 1}`}
-                        onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })}
-                        onWheel={(e) => e.target.blur()} placeholder="0"
-                        className="ps-input ps-input--num" style={{ padding: '5px 8px', fontSize: 12.5 }} />
-                    </td>
-                  )}
+                  {/* Item Cost — dòng thư viện lấy giá vốn từ thư viện (chỉ đọc), dòng
+                      Seller tự thêm phải nhập tay, nếu không Profit của dòng đó sai. */}
+                  <td className="ps-cell">
+                    <input type="number" step="0.01" value={sz.itemCost ?? ''} aria-label={`Item cost — size ${sz.label || i + 1}`}
+                      onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })}
+                      onWheel={(e) => e.target.blur()} placeholder="0" readOnly={sz.isLib}
+                      title={sz.isLib ? 'Giá vốn lấy từ thư viện Vendor (cột P1) — không sửa ở đây' : undefined}
+                      className="ps-input ps-input--num" style={{ padding: '5px 8px', fontSize: 12.5 }} />
+                  </td>
 
                   {/* ── Nhóm computed: nền subtle, chữ mảnh, KHÔNG nền màu đậm ── */}
                   {/* Coupon (thay cột Ship Cost cũ) — số tiền giảm giá của dòng */}
@@ -385,23 +527,36 @@ export default function PriceTable({ pt, settings, libEntry, onUpdateSize, onRem
                   <td className="ps-cell-auto"><MarginCell value={calc.margin} /></td>
                   <td className="ps-cell-auto"><MarginCell value={calc.marginAfter} /></td>
 
-                  {/* Xoá size (nhập tay) */}
-                  {!libEntry && (
-                    <td className="ps-cell" style={{ textAlign: 'center' }}>
-                      {!sz.isLib && (
-                        <IconBtn variant="dangerghost" title={`Xoá size ${sz.label || i + 1}`}
-                          disabled={(pt.sizes?.length || 0) <= 1}
-                          onClick={() => onRemoveSize(pt.id, sz.id)}
-                          style={{ width: 26, height: 26, fontSize: 12 }}>✕</IconBtn>
-                      )}
-                    </td>
-                  )}
+                  {/* Loại khỏi tổng hợp — giữ dòng lại nhưng không kéo tụt Avg Margin */}
+                  <td className="ps-cell" style={{ textAlign: 'center' }}>
+                    <input type="checkbox" checked={!!sz.excluded}
+                      aria-label={`Loại size ${sz.label || i + 1} khỏi tổng hợp`}
+                      onChange={(e) => onUpdateSize(pt.id, sz.id, { excluded: e.target.checked })}
+                      style={{ width: 15, height: 15, cursor: 'pointer', accentColor: PS.brand }} />
+                  </td>
+
+                  {/* Xoá size — dùng được cho CẢ dòng thư viện: phôi dùng chung nhiều
+                      project có size dư là bình thường, xoá ở đây KHÔNG đụng file thư
+                      viện Vendor gốc. Nút ↺ trên card lấy lại đủ size bất cứ lúc nào. */}
+                  <td className="ps-cell" style={{ textAlign: 'center' }}>
+                    <IconBtn variant="dangerghost" title={`Xoá size ${sz.label || i + 1} khỏi bảng tính giá`}
+                      disabled={!canDelete}
+                      onClick={() => requestRemoveSize(sz)}
+                      style={{ width: 26, height: 26, fontSize: 12 }}>✕</IconBtn>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {confirmDeleteSz && (
+        <ConfirmDialog title="Xoá size khỏi bảng tính giá" confirmLabel="Xoá dòng"
+          message={`Dòng "${confirmDeleteSz.label || 'size chưa đặt tên'}" đã có giá. Xoá khỏi bảng tính giá này? Thư viện Vendor không bị ảnh hưởng.`}
+          onConfirm={() => { onRemoveSize(pt.id, confirmDeleteSz.id); setConfirmDeleteSz(null); }}
+          onClose={() => setConfirmDeleteSz(null)} />
+      )}
     </div>
   );
 }

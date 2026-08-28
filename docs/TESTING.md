@@ -55,6 +55,13 @@ CI chạy đúng các lệnh này trong `.github/workflows/tests.yml`. Job `*-pe
 | `frontend/src/utils/__tests__/sheetSerialization.test.js` | save → reload → export cho ra đúng một kết quả; mapping cột customize bám `ci.id` |
 | `frontend/src/components/seller/pricesheet/__tests__/pastePrices.test.js` | Dán nhiều giá từ Google Sheet (TSV, khớp theo tên size, phần dư rải tuần tự) |
 | `frontend/src/components/seller/pricesheet/__tests__/fillDown.test.js` | Fill Down / Fill Right / xoá vùng / undo — logic thuần, kể cả cột customize |
+| `frontend/src/components/seller/pricesheet/__tests__/priceTableDrag.test.jsx` (thăng cấp trước 2026-08-28) | Kéo dọc CHỈ chọn vùng, `mouseup` không ghi gì (regression 2026-08); Fill Down / Ctrl+Z / Ctrl+D / Delete |
+| `frontend/src/utils/__tests__/sizeStructure.test.js` (thăng cấp 2026-08-28) | Size Seller tự thêm sống sót qua resolveSheet; override cục bộ; `restoreFromLibrary`; dòng `excluded` không kéo tụt avgMargin |
+| `frontend/src/utils/__tests__/sheetOrdering.test.js` (thăng cấp 2026-08-28) | `sizeOrder` giữ sau save/reload/export; đổi thứ tự cột Customize không đổi giá (mapping theo `ci.id`); `defaultPrice` cho size mới |
+| `frontend/src/utils/__tests__/vendorRecords.test.js` (thăng cấp 2026-08-28) | 2 vendor cùng tên phôi ⇒ 2 record độc lập, không đè giá |
+| `frontend/src/utils/__tests__/libraryReadonly.test.js` (mới 2026-08-28) | Chuỗi thêm/sửa/xoá/khôi phục size trong bảng tính giá KHÔNG gọi `vendorLibraryApi.save`, `libIndex` không đổi bit nào |
+| `frontend/src/components/seller/pricesheet/__tests__/sizeRowOps.test.jsx` (mới 2026-08-28) | Thêm/xoá size ở cả 2 loại Product Type; ConfirmDialog khi xoá dòng đã có giá; nút Khôi phục theo thư viện |
+| `frontend/src/components/seller/pricesheet/__tests__/sizeOrder.interaction.test.jsx` (mới 2026-08-28) | Nút ▲▼/◀▶ và Alt+mũi tên đổi thứ tự size/cột customize, không đổi giá; kéo bắt đầu từ ô Giá Size vẫn chỉ chọn vùng |
 | `frontend/src/services/__tests__/realtime.test.js` | Đăng ký kênh realtime theo project, payload chỉ mang tín hiệu, huỷ listener khi unmount |
 | `backend/tests/Feature/PriceSheetProjectScopeTest.php` | Seller chỉ thấy project mình; lưu bị ép về project của mình; xoá chéo project → 403 |
 | `backend/tests/Feature/PriceSheetListPayloadTest.php` | Danh sách không kèm `history`/`productTypes`; payload không phình theo số lần Lưu; `/{id}` và `/{id}/versions` nạp riêng |
@@ -68,13 +75,13 @@ CI chạy đúng các lệnh này trong `.github/workflows/tests.yml`. Job `*-pe
 
 | File | Mục trong mindmap | PR mở khoá |
 |---|---|---|
-| `priceTableDrag.pending.test.jsx` | **01** — kéo chuột KHÔNG được xoá giá; Fill Down; Ctrl+Z; Ctrl+D; Delete | PR-A1 + Milestone P |
-| `vendorRecords.pending.test.js` | **03 + 04** — hai vendor cùng tên phôi cùng tồn tại, `recordKey`, `costSnapshot`, block trùng tên độc lập | PR-A3 |
-| `sizeStructure.pending.test.js` | **02** — thêm/sửa/xoá size ở cả 2 loại PT, override cục bộ, dòng `excluded` không kéo tụt avgMargin | PR-A4 |
-| `sheetOrdering.pending.test.js` | **05 + 06** — thứ tự size và cột custom giữ sau save/reload/export, giá mặc định cho cột | PR-A4, PR-A5 |
+| `priceTableDrag.pending.test.jsx` | **01** — kéo chuột KHÔNG được xoá giá; Fill Down; Ctrl+Z; Ctrl+D; Delete | PR-A1 + Milestone P — **đã thăng cấp** (nay chạy ở `npm test`, xem mục 3) |
 | `cloneSheet.pending.test.js` | **08** — clone độc lập hoàn toàn, remap `customize[ciId]` theo id mới | PR-A2 |
 | `pricePrivacy.pending.test.js` | **PR-S3 (tầng client)** — không khoá giá nào lọt vào props của CSF/PD/Marvel | Milestone S |
 | `roleRoute.pending.test.js` | **PR-S5** — một nơi duy nhất quyết định role → route; role lạ không rơi im lặng về `/seller` | Milestone S |
+
+> `sizeStructure.pending.test.js`, `sheetOrdering.pending.test.js` và `vendorRecords.pending.test.js`
+> đã thăng cấp bỏ hậu tố `.pending` ngày 2026-08-28 (mục 02, 05, 06, 03/04) — xem mục 3.
 
 ### Backend
 
@@ -123,12 +130,12 @@ Hai điểm bắt buộc:
 - **Kiểm bằng 2 trình duyệt** (mục 7 phần "Verification thủ công" của kế hoạch fix) không thay được
   bằng test tự động: A lưu → B thấy danh sách đổi mà không F5; B lưu bản cũ → nhận 409.
 
-## 8. Số liệu lần chạy gần nhất (2026-08-14, máy dev Windows)
+## 8. Số liệu lần chạy gần nhất (2026-08-28, máy dev Windows — nhánh `fix/seller-price-sheet-size-customize`)
 
 | Bộ | Kết quả |
 |---|---|
-| `npm test` | **92/92 xanh** (8 file) |
-| `npm run test:pending` | **29 đỏ / 2 xanh** (7 file) — đúng như thiết kế, mỗi dòng đỏ là một mục chưa làm |
-| `npm run check:realtime` | xanh — bundle có key + cluster Pusher (cảnh báo 2 bundle mồ côi trong `dist/`, xem PR-S5) |
-| `npm run test:smoke` | xanh — `#root` render, không exception, không conflict marker |
-| `php artisan test` | **chưa chạy được** — máy dev không có PHP/composer trong PATH |
+| `npm test` | **332/332 xanh** (33 file) — tăng từ 279 sau khi thăng cấp `sizeStructure`/`sheetOrdering`/`vendorRecords` và thêm `libraryReadonly`/`sizeRowOps`/`sizeOrder.interaction` |
+| `npm run test:pending` | **7 đỏ / 10 xanh** (3 file: `cloneSheet` mục 08, `pricePrivacy` + `roleRoute` Milestone S — ngoài phạm vi PR này) |
+| `npm run check:realtime` | xanh |
+| `npm run test:smoke` | xanh — `#root` render, không exception, không conflict marker (chạy lại 3 lần liên tiếp để loại trừ flaky do port `vite preview` còn giữ từ lần trước) |
+| `php artisan test` | chưa chạy — không đụng backend trong PR này |

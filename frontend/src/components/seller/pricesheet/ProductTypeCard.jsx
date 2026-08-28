@@ -15,8 +15,12 @@ export default function ProductTypeCard({
   pt, settings, libEntry,
   onPT, onRemovePT, onAddSize, onUpdateSize, onRemoveSize,
   onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize,
+  onMoveSize, onReorderSizes, onMoveCustomize, onReorderCustomize, onRestoreFromLibrary,
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState(false);
+  // PT có nguồn thư viện (theo record hoặc theo tên) → mới có gì để khôi phục.
+  const fromLibrary = Boolean(libEntry || pt.libRef?.recordKey);
   // Mã vendor hiển thị — ưu tiên `pt.vendorCode` (PT gắn `libRef`, mục 03/04),
   // rơi về `libEntry.vendor` cho bảng cũ resolve theo tên (đường lùi).
   const vendorLabel = pt.vendorCode || libEntry?.vendor || '';
@@ -90,22 +94,39 @@ export default function ProductTypeCard({
 
         {/* Actions */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-          {!libEntry && <Btn size="sm" onClick={() => onAddSize(pt.id)}>＋ Thêm Size</Btn>}
+          {/* PR-A4: thêm size mở cho CẢ Product Type lấy từ thư viện — bảng giá
+              là bản làm việc của Seller, không phải bản sao khoá cứng của thư viện. */}
+          <Btn size="sm" onClick={() => onAddSize(pt.id)}>＋ Thêm Size</Btn>
           <Btn size="sm" onClick={() => onAddCustomize(pt.id)}>＋ Add Customize Info</Btn>
+          {fromLibrary && (
+            <Btn size="sm" variant="outline" onClick={() => setConfirmRestore(true)}
+              title="Lấy lại đúng danh sách size và tên size của thư viện Vendor cho product type này">
+              ↺ Khôi phục theo thư viện
+            </Btn>
+          )}
           <IconBtn variant="dangerghost" title="Xoá product type" onClick={() => setConfirmDelete(true)}>🗑</IconBtn>
         </div>
       </div>
 
       {/* ── Bảng size ── */}
-      <PriceTable pt={pt} settings={settings} libEntry={libEntry}
+      <PriceTable pt={pt} settings={settings}
         onUpdateSize={onUpdateSize} onRemoveSize={onRemoveSize}
         onUpdateCustomize={onUpdateCustomize}
-        onRenameCustomize={onRenameCustomize} onRemoveCustomize={onRemoveCustomize} />
+        onRenameCustomize={onRenameCustomize} onRemoveCustomize={onRemoveCustomize}
+        onMoveSize={onMoveSize} onReorderSizes={onReorderSizes}
+        onMoveCustomize={onMoveCustomize} onReorderCustomize={onReorderCustomize} />
 
       {confirmDelete && (
         <ConfirmDialog title="Xoá Product Type" confirmLabel="Xoá khỏi bảng"
           message={`Xoá "${pt.name || 'product type chưa đặt tên'}" khỏi bảng tính giá? Dữ liệu giá size đã nhập của phần này sẽ mất.`}
           onConfirm={() => onRemovePT(pt.id)} onClose={() => setConfirmDelete(false)} />
+      )}
+
+      {confirmRestore && (
+        <ConfirmDialog title="Khôi phục theo thư viện" confirmLabel="Khôi phục"
+          message="Lấy lại đúng danh sách size, tên size và thứ tự của thư viện Vendor. Size bạn tự thêm sẽ bị bỏ; giá size và giá customize đã nhập cho các dòng của thư viện vẫn được giữ."
+          onConfirm={() => { onRestoreFromLibrary(pt.id); setConfirmRestore(false); }}
+          onClose={() => setConfirmRestore(false)} />
       )}
     </section>
   );

@@ -14,6 +14,15 @@
 //  lùi KHÔNG đổi field nào, không có migration, không có bảng nào tự đổi số.
 //  Muốn 2 vendor cùng một phôi cùng tồn tại: thêm 2 Product Type block riêng,
 //  mỗi block một `libRef` — xem AddProductTypeModal + mục 03 (bỏ chặn trùng tên).
+//
+//  PR-A4 (mục 02/05/06) — ba thứ MỚI, đều chỉ sống trong bảng tính giá và
+//  KHÔNG bao giờ ghi ngược lên thư viện Vendor (một phôi dùng chung nhiều
+//  project có size dư là chuyện bình thường, Seller phải tự dọn được trong
+//  bảng giá của mình mà không đụng file gốc):
+//    • size Seller tự thêm (`origin: 'manual'`) sống sót qua mỗi lần resolve;
+//    • `size.overrides.{label,itemCost}` thắng giá trị thư viện — sửa tại chỗ;
+//    • `pt.sizeOrder` quyết định thứ tự dòng, id lạ đẩy về cuối.
+//  Bảng cũ không có ba trường này thì mọi thứ chạy y hệt trước.
 // ════════════════════════════════════════════════════════
 import { makeSize } from './pricingEngine';
 import {
@@ -32,6 +41,28 @@ import {
 export const libSizeId = (ptId, label) => `szlib_${ptId}_${normalizeKey(label)}`;
 
 /**
+ * Nhãn dùng để KHỚP một dòng state với một size của thư viện.
+ *
+ * `overrides.label` cho phép Seller đổi tên hiển thị của dòng thư viện, mà
+ * `handleSave` lại ghi xuống server bản ĐÃ resolve (label đã đổi). Nếu khớp
+ * bằng `label` thì lần mở sau dòng "S (rộng)" không còn khớp size "S" của thư
+ * viện → vừa mọc thêm một dòng "S" mới, vừa biến dòng cũ thành size lạ. Vì vậy
+ * dòng thư viện luôn mang theo `libLabel` = nhãn GỐC của thư viện.
+ */
+const libLabelOf = (sz) => sz?.libLabel ?? sz?.label;
+
+/** Giá mặc định của các cột Customize — chỉ áp cho dòng size MỚI dựng (mục 06). */
+function defaultCustomizeOf(pt) {
+  const out = {};
+  (pt?.customizeInfos || []).forEach((ci) => {
+    if (ci?.defaultPrice !== undefined && ci?.defaultPrice !== null && ci?.defaultPrice !== '') {
+      out[ci.id] = ci.defaultPrice;
+    }
+  });
+  return out;
+}
+
+/**
  * Danh sách size của 1 Product Type theo đúng một "nguồn" thư viện (entry theo
  * tên, hoặc record theo vendor cụ thể — cả hai đều có hình dạng {sizes, bySize}).
  * Giữ nguyên dòng cũ khi khớp label (không mất giá đã nhập), dòng chưa có thì
@@ -39,9 +70,43 @@ export const libSizeId = (ptId, label) => `szlib_${ptId}_${normalizeKey(label)}`
  */
 export function libSizesOf(pt, libSource) {
   return (libSource?.sizes || []).map((label) => {
-    const existing = (pt.sizes || []).find((s) => s.label === label);
-    return existing || { ...makeSize(label, ''), id: libSizeId(pt.id, label) };
+    const existing = (pt.sizes || []).find((s) => libLabelOf(s) === label);
+    if (existing) return existing;
+    return { ...makeSize(label, ''), id: libSizeId(pt.id, label), customize: defaultCustomizeOf(pt) };
   });
+}
+
+/**
+ * Dòng size do Seller tự thêm vào một Product Type LẤY TỪ THƯ VIỆN (mục 02).
+ * Trước PR-A4 những dòng này bị `libSizesOf` bỏ qua nên biến mất ngay lần
+ * resolve kế tiếp. Nhận diện theo 3 dấu hiệu, đủ để bảng cũ cũng đúng:
+ *   • `origin === 'manual'` (dòng thêm bằng nút ＋ Thêm Size từ nay);
+ *   • `isLib === false` (đánh dấu tường minh);
+ *   • nhãn không khớp size nào của thư viện (size dư / size riêng).
+ */
+export function manualSizesOf(pt, libSource) {
+  const libLabels = new Set((libSource?.sizes || []).map((l) => normalizeKey(l)));
+  return (pt?.sizes || []).filter((sz) =>
+    sz?.origin === 'manual' || sz?.isLib === false || !libLabels.has(normalizeKey(libLabelOf(sz)))
+  );
+}
+
+/**
+ * Sắp dòng size theo `pt.sizeOrder` (mục 05). Id không có trong danh sách thứ
+ * tự (size vừa thêm, size mới xuất hiện ở thư viện) đẩy về cuối và giữ nguyên
+ * thứ tự tương đối với nhau — Array.prototype.sort ổn định từ ES2019.
+ */
+export function orderSizes(sizes, sizeOrder) {
+  if (!Array.isArray(sizeOrder) || !sizeOrder.length) return sizes;
+  const pos = new Map(sizeOrder.map((id, i) => [id, i]));
+  const rank = (sz) => (pos.has(sz?.id) ? pos.get(sz.id) : Number.MAX_SAFE_INTEGER);
+  return [...sizes].sort((a, b) => rank(a) - rank(b));
+}
+
+/** Nguồn thư viện của một Product Type: record gắn chặt, hoặc entry khớp tên. */
+function libSourceOf(pt, libIndex) {
+  if (pt?.libRef?.recordKey) return findLibraryRecord(libIndex, pt.libRef.recordKey);
+  return findLibraryEntry(libIndex, pt?.name);
 }
 
 /**
@@ -49,29 +114,51 @@ export function libSizesOf(pt, libSource) {
  * đó; PT lấy từ thư viện theo tên (đường lùi) thì đồng bộ theo entry khớp tên;
  * PT nhập tay giữ nguyên. Record/entry biến mất khỏi thư viện thì giữ nguyên
  * state hiện có (không tự xoá size chỉ vì thư viện đang tạm không có).
+ *
+ * ⚠ Phải trả về ĐỦ dòng đang hiển thị (thư viện + tự thêm, đúng thứ tự): mọi
+ * thao tác ghi (`patchPTSizes`) lấy mảng này làm gốc, thiếu dòng nào là mất
+ * dòng đó ngay lần gõ giá kế tiếp.
  */
 export function baseSizesOf(pt, libIndex) {
-  if (pt?.libRef?.recordKey) {
-    const record = findLibraryRecord(libIndex, pt.libRef.recordKey);
-    return record ? libSizesOf(pt, record) : (pt.sizes || []);
-  }
-  const libEntry = findLibraryEntry(libIndex, pt.name);
-  return libEntry ? libSizesOf(pt, libEntry) : (pt.sizes || []);
+  const source = libSourceOf(pt, libIndex);
+  if (!source) return pt?.sizes || [];
+  return orderSizes([...libSizesOf(pt, source), ...manualSizesOf(pt, source)], pt.sizeOrder);
 }
 
-/** Product Type resolve theo TÊN — đường lùi cho bảng chưa có `libRef` (giữ nguyên 100% hành vi cũ). */
+/** Một dòng thư viện sau khi nạp giá vốn + ship, rồi áp override cục bộ của Seller. */
+function decorateLibRow(base, source, pt) {
+  const label = libLabelOf(base);
+  // Bản chỉnh 2026-07-17: giá vốn = P1 (không còn cột Total); cost-ship lấy per-method.
+  const itemCost = getLibraryItemCost(source, label) || '';
+  const totalShipCost = getLibraryShip(source, label, pt.shipMethod) || 0;      // cột "Price Ship"
+  const shipCostItem = getLibraryShipItem2(source, label, pt.shipMethod) || 0;  // cột "Price Ship Item 2"
+  const ov = base.overrides || {};
+  return {
+    ...base,
+    libLabel: label,
+    label: ov.label ?? label,
+    itemCost: ov.itemCost ?? itemCost,
+    totalShipCost,
+    shipCostItem,
+    isLib: true,
+  };
+}
+
+/** Dòng Seller tự thêm: thư viện KHÔNG được đụng vào giá vốn đã nhập tay. */
+const decorateManualRow = (sz) => ({ ...sz, isLib: false, origin: 'manual' });
+
+/** Ghép dòng thư viện + dòng tự thêm rồi sắp theo `pt.sizeOrder`. */
+function composeSizes(pt, source) {
+  const lib = libSizesOf(pt, source).map((base) => decorateLibRow(base, source, pt));
+  const manual = manualSizesOf(pt, source).map(decorateManualRow);
+  return orderSizes([...lib, ...manual], pt.sizeOrder);
+}
+
+/** Product Type resolve theo TÊN — đường lùi cho bảng chưa có `libRef`. */
 function resolveByName(pt, libIndex) {
   const libEntry = findLibraryEntry(libIndex, pt.name);
   if (!libEntry) return pt;
-  const sizes = libSizesOf(pt, libEntry).map((base) => {
-    const label = base.label;
-    // Bản chỉnh 2026-07-17: giá vốn = P1 (không còn cột Total); cost-ship lấy per-method.
-    const itemCost = getLibraryItemCost(libEntry, label) || '';
-    const totalShipCost = getLibraryShip(libEntry, label, pt.shipMethod) || 0;      // cột "Price Ship"
-    const shipCostItem = getLibraryShipItem2(libEntry, label, pt.shipMethod) || 0;  // cột "Price Ship Item 2"
-    return { ...base, label, itemCost, totalShipCost, shipCostItem, isLib: true };
-  });
-  return { ...pt, sizes };
+  return { ...pt, sizes: composeSizes(pt, libEntry) };
 }
 
 /** Product Type gắn chặt vào một record cụ thể (mục 03/04) — một vendor, một file nguồn. */
@@ -84,25 +171,48 @@ function resolveByRecord(pt, libIndex) {
     // bảng đang chạy thật, và báo rõ để Seller biết mà kiểm tra lại thư viện.
     const snapshot = pt.costSnapshot || {};
     const sizes = (pt.sizes || []).map((sz) => {
-      const snap = snapshot[sz.label] || {};
+      if (sz?.origin === 'manual' || sz?.isLib === false) return decorateManualRow(sz);
+      const label = libLabelOf(sz);
+      const snap = snapshot[label] || {};
+      const ov = sz.overrides || {};
       return {
-        ...sz, isLib: true,
-        itemCost: snap.itemCost ?? sz.itemCost ?? '',
+        ...sz, isLib: true, libLabel: label,
+        label: ov.label ?? label,
+        itemCost: ov.itemCost ?? snap.itemCost ?? sz.itemCost ?? '',
         totalShipCost: snap.totalShipCost ?? sz.totalShipCost ?? 0,
         shipCostItem: snap.shipCostItem ?? sz.shipCostItem ?? 0,
       };
     });
-    return { ...pt, sizes, vendorCode: pt.libRef.vendorCode, warning: 'record-missing' };
+    return {
+      ...pt, sizes: orderSizes(sizes, pt.sizeOrder),
+      vendorCode: pt.libRef.vendorCode, warning: 'record-missing',
+    };
   }
 
-  const sizes = libSizesOf(pt, record).map((base) => {
-    const label = base.label;
-    const itemCost = getLibraryItemCost(record, label) || '';
-    const totalShipCost = getLibraryShip(record, label, pt.shipMethod) || 0;
-    const shipCostItem = getLibraryShipItem2(record, label, pt.shipMethod) || 0;
-    return { ...base, label, itemCost, totalShipCost, shipCostItem, isLib: true };
+  return { ...pt, sizes: composeSizes(pt, record), vendorCode: record.vendorCode };
+}
+
+/**
+ * Bỏ MỌI chỉnh sửa cấu trúc cục bộ của một Product Type và quay về đúng thư
+ * viện (mục 02): xoá `overrides` của từng dòng, bỏ size Seller tự thêm, bỏ thứ
+ * tự tuỳ chỉnh. Giá size / customize đã nhập cho các dòng thư viện được GIỮ —
+ * đây là nút "khôi phục cấu trúc", không phải nút xoá trắng công sức nhập giá.
+ *
+ * Không có nguồn thư viện (PT nhập tay) thì trả nguyên PT — không có gì để khôi phục.
+ */
+export function restoreFromLibrary(pt, libIndex) {
+  const source = libSourceOf(pt, libIndex);
+  if (!source) return pt;
+  const sizes = (source.sizes || []).map((label) => {
+    const existing = (pt.sizes || []).find((s) => libLabelOf(s) === label);
+    if (!existing) return { ...makeSize(label, ''), id: libSizeId(pt.id, label), customize: defaultCustomizeOf(pt) };
+    const rest = { ...existing };
+    delete rest.overrides;
+    return { ...rest, label, libLabel: label };
   });
-  return { ...pt, sizes, vendorCode: record.vendorCode };
+  const rest = { ...pt };
+  delete rest.sizeOrder;
+  return { ...rest, sizes };
 }
 
 /**

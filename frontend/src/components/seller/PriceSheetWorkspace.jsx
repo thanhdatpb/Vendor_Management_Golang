@@ -15,7 +15,8 @@ import {
   makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
 import { loadVendorLibraryIndex, findLibraryEntry, findLibraryRecord } from '../../utils/vendorLibraryIndex';
-import { resolveSheet, baseSizesOf as baseSizesOfLib, libSizesOf } from '../../utils/resolveSheet';
+import { resolveSheet, baseSizesOf as baseSizesOfLib, libSizesOf, restoreFromLibrary } from '../../utils/resolveSheet';
+import { moveByDelta, moveById, orderIdsOf } from '../../utils/sheetStructure';
 import { exportSheetToExcel } from '../../utils/sheetExport';
 
 import { PS, marginTone } from './pricesheet/tokens';
@@ -91,7 +92,19 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   };
   // Confirm xoá đã chuyển vào ConfirmDialog trong ProductTypeCard
   const removePT = (ptId) => setProductTypes((p) => p.filter((pt) => pt.id !== ptId));
-  const addSize = (ptId) => patchPTSizes(ptId, (sizes) => [...sizes, makeSize()]);
+  // Size Seller tự thêm mang `origin: 'manual'` để resolveSheet giữ lại qua mỗi
+  // lần bind thư viện (mục 02) — thiếu dấu này là dòng biến mất ngay lần render sau.
+  // Có `sizeOrder` thì nối id mới vào cuối, nếu không dòng mới bị orderSizes đẩy
+  // về cuối một cách tình cờ thay vì theo đúng chỗ Seller vừa thêm.
+  const addSize = (ptId) => setProductTypes((p) => p.map((pt) => {
+    if (pt.id !== ptId) return pt;
+    const row = { ...makeSize(), origin: 'manual', isLib: false };
+    const sizes = [...baseSizesOf(pt), row];
+    return {
+      ...pt, sizes,
+      ...(pt.sizeOrder?.length ? { sizeOrder: [...pt.sizeOrder, row.id] } : {}),
+    };
+  }));
   const removeSize = (ptId, szId) => patchPTSizes(ptId, (sizes) => (sizes.length <= 1 ? sizes : sizes.filter((s) => s.id !== szId)));
   const updateSize = (ptId, szId, patch) => patchPTSizes(ptId, (sizes) => sizes.map((s) => (s.id === szId ? { ...s, ...patch } : s)));
   const updateSizeCustomize = (ptId, szId, ciId, val) =>
@@ -113,7 +126,9 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       return {
         ...pt,
         sizes: newSizes,
-        customizeInfos: [...(pt.customizeInfos || []), { id: ciId, name }]
+        // `defaultPrice` ở lại trên cột: size thêm SAU này (kể cả size mới xuất
+        // hiện ở thư viện) tự nhận đúng giá đó thay vì để trống (mục 06).
+        customizeInfos: [...(pt.customizeInfos || []), { id: ciId, name, defaultPrice }]
       };
     }));
   };
@@ -121,6 +136,36 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, customizeInfos: pt.customizeInfos.map((c) => (c.id === ciId ? { ...c, name: nm } : c)) } : pt)));
   const removeCustomize = (ptId, ciId) =>
     setProductTypes((p) => p.map((pt) => (pt.id === ptId ? { ...pt, customizeInfos: pt.customizeInfos.filter((c) => c.id !== ciId) } : pt)));
+
+  // ── Thứ tự dòng size & cột customize (mục 05/06) ──
+  // Thứ tự lưu ở `pt.sizeOrder` (danh sách id) chứ không phải ở thứ tự mảng
+  // `sizes`: resolveSheet dựng lại mảng đó từ thư viện ở mỗi lần render, nên
+  // thứ tự nằm trong mảng sẽ bị ghi đè ngay. Cột customize thì ngược lại —
+  // chỉ hoán vị mảng `customizeInfos`, `ci.id` KHÔNG đổi nên không ô giá nào
+  // đổi theo (giá customize bám id, không bám chỉ số cột).
+  const setSizeOrderFrom = (pt, sizes) => ({ ...pt, sizeOrder: orderIdsOf(sizes) });
+  const moveSize = (ptId, szId, delta) => setProductTypes((p) => p.map((pt) => {
+    if (pt.id !== ptId) return pt;
+    const current = baseSizesOf(pt);
+    const idx = current.findIndex((s) => s.id === szId);
+    return setSizeOrderFrom(pt, moveByDelta(current, idx, delta));
+  }));
+  const reorderSizes = (ptId, szId, toIndex) => setProductTypes((p) => p.map((pt) => (
+    pt.id === ptId ? setSizeOrderFrom(pt, moveById(baseSizesOf(pt), szId, toIndex)) : pt
+  )));
+  const moveCustomize = (ptId, ciId, delta) => setProductTypes((p) => p.map((pt) => {
+    if (pt.id !== ptId) return pt;
+    const cols = pt.customizeInfos || [];
+    return { ...pt, customizeInfos: moveByDelta(cols, cols.findIndex((c) => c.id === ciId), delta) };
+  }));
+  const reorderCustomize = (ptId, ciId, toIndex) => setProductTypes((p) => p.map((pt) => (
+    pt.id === ptId ? { ...pt, customizeInfos: moveById(pt.customizeInfos || [], ciId, toIndex) } : pt
+  )));
+
+  // Bỏ mọi chỉnh sửa cấu trúc cục bộ, quay về đúng thư viện (mục 02).
+  const restorePTFromLibrary = (ptId) => setProductTypes((p) => p.map((pt) => (
+    pt.id === ptId ? restoreFromLibrary({ ...pt, sizes: baseSizesOf(pt) }, libIndex) : pt
+  )));
 
   const shownPTs = productTypes.filter((pt) => pt.shown);
 
@@ -280,7 +325,10 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
               <ProductTypeCard key={pt.id} pt={pt} settings={settings} libEntry={libEntry}
                 onPT={patchPT} onRemovePT={removePT}
                 onAddSize={addSize} onUpdateSize={updateSize} onRemoveSize={removeSize} onUpdateCustomize={updateSizeCustomize}
-                onAddCustomize={openAddCustomize} onRenameCustomize={renameCustomize} onRemoveCustomize={removeCustomize} />
+                onAddCustomize={openAddCustomize} onRenameCustomize={renameCustomize} onRemoveCustomize={removeCustomize}
+                onMoveSize={moveSize} onReorderSizes={reorderSizes}
+                onMoveCustomize={moveCustomize} onReorderCustomize={reorderCustomize}
+                onRestoreFromLibrary={restorePTFromLibrary} />
             );
           })}
         </div>

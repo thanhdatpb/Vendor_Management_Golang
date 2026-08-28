@@ -145,11 +145,22 @@ export function computeSizeRow(settings, productType, size) {
   };
 }
 
-/** Tổng hợp một bảng tính giá: số size, khoảng giá, avg margin. */
+/**
+ * Tổng hợp một bảng tính giá: số size, khoảng giá, avg margin.
+ *
+ * Mục 02: dòng có `excluded: true` bị loại khỏi MỌI con số ở đây. Một phôi dùng
+ * chung nhiều project thường mang theo size dư mà bảng giá này không bán; để
+ * chúng trong phép trung bình thì Avg Margin của cả bảng bị kéo tụt bởi những
+ * dòng chưa ai nhập giá. Dòng vẫn nằm nguyên trong bảng và trong file export —
+ * chỉ không tính vào tổng hợp. Bảng cũ không có trường này → không đổi số nào.
+ */
 export function summarizeSheet(sheet) {
   const rows = [];
   (sheet?.productTypes || []).forEach((pt) => {
-    (pt.sizes || []).forEach((sz) => rows.push(computeSizeRow(sheet.settings, pt, sz)));
+    (pt.sizes || []).forEach((sz) => {
+      if (sz?.excluded) return;
+      rows.push(computeSizeRow(sheet.settings, pt, sz));
+    });
   });
   if (!rows.length) return { count: 0, minPrice: null, maxPrice: null, avgMargin: null };
   const prices = rows.map((r) => r.totalPrice);
