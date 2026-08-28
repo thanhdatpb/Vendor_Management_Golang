@@ -2031,9 +2031,13 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
         />
       )}
 
-      {/* Action Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      {/* Action Bar — nhóm nút (Export/Thêm mới/Template/Import) LUÔN ở hàng đầu,
+          bên phải, giống hệt vị trí ở role Vendor. Filter theo sản phẩm (chỉ có ở
+          role readOnly như Admin/Seller) không được đẩy cả nhóm nút xuống hàng
+          dưới — nếu thiếu chỗ thì phần filter/search tự xuống dòng RIÊNG trong khu
+          bên trái, không đụng vào nhóm nút bên phải. */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'nowrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: '1 1 auto', minWidth: 0 }}>
           <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink, fontFamily: "'Inter',sans-serif" }}>
             {(mode === 'bestseller' || mode === 'best_seller') ? 'Danh sách Vendor Best Seller' : mode === 'new_products' ? 'New Arrivals' : 'Tổng quan Vendor & Sản phẩm'}
           </div>
@@ -2074,7 +2078,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
           <button
             onClick={() => setShowExportPicker(true)}
             disabled={exporting}
