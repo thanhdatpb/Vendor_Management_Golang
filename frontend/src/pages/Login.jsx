@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { postLoginPath } from "../utils/postLoginRedirect";
 import AccountChooser from "../components/shared/AccountChooser";
 import logoImg from "../assets/logo.png";
 import useIsMobile from "../hooks/useIsMobile";
@@ -33,15 +34,7 @@ export default function Login() {
 
   useEffect(() => {
     if (contextUser) {
-      const rawRole = typeof contextUser.role === "object" ? contextUser.role?.name : contextUser.role;
-      const role = rawRole ? rawRole.toString().toLowerCase().replace(/[_\-\s]/g, "") : "";
-
-      if (role === "admin") navigate("/admin");
-      else if (role === "staffa" || role === "staff" || role === "seller") navigate("/seller");
-      else if (role === "staffb" || role === "vendor") navigate("/vendor");
-      else if (role === "csf") navigate("/csf");
-      else if (role === "marvel") navigate("/marvel");
-      else if (role === "pd") navigate("/pd");
+      navigate(postLoginPath(contextUser.role));
     }
   }, [contextUser, navigate]);
 
@@ -57,17 +50,7 @@ export default function Login() {
   const [selection, setSelection] = useState(null);       // { ticket, accounts } khi 1 email có nhiều tài khoản
   const [selectBusyId, setSelectBusyId] = useState(null); // id account đang được chọn
 
-  const goByRole = (user) => {
-    const rawRole = typeof user.role === "object" ? user.role?.name : user.role;
-    const role = rawRole ? rawRole.toString().toLowerCase().replace(/[_\-\s]/g, "") : "";
-    if (role === "admin") navigate("/admin");
-    else if (role === "staffa" || role === "staff" || role === "seller") navigate("/seller");
-    else if (role === "staffb" || role === "vendor") navigate("/vendor");
-    else if (role === "csf") navigate("/csf");
-    else if (role === "marvel") navigate("/marvel");
-    else if (role === "pd") navigate("/pd");
-    else navigate("/");
-  };
+  const goByRole = (user) => navigate(postLoginPath(user.role));
 
   const handleSubmit = async () => {
     if (!form.email || !form.password) {

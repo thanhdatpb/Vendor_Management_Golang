@@ -1,18 +1,26 @@
 // ════════════════════════════════════════════════════════
-//  MỤC 17 — Đường lùi khi backend chưa có `GET /price-sheets/{id}`.
+//  "Mở bảng" giờ điều hướng sang /price-sheets/:id (link riêng để gửi Admin)
+//  thay vì tự fetch rồi mở PriceSheetWorkspace ngay tại danh sách — PriceSheetPage
+//  mới là nơi gọi priceSheetApi.get(id) và quyết định Seller/Admin xem gì.
 //
-//  Deploy frontend TRƯỚC backend là chuyện xảy ra được (CDN/cache, hoặc chỉ
-//  đơn giản là làm sai thứ tự). Lúc đó `priceSheetApi.get` trả 404. Không có
-//  đường lùi thì Seller không mở được BẤT KỲ bảng giá nào — cả tính năng chết.
-//
-//  Ở tình huống đó, backend cũ vẫn trả danh sách dạng sheet ĐẦY ĐỦ, nên bản
-//  trong danh sách là đủ để mở workspace.
+//  MỤC 17 — đường lùi khi backend chưa có `GET /price-sheets/{id}` giờ chỉ còn
+//  áp dụng cho EXPORT (nút ⬇ ở danh sách vẫn tự fetch bản đầy đủ trước khi
+//  xuất Excel): deploy frontend TRƯỚC backend là chuyện xảy ra được, lúc đó
+//  `priceSheetApi.get` trả 404 — không có đường lùi thì Seller export ra file
+//  trống thay vì lỗi rõ ràng.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SetupPriceSection from '../SetupPriceSection';
 import { priceSheetApi } from '../../../services/api';
+import { exportSheetToExcel } from '../PriceSheetWorkspace';
+
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 vi.mock('../../../services/api', () => ({
   priceSheetApi: {
@@ -30,14 +38,7 @@ vi.mock('../../../services/echo', () => ({
   subscribePriceSheetChanges: vi.fn(() => () => {}),
 }));
 
-// Workspace thật quá nặng để dựng; thay bằng bản ghi lại đúng thứ nó nhận được.
 vi.mock('../PriceSheetWorkspace', () => ({
-  default: ({ sheet }) => (
-    <div data-testid="workspace">
-      <span data-testid="ws-name">{sheet.name}</span>
-      <span data-testid="ws-sizes">{sheet.productTypes?.[0]?.sizes?.length ?? 0}</span>
-    </div>
-  ),
   exportSheetToExcel: vi.fn(),
 }));
 
@@ -68,59 +69,55 @@ const summaryRow = () => ({
 
 const notFound = () => Object.assign(new Error('Not Found'), { response: { status: 404 } });
 
-const clickOpen = async () => {
-  const user = userEvent.setup();
-  const btn = await screen.findByRole('button', { name: 'Mở bảng' });
-  await user.click(btn);
-};
-
 beforeEach(() => {
   priceSheetApi.list.mockReset();
   priceSheetApi.get.mockReset();
+  mockNavigate.mockReset();
+  exportSheetToExcel.mockReset();
 });
 
-describe('mở bảng khi backend chưa có /price-sheets/{id}', () => {
-  it('dùng bản đầy đủ trong danh sách thay vì chặn người dùng', async () => {
+describe('"Mở bảng" điều hướng sang link riêng của bảng', () => {
+  it('bấm "Mở bảng" chỉ navigate tới /price-sheets/:id, không tự fetch', async () => {
+    priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
+
+    render(<SetupPriceSection />);
+    const user = userEvent.setup();
+    const btn = await screen.findByRole('button', { name: 'Mở bảng' });
+    await user.click(btn);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/price-sheets/sheet_1');
+    expect(priceSheetApi.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('export vẫn có đường lùi khi backend chưa có /price-sheets/{id}', () => {
+  it('get(id) lỗi 404 → export bằng bản đầy đủ có sẵn trong danh sách thay vì báo lỗi', async () => {
     priceSheetApi.list.mockResolvedValue({ data: [fullSheet()] });
     priceSheetApi.get.mockRejectedValue(notFound());
 
     render(<SetupPriceSection />);
-    await clickOpen();
+    const user = userEvent.setup();
+    const btn = await screen.findByTitle('Export Excel');
+    await user.click(btn);
 
-    const ws = await screen.findByTestId('workspace');
-    expect(ws).toBeInTheDocument();
-    // Mở đúng nội dung, không phải bảng trống — đây mới là điều quan trọng:
-    // bảng trống mà Seller bấm Lưu là ghi đè mất bảng giá thật.
-    expect(screen.getByTestId('ws-sizes')).toHaveTextContent('20');
-    expect(screen.getByTestId('ws-name')).toHaveTextContent('Legend Shirt');
+    await vi.waitFor(() => expect(exportSheetToExcel).toHaveBeenCalled());
+    const [exported] = exportSheetToExcel.mock.calls[0];
+    expect(exported.name).toBe('Legend Shirt');
+    expect(exported.productTypes[0].sizes).toHaveLength(20);
   });
 
-  it('không mở bảng TRỐNG khi danh sách chỉ có bản rút gọn', async () => {
-    // Backend mới (danh sách rút gọn) + endpoint chi tiết hỏng: không có gì để
-    // mở an toàn → thà báo lỗi còn hơn mở bảng rỗng rồi để người dùng lưu đè.
+  it('danh sách chỉ có bản rút gọn + get(id) lỗi → không export được bảng rỗng, báo lỗi rõ ràng', async () => {
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
     priceSheetApi.get.mockRejectedValue(notFound());
 
     render(<SetupPriceSection />);
-    await clickOpen();
+    const user = userEvent.setup();
+    const btn = await screen.findByTitle('Export Excel');
+    await user.click(btn);
 
-    await waitFor(() => expect(priceSheetApi.get).toHaveBeenCalledWith('sheet_1'));
-    expect(screen.queryByTestId('workspace')).not.toBeInTheDocument();
-  });
-});
-
-describe('đường bình thường vẫn được ưu tiên', () => {
-  it('gọi get(id) và mở bằng dữ liệu server, không dùng bản trong danh sách', async () => {
-    const server = fullSheet();
-    server.name = 'Ban tu server';
-    priceSheetApi.list.mockResolvedValue({ data: [fullSheet()] });
-    priceSheetApi.get.mockResolvedValue({ data: server });
-
-    render(<SetupPriceSection />);
-    await clickOpen();
-
-    expect(await screen.findByTestId('ws-name')).toHaveTextContent('Ban tu server');
-    expect(priceSheetApi.get).toHaveBeenCalledWith('sheet_1');
+    await vi.waitFor(() => expect(priceSheetApi.get).toHaveBeenCalledWith('sheet_1'));
+    expect(exportSheetToExcel).not.toHaveBeenCalled();
+    expect(await screen.findByText('Không export được')).toBeInTheDocument();
   });
 });
 

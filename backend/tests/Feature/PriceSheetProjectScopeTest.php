@@ -66,17 +66,23 @@ class PriceSheetProjectScopeTest extends TestCase
         $this->assertSame(['sheet_happy', 'sheet_khong_project'], $ids);
     }
 
-    public function test_admin_va_vendor_thay_moi_project(): void
+    public function test_chi_admin_thay_moi_project(): void
     {
+        // Bảng tính giá chỉ Admin + Seller/StaffA được đụng vào (PR-S1) — Vendor/StaffB
+        // quản lý vendor chứ không tính giá bán, nên KHÔNG còn thấy được nữa.
         $this->seedSheet('sheet_happy', 'happy');
         $this->seedSheet('sheet_creative', 'creative');
 
-        foreach (['admin', 'vendor', 'staff_b'] as $role) {
-            $this->assertCount(
-                2,
-                $this->actingAs($this->user($role))->getJson('/api/price-sheets')->assertOk()->json(),
-                "Role {$role} phải thấy mọi project"
-            );
+        $this->assertCount(
+            2,
+            $this->actingAs($this->user('admin'))->getJson('/api/price-sheets')->assertOk()->json(),
+            'Admin phải thấy mọi project'
+        );
+
+        foreach (['vendor', 'staff_b'] as $role) {
+            $this->actingAs($this->user($role))
+                ->getJson('/api/price-sheets')
+                ->assertStatus(403);
         }
     }
 

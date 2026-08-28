@@ -36,7 +36,20 @@ class PriceSheetController extends Controller
     /** Role được xem tất cả project (khớp _getUserProjectKey ở frontend). */
     private function seesAllProjects($user): bool
     {
-        return in_array($this->normRole($user->role ?? ''), ['admin', 'marvel', 'staffb', 'vendor'], true);
+        return $this->normRole($user->role ?? '') === 'admin';
+    }
+
+    /**
+     * Bảng tính giá chứa giá — chỉ Admin + Seller/StaffA được đụng vào.
+     * CSF/PD/Marvel là role chỉ-xem Thư viện Vendor và KHÔNG được thấy giá
+     * (CLAUDE.md §3); StaffB/Vendor quản lý vendor chứ không tính giá bán.
+     * Trước bản này, seesAllProjects() lỡ gồm cả marvel/staffb/vendor và 3
+     * route /price-sheets không hề có middleware role nào → mọi role trên
+     * đọc/ghi/xoá được MỌI bảng giá của MỌI project qua thẳng API.
+     */
+    private function canUsePriceSheets($user): bool
+    {
+        return in_array($this->normRole($user->role ?? ''), ['admin', 'seller', 'staffa', 'staff'], true);
     }
 
     private function projectKey($user): string
@@ -76,6 +89,9 @@ class PriceSheetController extends Controller
     public function index(Request $request)
     {
         $user  = $request->user();
+        if (!$this->canUsePriceSheets($user)) {
+            return response()->json(['message' => 'Bạn không có quyền xem bảng tính giá.'], 403);
+        }
         $scope = $this->seesAllProjects($user) ? '*' : $this->projectKey($user);
 
         // ── Vì sao phải có cờ `summary` ────────────────────────────────────
@@ -161,6 +177,9 @@ class PriceSheetController extends Controller
     /** Nội dung đầy đủ của một bảng — chỉ gọi khi bấm "Mở bảng". */
     public function show(Request $request, string $id)
     {
+        if (!$this->canUsePriceSheets($request->user())) {
+            return response()->json(['message' => 'Bạn không có quyền xem bảng tính giá.'], 403);
+        }
         $row = DB::table('price_sheets')->where('id', $id)->first();
         if (!$row) {
             return response()->json(['message' => 'Không tìm thấy bảng tính giá.'], 404);
@@ -200,6 +219,9 @@ class PriceSheetController extends Controller
      */
     public function versions(Request $request, string $id)
     {
+        if (!$this->canUsePriceSheets($request->user())) {
+            return response()->json(['message' => 'Bạn không có quyền xem bảng tính giá.'], 403);
+        }
         $row = DB::table('price_sheets')->where('id', $id)->first();
         if (!$row) {
             return response()->json(['message' => 'Không tìm thấy bảng tính giá.'], 404);
@@ -235,6 +257,9 @@ class PriceSheetController extends Controller
     public function upsert(Request $request)
     {
         $user  = $request->user();
+        if (!$this->canUsePriceSheets($user)) {
+            return response()->json(['message' => 'Bạn không có quyền sửa bảng tính giá.'], 403);
+        }
         $sheet = $request->all();
 
         if (empty($sheet['id'])) {
@@ -546,6 +571,9 @@ class PriceSheetController extends Controller
     public function destroy(Request $request, string $id)
     {
         $user = $request->user();
+        if (!$this->canUsePriceSheets($user)) {
+            return response()->json(['message' => 'Bạn không có quyền xoá bảng tính giá.'], 403);
+        }
 
         $row = DB::table('price_sheets')->where('id', $id)->first();
         if (!$row) {

@@ -11,6 +11,7 @@
 //  Bảng Seller đang mở trên máy khác không hề biết Admin đang xem cùng lúc.
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HC } from '../constants';
 import AppToast from '../../shared/AppToast';
 import { Pagination } from '../../seller/SellerUI';
@@ -18,9 +19,8 @@ import { priceSheetApi } from '../../../services/api';
 import { usd, pct } from '../../../utils/pricingEngine';
 import { normalizeSheetRow, matchesSheetSearch } from '../../../utils/priceSheetSummary';
 import { exportSheetToExcel } from '../../../utils/sheetExport';
+import { priceSheetPath, copyPriceSheetLink } from '../../../utils/priceSheetLink';
 import { PROJECTS } from '../../../constants/projects';
-import PriceSheetViewerModal from '../modals/PriceSheetViewerModal';
-import HistoryPanel from '../../seller/pricesheet/HistoryPanel';
 
 const ITEMS_PER_PAGE = 10;
 // Bảng chưa gán được về project nào (tài khoản Seller chưa điền project, hoặc
@@ -39,6 +39,7 @@ const projectLabel = (key) => {
 const chipOf = (row) => row.projectKey || UNASSIGNED;
 
 export default function PriceSheetSection() {
+  const navigate = useNavigate();
   const [allSheets, setAllSheets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -46,9 +47,6 @@ export default function PriceSheetSection() {
   const [projectFilter, setProjectFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
-  const [openingId, setOpeningId] = useState(null); // id đang tải để mở xem
-  const [viewingSheet, setViewingSheet] = useState(null); // sheet ĐẦY ĐỦ đang xem
-  const [historyFor, setHistoryFor] = useState(null); // sheet đang mở panel Lịch sử
 
   const showToast = useCallback((type, title, message, duration = 3000) => {
     setToast({ type, title, message, duration });
@@ -94,16 +92,13 @@ export default function PriceSheetSection() {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const openViewer = async (row) => {
-    setOpeningId(row.id);
+  const handleCopyLink = async (id) => {
     try {
-      const res = await priceSheetApi.get(row.id);
-      setViewingSheet(res.data);
+      await copyPriceSheetLink(id);
+      showToast('success', 'Đã copy link', 'Dán link để gửi cho ai cần xem bảng này.');
     } catch (err) {
-      console.error('Không tải được nội dung bảng tính giá:', err?.message || err);
-      showToast('error', 'Không mở được bảng', 'Kiểm tra kết nối rồi thử lại.', 4000);
-    } finally {
-      setOpeningId(null);
+      console.warn('Copy link bảng tính giá thất bại:', err?.message || err);
+      showToast('error', 'Copy link thất bại', 'Kiểm tra quyền truy cập clipboard rồi thử lại.');
     }
   };
 
@@ -231,10 +226,11 @@ export default function PriceSheetSection() {
                       </td>
                       <td style={{ padding: '10px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                          <button onClick={() => openViewer(sheet)} disabled={openingId === sheet.id}
-                            style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: openingId === sheet.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800, opacity: openingId === sheet.id ? 0.7 : 1 }}>
-                            {openingId === sheet.id ? 'Đang mở…' : 'Xem'}
+                          <button onClick={() => navigate(priceSheetPath(sheet.id))}
+                            style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>
+                            Xem
                           </button>
+                          <button onClick={() => handleCopyLink(sheet.id)} title="Copy link bảng tính giá" style={{ padding: '5px 9px', borderRadius: 6, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>🔗</button>
                           <button onClick={() => exportRow(sheet)} title="Export Excel" style={{ padding: '5px 9px', borderRadius: 6, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>⬇</button>
                         </div>
                       </td>
@@ -248,23 +244,6 @@ export default function PriceSheetSection() {
         </>
       )}
 
-      {viewingSheet && (
-        <PriceSheetViewerModal
-          sheet={viewingSheet}
-          onClose={() => setViewingSheet(null)}
-          onOpenHistory={(sheet) => setHistoryFor(sheet)}
-          showToast={showToast}
-        />
-      )}
-
-      {historyFor && (
-        <HistoryPanel
-          sheet={historyFor}
-          readOnly
-          onClose={() => setHistoryFor(null)}
-          onExportVersion={(snap) => exportSheetToExcel({ ...historyFor, name: `${historyFor.name}_v${snap.version}`, settings: snap.settings, productTypes: snap.productTypes }, showToast)}
-        />
-      )}
     </div>
   );
 }

@@ -4,14 +4,17 @@
 //  Seller tự gom Product Type từ Thư viện Vendor vào một bảng.
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { HC } from '../../constants/sellerTheme';
 import AppToast from '../shared/AppToast';
 import { Pagination } from './SellerUI';
 import { vendorLibraryApi, priceSheetApi } from '../../services/api';
+import { saveSheetToServer } from '../../utils/priceSheetCommit';
 import { subscribePriceSheetChanges } from '../../services/echo';
 import { usd, pct, makeSheet, makeProductType, makeSize } from '../../utils/pricingEngine';
 import { normalizeSheetRow, matchesSheetSearch, sheetInProject, toSummaryRow } from '../../utils/priceSheetSummary';
-import PriceSheetWorkspace, { exportSheetToExcel } from './PriceSheetWorkspace';
+import { priceSheetPath, copyPriceSheetLink } from '../../utils/priceSheetLink';
+import { exportSheetToExcel } from './PriceSheetWorkspace';
 
 const LS_SHEETS = 'PRICE_SHEETS_V1';
 const ITEMS_PER_PAGE = 10;
@@ -53,13 +56,12 @@ const persistAllSheets = (list) => {
 };
 
 export default function SetupPriceSection() {
+  const navigate = useNavigate();
   const [allSheets, setAllSheets] = useState(loadAllSheets);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
-  const [workspaceSheet, setWorkspaceSheet] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [openingId, setOpeningId] = useState(null); // id bảng đang tải nội dung
   const aliveRef = useRef(true);
 
   const { skip, key: projectKey } = _getUserProjectKey();
@@ -138,77 +140,38 @@ export default function SetupPriceSection() {
       return next;
     });
 
-    // Đồng bộ lên server để mọi máy trong project thấy được
-    try {
-      const res = await priceSheetApi.save(updated, { force });
-      const version = res?.data?.version;
-      if (version) {
-        // Nhận version mới của server để lần lưu sau gửi đúng — nếu không, lần
-        // lưu thứ hai sẽ tự xung đột với chính mình.
-        const synced = { ...updated, version };
-        setAllSheets((prev) => {
-          const next = prev.map((s) => (s.id === synced.id ? synced : s));
-          persistAllSheets(next);
-          return next;
-        });
-        return synced;
-      }
-      return updated;
-    } catch (err) {
-      // 409 = có người khác đã lưu ở giữa. Không nuốt lỗi: workspace cần biết
-      // để hỏi người dùng, thay vì âm thầm ghi đè công của người kia.
-      if (err?.response?.status === 409) throw err;
-
-      console.warn('Lưu bảng tính giá lên server thất bại:', err?.message || err);
-      showToast('error', 'Lưu thất bại', 'Đã lưu tạm ở máy này. Kiểm tra kết nối / đăng nhập rồi lưu lại.', 4500);
-      return updated;
+    // Đồng bộ lên server để mọi máy trong project thấy được (409 ném thẳng
+    // lên cho workspace hiện hộp thoại xung đột — xem utils/priceSheetCommit).
+    const synced = await saveSheetToServer(updated, { force, showToast });
+    if (synced.version !== updated.version) {
+      // Nhận version mới của server để lần lưu sau gửi đúng — nếu không, lần
+      // lưu thứ hai sẽ tự xung đột với chính mình.
+      setAllSheets((prev) => {
+        const next = prev.map((s) => (s.id === synced.id ? synced : s));
+        persistAllSheets(next);
+        return next;
+      });
     }
+    return synced;
   };
 
   const handleCreate = (sheet) => {
     commitSheet(sheet);
     setShowCreate(false);
-    setWorkspaceSheet(sheet); // bảng mới tạo đã đủ dữ liệu, không cần tải lại
+    navigate(priceSheetPath(sheet.id)); // bảng mới tạo đã đủ dữ liệu, không cần tải lại
   };
 
   /**
-   * Mở workspace: PHẢI tải bản đầy đủ.
-   * Danh sách chỉ mang cột tổng hợp (không có settings/productTypes) nên mở
-   * thẳng object của danh sách sẽ ra bảng rỗng.
-   */
-  /**
    * Đường lùi khi server chưa có `/price-sheets/{id}` (deploy frontend trước
-   * backend): lúc đó danh sách vẫn là sheet ĐẦY ĐỦ, nên mở thẳng bản trong
-   * danh sách còn hơn chặn Seller không mở được bảng nào.
+   * backend): lúc đó danh sách vẫn là sheet ĐẦY ĐỦ, nên PriceSheetPage mở
+   * thẳng bản trong danh sách còn hơn chặn Seller không mở được bảng nào.
    */
   const fullRowFromList = (id) => {
     const raw = allSheets.find((s) => s.id === id);
     return raw && Array.isArray(raw.productTypes) ? raw : null;
   };
 
-  const openSheet = async (row) => {
-    setOpeningId(row.id);
-    try {
-      const res = await priceSheetApi.get(row.id);
-      setWorkspaceSheet(res.data);
-    } catch (err) {
-      const fallback = fullRowFromList(row.id);
-      if (fallback) { setWorkspaceSheet(fallback); return; }
-
-      console.warn('Không tải được nội dung bảng tính giá:', err?.message || err);
-      showToast('error', 'Không mở được bảng', 'Kiểm tra kết nối rồi thử lại.', 4000);
-    } finally {
-      setOpeningId(null);
-    }
-  };
-
-  const handleSaveWorkspace = async (updated, opts) => {
-    const synced = await commitSheet(updated, opts); // 409 ném lên workspace
-    setWorkspaceSheet(synced); // giữ mở với dữ liệu mới (kèm version server)
-    return synced;
-  };
-
-  /** Export từ danh sách — cũng phải tải bản đầy đủ trước, vì lý do như openSheet. */
+  /** Export từ danh sách — phải tải bản đầy đủ trước vì danh sách chỉ có cột tổng hợp. */
   const exportSheet = async (row) => {
     try {
       const res = await priceSheetApi.get(row.id);
@@ -219,6 +182,16 @@ export default function SetupPriceSection() {
 
       console.warn('Không tải được bảng để export:', err?.message || err);
       showToast('error', 'Không export được', 'Kiểm tra kết nối rồi thử lại.', 4000);
+    }
+  };
+
+  const handleCopyLink = async (id) => {
+    try {
+      await copyPriceSheetLink(id);
+      showToast('success', 'Đã copy link', 'Dán link để gửi cho Admin xem bảng này.');
+    } catch (err) {
+      console.warn('Copy link bảng tính giá thất bại:', err?.message || err);
+      showToast('error', 'Copy link thất bại', 'Kiểm tra quyền truy cập clipboard rồi thử lại.');
     }
   };
 
@@ -303,10 +276,11 @@ export default function SetupPriceSection() {
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                            <button onClick={() => openSheet(sheet)} disabled={openingId === sheet.id}
-                              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: openingId === sheet.id ? 'wait' : 'pointer', fontSize: 11, fontWeight: 800, opacity: openingId === sheet.id ? 0.7 : 1 }}>
-                              {openingId === sheet.id ? 'Đang mở…' : 'Mở bảng'}
+                            <button onClick={() => navigate(priceSheetPath(sheet.id))}
+                              style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>
+                              Mở bảng
                             </button>
+                            <button onClick={() => handleCopyLink(sheet.id)} title="Copy link bảng tính giá" style={{ padding: '5px 9px', borderRadius: 6, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>🔗</button>
                             <button onClick={() => exportSheet(sheet)} title="Export Excel" style={{ padding: '5px 9px', borderRadius: 6, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>⬇</button>
                             <button onClick={() => handleDelete(sheet)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#fef2f2', color: HC.danger, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Xoá</button>
                           </div>
@@ -324,10 +298,6 @@ export default function SetupPriceSection() {
 
       {showCreate && (
         <CreateSheetModal projectKey={skip ? '' : projectKey} skip={skip} onClose={() => setShowCreate(false)} onCreate={handleCreate} showToast={showToast} />
-      )}
-
-      {workspaceSheet && (
-        <PriceSheetWorkspace sheet={workspaceSheet} onSave={handleSaveWorkspace} onClose={() => setWorkspaceSheet(null)} showToast={showToast} />
       )}
     </div>
   );

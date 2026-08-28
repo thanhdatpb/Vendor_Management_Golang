@@ -11,6 +11,14 @@ import userEvent from '@testing-library/user-event';
 import PriceSheetSection from '../PriceSheetSection';
 import { priceSheetApi } from '../../../../services/api';
 
+// "Xem" giờ điều hướng sang /price-sheets/:id (link riêng) thay vì mở modal
+// tại chỗ — PriceSheetPage mới là nơi gọi get(id) và dựng view chỉ-đọc.
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 vi.mock('../../../../services/api', () => ({
   priceSheetApi: {
     list: vi.fn(),
@@ -64,6 +72,7 @@ beforeEach(() => {
   priceSheetApi.list.mockReset();
   priceSheetApi.get.mockReset();
   xlsxMock.writeFile.mockClear();
+  mockNavigate.mockReset();
 });
 
 describe('danh sách — trộn nhiều project', () => {
@@ -127,55 +136,22 @@ describe('danh sách — trộn nhiều project', () => {
 });
 
 describe('chỉ xem — không có đường sửa/xoá', () => {
-  it('bấm Xem thì gọi get(id) và mở modal đọc nội dung đầy đủ', async () => {
+  // Modal chỉ-xem tại chỗ đã chuyển thành trang riêng /price-sheets/:id
+  // (PriceSheetPage) để có link gửi được cho người khác — coverage "không có
+  // input/nút Lưu/Xoá" và "Lịch sử không có nút Khôi phục" giờ nằm ở
+  // pages/__tests__/PriceSheetPage.test.jsx, đúng nơi view đó được dựng.
+  it('bấm Xem điều hướng sang link riêng của bảng, không tự fetch', async () => {
     const user = userEvent.setup();
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
-    priceSheetApi.get.mockResolvedValue({ data: fullSheet() });
 
     render(<PriceSheetSection />);
     await user.click(await screen.findByRole('button', { name: 'Xem' }));
 
-    await waitFor(() => expect(priceSheetApi.get).toHaveBeenCalledWith('sheet_1'));
-    expect(await screen.findByText('Chỉ xem — Admin không sửa hay xoá bảng tính giá của Seller ở đây.')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/price-sheets/sheet_1');
+    expect(priceSheetApi.get).not.toHaveBeenCalled();
   });
 
-  it('modal xem không có input hay nút Lưu/Sửa/Xoá nào', async () => {
-    const user = userEvent.setup();
-    priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
-    priceSheetApi.get.mockResolvedValue({ data: fullSheet() });
-
-    render(<PriceSheetSection />);
-    await user.click(await screen.findByRole('button', { name: 'Xem' }));
-    // Tên bảng lặp ở cả dòng danh sách lẫn tiêu đề modal — chờ tiêu đề Chỉ Xem
-    // xuất hiện là đủ xác nhận modal đã mở, không cần tìm theo tên bảng.
-    await screen.findByText('Chỉ xem — Admin không sửa hay xoá bảng tính giá của Seller ở đây.');
-
-    // Ô tìm kiếm ngoài trang (nền sau modal) vẫn là 1 textbox hợp lệ — chỉ loại
-    // đúng nó ra, còn lại phải rỗng thì mới chắc BÊN TRONG modal không có input.
-    const searchBox = screen.getByPlaceholderText(/Tìm bảng/);
-    expect(screen.queryAllByRole('textbox').filter((el) => el !== searchBox)).toHaveLength(0);
-    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: /Lưu/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Xoá/ })).not.toBeInTheDocument();
-  });
-
-  it('panel Lịch sử mở từ modal xem không có nút Khôi phục', async () => {
-    const user = userEvent.setup();
-    priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
-    priceSheetApi.get.mockResolvedValue({ data: fullSheet() });
-    priceSheetApi.versions.mockResolvedValue({
-      data: [{ version: 2, savedAt: '2026-08-17T00:00:00.000Z', savedBy: 'Seller A', avgMargin: 40, minPrice: 20, maxPrice: 30, count: 2 }],
-    });
-
-    render(<PriceSheetSection />);
-    await user.click(await screen.findByRole('button', { name: 'Xem' }));
-    await user.click(await screen.findByRole('button', { name: 'Lịch sử phiên bản' }));
-
-    await screen.findByText(/v2/);
-    expect(screen.queryByRole('button', { name: /Khôi phục/ })).not.toBeInTheDocument();
-  });
-
-  it('bấm export ở danh sách gọi get(id) rồi xuất file, không mở modal', async () => {
+  it('bấm export ở danh sách gọi get(id) rồi xuất file, không điều hướng', async () => {
     const user = userEvent.setup();
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
     priceSheetApi.get.mockResolvedValue({ data: fullSheet() });
@@ -187,7 +163,7 @@ describe('chỉ xem — không có đường sửa/xoá', () => {
     await waitFor(() => expect(xlsxMock.writeFile).toHaveBeenCalled());
     // Xuất ĐÚNG tên file quy ước, và đi qua mock nên không rơi file vào repo.
     expect(xlsxMock.writeFile.mock.calls[0][1]).toMatch(/^HC_Gia_.*.xlsx$/);
-    expect(screen.queryByText('Chỉ xem — Admin không sửa hay xoá bảng tính giá của Seller ở đây.')).not.toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 

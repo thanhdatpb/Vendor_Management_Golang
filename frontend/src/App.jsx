@@ -8,6 +8,7 @@ import VendorDashboard from "./pages/VendorDashboard";
 import CsfDashboard from "./pages/CsfDashboard";
 import MarvelVendorLibrary from "./components/csfpd/MarvelVendorLibrary";
 import PdDashboard from "./pages/PdDashboard";
+import PriceSheetPage from "./pages/PriceSheetPage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -81,6 +82,19 @@ export default function App() {
           <ProtectedRoute>
             <RoleRoute allow={["pd"]}>
               <PdDashboard />
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Link riêng cho 1 bảng tính giá — chỉ Admin + Seller/StaffA, không public,
+          không cho CSF/PD/Marvel/StaffB/Vendor (bảng chứa giá bán). */}
+      <Route
+        path="/price-sheets/:id"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "seller", "staffa", "staff"]}>
+              <PriceSheetPage />
             </RoleRoute>
           </ProtectedRoute>
         }

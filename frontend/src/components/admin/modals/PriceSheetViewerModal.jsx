@@ -112,13 +112,67 @@ function toneColorOf(tone) {
 }
 
 /**
+ * Thân bảng chỉ-xem, KHÔNG overlay — dùng chung cho modal Admin (dưới đây)
+ * và trang /price-sheets/:id (PriceSheetPage, mở qua link riêng).
+ *
  * @param {object} sheet — bảng ĐẦY ĐỦ (từ priceSheetApi.get(id)), không phải
  *   dòng tổng hợp trong danh sách.
+ * @param {React.ReactNode} actions — nút bên phải header (History/Export/Đóng
+ *   hoặc History/Export/Copy link/Back tuỳ nơi gọi).
+ * @param {string} [footerNote] — dòng chú thích cuối bảng.
  */
-export default function PriceSheetViewerModal({ sheet, onClose, onOpenHistory, showToast }) {
+export function PriceSheetReadOnlyView({ sheet, actions, footerNote = 'Chỉ xem — không sửa hay xoá bảng tính giá của Seller ở đây.' }) {
   const summary = useMemo(() => summarizeSheet(sheet), [sheet]);
   const mTone = marginTone(summary.avgMargin);
 
+  return (
+    <>
+      <PsStyles />
+
+      <div style={{
+        padding: '14px 20px', background: PS.bgSurface, borderBottom: `1px solid ${PS.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+      }}>
+        <div style={{ minWidth: 0, flex: 1, borderLeft: `4px solid ${PS.accentBar}`, paddingLeft: 12 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: PS.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {sheet.name || 'Bảng tính giá'}
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+            <Badge>{projectLabel(sheet.project)}</Badge>
+            {sheet.vendorRef && <Badge>{sheet.vendorRef}</Badge>}
+            <Badge>{summary.count} size</Badge>
+            {summary.avgMargin != null && <Badge tone={mTone}>avg margin {pct(summary.avgMargin, 1)}</Badge>}
+            {sheet.createdBy && <Badge>tạo bởi {sheet.createdBy}</Badge>}
+            {sheet.updatedBy && <Badge>cập nhật bởi {sheet.updatedBy}</Badge>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          {actions}
+        </div>
+      </div>
+
+      <SettingsBar settings={sheet.settings} />
+
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 20px' }}>
+        {(sheet.productTypes || []).filter((pt) => pt.shown !== false).map((pt) => (
+          <ProductTypeTable key={pt.id} pt={pt} settings={sheet.settings} />
+        ))}
+        {(!sheet.productTypes || sheet.productTypes.length === 0) && (
+          <div style={{ textAlign: 'center', color: PS.textMuted, padding: 40 }}>Bảng chưa có Product Type nào.</div>
+        )}
+      </div>
+
+      <div style={{
+        padding: '10px 20px', borderTop: `1px solid ${PS.border}`, background: PS.bgSurface,
+        fontSize: 12, color: PS.textMuted, textAlign: 'center',
+      }}>
+        {footerNote}
+      </div>
+    </>
+  );
+}
+
+export default function PriceSheetViewerModal({ sheet, onClose, onOpenHistory, showToast }) {
   return (
     <div className="ps-overlay" onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
@@ -126,49 +180,15 @@ export default function PriceSheetViewerModal({ sheet, onClose, onOpenHistory, s
         width: 'min(1100px, 96vw)', maxHeight: '92vh', display: 'flex', flexDirection: 'column',
         background: PS.bgApp, borderRadius: 16, overflow: 'hidden', boxShadow: PS.shadowModal, color: PS.text,
       }}>
-        <PsStyles />
-
-        <div style={{
-          padding: '14px 20px', background: PS.bgSurface, borderBottom: `1px solid ${PS.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-        }}>
-          <div style={{ minWidth: 0, flex: 1, borderLeft: `4px solid ${PS.accentBar}`, paddingLeft: 12 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: PS.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {sheet.name || 'Bảng tính giá'}
-            </div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-              <Badge>{projectLabel(sheet.project)}</Badge>
-              {sheet.vendorRef && <Badge>{sheet.vendorRef}</Badge>}
-              <Badge>{summary.count} size</Badge>
-              {summary.avgMargin != null && <Badge tone={mTone}>avg margin {pct(summary.avgMargin, 1)}</Badge>}
-              {sheet.createdBy && <Badge>tạo bởi {sheet.createdBy}</Badge>}
-              {sheet.updatedBy && <Badge>cập nhật bởi {sheet.updatedBy}</Badge>}
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        <PriceSheetReadOnlyView
+          sheet={sheet}
+          footerNote="Chỉ xem — Admin không sửa hay xoá bảng tính giá của Seller ở đây."
+          actions={<>
             <Btn variant="outline" onClick={() => onOpenHistory(sheet)}>Lịch sử phiên bản</Btn>
             <Btn variant="outline" onClick={() => exportSheetToExcel(sheet, showToast)}>⬇ Export Excel</Btn>
             <IconBtn title="Đóng" onClick={onClose}>✕</IconBtn>
-          </div>
-        </div>
-
-        <SettingsBar settings={sheet.settings} />
-
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 20px' }}>
-          {(sheet.productTypes || []).filter((pt) => pt.shown !== false).map((pt) => (
-            <ProductTypeTable key={pt.id} pt={pt} settings={sheet.settings} />
-          ))}
-          {(!sheet.productTypes || sheet.productTypes.length === 0) && (
-            <div style={{ textAlign: 'center', color: PS.textMuted, padding: 40 }}>Bảng chưa có Product Type nào.</div>
-          )}
-        </div>
-
-        <div style={{
-          padding: '10px 20px', borderTop: `1px solid ${PS.border}`, background: PS.bgSurface,
-          fontSize: 12, color: PS.textMuted, textAlign: 'center',
-        }}>
-          Chỉ xem — Admin không sửa hay xoá bảng tính giá của Seller ở đây.
-        </div>
+          </>}
+        />
       </div>
     </div>
   );

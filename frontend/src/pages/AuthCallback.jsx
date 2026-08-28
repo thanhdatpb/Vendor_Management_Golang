@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../services/api";
+import { postLoginPath } from "../utils/postLoginRedirect";
 import AccountChooser from "../components/shared/AccountChooser";
 import logoImg from "../assets/logo.png";
 
@@ -11,16 +12,6 @@ const ERROR_MESSAGES = {
   email_not_verified:  "Gmail của bạn chưa được Google xác minh.",
   oauth_failed:        "Xác thực Google thất bại. Vui lòng thử lại.",
 };
-
-function resolveRoleRoute(role) {
-  const r = (role || "").toLowerCase().replace(/[_\-\s]/g, "");
-  if (r === "admin")  return "/admin";
-  if (r === "vendor" || r === "staffb") return "/vendor";
-  if (r === "csf") return "/csf";
-  if (r === "marvel") return "/marvel";
-  if (r === "pd")  return "/pd";
-  return "/seller"; // seller / staffa
-}
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -37,7 +28,7 @@ export default function AuthCallback() {
     if (userData.seller_name) userData.sellerName = userData.seller_name;
     localStorage.setItem("auth_token", token);
     localStorage.setItem("user", JSON.stringify(userData));
-    window.location.href = resolveRoleRoute(userData.role);
+    window.location.href = postLoginPath(userData.role);
   };
 
   useEffect(() => {

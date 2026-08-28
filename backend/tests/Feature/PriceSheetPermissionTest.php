@@ -9,25 +9,19 @@ use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
- * PR-S1 — Role chỉ-đọc KHÔNG được đọc / ghi / xoá bảng tính giá.
+ * PR-S1 — Bảng tính giá chỉ Admin + Seller/StaffA được đụng vào.
  *
- * ⛔ ĐỎ LÀ ĐÚNG cho tới khi Milestone S xong. Hiện tại:
- *   - PriceSheetController::seesAllProjects() có sẵn chuỗi 'marvel' → user
- *     Marvel (được mô tả là "quyền y hệt CSF, read-only, không thấy giá") đang
- *     đọc được MỌI bảng giá của MỌI project, ghi đè và xoá được.
- *   - Ba route /price-sheets không có middleware role nào → CSF/PD cũng vào được.
- *
- * Chạy riêng nhóm này:  php artisan test --group=pending
- * Khi PR-S1 merge: bỏ #[Group('pending')] để test thành cổng chặn merge.
+ * Trước bản này, PriceSheetController::seesAllProjects() có sẵn chuỗi
+ * 'marvel'/'staffb'/'vendor' và 3 route /price-sheets không có middleware
+ * role nào → Marvel/CSF/PD/StaffB/Vendor đều đọc/ghi/xoá được MỌI bảng giá.
  */
-#[Group('pending')]
 #[Group('milestone-s')]
 class PriceSheetPermissionTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Ba role chỉ-đọc theo mô tả sản phẩm: Marvel, CSF, PD. */
-    private const READ_ONLY_ROLES = ['marvel', 'csf', 'pd'];
+    /** Role không được đụng vào bảng tính giá: 3 role chỉ-xem + StaffB/Vendor. */
+    private const READ_ONLY_ROLES = ['marvel', 'csf', 'pd', 'staffb', 'vendor'];
 
     private function user(string $role, ?string $project = null): User
     {
@@ -125,7 +119,6 @@ class PriceSheetPermissionTest extends TestCase
 
         $this->actingAs($this->user('seller', 'happy'))->getJson('/api/price-sheets')->assertOk();
         $this->actingAs($this->user('admin'))->getJson('/api/price-sheets')->assertOk();
-        $this->actingAs($this->user('vendor'))->getJson('/api/price-sheets')->assertOk();
     }
 
     public function test_seller_clone_sang_project_khac_van_bi_ep_ve_project_cua_minh(): void
