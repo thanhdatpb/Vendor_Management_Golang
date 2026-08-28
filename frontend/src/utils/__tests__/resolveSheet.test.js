@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { loadVendorLibraryIndex } from '../vendorLibraryIndex';
-import { resolveSheet, libSizesOf, libSizeId, baseSizesOf } from '../resolveSheet';
+import { resolveSheet, libSizesOf, libSizeId, baseSizesOf, restoreFromLibrary } from '../resolveSheet';
 import { findLibraryEntry } from '../vendorLibraryIndex';
 
 vi.mock('../../services/api', () => import('../../test/apiMock.js'));
@@ -67,6 +67,34 @@ describe('resolveSheet — Product Type lấy từ thư viện', () => {
     resolveSheet(sheet, libIndex);
     expect(JSON.stringify(sheet)).toBe(beforeSheet);
     expect(JSON.stringify(libIndex)).toBe(beforeIndex);     // thư viện Vendor gốc không được đổi
+  });
+
+  it('lọc bỏ size thư viện nếu nằm trong danh sách deletedSizes', () => {
+    const sheet = {
+      productTypes: [libPT({
+        sizes: [
+          { id: 'szlib_pt_lib_s', label: 'S', sizeAdd: '4.5', isLib: true },
+          { id: 'szlib_pt_lib_m', label: 'M', sizeAdd: '5', isLib: true },
+        ],
+        deletedSizes: ['S'],
+      })],
+    };
+    const out = resolveSheet(sheet, libIndex);
+    const labels = out.productTypes[0].sizes.map((s) => s.label);
+    expect(labels).not.toContain('S');
+    expect(labels).toContain('M');
+  });
+
+  it('“Khôi phục theo thư viện” khôi phục cả size thư viện đã bị xoá', () => {
+    const pt = libPT({
+      sizes: [
+        { id: 'szlib_pt_lib_m', label: 'M', sizeAdd: '5', isLib: true },
+      ],
+      deletedSizes: ['S'],
+    });
+    const restored = restoreFromLibrary(pt, libIndex);
+    expect(restored.deletedSizes).toBeUndefined();
+    expect(restored.sizes.map((s) => s.label)).toEqual(['S', 'M', 'L', 'XL', '2XL']);
   });
 });
 

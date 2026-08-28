@@ -49,7 +49,7 @@ export const libSizeId = (ptId, label) => `szlib_${ptId}_${normalizeKey(label)}`
  * viện → vừa mọc thêm một dòng "S" mới, vừa biến dòng cũ thành size lạ. Vì vậy
  * dòng thư viện luôn mang theo `libLabel` = nhãn GỐC của thư viện.
  */
-const libLabelOf = (sz) => sz?.libLabel ?? sz?.label;
+export const libLabelOf = (sz) => sz?.libLabel ?? sz?.label;
 
 /** Giá mặc định của các cột Customize — chỉ áp cho dòng size MỚI dựng (mục 06). */
 function defaultCustomizeOf(pt) {
@@ -69,11 +69,14 @@ function defaultCustomizeOf(pt) {
  * tạo mới với id tiền định để state và UI luôn dùng chung một id.
  */
 export function libSizesOf(pt, libSource) {
-  return (libSource?.sizes || []).map((label) => {
-    const existing = (pt.sizes || []).find((s) => libLabelOf(s) === label);
-    if (existing) return existing;
-    return { ...makeSize(label, ''), id: libSizeId(pt.id, label), customize: defaultCustomizeOf(pt) };
-  });
+  const deleted = pt?.deletedSizes || [];
+  return (libSource?.sizes || [])
+    .filter((label) => !deleted.includes(label))
+    .map((label) => {
+      const existing = (pt.sizes || []).find((s) => libLabelOf(s) === label);
+      if (existing) return existing;
+      return { ...makeSize(label, ''), id: libSizeId(pt.id, label), customize: defaultCustomizeOf(pt) };
+    });
 }
 
 /**
@@ -212,6 +215,7 @@ export function restoreFromLibrary(pt, libIndex) {
   });
   const rest = { ...pt };
   delete rest.sizeOrder;
+  delete rest.deletedSizes;
   return { ...rest, sizes };
 }
 

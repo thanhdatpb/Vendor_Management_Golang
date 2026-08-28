@@ -15,7 +15,7 @@ import {
   makeSize, makeProductType, uid,
 } from '../../utils/pricingEngine';
 import { loadVendorLibraryIndex, findLibraryEntry, findLibraryRecord } from '../../utils/vendorLibraryIndex';
-import { resolveSheet, baseSizesOf as baseSizesOfLib, libSizesOf, restoreFromLibrary } from '../../utils/resolveSheet';
+import { resolveSheet, baseSizesOf as baseSizesOfLib, libSizesOf, restoreFromLibrary, libLabelOf } from '../../utils/resolveSheet';
 import { moveByDelta, moveById, orderIdsOf } from '../../utils/sheetStructure';
 import { exportSheetToExcel } from '../../utils/sheetExport';
 
@@ -105,7 +105,32 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       ...(pt.sizeOrder?.length ? { sizeOrder: [...pt.sizeOrder, row.id] } : {}),
     };
   }));
-  const removeSize = (ptId, szId) => patchPTSizes(ptId, (sizes) => (sizes.length <= 1 ? sizes : sizes.filter((s) => s.id !== szId)));
+  const removeSize = (ptId, szId) => {
+    setProductTypes((prevPTs) => prevPTs.map((pt) => {
+      if (pt.id !== ptId) return pt;
+      const currentSizes = baseSizesOf(pt);
+      if (currentSizes.length <= 1) return pt;
+      const toRemove = currentSizes.find((s) => s.id === szId);
+      if (!toRemove) return pt;
+
+      const isLib = toRemove.isLib;
+      const label = libLabelOf(toRemove);
+
+      const nextDeletedSizes = [...(pt.deletedSizes || [])];
+      if (isLib && label && !nextDeletedSizes.includes(label)) {
+        nextDeletedSizes.push(label);
+      }
+
+      const updatedPtSizes = (pt.sizes || []).filter((s) => s.id !== szId);
+
+      return {
+        ...pt,
+        sizes: updatedPtSizes,
+        deletedSizes: nextDeletedSizes,
+        ...(pt.sizeOrder?.length ? { sizeOrder: pt.sizeOrder.filter((id) => id !== szId) } : {}),
+      };
+    }));
+  };
   const updateSize = (ptId, szId, patch) => patchPTSizes(ptId, (sizes) => sizes.map((s) => (s.id === szId ? { ...s, ...patch } : s)));
   const updateSizeCustomize = (ptId, szId, ciId, val) =>
     patchPTSizes(ptId, (sizes) => sizes.map((s) => (s.id === szId ? { ...s, customize: { ...s.customize, [ciId]: val } } : s)));
