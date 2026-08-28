@@ -166,6 +166,23 @@ export function summarizeSheet(sheet) {
   };
 }
 
+/**
+ * Đếm số Product Type cùng tên (chuẩn hoá trim+lowercase) trong 1 bảng —
+ * dùng để gắn nhãn "So sánh · N" trên card khi Seller thêm nhiều block cùng
+ * phôi (nhiều vendor) để so giá (vấn đề #3, mindmap 2026-08-28). Chỉ đếm
+ * PT đang `shown` — card đang ẩn không cần tính vào, và không tính PT chưa
+ * đặt tên (tên rỗng không phải một "nhóm" thật).
+ */
+export function productTypeCompareCounts(productTypes) {
+  const counts = {};
+  (productTypes || []).filter((pt) => pt.shown).forEach((pt) => {
+    const key = (pt.name || '').trim().toLowerCase();
+    if (!key) return;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return counts;
+}
+
 // ─── Factory helpers ──────────────────────────────────────────────────────
 let _seq = 0;
 export const uid = (p = 'id') => `${p}_${Date.now().toString(36)}_${(_seq++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;

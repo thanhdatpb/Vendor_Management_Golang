@@ -8,27 +8,19 @@ import { useNavigate } from 'react-router-dom';
 import { HC } from '../../constants/sellerTheme';
 import AppToast from '../shared/AppToast';
 import { Pagination } from './SellerUI';
-import { vendorLibraryApi, priceSheetApi } from '../../services/api';
+import { priceSheetApi } from '../../services/api';
 import { saveSheetToServer } from '../../utils/priceSheetCommit';
 import { subscribePriceSheetChanges } from '../../services/echo';
-import { usd, pct, makeSheet, makeProductType, makeSize } from '../../utils/pricingEngine';
+import { usd, pct, makeSheet } from '../../utils/pricingEngine';
 import { normalizeSheetRow, matchesSheetSearch, sheetInProject, toSummaryRow } from '../../utils/priceSheetSummary';
 import { priceSheetPath, copyPriceSheetLink } from '../../utils/priceSheetLink';
+import { loadVendorLibraryIndex, listLibraryRecords } from '../../utils/vendorLibraryIndex';
+import { makeProductTypeFromRecord } from '../../utils/resolveSheet';
 import { exportSheetToExcel } from './PriceSheetWorkspace';
 
 const LS_SHEETS = 'PRICE_SHEETS_V1';
 const ITEMS_PER_PAGE = 10;
 
-// ── Project filter helpers (mirror VendorLibraryViewer) ──
-function _extractFileProject(filename) {
-  if (!filename) return null;
-  const fn = filename.toLowerCase();
-  if (fn.includes('p.hapify84')) return 'hapify84';
-  if (fn.includes('p.happy')) return 'happy';
-  if (fn.includes('p.creative')) return 'creative';
-  if (fn.includes('p.global')) return 'global';
-  return null;
-}
 function _getUserProjectKey() {
   try {
     const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -305,75 +297,60 @@ export default function SetupPriceSection() {
 
 const chip = { padding: '2px 8px', borderRadius: 10, background: HC.surface2, border: `1px solid ${HC.border}`, fontSize: 10, fontWeight: 600, color: HC.ink2, whiteSpace: 'nowrap', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis' };
 
+const vendorChip = (active) => ({
+  fontSize: 12, fontWeight: active ? 700 : 600, padding: '5px 11px', borderRadius: 999, cursor: 'pointer',
+  border: `1px solid ${active ? HC.orange : HC.border}`,
+  background: active ? HC.orangeLight : HC.surface,
+  color: active ? HC.orangeDark : HC.muted, whiteSpace: 'nowrap',
+});
+
 // ════════════════════════════════════════════════════════
 //  Create modal — gom Product Type từ Thư viện Vendor
 // ════════════════════════════════════════════════════════
 function CreateSheetModal({ projectKey, skip, onClose, onCreate, showToast }) {
   const [name, setName] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [libItems, setLibItems] = useState([]);
-  const [picked, setPicked] = useState({}); // key -> item
+  const [libIndex, setLibIndex] = useState(null); // null = đang tải
+  const [picked, setPicked] = useState({}); // recordKey -> record
   const [q, setQ] = useState('');
+  const [vendorFilter, setVendorFilter] = useState('');
 
+  // Liệt kê theo RECORD (mỗi vendor một dòng riêng) — cùng nguồn/logic với
+  // "+ Thêm Product Type" trong workspace (AddProductTypeModal, mục 03/04).
+  // Trước đây modal này tự gom theo TÊN phôi (byPT không phân biệt vendor):
+  // 2 vendor cùng tên "Poster" bị đè nhau, giữ đúng 1 mã vendor, size lẫn lộn,
+  // và không gắn `libRef` nên mở lại bảng vẫn tra nhầm theo tên — sinh đúng
+  // bug PR-A3 đã sửa ở nhánh AddProductTypeModal.
   useEffect(() => {
     let alive = true;
-    (async () => {
-      try {
-        const res = await vendorLibraryApi.get('all');
-        const files = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : []);
-        const filtered = (skip || !projectKey) ? files : files.filter((f) => {
-          const fp = _extractFileProject(f.filename);
-          return !fp || projectKey.includes(fp) || fp.includes(projectKey);
-        });
-        const items = [];
-        filtered.forEach((file) => {
-          const pricing = Array.isArray(file.pricing) ? file.pricing : [];
-          const byPT = {};
-          pricing.forEach((p) => {
-            const pt = (p.productType || '').trim();
-            if (!pt) return;
-            if (!byPT[pt]) byPT[pt] = { productType: pt, vendor: (p.kyHieu || '').trim(), sizes: new Set() };
-            if (p.size && String(p.size).trim() && p.size !== 'N/A') byPT[pt].sizes.add(String(p.size).trim());
-          });
-          Object.values(byPT).forEach((v) => items.push({
-            key: `${file.id}::${v.productType}`,
-            productType: v.productType,
-            vendor: v.vendor,
-            filename: (file.filename || '').replace(/\.[^.]+$/, ''),
-            sizes: [...v.sizes],
-          }));
-        });
-        if (alive) { setLibItems(items); setLoading(false); }
-      } catch (err) {
+    loadVendorLibraryIndex(skip ? '' : projectKey, skip)
+      .then((idx) => { if (alive) setLibIndex(idx); })
+      .catch((err) => {
         console.error('load library for create', err);
-        if (alive) { setLibItems([]); setLoading(false); }
-      }
-    })();
+        if (alive) setLibIndex({});
+      });
     return () => { alive = false; };
   }, [projectKey, skip]);
 
-  const shown = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return libItems;
-    return libItems.filter((i) => i.productType.toLowerCase().includes(s) || (i.vendor || '').toLowerCase().includes(s) || i.filename.toLowerCase().includes(s));
-  }, [libItems, q]);
+  const loading = libIndex == null;
+  const all = useMemo(() => listLibraryRecords(libIndex), [libIndex]);
+  const vendors = useMemo(
+    () => [...new Set(all.map((r) => r.vendorCode).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+    [all]
+  );
+  const shown = useMemo(() => listLibraryRecords(libIndex, { q, vendor: vendorFilter }), [libIndex, q, vendorFilter]);
 
-  const toggle = (item) => setPicked((p) => { const n = { ...p }; if (n[item.key]) delete n[item.key]; else n[item.key] = item; return n; });
+  const toggle = (rec) => setPicked((p) => { const n = { ...p }; if (n[rec.recordKey]) delete n[rec.recordKey]; else n[rec.recordKey] = rec; return n; });
 
   const create = (fromLibrary) => {
     const nm = name.trim() || 'Bảng tính giá mới';
     const sheet = makeSheet(nm, skip ? '' : projectKey);
     if (fromLibrary) {
-      const items = Object.values(picked);
-      if (items.length === 0) { showToast('error', 'Chưa chọn', 'Chọn ít nhất một Product Type để gom vào bảng.'); return; }
-      sheet.productTypes = items.map((it) => {
-        const pt = makeProductType(it.productType);
-        pt.sizes = it.sizes.length ? it.sizes.map((lbl) => makeSize(lbl)) : [makeSize()];
-        return pt;
-      });
-      const vendors = [...new Set(items.map((i) => i.vendor).filter(Boolean))];
-      sheet.vendorRef = vendors.join(', ');
-      sheet._sourceFile = [...new Set(items.map((i) => i.filename))].slice(0, 1)[0] || '';
+      const records = Object.values(picked);
+      if (records.length === 0) { showToast('error', 'Chưa chọn', 'Chọn ít nhất một Product Type để gom vào bảng.'); return; }
+      sheet.productTypes = records.map((rec) => makeProductTypeFromRecord(rec));
+      const vendorCodes = [...new Set(records.map((r) => r.vendorCode).filter(Boolean))];
+      sheet.vendorRef = vendorCodes.join(', ');
+      sheet._sourceFile = [...new Set(records.map((r) => r.filename))].slice(0, 1)[0] || '';
     }
     onCreate(sheet);
   };
@@ -398,17 +375,28 @@ function CreateSheetModal({ projectKey, skip, onClose, onCreate, showToast }) {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Lọc product type / vendor..."
             style={{ width: '100%', boxSizing: 'border-box', marginBottom: 10, padding: '8px 11px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, outline: 'none' }} />
 
+          {/* Lọc theo vendor — chỉ hiện khi thư viện có từ 2 vendor trở lên, cùng
+              UX với AddProductTypeModal trong workspace (mục 05). */}
+          {vendors.length > 1 && (
+            <div role="group" aria-label="Lọc theo vendor" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+              <button type="button" onClick={() => setVendorFilter('')} aria-pressed={vendorFilter === ''} style={vendorChip(vendorFilter === '')}>Tất cả vendor</button>
+              {vendors.map((v) => (
+                <button key={v} type="button" onClick={() => setVendorFilter(v)} aria-pressed={vendorFilter === v} style={vendorChip(vendorFilter === v)}>{v}</button>
+              ))}
+            </div>
+          )}
+
           <div style={{ border: `1px solid ${HC.border}`, borderRadius: 10, maxHeight: 260, overflowY: 'auto', background: HC.surface2 }}>
             {loading ? <div style={{ padding: 30, textAlign: 'center', color: HC.muted }}>Đang tải thư viện…</div>
               : shown.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: HC.muted, fontSize: 13 }}>Không có product type nào trong thư viện của bạn. Vẫn có thể tạo bảng trống.</div>
-                : shown.map((it) => {
-                  const on = !!picked[it.key];
+                : shown.map((rec) => {
+                  const on = !!picked[rec.recordKey];
                   return (
-                    <div key={it.key} onClick={() => toggle(it)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: `1px solid ${HC.border}`, cursor: 'pointer', background: on ? HC.orangeLight : 'transparent' }}>
+                    <div key={rec.recordKey} onClick={() => toggle(rec)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: `1px solid ${HC.border}`, cursor: 'pointer', background: on ? HC.orangeLight : 'transparent' }}>
                       <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${on ? HC.orange : HC.borderStrong}`, background: on ? HC.orange : HC.surface, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, flexShrink: 0 }}>{on ? '✓' : ''}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 13 }}>{it.productType}</div>
-                        <div style={{ fontSize: 10.5, color: HC.muted }}>{it.vendor && `${it.vendor} · `}{it.sizes.length} size · 📄 {it.filename}</div>
+                        <div style={{ fontWeight: 700, color: HC.ink2, fontSize: 13 }}>{rec.productType}</div>
+                        <div style={{ fontSize: 10.5, color: HC.muted }}>{rec.vendorCode && `Vendor: ${rec.vendorCode} · `}{(rec.sizes || []).length} size · 📄 {rec.filename}</div>
                       </div>
                     </div>
                   );

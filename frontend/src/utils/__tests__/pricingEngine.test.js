@@ -3,7 +3,7 @@
 //  Đây là lưới an toàn cho mọi refactor sau này: công thức sai = tiền sai.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
-import { computeSizeRow, summarizeSheet, num, DEFAULT_SETTINGS } from '../pricingEngine';
+import { computeSizeRow, summarizeSheet, num, DEFAULT_SETTINGS, productTypeCompareCounts } from '../pricingEngine';
 
 const settings = {
   ...DEFAULT_SETTINGS,
@@ -144,5 +144,49 @@ describe('summarizeSheet', () => {
     };
     const clean = { settings, productTypes: [{ ...withJunk.productTypes[0], sizes: [withJunk.productTypes[0].sizes[0]] }] };
     expect(summarizeSheet(withJunk).avgMargin).toBeLessThan(summarizeSheet(clean).avgMargin);
+  });
+});
+
+// Vấn đề #3 (mindmap 2026-08-28) — nhãn "So sánh · N" khi Seller thêm nhiều
+// Product Type block cùng tên phôi (mỗi block 1 vendor) để so giá.
+describe('productTypeCompareCounts', () => {
+  it('2 PT cùng tên (khác vendor) → cả 2 đếm 2', () => {
+    const productTypes = [
+      { id: 'a', name: 'Poster', shown: true, vendorCode: 'VN3' },
+      { id: 'b', name: 'Poster', shown: true, vendorCode: 'VN7' },
+      { id: 'c', name: 'Ceramic Mug', shown: true, vendorCode: 'VN3' },
+    ];
+    const counts = productTypeCompareCounts(productTypes);
+    expect(counts['poster']).toBe(2);
+    expect(counts['ceramic mug']).toBe(1);
+  });
+
+  it('chuẩn hoá trim + hoa/thường — "Poster" và " poster " tính chung một nhóm', () => {
+    const counts = productTypeCompareCounts([
+      { id: 'a', name: 'Poster', shown: true },
+      { id: 'b', name: ' poster ', shown: true },
+    ]);
+    expect(counts['poster']).toBe(2);
+  });
+
+  it('PT đang ẩn (shown: false) không tính vào', () => {
+    const counts = productTypeCompareCounts([
+      { id: 'a', name: 'Poster', shown: true },
+      { id: 'b', name: 'Poster', shown: false },
+    ]);
+    expect(counts['poster']).toBe(1);
+  });
+
+  it('PT chưa đặt tên (rỗng) không tạo nhóm', () => {
+    const counts = productTypeCompareCounts([
+      { id: 'a', name: '', shown: true },
+      { id: 'b', name: '  ', shown: true },
+    ]);
+    expect(counts).toEqual({});
+  });
+
+  it('mảng rỗng / undefined không vỡ', () => {
+    expect(productTypeCompareCounts([])).toEqual({});
+    expect(productTypeCompareCounts(undefined)).toEqual({});
   });
 });

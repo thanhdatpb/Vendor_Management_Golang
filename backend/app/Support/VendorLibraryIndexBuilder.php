@@ -68,6 +68,43 @@ final class VendorLibraryIndexBuilder
     }
 
     /**
+     * Thông tin phôi (mục 02, không phải giá) từ Section 1 của Excel — chất
+     * liệu, ảnh đầu tiên, chi tiết size, AVG TG — gom theo `kyHieu` (vendor gặp
+     * trước thắng, cùng quy ước "vendor gặp trước" đang dùng ở chỗ khác trong
+     * hệ thống). Không phải khoá giá nên KHÔNG cần lọc theo `$seesPrices`.
+     *
+     * @param  array<int,mixed>  $rows  `$file['generalInfo']`
+     * @return array<string,array<string,string>>  kyHieu (lowercase) → info
+     */
+    private static function indexGeneralInfoByVendor(array $rows): array
+    {
+        $byVendor = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $vendorCode = strtolower(trim((string) ($row['kyHieu'] ?? '')));
+            if ($vendorCode === '' || isset($byVendor[$vendorCode])) {
+                continue;
+            }
+
+            $images = is_array($row['images'] ?? null) ? $row['images'] : [];
+
+            $byVendor[$vendorCode] = [
+                'chatLieu'      => (string) ($row['chatLieu'] ?? ''),
+                'chiTietSize'   => (string) ($row['chiTietSize'] ?? ''),
+                'image'         => (string) ($images[0] ?? ''),
+                'avgTimeVendor' => (string) ($row['avgTimeVendor'] ?? ''),
+                'avgTimeActual' => (string) ($row['avgTimeActual'] ?? ''),
+            ];
+        }
+
+        return $byVendor;
+    }
+
+    /**
      * @param  array<int,mixed>  $files  blob thư viện đã json_decode
      * @return list<array<string,mixed>>
      */
@@ -89,6 +126,10 @@ final class VendorLibraryIndexBuilder
                 continue;
             }
 
+            $generalByVendor = self::indexGeneralInfoByVendor(
+                is_array($file['generalInfo'] ?? null) ? $file['generalInfo'] : []
+            );
+
             $pricing = is_array($file['pricing'] ?? null) ? $file['pricing'] : [];
             foreach ($pricing as $row) {
                 if (!is_array($row)) {
@@ -104,13 +145,19 @@ final class VendorLibraryIndexBuilder
                 $key        = self::recordKey($filename, $vendorCode, $productType);
 
                 if (!isset($records[$key])) {
+                    $general = $generalByVendor[strtolower($vendorCode)] ?? [];
                     $records[$key] = [
-                        'recordKey'   => $key,
-                        'productType' => $productType,
-                        'vendorCode'  => $vendorCode,
-                        'filename'    => $filename,
-                        'project'     => self::fileProject($filename),
-                        'sizes'       => [],
+                        'recordKey'     => $key,
+                        'productType'   => $productType,
+                        'vendorCode'    => $vendorCode,
+                        'filename'      => $filename,
+                        'project'       => self::fileProject($filename),
+                        'sizes'         => [],
+                        'chatLieu'      => $general['chatLieu'] ?? '',
+                        'chiTietSize'   => $general['chiTietSize'] ?? '',
+                        'image'         => $general['image'] ?? '',
+                        'avgTimeVendor' => $general['avgTimeVendor'] ?? '',
+                        'avgTimeActual' => $general['avgTimeActual'] ?? '',
                     ];
                 }
 

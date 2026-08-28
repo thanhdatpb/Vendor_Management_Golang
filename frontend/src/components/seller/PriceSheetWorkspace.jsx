@@ -12,10 +12,10 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { HistoryOutlined } from '@ant-design/icons';
 import {
   summarizeSheet, num, pct,
-  makeSize, makeProductType, uid,
+  makeSize, makeProductType, uid, productTypeCompareCounts,
 } from '../../utils/pricingEngine';
 import { loadVendorLibraryIndex, findLibraryEntry, findLibraryRecord } from '../../utils/vendorLibraryIndex';
-import { resolveSheet, baseSizesOf as baseSizesOfLib, libSizesOf, restoreFromLibrary, libLabelOf } from '../../utils/resolveSheet';
+import { resolveSheet, baseSizesOf as baseSizesOfLib, restoreFromLibrary, libLabelOf, makeProductTypeFromRecord } from '../../utils/resolveSheet';
 import { moveByDelta, moveById, orderIdsOf } from '../../utils/sheetStructure';
 import { exportSheetToExcel } from '../../utils/sheetExport';
 
@@ -79,15 +79,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   // `pt.libRef` để resolveSheet tra đúng record đó, không tra lại theo tên.
   // Nhờ vậy 2 vendor cùng tên phôi thêm được thành 2 block riêng, không đè nhau.
   const addPTFromLibrary = (record) => {
-    const pt = {
-      ...makeProductType(record.productType), shown: true,
-      libRef: { recordKey: record.recordKey, vendorCode: record.vendorCode, filename: record.filename },
-    };
-    // Nạp sẵn size của thư viện vào state (giống luồng tạo bảng ở SetupPriceSection)
-    // — nếu để mặc định 1 size rỗng thì các dòng size hiển thị chỉ là dữ liệu dựng
-    // tạm của draftSheet, không có trong state để sửa.
-    if (record?.sizes?.length) pt.sizes = libSizesOf(pt, record);
-    setProductTypes((p) => [...p, pt]);
+    setProductTypes((p) => [...p, makeProductTypeFromRecord(record)]);
     setShowAddPTDialog(false);
   };
   // Confirm xoá đã chuyển vào ConfirmDialog trong ProductTypeCard
@@ -197,6 +189,15 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   )));
 
   const shownPTs = productTypes.filter((pt) => pt.shown);
+
+  // Nhóm "cùng phôi" (vấn đề #3, mindmap 2026-08-28) — nhiều Product Type block
+  // trùng tên (mỗi block 1 vendor, xem addPTFromLibrary) đứng cạnh nhau để
+  // Seller so sánh chiến lược giá. Chỉ gắn NHÃN nhận diện, không đổi cấu trúc
+  // PriceTable/sizes — rủi ro thấp nhất trong các phương án đã cân nhắc.
+  const compareCountOf = useMemo(
+    () => productTypeCompareCounts(draftSheet.productTypes),
+    [draftSheet.productTypes]
+  );
 
   // ── save (append version snapshot — GIỮ NGUYÊN, thêm saving state) ──
   // `force` = người dùng đã xem cảnh báo xung đột và cố ý ghi đè (mục 16).
@@ -350,8 +351,9 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
             const libEntry = pt.libRef?.recordKey
               ? findLibraryRecord(libIndex, pt.libRef.recordKey)
               : findLibraryEntry(libIndex, pt.name);
+            const compareCount = compareCountOf[(pt.name || '').trim().toLowerCase()] || 0;
             return (
-              <ProductTypeCard key={pt.id} pt={pt} settings={settings} libEntry={libEntry}
+              <ProductTypeCard key={pt.id} pt={pt} settings={settings} libEntry={libEntry} compareCount={compareCount}
                 onPT={patchPT} onRemovePT={removePT}
                 onAddSize={addSize} onUpdateSize={updateSize} onRemoveSize={removeSize} onUpdateCustomize={updateSizeCustomize}
                 onAddCustomize={openAddCustomize} onRenameCustomize={renameCustomize} onRemoveCustomize={removeCustomize}

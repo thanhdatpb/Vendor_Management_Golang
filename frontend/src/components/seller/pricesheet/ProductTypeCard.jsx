@@ -12,7 +12,7 @@ import PriceTable from './PriceTable';
 import { SHIP_METHODS } from '../../../utils/vendorLibraryIndex';
 
 export default function ProductTypeCard({
-  pt, settings, libEntry,
+  pt, settings, libEntry, compareCount = 0,
   onPT, onRemovePT, onAddSize, onUpdateSize, onRemoveSize,
   onUpdateCustomize, onAddCustomize, onRenameCustomize, onRemoveCustomize,
   onMoveSize, onReorderSizes, onMoveCustomize, onReorderCustomize, onRestoreFromLibrary,
@@ -25,6 +25,12 @@ export default function ProductTypeCard({
   // rơi về `libEntry.vendor` cho bảng cũ resolve theo tên (đường lùi).
   const vendorLabel = pt.vendorCode || libEntry?.vendor || '';
   const recordMissing = pt.warning === 'record-missing';
+  // "Info phôi" (mục 02) — chỉ có khi PT lấy từ thư viện VÀ thư viện thật sự
+  // có ít nhất 1 trong 5 field này (file cũ import trước khi có Section 1
+  // đầy đủ thì rỗng hết — không hiện dòng trống vô nghĩa).
+  const hasGeneralInfo = Boolean(libEntry && (
+    libEntry.image || libEntry.chatLieu || libEntry.chiTietSize || libEntry.avgTimeVendor || libEntry.avgTimeActual
+  ));
 
   return (
     <section aria-label={`Product type ${pt.name || 'chưa đặt tên'}`} style={{
@@ -90,6 +96,41 @@ export default function ProductTypeCard({
             title="Record nguồn (vendor + file) không còn trong thư viện — có thể file đã bị xoá hoặc import lại. Giá đang hiện là bản chốt gần nhất (costSnapshot), không tự đổi số. Kiểm tra lại thư viện Vendor.">
             ⚠ Record nguồn không còn
           </Badge>
+        )}
+        {compareCount > 1 && (
+          <Badge style={{ cursor: 'help' }}
+            title={`${compareCount} block cùng tên "${pt.name}" trong bảng này — so sánh giá giữa các vendor/chiến lược giá khác nhau.`}>
+            🔍 So sánh · {compareCount}
+          </Badge>
+        )}
+        {hasGeneralInfo && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            {libEntry.image && (
+              <img src={libEntry.image} alt="Ảnh phôi" loading="lazy"
+                style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'cover', border: `1px solid ${PS.border}`, flexShrink: 0 }} />
+            )}
+            {libEntry.chatLieu && (
+              <span title={libEntry.chatLieu} style={{
+                fontSize: 11.5, color: PS.textSecondary, maxWidth: 140, overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>🧵 {libEntry.chatLieu}</span>
+            )}
+            {libEntry.chiTietSize && (
+              <span title={libEntry.chiTietSize} style={{
+                fontSize: 11.5, color: PS.textSecondary, maxWidth: 140, overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>📏 {libEntry.chiTietSize}</span>
+            )}
+            {(libEntry.avgTimeVendor || libEntry.avgTimeActual) && (
+              <span
+                title={`AVG TG (Vendor): ${libEntry.avgTimeVendor || '—'}\nAVG TG (Thực tế): ${libEntry.avgTimeActual || '—'}`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
+                  width: 18, height: 18, borderRadius: '50%', fontSize: 10.5, fontWeight: 700,
+                  border: `1px solid ${PS.borderStrong}`, color: PS.textMuted, flexShrink: 0,
+                }}>⏱</span>
+            )}
+          </div>
         )}
 
         {/* Actions */}

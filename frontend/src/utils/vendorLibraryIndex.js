@@ -79,6 +79,14 @@ async function loadLeanRecords(projectKey, skip) {
  * findLibraryEntry và mọi bảng giá cũ tiếp tục chạy đúng như trước — không
  * có migration nào, không có bảng nào tự đổi số khi mở lại.
  */
+/** 5 field "info phôi" (mục 02) — không phải giá, chỉ copy nguyên qua nếu có. */
+const GENERAL_INFO_FIELDS = ['chatLieu', 'chiTietSize', 'image', 'avgTimeVendor', 'avgTimeActual'];
+function pickGeneralInfo(source) {
+  const out = {};
+  GENERAL_INFO_FIELDS.forEach((f) => { out[f] = source?.[f] || ''; });
+  return out;
+}
+
 function indexFromRecords(records) {
   const byKey = {};
   records.forEach((record) => {
@@ -101,6 +109,7 @@ function indexFromRecords(records) {
     (byKey[key] ||= []).push({
       recordKey, productType: ptName, vendorCode, vendor: vendorCode,
       filename, project: record.project, sizes: sizeLabels, bySize,
+      ...pickGeneralInfo(record), // server đã lồng sẵn (VendorLibraryIndexBuilder)
     });
   });
   return buildLegacyView(mergeBlankVendorRecords(byKey));
@@ -135,6 +144,10 @@ function buildLegacyView(byProductTypeKey) {
       productType: first.productType, vendor: first.vendor, filename: first.filename,
       sizes, bySize,
       records, // MỚI (mục 03/04) — danh sách đầy đủ, mỗi vendor một record riêng
+      // Info phôi (mục 02) của record ĐẦU TIÊN — chỉ dùng khi PT chưa gắn
+      // libRef (đường lùi resolve theo tên); PT có libRef đọc thẳng từ đúng
+      // record của nó qua findLibraryRecord, không qua nhánh này.
+      ...pickGeneralInfo(first),
     };
   });
   return index;
@@ -199,6 +212,19 @@ function indexFromFiles(files, projectKey, skip) {
     const filename = (file.filename || '').replace(/\.[^.]+$/, '');
     const project = extractFileProject(file.filename) || undefined;
 
+    // Info phôi (mục 02) không nằm trong `pricing` — gom theo `kyHieu`, vendor
+    // gặp trước thắng, cùng quy ước với backend (VendorLibraryIndexBuilder).
+    const generalByVendor = {};
+    (Array.isArray(file.generalInfo) ? file.generalInfo : []).forEach((row) => {
+      const vCode = normalizeKey(row?.kyHieu);
+      if (!vCode || generalByVendor[vCode]) return;
+      generalByVendor[vCode] = {
+        chatLieu: row.chatLieu || '', chiTietSize: row.chiTietSize || '',
+        image: (Array.isArray(row.images) && row.images[0]) || '',
+        avgTimeVendor: row.avgTimeVendor || '', avgTimeActual: row.avgTimeActual || '',
+      };
+    });
+
     pricing.forEach((p) => {
       const ptName = (p.productType || '').trim();
       if (!ptName) return;
@@ -213,6 +239,7 @@ function indexFromFiles(files, projectKey, skip) {
         bucket.set(recordKey, {
           recordKey, productType: ptName, vendorCode, vendor: vendorCode,
           filename, project, sizes: [], bySize: {},
+          ...pickGeneralInfo(generalByVendor[normalizeKey(vendorCode)]),
         });
       }
       const rec = bucket.get(recordKey);

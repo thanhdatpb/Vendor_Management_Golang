@@ -24,7 +24,7 @@
 //    • `pt.sizeOrder` quyết định thứ tự dòng, id lạ đẩy về cuối.
 //  Bảng cũ không có ba trường này thì mọi thứ chạy y hệt trước.
 // ════════════════════════════════════════════════════════
-import { makeSize } from './pricingEngine';
+import { makeSize, makeProductType } from './pricingEngine';
 import {
   findLibraryEntry, findLibraryRecord, getLibraryItemCost, getLibraryShip, getLibraryShipItem2, normalizeKey,
 } from './vendorLibraryIndex';
@@ -77,6 +77,24 @@ export function libSizesOf(pt, libSource) {
       if (existing) return existing;
       return { ...makeSize(label, ''), id: libSizeId(pt.id, label), customize: defaultCustomizeOf(pt) };
     });
+}
+
+/**
+ * Dựng một Product Type từ ĐÚNG một record thư viện (một vendor, một file
+ * nguồn) — dùng chung cho cả 2 nơi Seller chọn phôi từ thư viện:
+ *   • "+ Thêm Product Type" ngay trong workspace (PriceSheetWorkspace)
+ *   • "Tạo bảng tính giá" lúc tạo sheet mới (SetupPriceSection.CreateSheetModal)
+ * Trước đây CreateSheetModal tự gom theo TÊN phôi (không theo vendor), 2 vendor
+ * cùng tên bị đè nhau và không gắn `libRef` — sheet tạo ra không tra đúng
+ * record khi mở lại, tái diễn đúng bug PR-A3 đã sửa ở nhánh kia.
+ */
+export function makeProductTypeFromRecord(record) {
+  const pt = {
+    ...makeProductType(record.productType), shown: true,
+    libRef: { recordKey: record.recordKey, vendorCode: record.vendorCode, filename: record.filename },
+  };
+  if (record?.sizes?.length) pt.sizes = libSizesOf(pt, record);
+  return pt;
 }
 
 /**

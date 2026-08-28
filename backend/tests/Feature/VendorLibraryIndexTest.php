@@ -118,6 +118,33 @@ class VendorLibraryIndexTest extends TestCase
         $this->assertSame(4.1, $vn3['sizes'][0]['eco_price']);
     }
 
+    /**
+     * mục 02 — "info phôi" (chất liệu, ảnh, chi tiết size, AVG TG) đi kèm mỗi
+     * record cho bảng tính giá, lấy từ `generalInfo` đã có sẵn thay vì phải
+     * nhập thêm dữ liệu mới. Không phải giá nên vẫn xuất hiện kể cả role
+     * không thấy giá.
+     */
+    public function test_index_kem_theo_info_phoi_tu_generalInfo(): void
+    {
+        $records = $this->actingAs($this->user('pd', 'happy'))
+            ->getJson('/api/vendor-library/index?project=happy')
+            ->assertOk()
+            ->json();
+
+        $vn3 = collect($records)->firstWhere('vendorCode', 'VN3');
+        $this->assertSame('Polyester 150gsm', $vn3['chatLieu']);
+        $this->assertNotEmpty($vn3['image']);
+
+        // CN1 không có generalInfo — không được vỡ, các trường info phôi rỗng
+        // thay vì thiếu khoá (client dựa vào khoá này tồn tại để hiện UI).
+        $cn1 = collect($records)->firstWhere('vendorCode', 'CN1');
+        $this->assertSame('', $cn1['chatLieu']);
+        $this->assertSame('', $cn1['image']);
+        $this->assertSame('', $cn1['avgTimeVendor']);
+        $this->assertSame('', $cn1['avgTimeActual']);
+        $this->assertSame('', $cn1['chiTietSize']);
+    }
+
     public function test_index_nhe_hon_han_blob_day_du(): void
     {
         $seller = $this->user('seller', 'happy');
