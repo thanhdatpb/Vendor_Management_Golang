@@ -218,9 +218,14 @@ function indexFromFiles(files, projectKey, skip) {
     (Array.isArray(file.generalInfo) ? file.generalInfo : []).forEach((row) => {
       const vCode = normalizeKey(row?.kyHieu);
       if (!vCode || generalByVendor[vCode]) return;
+      // Ảnh nhúng qua formula Excel đôi khi là base64/data-URI khổng lồ thay vì
+      // URL bình thường — cùng ngưỡng MAX_IMAGE_URL_LENGTH phía backend, để 2
+      // đường build index (lean-index server / blob-fallback này) không lệch
+      // hành vi tuỳ server có endpoint gọn hay không.
+      const rawImage = (Array.isArray(row.images) && row.images[0]) || '';
       generalByVendor[vCode] = {
         chatLieu: row.chatLieu || '', chiTietSize: row.chiTietSize || '',
-        image: (Array.isArray(row.images) && row.images[0]) || '',
+        image: rawImage.length > 300 ? '' : rawImage,
         avgTimeVendor: row.avgTimeVendor || '', avgTimeActual: row.avgTimeActual || '',
       };
     });

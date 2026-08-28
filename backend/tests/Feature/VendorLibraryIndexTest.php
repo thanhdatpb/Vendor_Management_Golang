@@ -133,7 +133,10 @@ class VendorLibraryIndexTest extends TestCase
 
         $vn3 = collect($records)->firstWhere('vendorCode', 'VN3');
         $this->assertSame('Polyester 150gsm', $vn3['chatLieu']);
-        $this->assertNotEmpty($vn3['image']);
+        // `images` của fixture này CỐ TÌNH là chuỗi khổng lồ ($heavy, xem
+        // library() ở trên) để bẫy đúng lỗi "index gọn cõng luôn ảnh nặng" —
+        // builder phải loại nó ra, không phải giữ lại (xem MAX_IMAGE_URL_LENGTH).
+        $this->assertSame('', $vn3['image']);
 
         // CN1 không có generalInfo — không được vỡ, các trường info phôi rỗng
         // thay vì thiếu khoá (client dựa vào khoá này tồn tại để hiện UI).
@@ -143,6 +146,33 @@ class VendorLibraryIndexTest extends TestCase
         $this->assertSame('', $cn1['avgTimeVendor']);
         $this->assertSame('', $cn1['avgTimeActual']);
         $this->assertSame('', $cn1['chiTietSize']);
+    }
+
+    /** Đối chứng với test trên: ảnh độ dài bình thường KHÔNG bị loại. */
+    public function test_anh_do_dai_binh_thuong_thi_giu_nguyen(): void
+    {
+        DB::table('vendor_library')->update([
+            'data' => json_encode([[
+                'filename'    => 'HappyC_VendorLibrary_p.happy_2026-06.xlsx',
+                'generalInfo' => [[
+                    'kyHieu' => 'VN9', 'productType' => 'Sticker',
+                    'images' => ['https://cdn.example/sticker-vn9.jpg'],
+                ]],
+                'pricing' => [[
+                    'kyHieu' => 'VN9', 'productType' => 'Sticker', 'size' => 'S', 'pricing1' => 1.5,
+                ]],
+            ]]),
+            // Đổi updated_at để ETag khác bản setUp() — tránh dính cache theo etag cũ.
+            'updated_at' => now()->addMinute(),
+        ]);
+
+        $records = $this->actingAs($this->user('seller', 'happy'))
+            ->getJson('/api/vendor-library/index')
+            ->assertOk()
+            ->json();
+
+        $vn9 = collect($records)->firstWhere('vendorCode', 'VN9');
+        $this->assertSame('https://cdn.example/sticker-vn9.jpg', $vn9['image']);
     }
 
     public function test_index_nhe_hon_han_blob_day_du(): void

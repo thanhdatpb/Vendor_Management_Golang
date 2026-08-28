@@ -15,6 +15,9 @@ namespace App\Support;
  */
 final class VendorLibraryIndexBuilder
 {
+    /** Ngưỡng an toàn cho field `image` — xem indexGeneralInfoByVendor(). */
+    private const MAX_IMAGE_URL_LENGTH = 300;
+
     /**
      * Suy ra project từ tên file — khớp `extractFileProject` bên frontend.
      */
@@ -91,11 +94,20 @@ final class VendorLibraryIndexBuilder
             }
 
             $images = is_array($row['images'] ?? null) ? $row['images'] : [];
+            $image  = (string) ($images[0] ?? '');
+            // Ảnh nhúng qua formula Excel đôi khi là base64/data-URI khổng lồ
+            // thay vì một URL bình thường — index GỌN không được cõng nó
+            // (đúng mục đích ban đầu "không kèm ảnh/generalInfo" của index này,
+            // xem test_index_nhe_hon_han_blob_day_du). URL ảnh thật không bao
+            // giờ cần dài quá ngưỡng này.
+            if (mb_strlen($image) > self::MAX_IMAGE_URL_LENGTH) {
+                $image = '';
+            }
 
             $byVendor[$vendorCode] = [
                 'chatLieu'      => (string) ($row['chatLieu'] ?? ''),
                 'chiTietSize'   => (string) ($row['chiTietSize'] ?? ''),
-                'image'         => (string) ($images[0] ?? ''),
+                'image'         => $image,
                 'avgTimeVendor' => (string) ($row['avgTimeVendor'] ?? ''),
                 'avgTimeActual' => (string) ($row['avgTimeActual'] ?? ''),
             ];
