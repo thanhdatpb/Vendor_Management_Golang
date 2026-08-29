@@ -192,11 +192,11 @@ export default function SetupPriceSection({ onTotalCountChange } = {}) {
   };
 
   return (
-    <div>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap', flexShrink: 0 }}>
         <input type="text" placeholder="Tìm bảng / vendor / product..." value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 220 }} />
@@ -215,8 +215,8 @@ export default function SetupPriceSection({ onTotalCountChange } = {}) {
         </div>
       ) : (
         <>
-          <div style={{ borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-            <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 320px)' }}>
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12, minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>
