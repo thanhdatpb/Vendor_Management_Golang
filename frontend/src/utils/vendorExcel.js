@@ -851,7 +851,10 @@ export async function parseHappyCreativeLibrary(file) {
             if (sizeCell && sizeCell.f) {
               const m = sizeCell.f.match(/image\(\s*["'](.*?)["']\s*\)/i);
               if (m && m[1]) chiTietSizeImage = m[1];
-            } else if (sizeCell && sizeCell.v && cellStr(sizeCell.v).startsWith('http') && cellStr(sizeCell.v).match(/\.(jpeg|jpg|gif|png)$/i)) {
+            } else if (sizeCell && sizeCell.v && isSizeGuideMediaUrl(cellStr(sizeCell.v))) {
+              // isSizeGuideMediaUrl bắt cả link Google Drive (drive/docs.google.com), không
+              // chỉ URL đuôi ảnh — thiếu nhánh này thì link Drive dán trực tiếp vào ô Excel
+              // rơi xuống nhánh text, hiện URL thô thay vì icon Drive gọn khi import.
               chiTietSizeImage = cellStr(sizeCell.v);
             }
 
@@ -862,7 +865,9 @@ export async function parseHappyCreativeLibrary(file) {
 
             generalInfo.push({
               id: 'row-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 6),
-              vendorName: col_vendorName >= 0 ? cellStr(row[col_vendorName]) : '',
+              // Không có cột "Vendor Name" riêng (hoặc ô đó trống) → dùng Ký hiệu (VD: CN1,
+              // VN1) làm tên vendor, đúng cách sheet cũ dùng Ký hiệu để định danh vendor.
+              vendorName: (col_vendorName >= 0 ? cellStr(row[col_vendorName]) : '') || originalKyHieu,
               productType: col_productType1 >= 0 ? cellStr(row[col_productType1]) : '',
               kyHieu: originalKyHieu,
               images,
