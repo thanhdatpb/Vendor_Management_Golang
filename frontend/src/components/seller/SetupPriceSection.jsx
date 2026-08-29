@@ -7,7 +7,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HC } from '../../constants/sellerTheme';
 import AppToast from '../shared/AppToast';
-import { Pagination } from './SellerUI';
 import { priceSheetApi } from '../../services/api';
 import { saveSheetToServer } from '../../utils/priceSheetCommit';
 import { subscribePriceSheetChanges } from '../../services/echo';
@@ -20,7 +19,6 @@ import { makeProductTypeFromRecord } from '../../utils/resolveSheet';
 import { exportSheetToExcel } from './PriceSheetWorkspace';
 
 const LS_SHEETS = 'PRICE_SHEETS_V1';
-const ITEMS_PER_PAGE = 10;
 
 function _getUserProjectKey() {
   try {
@@ -48,11 +46,10 @@ const persistAllSheets = (list) => {
   }
 };
 
-export default function SetupPriceSection() {
+export default function SetupPriceSection({ onTotalCountChange } = {}) {
   const navigate = useNavigate();
   const [allSheets, setAllSheets] = useState(loadAllSheets);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const aliveRef = useRef(true);
@@ -119,8 +116,7 @@ export default function SetupPriceSection() {
     [sheets, search]
   );
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  useEffect(() => { onTotalCountChange && onTotalCountChange(sheets.length); }, [sheets, onTotalCountChange]);
 
   // ── CRUD ──
   /** Ghi vào state + cache local, rồi đẩy lên server.
@@ -200,19 +196,14 @@ export default function SetupPriceSection() {
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})` }} />
-        <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Bảng tính giá</div>
-        <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.orangeDark, fontSize: 11, fontWeight: 700 }}>{filtered.length} bảng</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input type="text" placeholder="Tìm bảng / vendor / product..." value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 220 }} />
-          <button onClick={() => setShowCreate(true)}
-            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
-            ＋ Tạo bảng tính giá
-          </button>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <input type="text" placeholder="Tìm bảng / vendor / product..." value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 220 }} />
+        <button onClick={() => setShowCreate(true)}
+          style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', fontSize: 12.5, fontWeight: 800, cursor: 'pointer' }}>
+          ＋ Tạo bảng tính giá
+        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -225,21 +216,21 @@ export default function SetupPriceSection() {
       ) : (
         <>
           <div style={{ borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 320px)' }}>
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12, minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>
                     {['#', 'Bảng tính giá', 'Vendor', 'Product Type', 'Size', 'Khoảng giá', 'Avg Margin', 'Cập nhật', 'Thao tác'].map((h, i) => (
-                      <th key={h} style={{ padding: '10px 10px', color: '#fff', fontWeight: 700, textAlign: i === 0 || i > 3 ? 'center' : 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ position: 'sticky', top: 0, zIndex: 1, padding: '10px 10px', color: '#fff', fontWeight: 700, textAlign: i === 0 || i > 3 ? 'center' : 'left', whiteSpace: 'nowrap', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {paged.map((sheet, idx) => {
+                  {filtered.map((sheet, idx) => {
                     const names = sheet.productTypeNames;
                     return (
                       <tr key={sheet.id} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#fff' : HC.surface2 }}>
-                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>{(page - 1) * ITEMS_PER_PAGE + idx + 1}</td>
+                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: 600, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</td>
                         <td style={{ padding: '10px' }}>
                           <div style={{ fontWeight: 800, color: HC.ink2 }}>{sheet.name || '—'}</div>
                           {sheet.sourceFile && <div style={{ fontSize: 10, color: HC.muted, marginTop: 2 }}>📄 {sheet.sourceFile}</div>}
@@ -283,7 +274,6 @@ export default function SetupPriceSection() {
               </table>
             </div>
           </div>
-          {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} totalItems={filtered.length} onPageChange={setPage} itemsPerPage={ITEMS_PER_PAGE} />}
         </>
       )}
 

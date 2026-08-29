@@ -36,6 +36,7 @@ export default function SellerDashboard() {
   const [pendingOpenProductId, setPendingOpenProductId] = useState(null);
   const [vendorHighlightFileId, setVendorHighlightFileId] = useState(null);
   const [productsTotalCount, setProductsTotalCount] = useState(null);
+  const [priceSheetsTotalCount, setPriceSheetsTotalCount] = useState(null);
 
   const handleViewVendorLibrary = (fileId) => {
     setVendorHighlightFileId(fileId || null);
@@ -253,7 +254,7 @@ export default function SellerDashboard() {
     switch (active) {
       case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} onViewVendorLibrary={handleViewVendorLibrary} onTotalCountChange={setProductsTotalCount} />;
       case 'vendors': return <VendorsSection highlightFileId={vendorHighlightFileId} onHighlightCleared={() => setVendorHighlightFileId(null)} />;
-      case 'setup_price': return <SetupPriceSection />;
+      case 'setup_price': return <SetupPriceSection onTotalCountChange={setPriceSheetsTotalCount} />;
       default: return null;
     }
   };
@@ -296,6 +297,11 @@ export default function SellerDashboard() {
                 {active === 'products' && productsTotalCount !== null && !isMobile && (
                   <div style={{ color: HC.muted, fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     Tổng cộng: {productsTotalCount} sản phẩm đã tạo
+                  </div>
+                )}
+                {active === 'setup_price' && priceSheetsTotalCount !== null && !isMobile && (
+                  <div style={{ color: HC.muted, fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Tổng cộng: {priceSheetsTotalCount} bảng tính giá
                   </div>
                 )}
               </div>
