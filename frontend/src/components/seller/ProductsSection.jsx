@@ -763,6 +763,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       )}
 
       {/* ── Filter Bar ── */}
+      {(isMobile || hasFilter) && (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14, padding: '10px 14px', background: '#fff', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
         {isMobile && (
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', width: '100%', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
@@ -796,11 +797,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             style={{ padding: '8px 14px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
           >✕ Xóa bộ lọc</button>
         )}
-        <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: HC.muted, fontWeight: 700 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: HC.orange, display: 'inline-block' }} />
-          {filteredProducts.length} / {submittedProducts.length} sản phẩm
-        </div>
       </div>
+      )}
 
       {/* ── Table / Card List ── */}
       {filteredProducts.length === 0 ? (
