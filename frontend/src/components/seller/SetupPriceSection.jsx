@@ -14,6 +14,7 @@ import { subscribePriceSheetChanges } from '../../services/echo';
 import { usd, pct, makeSheet } from '../../utils/pricingEngine';
 import { normalizeSheetRow, matchesSheetSearch, sheetInProject, toSummaryRow } from '../../utils/priceSheetSummary';
 import { priceSheetPath, copyPriceSheetLink } from '../../utils/priceSheetLink';
+import { fmtVNDate } from '../../utils/vnTime';
 import { loadVendorLibraryIndex, listLibraryRecords } from '../../utils/vendorLibraryIndex';
 import { makeProductTypeFromRecord } from '../../utils/resolveSheet';
 import { exportSheetToExcel } from './PriceSheetWorkspace';
@@ -264,7 +265,7 @@ export default function SetupPriceSection() {
                           {sheet.avgMargin != null ? pct(sheet.avgMargin, 1) : '—'}
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center', fontSize: 11, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>
-                          {sheet.updatedAt ? new Date(sheet.updatedAt).toLocaleDateString('vi-VN') : '—'}
+                          {fmtVNDate(sheet.updatedAt, '—')}
                         </td>
                         <td style={{ padding: '10px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>

@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { PS, marginTone, toneColor } from './tokens';
 import { Btn, IconBtn, Badge, Dot } from './primitives';
 import { usd, pct } from '../../../utils/pricingEngine';
+import { fmtVNDateTime } from '../../../utils/vnTime';
 import { priceSheetApi } from '../../../services/api';
 
 // `readOnly`: Admin xem lịch sử của bảng Seller — chỉ Export, không Khôi phục
@@ -90,7 +91,7 @@ export default function HistoryPanel({ sheet, onClose, onRestore, onExportVersio
                     <span style={{ fontWeight: 700, fontSize: 13, color: PS.text }}>v{snap.version}</span>
                     {i === 0 && <Badge tone="warning" style={{ background: PS.brandSubtle, color: PS.brandDeep, border: `1px solid ${PS.brandBorder}` }}>mới nhất</Badge>}
                     <span style={{ fontSize: 11.5, color: PS.textMuted, fontVariantNumeric: 'tabular-nums' }}>
-                      {new Date(snap.savedAt).toLocaleString('vi-VN')}
+                      {fmtVNDateTime(snap.savedAt, '—')}
                     </span>
                   </div>
                   <span style={{ fontSize: 11.5, color: PS.textMuted }}>{snap.savedBy}</span>

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './constants';
+import { fmtVNDate } from '../../utils/vnTime';
 
 export const fmt = n => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n || 0);
 
@@ -13,13 +14,7 @@ const toImageEmbedUrl = (url) => {
   return url;
 };
 
-export const fmtDate = iso => { 
-  try { 
-    return iso ? new Date(iso).toLocaleDateString('vi-VN') : '—'; 
-  } catch { 
-    return '—'; 
-  } 
-};
+export const fmtDate = iso => fmtVNDate(iso, '—');
 
 export const normalizeList = resp => {
   if (!resp) return [];

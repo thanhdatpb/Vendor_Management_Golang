@@ -16,6 +16,7 @@ import SellerNotificationCenter from '../components/seller/SellerNotificationCen
 import ProductsSection from '../components/seller/ProductsSection';
 import VendorsSection from '../components/seller/VendorsSection';
 import SetupPriceSection from '../components/seller/SetupPriceSection';
+import { timeValue, fmtVNDateTime, fmtVNLongDate } from '../utils/vnTime';
 
 // ══════════════════════════════════════════════════════════
 //  MAIN SELLER DASHBOARD
@@ -68,7 +69,7 @@ export default function SellerDashboard() {
               source: 'api',
               title: n.title || 'Thông báo',
               message: n.body || '',
-              time: new Date(n.created_at).toLocaleString('vi-VN'),
+              time: fmtVNDateTime(n.created_at),
               read: n.is_read || false,
               productId,
               productType: productName,
@@ -82,7 +83,7 @@ export default function SellerDashboard() {
           const merged = requests.map(n => ({ ...n, read: prevMap[n.id]?.read === true ? true : n.read }));
           const allIds = new Set(merged.map(n => n.id));
           const kept = prev.filter(n => !allIds.has(n.id));
-          return [...merged, ...kept].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 100);
+          return [...merged, ...kept].sort((a, b) => timeValue(b.timestamp) - timeValue(a.timestamp)).slice(0, 100);
         });
       })
       .catch(err => console.error('Lỗi load API notifications:', err));
@@ -100,7 +101,7 @@ export default function SellerDashboard() {
             requests.push({
               id: `staffb_${n.id}`, type: n.type, source: 'staffb',
               icon, title, message: n.message || '',
-              time: n.time || new Date(n.created_at || Date.now()).toLocaleString('vi-VN'),
+              time: n.time || fmtVNDateTime(n.created_at || Date.now()),
               read: n.is_read || false, productId: n.productId,
               productType: productName, vendorType: n.vendorType,
               timestamp: n.created_at || Date.now(),
@@ -119,7 +120,7 @@ export default function SellerDashboard() {
             id: `staffa_${n.id}`, type: 'feedback_from_b', source: 'staffb',
             icon: n.icon || '💬', title: n.title || 'Staff B đã gửi phản hồi',
             message: n.message || '',
-            time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'),
+            time: n.time || fmtVNDateTime(n.timestamp || Date.now()),
             read: n.is_read || false, productId: n.productId,
             productType: n.productType, vendorKey: n.vendorKey,
             timestamp: n.timestamp || n.id,
@@ -128,13 +129,13 @@ export default function SellerDashboard() {
       });
     } catch (err) { console.error('Lỗi load STAFF_A_NOTIFICATIONS:', err); }
 
-    requests.sort((a, b) => new Date(b.time) - new Date(a.time));
+    requests.sort((a, b) => timeValue(b.timestamp) - timeValue(a.timestamp));
     setRequestNotifications(prev => {
       const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
       const merged = requests.map(n => ({ ...n, read: prevMap[n.id]?.read === true ? true : n.read }));
       const allIds = new Set(merged.map(n => n.id));
       const kept = prev.filter(n => !allIds.has(n.id));
-      return [...merged, ...kept].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 100);
+      return [...merged, ...kept].sort((a, b) => timeValue(b.timestamp) - timeValue(a.timestamp)).slice(0, 100);
     });
   }, []);
 
@@ -154,7 +155,7 @@ export default function SellerDashboard() {
             icon: n.data?.icon || '📰',
             title: n.title || 'Tin tức mới',
             message: n.body || '',
-            time: new Date(n.created_at).toLocaleString('vi-VN'),
+            time: fmtVNDateTime(n.created_at),
             read: n.is_read || false,
             timestamp: n.created_at,
             source: 'staff_b',
@@ -164,7 +165,7 @@ export default function SellerDashboard() {
           const prevMap = Object.fromEntries(prev.map(n => [n.id, n]));
           return news
             .map(n => ({ ...n, read: prevMap[n.id]?.read === true ? true : n.read }))
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .sort((a, b) => timeValue(b.timestamp) - timeValue(a.timestamp))
             .slice(0, 100);
         });
       })
@@ -293,7 +294,7 @@ export default function SellerDashboard() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
               {!isMobile && (
-                <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{fmtVNLongDate()}</div>
               )}
               <SellerNotificationCenter
                 requestNotifications={requestNotifications}

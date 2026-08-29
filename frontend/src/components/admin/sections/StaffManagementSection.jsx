@@ -3,6 +3,7 @@ import { PlusOutlined, EditOutlined, LockOutlined, UnlockOutlined, LoadingOutlin
 import { HC } from '../constants';
 import { adminUserApi } from '../../../services/api';
 import { formatLastSeen } from '../lastSeen';
+import { fmtVNDateTime } from '../../../utils/vnTime';
 
 // ─────────────────────────────────────────────
 const PROJECTS = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
@@ -299,7 +300,7 @@ function LastSeenCell({ iso }) {
   const { text, stale } = formatLastSeen(iso);
   return (
     <span
-      title={iso ? new Date(iso).toLocaleString('vi-VN') : 'Chưa có lần truy cập nào được ghi nhận'}
+      title={iso ? fmtVNDateTime(iso) : 'Chưa có lần truy cập nào được ghi nhận'}
       style={{ fontSize: 12, fontWeight: 600, color: stale ? '#94a3b8' : HC.brown, fontVariantNumeric: 'tabular-nums' }}>
       {text}
     </span>

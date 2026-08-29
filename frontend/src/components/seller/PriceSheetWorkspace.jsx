@@ -18,6 +18,7 @@ import { loadVendorLibraryIndex, findLibraryEntry, findLibraryRecord } from '../
 import { resolveSheet, baseSizesOf as baseSizesOfLib, restoreFromLibrary, libLabelOf, makeProductTypeFromRecord } from '../../utils/resolveSheet';
 import { moveByDelta, moveById, orderIdsOf } from '../../utils/sheetStructure';
 import { exportSheetToExcel } from '../../utils/sheetExport';
+import { fmtVNDateTime } from '../../utils/vnTime';
 
 import { PS, marginTone } from './pricesheet/tokens';
 import { PsStyles, Btn, IconBtn, Badge, ConfirmDialog, ModalShell } from './pricesheet/primitives';
@@ -386,7 +387,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
           <div style={{ padding: 16, fontSize: 13.5, color: PS.textSecondary, lineHeight: 1.7 }}>
             <p style={{ margin: '0 0 12px' }}>
               <b style={{ color: PS.text }}>{conflict.updatedBy}</b> đã lưu bảng này
-              {conflict.updatedAt ? ` lúc ${new Date(conflict.updatedAt).toLocaleString('vi-VN')}` : ''}
+              {conflict.updatedAt ? ` lúc ${fmtVNDateTime(conflict.updatedAt)}` : ''}
               {conflict.currentVersion ? ` (phiên bản v${conflict.currentVersion})` : ''}.
             </p>
             <ul style={{ margin: 0, paddingLeft: 18 }}>

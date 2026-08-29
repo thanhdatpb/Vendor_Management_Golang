@@ -13,6 +13,7 @@ import VendorsSection from '../components/vendor/sections/VendorsSection';
 import { HC, MENU, PAGE_TITLES } from '../components/vendor/utils/constants';
 import { VENDOR_SECTIONS } from '../constants/dashboardSections';
 import useSectionRoute from '../hooks/useSectionRoute';
+import { timeValue, fmtVNDateTime, fmtVNLongDate } from '../utils/vnTime';
 
 const DARK = {
   bg:          'var(--hc-dark-bg)',
@@ -54,7 +55,7 @@ export default function VendorDashboard() {
             id: `api_${n.id}`, type: n.type, source: 'api',
             title: n.title || 'Thông báo',
             message: n.body || '',
-            time: new Date(n.created_at).toLocaleString('vi-VN'), read: n.is_read || false,
+            time: fmtVNDateTime(n.created_at), read: n.is_read || false,
             productId, productType: productName, sellerName, timestamp: n.created_at
           });
         });
@@ -68,7 +69,7 @@ export default function VendorDashboard() {
           requests.push({
             id: `staffa_${n.id}`, type: n.type, source: 'staffA', icon: isApproved ? '' : '',
             title: isApproved ? 'Seller đồng ý đặt Sample' : 'Seller từ chối đặt Sample',
-            message: n.message || '', time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'),
+            message: n.message || '', time: n.time || fmtVNDateTime(n.timestamp || Date.now()),
             read: n.read || false, productId: n.productId, productType: n.productType, vendorType: n.vendorType, sellerName: n.sellerName, sampleDetails: n.sampleDetails, timestamp: n.timestamp || Date.now()
           });
         }
@@ -82,14 +83,14 @@ export default function VendorDashboard() {
           requests.push({
             id: `staffb_${n.id}`, type: 'staff_a_approved_vendor', source: 'staffA', icon: n.icon || '',
             title: n.title || 'Staff A đã xác nhận vendor', message: n.message || '',
-            time: n.time || new Date(n.timestamp || Date.now()).toLocaleString('vi-VN'), read: n.is_read || false,
+            time: n.time || fmtVNDateTime(n.timestamp || Date.now()), read: n.is_read || false,
             productId: n.productId, productType: n.productName || n.productType, vendorType: n.vendorType, sellerFeedback: n.sellerFeedback, timestamp: n.timestamp || n.id
           });
         }
       });
     } catch (err) { console.error('Lỗi load staff_a_approved_vendor:', err); }
 
-    requests.sort((a, b) => new Date(b.time) - new Date(a.time));
+    requests.sort((a, b) => timeValue(b.timestamp) - timeValue(a.timestamp));
     setRequestNotifications(requests.slice(0, 100));
   }, []);
 
@@ -102,11 +103,11 @@ export default function VendorDashboard() {
         news.push({
           id: `news_${n.id}`, type: 'news', icon: n.icon || '📰',
           title: n.title || 'Tin tức mới', message: n.message || '',
-          time: n.time || new Date(n.created_at || Date.now()).toLocaleString('vi-VN'), read: n.read || false, timestamp: n.created_at || Date.now()
+          time: n.time || fmtVNDateTime(n.created_at || Date.now()), read: n.read || false, timestamp: n.created_at || Date.now()
         });
       });
     } catch (err) { }
-    news.sort((a, b) => new Date(b.time) - new Date(a.time));
+    news.sort((a, b) => timeValue(b.timestamp) - timeValue(a.timestamp));
     setNewsNotifications(news.slice(0, 100));
   }, []);
 
@@ -289,7 +290,7 @@ export default function VendorDashboard() {
               {PAGE_TITLES[active]}
               {active === 'library' && filterProductType && <span style={{ padding: '2px 10px', borderRadius: 999, background: HC.orangeLight, border: `1.5px solid ${HC.orange}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>🔍 {filterProductType}</span>}
             </div>
-            <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{fmtVNLongDate()}</div>
             <VendorNotificationCenter requestNotifications={requestNotifications} newsNotifications={newsNotifications} markRequestAsRead={markRequestAsRead} markNewsAsRead={markNewsAsRead} onRequestClick={handleRequestClick} onNewsClick={handleNewsClick} />
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>{renderSection()}</div>

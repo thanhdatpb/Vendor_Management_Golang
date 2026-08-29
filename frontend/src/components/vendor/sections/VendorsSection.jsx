@@ -7,6 +7,7 @@ import { Spinner, EmptyState, BestSellerBadge } from '../ui/VendorUI';
 import { SearchOutlined } from '@ant-design/icons';
 import VendorLibraryViewer from './VendorLibraryViewer';
 import AppToast from '../../shared/AppToast';
+import { vnFileStamp } from '../../../utils/vnTime';
 
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
   const [activeTab, setActiveTab] = useState('all'); 
@@ -331,7 +332,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, activeTab === 'bestseller' ? 'Best_Seller' : 'Vendors');
-    const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    const ts = vnFileStamp();
     const filename = hasSelection
       ? `Vendors_Export_${ts}.xlsx`
       : `Vendor_Template_${ts}.xlsx`;

@@ -22,6 +22,7 @@ import AppToast from '../shared/AppToast';
 import ExportVendorFilesModal from '../shared/ExportVendorFilesModal';
 import { renderChiTietSizeText } from '../vendor/sections/VendorLibraryViewer';
 import { fileVisibleToProject } from '../../constants/projects';
+import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../utils/vnTime';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -84,12 +85,12 @@ function MediaThumb({ url }) {
 // của VendorLibraryViewer. Sang thứ Hai tuần kế tiếp, file rời khỏi tab này.
 function isWithinCurrentWeek(importedAt) {
   if (!importedAt) return false;
-  const t = new Date(importedAt).getTime();
+  const t = timeValue(importedAt, NaN);
   if (!Number.isFinite(t)) return false;
-  const now = new Date();
-  const daysSinceMonday = now.getDay() === 0 ? 6 : now.getDay() - 1;
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday, 0, 0, 0, 0);
-  return t >= monday.getTime();
+  // Ranh giới tuần phải là nửa đêm thứ Hai Ở VIỆT NAM, không phải nửa đêm theo
+  // máy người xem — nếu không, người ngồi khác múi giờ thấy tab New Arrivals
+  // đổi nội dung sớm/muộn hơn phần còn lại của team.
+  return t >= vnStartOfWeek();
 }
 
 // ── Ghép Link Template (từ bảng giá) vào từng dòng thông tin chung ────────────
@@ -211,9 +212,7 @@ function LibraryCard({ entry, highlighted, showLeadTime }) {
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
 
-  const importDate = entry.importedAt
-    ? new Date(entry.importedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '';
+  const importDate = fmtVNDateTimeShort(entry.importedAt);
 
   return (
     <div
@@ -371,8 +370,8 @@ export default function VendorLibraryView({ projectKey, department }) {
     }
 
     return [...files].sort((a, b) => {
-      const ta = a.importedAt ? new Date(a.importedAt).getTime() : 0;
-      const tb = b.importedAt ? new Date(b.importedAt).getTime() : 0;
+      const ta = timeValue(a.importedAt);
+      const tb = timeValue(b.importedAt);
       return tb - ta;
     });
   }, [rawFiles, projectKey, activeTab, searchQuery, bestSellerIds]);

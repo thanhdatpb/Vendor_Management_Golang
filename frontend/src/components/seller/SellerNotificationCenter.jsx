@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { HC } from '../../constants/sellerTheme';
+import { toDate, timeValue, fmtVNDate, fmtVNDateTime } from '../../utils/vnTime';
 
 const TYPE_META = {
   approved:                { icon: '✅', label: 'Đã duyệt',      color: '#10B981', bg: '#ecfdf5', border: '#bbf7d0' },
@@ -17,10 +18,10 @@ const NEWS_COLOR = '#0891b2';
 const NEWS_BG   = '#f0f9ff';
 
 function formatTime(timestamp) {
-  if (!timestamp) return '';
+  const date = toDate(timestamp);
+  if (!date) return '';
   try {
-    const date = new Date(timestamp);
-    const diff = Date.now() - date;
+    const diff = Date.now() - date.getTime();
     const m = Math.floor(diff / 60000);
     if (m < 1) return 'Vừa xong';
     if (m < 60) return `${m} phút trước`;
@@ -28,7 +29,7 @@ function formatTime(timestamp) {
     if (h < 24) return `${h} giờ trước`;
     const d = Math.floor(diff / 86400000);
     if (d < 7) return `${d} ngày trước`;
-    return date.toLocaleDateString('vi-VN');
+    return fmtVNDate(date);
   } catch { return ''; }
 }
 
@@ -68,8 +69,8 @@ export default function SellerNotificationCenter({
     const reqs = localRequests.map(n => ({ ...n, _category: 'request' }));
     const news = localNews.map(n => ({ ...n, _category: 'news' }));
     return [...reqs, ...news].sort((a, b) => {
-      const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-      const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      const ta = timeValue(a.timestamp);
+      const tb = timeValue(b.timestamp);
       return tb - ta;
     });
   }, [localRequests, localNews]);
@@ -180,7 +181,7 @@ export default function SellerNotificationCenter({
                     )}
                     <div style={{ display: 'flex', gap: 8 }}>
                       <span style={{ fontSize: 11, color: HC.muted, width: 90 }}>🕒 Thời gian</span>
-                      <span style={{ fontSize: 12, color: HC.brown }}>{selectedNotif.time || (selectedNotif.timestamp ? new Date(selectedNotif.timestamp).toLocaleString('vi-VN') : '')}</span>
+                      <span style={{ fontSize: 12, color: HC.brown }}>{selectedNotif.time || (selectedNotif.timestamp ? fmtVNDateTime(selectedNotif.timestamp) : '')}</span>
                     </div>
                     {selectedNotif.reason && (
                       <div style={{ marginTop: 8, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, fontSize: 12, color: HC.danger, lineHeight: 1.5 }}>

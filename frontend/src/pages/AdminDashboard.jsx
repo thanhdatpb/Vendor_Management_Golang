@@ -12,6 +12,7 @@ import OverviewSection from '../components/admin/sections/OverviewSection';
 import VendorsSection from '../components/admin/sections/VendorsSection';
 import PriceSheetSection from '../components/admin/sections/PriceSheetSection';
 import StaffManagementSection from '../components/admin/sections/StaffManagementSection';
+import { fmtVNLongDate } from '../utils/vnTime';
 
 window.sendNewsToAdmin = function (newsData) {
   try {
@@ -420,7 +421,7 @@ export default function AdminDashboard() {
               alignItems: 'center',
               gap: 16,
             }}>
-              <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>{fmtVNLongDate()}</div>
               <NotificationCenter
                 notifications={requestNotifications}
                 newsNotifications={newsNotifications}

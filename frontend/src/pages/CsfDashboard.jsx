@@ -13,6 +13,7 @@ import { PROJECTS } from '../constants/projects';
 import useSectionRoute from '../hooks/useSectionRoute';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import CsfVendorLibrary from '../components/csfpd/CsfVendorLibrary';
+import { fmtVNLongDate } from '../utils/vnTime';
 
 // Danh sách project khai ở constants/projects.js — dùng chung với PD.
 const PROJECT_MENU = PROJECTS.map(p => ({ id: p.id, icon: <ShopOutlined />, label: p.label }));
@@ -69,7 +70,7 @@ export default function CsfDashboard({ basePath = '/csf', roleLabel = 'CSF', lib
               </div>
             </div>
             <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>
-              {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {fmtVNLongDate()}
             </div>
           </div>
 

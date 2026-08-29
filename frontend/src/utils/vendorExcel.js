@@ -2,6 +2,7 @@
  * Chuẩn import/export Vendor Excel — dùng chung Staff B (và Admin nếu cần).
  */
 import { isSizeGuideMediaUrl } from './vendorMedia';
+import { vnIsoDate } from './vnTime';
 
 export const VENDOR_TYPES = ['Old', 'New', 'Best Seller'];
 
@@ -591,7 +592,7 @@ export async function exportVendorLibraryFiles(files, { includePricing = true } 
   }
 
   const zipBlob = await zip.generateAsync({ type: 'blob' });
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = vnIsoDate();
   const url = URL.createObjectURL(zipBlob);
   const a = document.createElement('a');
   a.href = url;

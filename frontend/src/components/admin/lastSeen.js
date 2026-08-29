@@ -8,6 +8,8 @@
 //  Thuần logic, không dính React → test được mà không cần render.
 // ════════════════════════════════════════════════════════
 
+import { timeValue, vnDateStamp } from '../../utils/vnTime';
+
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -21,7 +23,7 @@ const DAY = 24 * HOUR;
 export function formatLastSeen(iso, now = new Date()) {
   if (!iso) return { text: 'Chưa truy cập', stale: true };
 
-  const then = new Date(iso).getTime();
+  const then = timeValue(iso, NaN);
   if (!Number.isFinite(then)) return { text: 'Chưa truy cập', stale: true };
 
   const diff = now.getTime() - then;
@@ -44,7 +46,7 @@ export function formatLastSeen(iso, now = new Date()) {
 
   // Quá một tuần: ngày tháng cụ thể có ích hơn "37 ngày trước".
   return {
-    text: new Date(then).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+    text: vnDateStamp(then, '/'),
     stale: days > 30,
   };
 }

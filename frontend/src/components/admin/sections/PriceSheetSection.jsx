@@ -20,6 +20,7 @@ import { usd, pct } from '../../../utils/pricingEngine';
 import { normalizeSheetRow, matchesSheetSearch } from '../../../utils/priceSheetSummary';
 import { exportSheetToExcel } from '../../../utils/sheetExport';
 import { priceSheetPath, copyPriceSheetLink } from '../../../utils/priceSheetLink';
+import { fmtVNDate } from '../../../utils/vnTime';
 import { PROJECTS } from '../../../constants/projects';
 
 const ITEMS_PER_PAGE = 10;
@@ -222,7 +223,7 @@ export default function PriceSheetSection() {
                       </td>
                       <td style={{ padding: '10px', fontSize: 11, color: HC.muted, textAlign: 'center' }}>{sheet.createdBy || '—'}</td>
                       <td style={{ padding: '10px', textAlign: 'center', fontSize: 11, color: HC.muted, fontVariantNumeric: 'tabular-nums' }}>
-                        {sheet.updatedAt ? new Date(sheet.updatedAt).toLocaleDateString('vi-VN') : '—'}
+                        {fmtVNDate(sheet.updatedAt, '—')}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>

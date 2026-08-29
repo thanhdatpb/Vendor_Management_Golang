@@ -1,4 +1,5 @@
 import { notificationApi } from '../services/api';
+import { fmtVNDateTime } from './vnTime';
 
 // Map role → localStorage key (fallback khi backend chưa có POST /notifications)
 const ROLE_LS_KEY = {
@@ -40,7 +41,7 @@ export async function pushNotif(forRole, payload) {
         icon,
         product_id,
         productId: product_id,
-        time: new Date().toLocaleString('vi-VN'),
+        time: fmtVNDateTime(Date.now()),
         timestamp: Date.now(),
         is_read: false,
         read: false,

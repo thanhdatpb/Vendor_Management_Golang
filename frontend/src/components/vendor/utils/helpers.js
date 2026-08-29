@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './constants';
+import { fmtVNDate } from '../../../utils/vnTime';
 
 export const getMediaUrls = (product) => {
   if (!product) return [];
@@ -40,10 +41,7 @@ export const getMediaUrls = (product) => {
   return [...new Set(urls)].filter(url => typeof url === 'string' && url.trim() !== '');
 };
 
-export const fmtDate = iso => {
-  if (!iso) return '';
-  try { return new Date(iso).toLocaleDateString('vi-VN'); } catch { return iso; }
-};
+export const fmtDate = iso => fmtVNDate(iso);
 
 export const lsGet = (key, fallback) => { 
   try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; } 

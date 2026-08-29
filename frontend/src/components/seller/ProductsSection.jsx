@@ -13,6 +13,7 @@ import { productApi } from '../../services/api';
 import { subscribeProductChanges } from '../../services/echo';
 import ProductViewerModal from './ProductViewerModal';
 import useIsMobile from '../../hooks/useIsMobile';
+import { vnDateStamp } from '../../utils/vnTime';
 
 function ThumbnailCell({ src }) {
   const [broken, setBroken] = useState(false);
@@ -629,7 +630,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     setShowExportModal(false);
     setExporting(true);
     try {
-      const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+      const today = vnDateStamp();
       await exportProductsToExcel(toExport, productVendors, `seller-products-${today}.xlsx`);
       showToast('success', 'Xuất Excel thành công!', `Đã xuất ${toExport.length} sản phẩm`);
       setSelectedIds(new Set());

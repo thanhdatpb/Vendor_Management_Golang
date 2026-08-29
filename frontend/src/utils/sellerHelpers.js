@@ -3,6 +3,7 @@
 //  xlsx được import DYNAMIC — chỉ load khi user click Export
 // ════════════════════════════════════════════════════════
 import { API_BASE_URL, LS_A_SELECTIONS } from '../constants/sellerTheme';
+import { toDate, fmtVNDate, VN_TIMEZONE } from './vnTime';
 
 // ─── LocalStorage helpers ────────────────────────────────
 export const lsGet = (key, fallback) => {
@@ -11,20 +12,17 @@ export const lsGet = (key, fallback) => {
 export const lsSet = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
 
 // ─── Date formatter ─────────────────────────────────────
-export const fmtDate = iso => {
-  if (!iso) return '';
-  try { return new Date(iso).toLocaleDateString('vi-VN'); } catch { return iso; }
-};
+export const fmtDate = iso => fmtVNDate(iso);
 
 // ─── DateTime formatter (date + HH:MM) ──────────────────
 export const fmtDateTime = iso => {
   if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    const date = d.toLocaleDateString('vi-VN');
-    const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
-    return { date, time };
-  } catch { return { date: iso, time: '' }; }
+  const d = toDate(iso);
+  if (!d) return { date: iso, time: '' };
+  return {
+    date: d.toLocaleDateString('vi-VN', { timeZone: VN_TIMEZONE }),
+    time: d.toLocaleTimeString('vi-VN', { timeZone: VN_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false }),
+  };
 };
 
 // ─── Chuyển đổi URL chia sẻ (Google Drive, v.v.) thành URL có thể nhúng vào <img> ────

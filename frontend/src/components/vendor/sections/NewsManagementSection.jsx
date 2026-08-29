@@ -7,6 +7,7 @@ import { Spinner, EmptyState, Pagination } from '../ui/VendorUI';
 import NewsModalComponent from '../components/NewsModalComponent';
 import NewsDetailModal from '../components/NewsDetailModal';
 import { newsApi } from '../../../services/api';
+import { timeValue, fmtVNDateTime } from '../../../utils/vnTime';
 
 // Vendor luôn phát thông báo cho cả Admin lẫn Seller — không còn chọn đối tượng
 // trong form nữa, nên khoá cứng target ở một chỗ để list/API dùng chung.
@@ -42,7 +43,7 @@ export default function NewsManagementSection() {
     try {
       const res = await newsApi.list();
       const news = Array.isArray(res.data) ? res.data : [];
-      news.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      news.sort((a, b) => timeValue(b.created_at) - timeValue(a.created_at));
       setNewsList(news);
     } catch (err) {
       console.error('Lỗi load tin tức:', err);
@@ -227,7 +228,7 @@ export default function NewsManagementSection() {
                   </span>
                 </td>
                 <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 11, color: HC.muted }}>
-                  {new Date(news.created_at).toLocaleString('vi-VN')}
+                  {fmtVNDateTime(news.created_at)}
                 </td>
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                   {isSent(news) ? (
@@ -238,7 +239,7 @@ export default function NewsManagementSection() {
                       borderRadius: 999, border: '1.5px solid #bbf7d0', background: '#ecfdf5',
                       color: HC.success, fontSize: 11, fontWeight: 800, whiteSpace: 'nowrap'
                     }}>
-                      <CheckCircleOutlined /> Đã gửi · {new Date(news.sent_at).toLocaleString('vi-VN')}
+                      <CheckCircleOutlined /> Đã gửi · {fmtVNDateTime(news.sent_at)}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>

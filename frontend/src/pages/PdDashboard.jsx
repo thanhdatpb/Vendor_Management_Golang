@@ -14,6 +14,7 @@ import { PROJECTS, projectNameToKey } from '../constants/projects';
 import useSectionRoute from '../hooks/useSectionRoute';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import PdVendorLibrary from '../components/csfpd/PdVendorLibrary';
+import { fmtVNLongDate } from '../utils/vnTime';
 
 export default function PdDashboard() {
   const { user, logout } = useAuth();
@@ -69,7 +70,7 @@ export default function PdDashboard() {
               </div>
             </div>
             <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>
-              {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {fmtVNLongDate()}
             </div>
           </div>
 

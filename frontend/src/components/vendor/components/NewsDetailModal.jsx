@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { EditOutlined, SendOutlined, NotificationOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
+import { timeValue, fmtVNDateTime } from '../../../utils/vnTime';
 
 /**
  * Modal xem chi tiết 1 thông báo (news) ở màn Quản Lý Thông Báo của Vendor.
@@ -19,16 +20,12 @@ export default function NewsDetailModal({ news, onClose, onEdit, onSend }) {
 
   if (!news) return null;
 
-  const fmt = (value) => {
-    if (!value) return '—';
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('vi-VN');
-  };
+  const fmt = (value) => fmtVNDateTime(value, '—');
 
   const createdAt = fmt(news.created_at);
   const updatedAt = fmt(news.updated_at);
   const isEdited = news.updated_at && news.created_at
-    && new Date(news.updated_at).getTime() - new Date(news.created_at).getTime() > 1000;
+    && timeValue(news.updated_at) - timeValue(news.created_at) > 1000;
   const isSent = !!news.sent_at;
 
   const metaRow = (icon, label, value) => (
