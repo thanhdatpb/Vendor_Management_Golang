@@ -26,6 +26,9 @@ claude.md
 ds-bundle/
 .ds-sync/
 
+docs/
+.fix-excel-images/
+
 # Thư mục làm việc tạm của công cụ/agent khi dựng PR hoặc gói bản phát hành.
 # Chúng là bản sao repo (có .git riêng) nên lệnh add tất cả ở thư mục gốc sẽ
 # nuốt phải thành embedded repo — đúng thứ không ai muốn thấy trong commit.
