@@ -1172,6 +1172,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
             {renamingFile ? (
               <input
                 autoFocus
+                size={Math.max(filenameDraft.length, 1)}
                 value={filenameDraft}
                 onChange={e => setFilenameDraft(e.target.value)}
                 onClick={e => e.stopPropagation()}
@@ -1182,7 +1183,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
                 }}
                 style={{
                   fontWeight: 800, fontSize: 12.5, color: HC.ink,
-                  fontFamily: "'Inter',sans-serif", flex: 1, minWidth: 0,
+                  fontFamily: "'Inter',sans-serif", flex: '0 1 auto', minWidth: 0, maxWidth: '100%',
                   padding: '2px 6px', borderRadius: 4, border: `1.5px solid ${HC.orange}`,
                   outline: 'none', background: '#fff',
                 }}
