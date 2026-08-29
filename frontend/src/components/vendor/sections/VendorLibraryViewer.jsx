@@ -1622,8 +1622,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   const [shareTarget, setShareTarget] = useState(null);
   const [sharingSave, setSharingSave] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  // Filter theo product trong chế độ readOnly
-  const [selectedProductId, setSelectedProductId] = useState('');
   const fileInputRef = useRef(null);
   const highlightRef = useRef(null);
   // Bỏ qua đúng một tín hiệu realtime kế tiếp — dùng khi chính máy này vừa ghi
@@ -1633,22 +1631,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   // dataLoaded vừa thay rawFiles ngay dưới tay người dùng, làm thao tác ghi
   // đang chạy dở tính trên một danh sách khác.
   const writingRef = useRef(false);
-
-  // Danh sách product có vendor được gán (dùng cho dropdown filter)
-  const productOptions = useMemo(() => {
-    if (!readOnly) return [];
-    try {
-      const LS_PRODUCT_VENDORS = 'STAFF_PRODUCT_VENDORS_V1';
-      const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
-      const products = JSON.parse(localStorage.getItem('MOCK_PRODUCTS') || '[]');
-      return Object.keys(assigned)
-        .filter(pid => (assigned[pid] || []).some(v => v.is_excel))
-        .map(pid => {
-          const p = products.find(pr => String(pr.id) === String(pid));
-          return { id: pid, label: p?.product_type ? `${p.product_type} (#${pid})` : `Sản phẩm #${pid}` };
-        });
-    } catch { return []; }
-  }, [readOnly, dataLoaded]);
 
   // libraryFiles = rawFiles đã filter theo product (chỉ trong readOnly + mode all)
   const libraryFiles = useMemo(() => {
@@ -1662,12 +1644,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
       const assigned = JSON.parse(localStorage.getItem(LS_PRODUCT_VENDORS) || '{}');
       const assignedIds = new Set();
 
-      // Nếu chọn 1 product cụ thể, chỉ lấy vendor của product đó
-      const sourceEntries = selectedProductId
-        ? (assigned[selectedProductId] ? { [selectedProductId]: assigned[selectedProductId] } : {})
-        : assigned;
-
-      Object.values(sourceEntries).forEach(list => {
+      Object.values(assigned).forEach(list => {
         (list || []).forEach(v => {
           if (v.is_excel) assignedIds.add(v.excel_row_id || v.id);
         });
@@ -1700,7 +1677,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
         return { ...file, generalInfo: filteredGeneral, pricing: filteredPricing };
       }).filter(Boolean);
     } catch { return rawFiles; }
-  }, [rawFiles, readOnly, mode, selectedProductId, dataLoaded]);
+  }, [rawFiles, readOnly, mode, dataLoaded]);
 
   useEffect(() => {
     if (highlightFileId && highlightRef.current) {
@@ -2091,17 +2068,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>
             {displayFiles.length} file
           </span>
-          {/* Product filter — chỉ hiện trong readOnly mode */}
-          {readOnly && productOptions.length > 1 && (
-            <select
-              value={selectedProductId}
-              onChange={e => setSelectedProductId(e.target.value)}
-              style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`, fontSize: 12, background: HC.surface, color: selectedProductId ? HC.orangeDark : HC.muted, outline: 'none', cursor: 'pointer', fontWeight: selectedProductId ? 700 : 400 }}
-            >
-              <option value="">Tất cả sản phẩm</option>
-              {productOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
-          )}
           {/* Search */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input
