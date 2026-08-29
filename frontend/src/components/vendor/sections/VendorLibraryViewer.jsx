@@ -1106,6 +1106,10 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
 
   const importDate = fmtVNDateTimeShort(entry.importedAt);
 
+  // Badge: tên các vendor đang có trong phôi này (thay vì category) để nhìn nhanh phôi có vendor nào.
+  const vendorNames = [...new Set((entry.generalInfo || []).map(r => r.vendorName).filter(Boolean))];
+  const vendorNamesLabel = vendorNames.length ? vendorNames.join(', ') : entry.title;
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -1158,13 +1162,17 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
             {mode === 'all' && entry.sourceTab === 'new_products' && isWithinCurrentWeek(entry.importedAt) && (
               <span style={{ padding: '1px 6px', borderRadius: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mới</span>
             )}
-            <span style={{
-              padding: '2px 8px', borderRadius: 99,
-              background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
-              color: HC.orangeDark, fontSize: 9.5, fontWeight: 800,
-              letterSpacing: '0.05em', textTransform: 'uppercase',
-            }}>
-              {entry.title}
+            <span
+              title={vendorNames.length ? `Vendor: ${vendorNamesLabel}` : entry.title}
+              style={{
+                padding: '2px 8px', borderRadius: 99,
+                background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
+                color: HC.orangeDark, fontSize: 9.5, fontWeight: 800,
+                letterSpacing: '0.05em', textTransform: 'uppercase',
+                maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}
+            >
+              {vendorNamesLabel}
             </span>
             <span style={{ fontSize: 10.5, color: HC.muted }}>
               {importDate}
