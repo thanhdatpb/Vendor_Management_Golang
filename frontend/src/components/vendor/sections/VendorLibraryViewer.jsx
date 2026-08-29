@@ -458,7 +458,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
           <th style={{ ...TH(), width: '10%', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
           <th style={{ ...TH(), width: '8%', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
           <th style={{ ...TH(), width: '13%' }}>Notes</th>
-          <th style={{ ...TH(), width: '9%' }}>Trạng thái đặt Sample</th>
+          <th style={{ ...TH(), width: '9%' }}>Sample Status</th>
           <th style={{ ...TH(), width: '8%' }}>Link Folder</th>
           {!readOnly && <th style={{ ...TH(), width: '5%' }}>Thao tác</th>}
         </tr>
