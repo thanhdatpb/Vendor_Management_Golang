@@ -689,7 +689,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
       {/* ── Page Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ position: 'relative', flex: '0 1 260px', minWidth: 160 }}>
           <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 13, pointerEvents: 'none' }} />
           <input
@@ -702,7 +702,19 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
             onBlur={e => { e.target.style.borderColor = HC.border; e.target.style.boxShadow = 'none'; }}
           />
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        {!isMobile && (
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            style={{ flex: '0 0 170px', padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2, fontWeight: 600, color: HC.ink2, cursor: 'pointer' }}
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="pending">Pending — Chờ duyệt</option>
+            <option value="approved">Approved — Đã duyệt</option>
+            <option value="reject">Rejected — Từ chối</option>
+          </select>
+        )}
+        <div style={{ display: 'flex', gap: 8, marginLeft: isMobile ? 0 : 'auto' }}>
           <button
             onClick={openExportModal}
             disabled={exporting || submittedProducts.length === 0}
@@ -752,7 +764,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
       {/* ── Filter Bar ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14, padding: '10px 14px', background: '#fff', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        {isMobile ? (
+        {isMobile && (
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', width: '100%', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
             {[
               { v: '', label: 'Tất cả' },
@@ -777,17 +789,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
               );
             })}
           </div>
-        ) : (
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            style={{ flex: '0 0 180px', padding: '9px 14px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface2, fontWeight: 600, color: HC.ink2, cursor: 'pointer' }}
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="pending">Pending — Chờ duyệt</option>
-            <option value="approved">Approved — Đã duyệt</option>
-            <option value="reject">Rejected — Từ chối</option>
-          </select>
         )}
         {hasFilter && (
           <button
