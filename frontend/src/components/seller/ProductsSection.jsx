@@ -47,7 +47,7 @@ function LinkPreviewImg({ src }) {
   );
 }
 
-export default function ProductsSection({ highlightedProductId, onHighlightCleared, onViewVendorLibrary }) {
+export default function ProductsSection({ highlightedProductId, onHighlightCleared, onViewVendorLibrary, onTotalCountChange }) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [viewProduct, setViewProduct] = useState(null);
@@ -648,6 +648,8 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
     return (!search || hay.includes(search.toLowerCase())) && (!filterStatus || status === filterStatus);
   });
 
+  useEffect(() => { onTotalCountChange && onTotalCountChange(submittedProducts.length); }, [submittedProducts, onTotalCountChange]);
+
   useEffect(() => { setCurrentPage(1); }, [search, filterStatus]);
   const hasFilter = search || filterStatus;
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
@@ -688,8 +690,17 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
       {/* ── Page Header ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
-        <div>
-          <p style={{ fontSize: 13, color: HC.ink2, margin: 0, fontWeight: 700 }}>Tổng cộng: {submittedProducts.length} sản phẩm đã tạo</p>
+        <div style={{ position: 'relative', flex: '0 1 260px', minWidth: 160 }}>
+          <SearchOutlined style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 13, pointerEvents: 'none' }} />
+          <input
+            type="text"
+            placeholder="Tìm loại sản phẩm..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ ...inp, padding: '7px 12px 7px 34px', borderRadius: 10, border: `1.5px solid ${HC.border}`, fontSize: 12.5, transition: 'border-color 0.15s, box-shadow 0.15s' }}
+            onFocus={e => { e.target.style.borderColor = HC.orange; e.target.style.boxShadow = `0 0 0 3px ${HC.orange}22`; }}
+            onBlur={e => { e.target.style.borderColor = HC.border; e.target.style.boxShadow = 'none'; }}
+          />
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
@@ -741,18 +752,6 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
 
       {/* ── Filter Bar ── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14, padding: '10px 14px', background: '#fff', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
-          <SearchOutlined style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: HC.muted, fontSize: 14, pointerEvents: 'none' }} />
-          <input
-            type="text"
-            placeholder="Tìm loại sản phẩm..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ ...inp, paddingLeft: 38, borderRadius: 10, border: `1.5px solid ${HC.border}`, transition: 'border-color 0.15s, box-shadow 0.15s' }}
-            onFocus={e => { e.target.style.borderColor = HC.orange; e.target.style.boxShadow = `0 0 0 3px ${HC.orange}22`; }}
-            onBlur={e => { e.target.style.borderColor = HC.border; e.target.style.boxShadow = 'none'; }}
-          />
-        </div>
         {isMobile ? (
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', width: '100%', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
             {[

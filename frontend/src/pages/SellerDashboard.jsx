@@ -35,6 +35,7 @@ export default function SellerDashboard() {
   const [highlightedProductId, setHighlightedProductId] = useState(null);
   const [pendingOpenProductId, setPendingOpenProductId] = useState(null);
   const [vendorHighlightFileId, setVendorHighlightFileId] = useState(null);
+  const [productsTotalCount, setProductsTotalCount] = useState(null);
 
   const handleViewVendorLibrary = (fileId) => {
     setVendorHighlightFileId(fileId || null);
@@ -250,7 +251,7 @@ export default function SellerDashboard() {
 
   const renderSection = () => {
     switch (active) {
-      case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} onViewVendorLibrary={handleViewVendorLibrary} />;
+      case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} onViewVendorLibrary={handleViewVendorLibrary} onTotalCountChange={setProductsTotalCount} />;
       case 'vendors': return <VendorsSection highlightFileId={vendorHighlightFileId} onHighlightCleared={() => setVendorHighlightFileId(null)} />;
       case 'setup_price': return <SetupPriceSection />;
       default: return null;
@@ -288,8 +289,15 @@ export default function SellerDashboard() {
               ) : (
                 <div style={{ width: 4, height: 32, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
               )}
-              <div style={{ color: HC.ink, fontWeight: 900, fontSize: isMobile ? 15 : 16, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {PAGE_TITLES[active]}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ color: HC.ink, fontWeight: 900, fontSize: isMobile ? 15 : 16, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {PAGE_TITLES[active]}
+                </div>
+                {active === 'products' && productsTotalCount !== null && !isMobile && (
+                  <div style={{ color: HC.muted, fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Tổng cộng: {productsTotalCount} sản phẩm đã tạo
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
