@@ -655,12 +655,16 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
 }
 
 // ── Section 2 Table ──────────────────────────────────────────────────────────
-function PricingTable({ rows, onSave, readOnly, generalInfo }) {
+function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
   const [editIdx, setEditIdx] = useState(-1);
   const [editForm, setEditForm] = useState(null);
   const [addingRow, setAddingRow] = useState(false);
   const [addForm, setAddForm] = useState(null);
   const showActions = !readOnly && !isCurrentUserVendor();
+  // Xóa dòng size/giá không còn hoạt động: Vendor (không readOnly) và Admin
+  // (readOnly nhưng canManage) đều được — tách riêng khỏi "Sửa" cả dòng, vì
+  // Admin vẫn không được sửa trực tiếp giá trị ô (chỉ được dọn dòng thừa).
+  const showActionsCol = showActions || canDeleteRow;
 
   const mkAddForm = () => ({
     kyHieu: '', productType: '', size: '', optional: '',
@@ -851,7 +855,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
             <col key={`${m.label}-c3`} style={{ width: 54 }} />,
           ])}
           <col style={{ width: 72 }} />{/* Link Template */}
-          {showActions && <col style={{ width: 54 }} />}
+          {showActionsCol && <col style={{ width: 54 }} />}
         </colgroup>
         <thead>
           <tr>
@@ -863,7 +867,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
               <th key={m.label} colSpan={3} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
             ))}
             <th rowSpan={2} style={{ ...TH(), whiteSpace: 'normal', lineHeight: 1.15 }}>Link Template</th>
-            {showActions && <th rowSpan={2} style={{ ...TH() }}>Thao tác</th>}
+            {showActionsCol && <th rowSpan={2} style={{ ...TH() }}>Thao tác</th>}
           </tr>
           <tr>
             <th style={{ ...TH() }}>Size</th>
@@ -979,7 +983,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                       : <span style={{ color: HC.muted2 }}>—</span>;
                   })()}
                 </td>
-                {showActions && (
+                {showActionsCol && (
                   <td style={{ ...TD(i), textAlign: 'center' }}>
                     {isEditing ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -988,8 +992,12 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>✏️ Sửa</button>
-                        <button onClick={() => deleteRow(i)} style={{ padding: '4px 8px', borderRadius: 4, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>🗑 Xóa</button>
+                        {showActions && (
+                          <button onClick={() => startEdit(i, r)} style={{ padding: '4px 8px', borderRadius: 4, background: 'rgba(212,160,23,0.15)', color: HC.gold, border: `1px solid ${HC.goldLight}`, cursor: 'pointer', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>✏️ Sửa</button>
+                        )}
+                        {canDeleteRow && (
+                          <button onClick={() => { if (window.confirm('Xóa dòng size này? Không thể hoàn tác.')) deleteRow(i); }} style={{ padding: '4px 8px', borderRadius: 4, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', cursor: 'pointer', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>🗑 Xóa</button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -1051,8 +1059,9 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
 
 // ── Single Library File Card ──────────────────────────────────────────────────
 // Nút chia sẻ nhỏ trên header card — mũi tên cong sang phải (biểu tượng "share").
-// Thay cho nút đổi tên file: quyền xem theo project giờ khai báo tường minh chứ
-// không suy từ ký hiệu `P.xxx` trong tên file nữa.
+// Quyền xem theo project khai báo tường minh qua đây, không còn suy từ ký hiệu
+// `P.xxx` trong tên file — nên đổi tên file (bên dưới, click vào tên) chỉ còn
+// là đổi nhãn hiển thị, không ảnh hưởng project nào thấy file.
 function ShareButton({ onClick, title }) {
   const [hover, setHover] = useState(false);
   return (
@@ -1083,6 +1092,19 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
+  const [renamingFile, setRenamingFile] = useState(false);
+  const [filenameDraft, setFilenameDraft] = useState('');
+
+  // Đổi tên file (chỉ Vendor/Admin — canShare): giữ nguyên phần đuôi .xlsx/.xls gốc,
+  // chỉ thay phần tên hiển thị (đã bỏ đuôi) mà người dùng gõ.
+  const commitRename = () => {
+    setRenamingFile(false);
+    const trimmed = filenameDraft.trim();
+    if (!trimmed) return;
+    const ext = (entry.filename.match(/\.xlsx?$/i) || [''])[0];
+    const newFilename = /\.xlsx?$/i.test(trimmed) ? trimmed : `${trimmed}${ext}`;
+    if (newFilename !== entry.filename) onUpdate({ ...entry, filename: newFilename });
+  };
 
   useEffect(() => {
     if (highlighted) setExpanded(true);
@@ -1145,16 +1167,45 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
         }}>📄</div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Filename */}
+          {/* Filename — Vendor/Admin (canShare) bấm vào tên để đổi, không làm toggle mở rộng card */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-            <span style={{
-              fontWeight: 800, fontSize: 12.5, color: HC.ink,
-              fontFamily: "'Inter',sans-serif",
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              flex: 1, minWidth: 0,
-            }}>
-              {entry.filename.replace(/\.xlsx?$/i, '')}
-            </span>
+            {renamingFile ? (
+              <input
+                autoFocus
+                value={filenameDraft}
+                onChange={e => setFilenameDraft(e.target.value)}
+                onClick={e => e.stopPropagation()}
+                onBlur={commitRename}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+                  if (e.key === 'Escape') { e.preventDefault(); setRenamingFile(false); }
+                }}
+                style={{
+                  fontWeight: 800, fontSize: 12.5, color: HC.ink,
+                  fontFamily: "'Inter',sans-serif", flex: 1, minWidth: 0,
+                  padding: '2px 6px', borderRadius: 4, border: `1.5px solid ${HC.orange}`,
+                  outline: 'none', background: '#fff',
+                }}
+              />
+            ) : (
+              <span
+                onClick={canShare ? (e) => {
+                  e.stopPropagation();
+                  setFilenameDraft(entry.filename.replace(/\.xlsx?$/i, ''));
+                  setRenamingFile(true);
+                } : undefined}
+                title={canShare ? 'Bấm để đổi tên file' : entry.filename}
+                style={{
+                  fontWeight: 800, fontSize: 12.5, color: HC.ink,
+                  fontFamily: "'Inter',sans-serif",
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  flex: 1, minWidth: 0,
+                  cursor: canShare ? 'text' : 'default',
+                }}
+              >
+                {entry.filename.replace(/\.xlsx?$/i, '')}
+              </span>
+            )}
           </div>
 
           {/* Meta row */}
@@ -1268,7 +1319,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
           {/* Section Content */}
           <div style={{ background: HC.surface }}>
             {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} onSampleStatusChange={onSampleStatusChange} />}
-            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} />}
+            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} canDeleteRow={canShare} />}
           </div>
         </div>
       )}
