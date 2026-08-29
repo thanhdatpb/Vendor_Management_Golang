@@ -8,7 +8,9 @@ import { notificationApi } from '../services/api';
 import { subscribeNotificationChanges } from '../services/echo';
 
 import { HC } from '../constants/sellerTheme';
+import { SELLER_SECTIONS } from '../constants/dashboardSections';
 import useIsMobile from '../hooks/useIsMobile';
+import useSectionRoute from '../hooks/useSectionRoute';
 import SellerSidebar from '../components/seller/SellerSidebar';
 import SellerNotificationCenter from '../components/seller/SellerNotificationCenter';
 import ProductsSection from '../components/seller/ProductsSection';
@@ -21,7 +23,11 @@ import SetupPriceSection from '../components/seller/SetupPriceSection';
 export default function SellerDashboard() {
   const { user, logout } = useAuth();
   const isMobile = useIsMobile();
-  const [active, setActive] = useState('products');
+  // Mục đang mở nằm trên URL (/seller/products | /seller/vendors |
+  // /seller/price-sheets) chứ không phải useState — nhờ vậy đóng Bảng tính giá
+  // ở /price-sheets/:id quay lại đúng mục Bảng Tính Giá, và Back/F5/bookmark
+  // đều giữ đúng mục.
+  const [active, setActive] = useSectionRoute({ basePath: '/seller', sections: SELLER_SECTIONS, fallback: 'products' });
   const [sidebarOpen, setSidebarOpen] = useState(() => !window.matchMedia('(max-width:767px)').matches);
   const [requestNotifications, setRequestNotifications] = useState([]);
   const [newsNotifications, setNewsNotifications] = useState([]);
@@ -198,7 +204,7 @@ export default function SellerDashboard() {
       setPendingOpenProductId(notification.productId);
       setActive('products');
     }
-  }, []);
+  }, [setActive]);
 
   const handleNewsClick = useCallback(() => {}, []);
 

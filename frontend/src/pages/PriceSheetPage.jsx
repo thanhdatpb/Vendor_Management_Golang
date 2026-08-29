@@ -20,6 +20,7 @@ import { saveSheetToServer } from '../utils/priceSheetCommit';
 import { copyPriceSheetLink } from '../utils/priceSheetLink';
 import { exportSheetToExcel } from '../utils/sheetExport';
 import { HC } from '../constants/sellerTheme';
+import { ADMIN_PRICE_SHEETS_PATH, SELLER_PRICE_SHEETS_PATH } from '../constants/dashboardSections';
 import AppToast from '../components/shared/AppToast';
 import PriceSheetWorkspace from '../components/seller/PriceSheetWorkspace';
 import { PriceSheetReadOnlyView } from '../components/admin/modals/PriceSheetViewerModal';
@@ -66,8 +67,11 @@ export default function PriceSheetPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
-  const backTo = isAdmin ? '/admin' : '/seller';
-  const backLabel = `← Về ${isAdmin ? 'trang Admin' : 'Bảng tính giá'}`;
+  // Về ĐÚNG mục Bảng Tính Giá, không phải dashboard trống: '/seller' | '/admin'
+  // remount dashboard và rơi về mục mặc định (Seller rớt sang Quản Lý Sản Phẩm,
+  // Admin rớt về Tổng Quan) — đúng mục là nơi người dùng vừa bấm mở bảng này.
+  const backTo = isAdmin ? ADMIN_PRICE_SHEETS_PATH : SELLER_PRICE_SHEETS_PATH;
+  const backLabel = '← Về Bảng tính giá'; // cả 2 role đều về mục Bảng Tính Giá của mình
 
   const [sheet, setSheet] = useState(null);
   const [status, setStatus] = useState('loading'); // loading | ready | not_found | forbidden | error

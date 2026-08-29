@@ -16,12 +16,17 @@ import RoleRoute from "./routes/RoleRoute";
 export default function App() {
   return (
     <Routes>
+      {/* :section? = mục đang mở trong dashboard (tab sidebar). Mỗi mục có URL
+          riêng để bookmark / gửi link / F5 / Back đều đúng mục — trước đây cả
+          role chỉ có một URL nên mọi lần remount đều rớt về mục mặc định.
+          Thiếu hoặc sai slug thì useSectionRoute viết lại về mục mặc định.
+          Danh sách slug: constants/dashboardSections.js */}
       <Route path="/" element={<Login />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
       <Route
-        path="/admin"
+        path="/admin/:section?"
         element={
           <ProtectedRoute>
             <RoleRoute allow={["admin"]}>
@@ -32,7 +37,7 @@ export default function App() {
       />
 
       <Route
-        path="/seller"
+        path="/seller/:section?"
         element={
           <ProtectedRoute>
             <RoleRoute allow={["staffa", "staff", "seller"]}>
@@ -43,7 +48,7 @@ export default function App() {
       />
 
       <Route
-        path="/vendor"
+        path="/vendor/:section?"
         element={
           <ProtectedRoute>
             <RoleRoute allow={["staffb", "vendor"]}>
@@ -54,7 +59,7 @@ export default function App() {
       />
 
       <Route
-        path="/csf"
+        path="/csf/:section?"
         element={
           <ProtectedRoute>
             <RoleRoute allow={["csf"]}>
@@ -66,18 +71,18 @@ export default function App() {
 
       {/* Marvel dùng chung dashboard với CSF (quyền y hệt), chỉ khác nhãn */}
       <Route
-        path="/marvel"
+        path="/marvel/:section?"
         element={
           <ProtectedRoute>
             <RoleRoute allow={["marvel"]}>
-              <CsfDashboard roleLabel="Marvel" libraryComponent={MarvelVendorLibrary} />
+              <CsfDashboard basePath="/marvel" roleLabel="Marvel" libraryComponent={MarvelVendorLibrary} />
             </RoleRoute>
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/pd"
+        path="/pd/:section?"
         element={
           <ProtectedRoute>
             <RoleRoute allow={["pd"]}>

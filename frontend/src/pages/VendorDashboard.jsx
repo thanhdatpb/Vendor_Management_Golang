@@ -11,6 +11,8 @@ import NewsManagementSection from '../components/vendor/sections/NewsManagementS
 import ProductsSection from '../components/vendor/sections/ProductsSection';
 import VendorsSection from '../components/vendor/sections/VendorsSection';
 import { HC, MENU, PAGE_TITLES } from '../components/vendor/utils/constants';
+import { VENDOR_SECTIONS } from '../constants/dashboardSections';
+import useSectionRoute from '../hooks/useSectionRoute';
 
 const DARK = {
   bg:          'var(--hc-dark-bg)',
@@ -27,7 +29,9 @@ const DARK = {
 
 export default function VendorDashboard() {
   const { user, logout } = useAuth();
-  const [active, setActive] = useState('products');
+  // Mục đang mở nằm trên URL (/vendor/products | /vendor/library |
+  // /vendor/news) — bookmark / gửi link / F5 / Back đều giữ đúng mục.
+  const [active, setActive] = useSectionRoute({ basePath: '/vendor', sections: VENDOR_SECTIONS, fallback: 'products' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogout, setShowLogout] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
@@ -133,7 +137,7 @@ export default function VendorDashboard() {
 
   const handleRequestClick = useCallback((notification) => {
     if (notification.productId) { setActive('products'); setSelectedProductId(notification.productId); }
-  }, []);
+  }, [setActive]);
   const handleNewsClick = useCallback((notification) => { console.log('Click vào tin tức:', notification); }, []);
 
   useEffect(() => {

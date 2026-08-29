@@ -67,10 +67,10 @@ describe('4 trạng thái tải', () => {
     expect(await screen.findByText('Không tìm thấy bảng tính giá')).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: /Về Bảng tính giá/ }));
-    expect(mockNavigate).toHaveBeenCalledWith('/seller');
+    expect(mockNavigate).toHaveBeenCalledWith('/seller/price-sheets');
   });
 
-  it('403 → thẻ "không có quyền", back về /admin khi role là Admin', async () => {
+  it('403 → thẻ "không có quyền", back về mục Bảng Tính Giá của Admin', async () => {
     authState.isAdmin = true;
     priceSheetApi.get.mockRejectedValue(httpError(403));
 
@@ -78,8 +78,8 @@ describe('4 trạng thái tải', () => {
 
     expect(await screen.findByText('Bạn không có quyền xem bảng này')).toBeInTheDocument();
     const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /Về trang Admin/ }));
-    expect(mockNavigate).toHaveBeenCalledWith('/admin');
+    await user.click(screen.getByRole('button', { name: /Về Bảng tính giá/ }));
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/price-sheets');
   });
 
   it('lỗi mạng → thẻ lỗi kèm nút Thử lại gọi lại get()', async () => {
@@ -145,13 +145,13 @@ describe('Seller — ra thẳng workspace sửa được', () => {
     expect(await screen.findByTestId('ws-name')).toHaveTextContent('Legend Shirt');
   });
 
-  it('đóng workspace thì navigate về /seller', async () => {
+  it('đóng workspace thì navigate về mục Bảng Tính Giá của Seller', async () => {
     priceSheetApi.get.mockResolvedValue({ data: fullSheet() });
 
     render(<PriceSheetPage />);
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Đóng workspace' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/seller');
+    expect(mockNavigate).toHaveBeenCalledWith('/seller/price-sheets');
   });
 });

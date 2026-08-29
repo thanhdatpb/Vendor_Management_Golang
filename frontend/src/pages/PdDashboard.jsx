@@ -11,6 +11,7 @@ import { ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { HC } from '../constants/sellerTheme';
 import { PROJECTS, projectNameToKey } from '../constants/projects';
+import useSectionRoute from '../hooks/useSectionRoute';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import PdVendorLibrary from '../components/csfpd/PdVendorLibrary';
 
@@ -25,8 +26,14 @@ export default function PdDashboard() {
       .map(p => ({ id: p.id, icon: <ShopOutlined />, label: p.label }));
   }, [user?.pd_projects]);
 
-  const [active, setActive] = useState(null);
-  const projectKey = active || projectMenu[0]?.id || null;
+  // Project đang xem nằm trên URL (/pd/happy…). Danh sách mục là các project
+  // Admin đã cấp cho tài khoản này, nên gõ thẳng URL của project CHƯA được cấp
+  // sẽ bị viết lại về project đầu tiên hợp lệ — không mở nhờ URL được.
+  const projectSections = useMemo(
+    () => projectMenu.map(m => ({ id: m.id, slug: m.id, title: `Thư Viện Vendor — ${m.label}` })),
+    [projectMenu],
+  );
+  const [projectKey, setActive] = useSectionRoute({ basePath: '/pd', sections: projectSections });
   const activeLabel = projectMenu.find(m => m.id === projectKey)?.label || '';
 
   return (

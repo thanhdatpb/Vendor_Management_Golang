@@ -10,23 +10,28 @@ import { ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { HC } from '../constants/sellerTheme';
 import { PROJECTS } from '../constants/projects';
+import useSectionRoute from '../hooks/useSectionRoute';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import CsfVendorLibrary from '../components/csfpd/CsfVendorLibrary';
 
 // Danh sách project khai ở constants/projects.js — dùng chung với PD.
 const PROJECT_MENU = PROJECTS.map(p => ({ id: p.id, icon: <ShopOutlined />, label: p.label }));
 
+// Project đang xem nằm trên URL (/csf/happy, /marvel/creative…) — gửi link
+// thẳng tới đúng project thay vì bảo người nhận 'vào rồi tự bấm sang tab'.
+const PROJECT_SECTIONS = PROJECTS.map(p => ({ id: p.id, slug: p.id, title: `Thư Viện Vendor — ${p.label}` }));
+
 /**
  * Dùng chung cho route /csf và /marvel. Hai bộ phận khác nhau ở NỘI DUNG bảng
  * nên mỗi bên truyền component thư viện của mình vào — xem components/csfpd/.
  */
-export default function CsfDashboard({ roleLabel = 'CSF', libraryComponent }) {
+export default function CsfDashboard({ basePath = '/csf', roleLabel = 'CSF', libraryComponent }) {
   // Gán ra biến hoa đầu để dùng làm tag JSX. Không destructure thẳng thành
   // `LibraryComponent`: project không cài eslint-plugin-react nên ESLint không
   // thấy JSX dùng tham số, sẽ báo nhầm "never used".
   const LibraryComponent = libraryComponent || CsfVendorLibrary;
   const { user, logout } = useAuth();
-  const [active, setActive] = useState('happy');
+  const [active, setActive] = useSectionRoute({ basePath, sections: PROJECT_SECTIONS, fallback: 'happy' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const activeLabel = PROJECT_MENU.find(m => m.id === active)?.label || '';

@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { productApi, notificationApi } from '../services/api';
 import { subscribeNotificationChanges, subscribeProductChanges } from '../services/echo';
 import { HC, PAGE_TITLES } from '../components/admin/constants';
+import { ADMIN_SECTIONS } from '../constants/dashboardSections';
+import useSectionRoute from '../hooks/useSectionRoute';
 import { normalizeList } from '../components/admin/utils';
 import Sidebar from '../components/admin/Sidebar';
 import NotificationCenter from '../components/admin/notifications/NotificationCenter';
@@ -40,27 +42,18 @@ window.sendNewsToAdmin = function (newsData) {
   }
 };
 
-// Bấm "Quay lại" từ /price-sheets/:id (hay bất kỳ route khác) remount lại
-// AdminDashboard — useState('overview') sẽ luôn thắng nếu không nhớ tab cuối,
-// nên Admin xem bảng tính giá xong quay lại luôn rớt về Tổng quan thay vì
-// đúng tab Bảng tính giá đang xem. sessionStorage: nhớ trong phiên làm việc,
-// không rò rỉ giữa các tài khoản khác nhau mở trình duyệt sau đó.
-const ADMIN_ACTIVE_TAB_KEY = 'ADMIN_ACTIVE_TAB';
-
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
-  const [active, setActive] = useState(() => {
-    try { return sessionStorage.getItem(ADMIN_ACTIVE_TAB_KEY) || 'overview'; } catch { return 'overview'; }
-  });
+  // Mục đang mở nằm trên URL (/admin/overview | /admin/vendors |
+  // /admin/price-sheets | /admin/staff). Trước đây là useState + sessionStorage
+  // để nhớ tab khi remount (bấm "Quay lại" từ /price-sheets/:id); URL làm
+  // đúng việc đó mà còn bookmark/gửi link/Back được, nên bỏ sessionStorage.
+  const [active, setActive] = useSectionRoute({ basePath: '/admin', sections: ADMIN_SECTIONS, fallback: 'overview' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [requestNotifications, setRequestNotifications] = useState([]);
   const [newsNotifications, setNewsNotifications] = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
   const [viewProduct, setViewProduct] = useState(null);
-
-  useEffect(() => {
-    try { sessionStorage.setItem(ADMIN_ACTIVE_TAB_KEY, active); } catch { /* private mode — bỏ qua */ }
-  }, [active]);
 
   const loadPendingProducts = useCallback(async () => {
     try {
@@ -280,7 +273,7 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error('Error fetching product:', err);
     }
-  }, [pendingProducts]);
+  }, [pendingProducts, setActive]);
 
   const handleNewsClick = useCallback(async (notification) => {
     console.log('Click vào tin tức:', notification);
