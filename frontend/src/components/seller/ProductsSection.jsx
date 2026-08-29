@@ -652,6 +652,10 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const hasFilter = search || filterStatus;
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const pagedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const hasActionableProducts = submittedProducts.some(p => {
+    const s = getStatus(p);
+    return s === 'draft' || s === 'reject';
+  });
   const renderVendorCell = (p) => {
     // Ưu tiên assigned_vendors từ API, fallback về localStorage
     let av = p.assigned_vendors;
@@ -912,7 +916,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                     { label: 'Status',           w: 120 },
                     { label: 'Nhân sự request',  w: 170 },
                     { label: 'Vendor',           w: 150 },
-                    { label: 'Actions',          w: 180 },
+                    ...(hasActionableProducts ? [{ label: 'Actions', w: 180 }] : []),
                   ].map(h => (
                     <th key={h.label} style={{
                       textAlign: 'left', padding: '14px 18px',
@@ -1013,6 +1017,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       </td>
 
                       {/* Actions */}
+                      {hasActionableProducts && (
                       <td style={{ padding: '19px 18px', borderBottom: '1px solid #e5e7eb' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
                           {(isDraft || isRejected) && (
@@ -1054,6 +1059,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                           )}
                         </div>
                       </td>
+                      )}
                     </tr>
                   );
                 })}
