@@ -221,7 +221,6 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
       ));
       savedSnapRef.current = snapshotOf(name, settings, productTypes);
       setConflict(null);
-      showToast?.('success', 'Đã lưu', `${name} · phiên bản v${snap.version}`);
     } catch (err) {
       // 409: có người khác đã lưu bảng này sau lúc ta mở nó. TUYỆT ĐỐI không
       // ghi đè im lặng — trước đây server là last-write-wins nên toàn bộ thay

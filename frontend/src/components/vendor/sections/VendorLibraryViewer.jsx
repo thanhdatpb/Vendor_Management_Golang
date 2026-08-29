@@ -1900,6 +1900,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           generalInfo: result.generalInfo,
           pricing: result.pricing,
           sourceTab: mode === 'new_products' ? 'new_products' : 'all',
+          projects: [], // mặc định share MỌI project — cần giới hạn thì tự chia sẻ lại
         });
       } catch (err) {
         errors.push(`${file.name}: ${err.message}`);
@@ -1910,8 +1911,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
       const map = Object.fromEntries(libraryFiles.map(e => [e.filename, e]));
       newEntries.forEach(ne => { map[ne.filename] = ne; });
       const updated = Object.values(map);
-      const saved = await saveLibrary(updated);
-      if (saved) showToast('success', `Import ${newEntries.length} file thành công${errors.length ? `, ${errors.length} lỗi` : ''}`);
+      await saveLibrary(updated);
     }
 
     if (errors.length > 0 && newEntries.length === 0) {
@@ -1928,7 +1928,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     setExporting(true);
     try {
       await exportVendorLibraryFiles(selectedFiles, { includePricing: true });
-      showToast('success', `📤 Đã xuất ${selectedFiles.length} file Excel theo file mẫu`);
       setShowExportPicker(false);
     } catch (err) {
       showToast('error', err.message || 'Xuất file thất bại');
@@ -1948,12 +1947,10 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   const executeDelete = async () => {
     if (!deleteConfirm) return;
     if (deleteConfirm.type === 'all') {
-      const saved = await saveLibrary([]);
-      if (saved) showToast('success', '🗑 Đã xóa toàn bộ thư viện');
+      await saveLibrary([]);
     } else if (deleteConfirm.type === 'single') {
       const updated = libraryFiles.filter(e => e.id !== deleteConfirm.id);
-      const saved = await saveLibrary(updated);
-      if (saved) showToast('success', '🗑 Đã xóa file thư viện');
+      await saveLibrary(updated);
     }
     setDeleteConfirm(null);
   };
@@ -1967,8 +1964,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
       ? { ...updatedEntry, generalInfo: mergeGeneralInfoById(rawEntry.generalInfo, updatedEntry.generalInfo) }
       : updatedEntry;
     const updated = rawFiles.map(e => e.id === merged.id ? merged : e);
-    const saved = await saveLibrary(updated);
-    if (saved) showToast('success', '💾 Đã lưu thay đổi');
+    await saveLibrary(updated);
   };
 
   // Toggle trạng thái Sample: cập nhật lạc quan trong bộ nhớ (badge đổi ngay),
@@ -1997,21 +1993,13 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     const updated = rawFiles.map(f => (f.id === shareTarget.id ? { ...f, projects } : f));
     const saved = await saveLibrary(updated);
     setSharingSave(false);
-    if (saved) {
-      setShareTarget(null);
-      showToast('success', projects.length
-        ? `🔗 Đã chia sẻ file cho ${projects.length} project`
-        : '🌐 Đã chia sẻ file cho mọi project');
-    }
+    if (saved) setShareTarget(null);
   };
 
   const handleManualAdd = async (entry) => {
     const updated = [...rawFiles, entry];
     const saved = await saveLibrary(updated);
-    if (saved) {
-      setShowManualAdd(false);
-      showToast('success', '✅ Đã thêm vendor mới thành công');
-    }
+    if (saved) setShowManualAdd(false);
   };
 
   return (

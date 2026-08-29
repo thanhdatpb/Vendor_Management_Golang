@@ -22,7 +22,6 @@ export default function ShareProjectsModal({ HC, entry, saving = false, onConfir
     return new Set(fromName ? [fromName] : []);
   });
 
-  const isLegacy = fileSharedProjects(entry) === null;
   const allProjects = selected.size === 0;
 
   const toggle = (id) => {
@@ -81,17 +80,6 @@ export default function ShareProjectsModal({ HC, entry, saving = false, onConfir
 
         {/* Body */}
         <div style={{ padding: '18px 22px' }}>
-          {isLegacy && (
-            <div style={{
-              marginBottom: 14, padding: '9px 12px', borderRadius: 10,
-              background: '#fffbeb', border: '1.5px solid #fde68a',
-              fontSize: 11, color: '#92400e', lineHeight: 1.5,
-            }}>
-              File này đang phân quyền theo ký hiệu <b>P.xxx</b> trong tên file. Lưu ở đây
-              một lần là chuyển sang danh sách bên dưới, tên file không còn ảnh hưởng nữa.
-            </div>
-          )}
-
           <div style={{ fontSize: 12, fontWeight: 800, color: HC.ink, marginBottom: 10 }}>
             Project được xem file này
           </div>

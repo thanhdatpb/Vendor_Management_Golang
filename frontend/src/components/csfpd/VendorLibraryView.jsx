@@ -381,7 +381,6 @@ export default function VendorLibraryView({ projectKey, department }) {
     setExporting(true);
     try {
       await exportVendorLibraryFiles(selectedFiles, { includePricing: false });
-      showToast('success', `📤 Đã xuất ${selectedFiles.length} file Excel theo file mẫu`);
       setShowExportPicker(false);
     } catch (err) {
       showToast('error', err.message || 'Xuất file thất bại');

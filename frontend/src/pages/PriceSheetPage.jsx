@@ -105,7 +105,6 @@ export default function PriceSheetPage() {
   const handleCopyLink = async () => {
     try {
       await copyPriceSheetLink(id);
-      showToast('success', 'Đã copy link', 'Dán link để gửi cho người cần xem bảng này.');
     } catch (err) {
       console.warn('Copy link bảng tính giá thất bại:', err?.message || err);
       showToast('error', 'Copy link thất bại', 'Kiểm tra quyền truy cập clipboard rồi thử lại.');

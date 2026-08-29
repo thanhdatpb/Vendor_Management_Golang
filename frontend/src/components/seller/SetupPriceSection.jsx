@@ -181,7 +181,6 @@ export default function SetupPriceSection() {
   const handleCopyLink = async (id) => {
     try {
       await copyPriceSheetLink(id);
-      showToast('success', 'Đã copy link', 'Dán link để gửi cho Admin xem bảng này.');
     } catch (err) {
       console.warn('Copy link bảng tính giá thất bại:', err?.message || err);
       showToast('error', 'Copy link thất bại', 'Kiểm tra quyền truy cập clipboard rồi thử lại.');
@@ -194,7 +193,6 @@ export default function SetupPriceSection() {
     priceSheetApi.remove(sheet.id).catch((err) => {
       console.warn('Xoá trên server thất bại:', err?.message || err);
     });
-    showToast('success', 'Đã xoá', sheet.name);
   };
 
   return (

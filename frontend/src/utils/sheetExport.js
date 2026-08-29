@@ -80,7 +80,6 @@ export async function exportSheetToExcel(sheet, showToast) {
     XLSX.utils.book_append_sheet(wb, ws, (sheet.name || 'Gia').slice(0, 28));
     const fileName = exportFileName(sheet);
     XLSX.writeFile(wb, fileName);
-    showToast?.('success', 'Đã export', `Tải file ${fileName}`);
   } catch (err) {
     console.error('exportSheetToExcel', err);
     showToast?.('error', 'Lỗi export', err.message || 'Không xuất được Excel');
