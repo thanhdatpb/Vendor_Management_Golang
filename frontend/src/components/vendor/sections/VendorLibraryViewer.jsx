@@ -450,16 +450,16 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
               </th>
             );
           })()}
-          <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Vendor Name</th>
-          <th style={{ ...TH(), width: '10%', textAlign: 'left' }}>Product Type</th>
-          <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Hình ảnh</th>
-          <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Chất liệu</th>
-          <th style={{ ...TH(), width: '7%', textAlign: 'left' }}>Chi tiết Size</th>
-          <th style={{ ...TH(), width: '10%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
-          <th style={{ ...TH(), width: '8%', textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
-          <th style={{ ...TH(), width: '13%', textAlign: 'left' }}>Notes</th>
-          <th style={{ ...TH(), width: '9%', textAlign: 'center' }}>Trạng thái đặt Sample</th>
-          <th style={{ ...TH(), width: '8%', textAlign: 'left' }}>Link Folder</th>
+          <th style={{ ...TH(), width: '9%' }}>Vendor Name</th>
+          <th style={{ ...TH(), width: '10%' }}>Product Type</th>
+          <th style={{ ...TH(), width: '9%' }}>Hình ảnh</th>
+          <th style={{ ...TH(), width: '9%' }}>Chất liệu</th>
+          <th style={{ ...TH(), width: '7%' }}>Chi tiết Size</th>
+          <th style={{ ...TH(), width: '10%', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Vendor)</th>
+          <th style={{ ...TH(), width: '8%', whiteSpace: 'normal', lineHeight: 1.3 }}>AVG TG (Thực tế)</th>
+          <th style={{ ...TH(), width: '13%' }}>Notes</th>
+          <th style={{ ...TH(), width: '9%' }}>Trạng thái đặt Sample</th>
+          <th style={{ ...TH(), width: '8%' }}>Link Folder</th>
           {!readOnly && <th style={{ ...TH(), width: '5%' }}>Thao tác</th>}
         </tr>
       </thead>
@@ -855,14 +855,14 @@ function PricingTable({ rows, onSave, readOnly, generalInfo }) {
         </colgroup>
         <thead>
           <tr>
-            <th rowSpan={2} style={{ ...TH(), textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.15 }}>Vendor Name</th>
-            <th rowSpan={2} style={{ ...TH(), textAlign: 'left' }}>Product Type</th>
+            <th rowSpan={2} style={{ ...TH(), whiteSpace: 'normal', lineHeight: 1.15 }}>Vendor Name</th>
+            <th rowSpan={2} style={{ ...TH() }}>Product Type</th>
             <th colSpan={2} style={{ ...TH() }}>Detail</th>
             <th colSpan={2} style={{ ...TH() }}>Pricing</th>
             {shipMethods.map((m, si) => (
               <th key={m.label} colSpan={3} style={{ ...TH(), background: shipBg[si] }}>{m.label}</th>
             ))}
-            <th rowSpan={2} style={{ ...TH(), textAlign: 'left', whiteSpace: 'normal', lineHeight: 1.15 }}>Link Template</th>
+            <th rowSpan={2} style={{ ...TH(), whiteSpace: 'normal', lineHeight: 1.15 }}>Link Template</th>
             {showActions && <th rowSpan={2} style={{ ...TH() }}>Thao tác</th>}
           </tr>
           <tr>
