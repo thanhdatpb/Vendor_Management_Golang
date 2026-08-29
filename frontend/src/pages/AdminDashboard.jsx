@@ -55,6 +55,9 @@ export default function AdminDashboard() {
   const [newsNotifications, setNewsNotifications] = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
   const [viewProduct, setViewProduct] = useState(null);
+  // Badge "N bảng" đứng cạnh tiêu đề trên topbar (cùng pattern với Seller) —
+  // PriceSheetSection báo số bảng đang hiện lên đây thay vì tự dựng header riêng.
+  const [priceSheetsCount, setPriceSheetsCount] = useState(null);
 
   const loadPendingProducts = useCallback(async () => {
     try {
@@ -340,7 +343,7 @@ export default function AdminDashboard() {
       case 'vendors':
         return <VendorsSection />;
       case 'pricesheets':
-        return <PriceSheetSection />;
+        return <PriceSheetSection onTotalCountChange={setPriceSheetsCount} />;
       case 'staff':
         return <StaffManagementSection />;
       default:
@@ -405,14 +408,25 @@ export default function AdminDashboard() {
                 background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`,
                 flexShrink: 0,
               }} />
-              <div style={{
-                color: HC.ink,
-                fontWeight: 900,
-                fontSize: 16,
-                fontFamily: "'Inter',sans-serif",
-                letterSpacing: '-0.01em',
-              }}>
-                {PAGE_TITLES[active]}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <div style={{
+                  color: HC.ink,
+                  fontWeight: 900,
+                  fontSize: 16,
+                  fontFamily: "'Inter',sans-serif",
+                  letterSpacing: '-0.01em',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>
+                  {PAGE_TITLES[active]}
+                </div>
+                {active === 'pricesheets' && priceSheetsCount !== null && (
+                  <span style={{
+                    padding: '2px 10px', borderRadius: 20, background: HC.orangeLight,
+                    color: HC.brown, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>{priceSheetsCount} bảng</span>
+                )}
               </div>
             </div>
 

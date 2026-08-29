@@ -14,7 +14,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HC } from '../constants';
 import AppToast from '../../shared/AppToast';
-import { Pagination } from '../../seller/SellerUI';
 import { priceSheetApi } from '../../../services/api';
 import { usd, pct } from '../../../utils/pricingEngine';
 import { normalizeSheetRow, matchesSheetSearch } from '../../../utils/priceSheetSummary';
@@ -23,7 +22,6 @@ import { priceSheetPath, copyPriceSheetLink } from '../../../utils/priceSheetLin
 import { fmtVNDate } from '../../../utils/vnTime';
 import { PROJECTS } from '../../../constants/projects';
 
-const ITEMS_PER_PAGE = 10;
 // Bảng chưa gán được về project nào (tài khoản Seller chưa điền project, hoặc
 // project cũ đã bỏ). Gom vào một chip riêng thay vì để chúng biến mất khỏi mọi
 // chip — nếu không, tổng các chip nhỏ hơn "Tất cả" mà không ai giải thích được.
@@ -39,14 +37,13 @@ const projectLabel = (key) => {
 // cột users.project lưu dạng NHÃN nên so thẳng với id ngắn là trượt hết.
 const chipOf = (row) => row.projectKey || UNASSIGNED;
 
-export default function PriceSheetSection() {
+export default function PriceSheetSection({ onTotalCountChange } = {}) {
   const navigate = useNavigate();
   const [allSheets, setAllSheets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState('all');
-  const [page, setPage] = useState(1);
   const [toast, setToast] = useState(null);
 
   const showToast = useCallback((type, title, message, duration = 3000) => {
@@ -90,8 +87,9 @@ export default function PriceSheetSection() {
     return rows;
   }, [sheets, projectFilter, search]);
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paged = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  // Số bảng đang hiện đứng cạnh tiêu đề trên topbar của AdminDashboard — cùng
+  // pattern với Seller, nên section không còn dựng header riêng ở đây nữa.
+  useEffect(() => { onTotalCountChange && onTotalCountChange(filtered.length); }, [filtered, onTotalCountChange]);
 
   const handleCopyLink = async (id) => {
     try {
@@ -113,23 +111,19 @@ export default function PriceSheetSection() {
   };
 
   return (
-    <div>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       <AppToast toast={toast} onClose={() => setToast(null)} />
 
-      {/* Header — KHÔNG có nút "Tạo bảng mới": Admin chỉ xem + export, không tạo. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ width: 6, height: 24, borderRadius: 99, background: `linear-gradient(to bottom,${HC.orange},${HC.orangeDark})` }} />
-        <div style={{ fontWeight: 900, fontSize: 15, color: HC.ink }}>Danh sách bảng tính giá</div>
-        <span style={{ padding: '2px 10px', borderRadius: 20, background: HC.orangeLight, color: HC.brown, fontSize: 11, fontWeight: 700 }}>{filtered.length} bảng</span>
-        <div style={{ marginLeft: 'auto' }}>
-          <input type="text" placeholder="Tìm bảng / vendor / product..." value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 240 }} />
-        </div>
+      {/* Header — KHÔNG có nút "Tạo bảng mới": Admin chỉ xem + export, không tạo.
+          Tiêu đề + badge "N bảng" đã lên topbar, ở đây chỉ còn ô tìm kiếm. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap', flexShrink: 0 }}>
+        <input type="text" placeholder="Tìm bảng / vendor / product..." value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ marginLeft: 'auto', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${HC.border}`, fontSize: 12, background: HC.surface, color: HC.ink, outline: 'none', width: 240 }} />
       </div>
 
       {/* Chip lọc theo project — cùng kiểu tab đang dùng ở Thư Viện Vendor / Quản Lý Nhân Sự */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8, flexWrap: 'wrap', flexShrink: 0 }}>
         {[
           { id: 'all', label: 'Tất cả' },
           ...PROJECTS,
@@ -140,7 +134,7 @@ export default function PriceSheetSection() {
           const count = p.id === 'all' ? sheets.length : (projectCounts[p.id] || 0);
           const active = projectFilter === p.id;
           return (
-            <button key={p.id} onClick={() => { setProjectFilter(p.id); setPage(1); }}
+            <button key={p.id} onClick={() => setProjectFilter(p.id)}
               style={{
                 padding: '9px 18px', borderRadius: 12, border: `2px solid ${active ? HC.orange : HC.border}`,
                 background: active ? HC.orangeLight : HC.surface, color: active ? HC.orangeDark : HC.muted,
@@ -182,18 +176,20 @@ export default function PriceSheetSection() {
         </div>
       ) : (
         <>
-          <div style={{ borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
+          {/* Bảng lấp đúng chiều cao còn lại rồi tự cuộn (giống Seller): flex:1 +
+              minHeight:0 thay cho calc(100vh) cảm tính — header sticky khi cuộn. */}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', borderRadius: 14, border: `1.5px solid ${HC.border}`, background: HC.surface, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12, minWidth: 1000 }}>
                 <thead>
                   <tr style={{ background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>
                     {['Tên bảng', 'Project', 'Vendor', 'PT / Size', 'Khoảng giá', 'Avg Margin', 'Người tạo', 'Cập nhật cuối', 'Thao tác'].map((h, i) => (
-                      <th key={h} style={{ padding: '10px 10px', color: '#fff', fontWeight: 700, textAlign: i > 2 ? 'center' : 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ position: 'sticky', top: 0, zIndex: 1, padding: '10px 10px', color: '#fff', fontWeight: 700, textAlign: i > 2 ? 'center' : 'left', whiteSpace: 'nowrap', background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})` }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {paged.map((sheet, idx) => (
+                  {filtered.map((sheet, idx) => (
                     <tr key={sheet.id} style={{ borderBottom: `1px solid ${HC.border}`, background: idx % 2 === 0 ? '#fff' : HC.surface2 }}>
                       <td style={{ padding: '10px' }}>
                         <div style={{ fontWeight: 800, color: HC.ink2 }}>{sheet.name || '—'}</div>
@@ -240,7 +236,6 @@ export default function PriceSheetSection() {
               </table>
             </div>
           </div>
-          {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} totalItems={filtered.length} onPageChange={setPage} itemsPerPage={ITEMS_PER_PAGE} />}
         </>
       )}
 

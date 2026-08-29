@@ -75,15 +75,23 @@ beforeEach(() => {
   mockNavigate.mockReset();
 });
 
+// Số bảng đang hiện giờ nằm ở topbar của AdminDashboard, không còn trong
+// section — section chỉ báo lên qua onTotalCountChange. Test kiểm số qua đúng
+// kênh đó thay vì đọc badge đã bị dời đi.
+let countSpy;
+beforeEach(() => { countSpy = vi.fn(); });
+const renderSection = () => render(<PriceSheetSection onTotalCountChange={countSpy} />);
+const expectSheetCount = (n) => waitFor(() => expect(countSpy).toHaveBeenLastCalledWith(n));
+
 describe('danh sách — trộn nhiều project', () => {
   it('hiện đủ số bảng và đúng cột Project cho từng dòng', async () => {
     priceSheetApi.list.mockResolvedValue({
       data: [summaryRow({ id: 's_happy', project: 'happy' }), summaryRow({ id: 's_creative', project: 'creative' })],
     });
 
-    render(<PriceSheetSection />);
+    renderSection();
 
-    expect(await screen.findByText('2 bảng')).toBeInTheDocument();
+    await expectSheetCount(2);
     // 'Happy Project' / 'Creative Project' xuất hiện cả ở chip lọc lẫn badge
     // cột Project của từng dòng — kiểm bằng số lần xuất hiện, không phải có/không.
     expect(screen.getAllByText('Happy Project').length).toBeGreaterThanOrEqual(2);
@@ -99,8 +107,8 @@ describe('danh sách — trộn nhiều project', () => {
       ],
     });
 
-    render(<PriceSheetSection />);
-    await screen.findByText('3 bảng');
+    renderSection();
+    await expectSheetCount(3);
 
     const happyChip = screen.getByRole('button', { name: /Happy Project/ });
     expect(happyChip).toHaveTextContent('2');
@@ -114,7 +122,7 @@ describe('danh sách — trộn nhiều project', () => {
       data: [summaryRow({ id: 's1', name: 'Bang Happy', project: 'happy' }), summaryRow({ id: 's2', name: 'Bang Creative', project: 'creative' })],
     });
 
-    render(<PriceSheetSection />);
+    renderSection();
     await screen.findByText('Bang Happy');
 
     await user.click(screen.getByRole('button', { name: /^Creative Project/ }));
@@ -129,9 +137,9 @@ describe('danh sách — trộn nhiều project', () => {
   it('project rỗng/không nhận ra không làm vỡ danh sách', async () => {
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow({ id: 's1', project: '' })] });
 
-    render(<PriceSheetSection />);
+    renderSection();
 
-    expect(await screen.findByText('1 bảng')).toBeInTheDocument();
+    await expectSheetCount(1);
   });
 });
 
@@ -144,7 +152,7 @@ describe('chỉ xem — không có đường sửa/xoá', () => {
     const user = userEvent.setup();
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
 
-    render(<PriceSheetSection />);
+    renderSection();
     await user.click(await screen.findByRole('button', { name: 'Xem' }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/price-sheets/sheet_1');
@@ -156,7 +164,7 @@ describe('chỉ xem — không có đường sửa/xoá', () => {
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow()] });
     priceSheetApi.get.mockResolvedValue({ data: fullSheet() });
 
-    render(<PriceSheetSection />);
+    renderSection();
     await user.click(await screen.findByTitle('Export Excel'));
 
     await waitFor(() => expect(priceSheetApi.get).toHaveBeenCalledWith('sheet_1'));
@@ -171,7 +179,7 @@ describe('lỗi tải — không nuốt thành danh sách rỗng im lặng', () 
   it('API lỗi thì hiện banner kèm nút Thử lại', async () => {
     priceSheetApi.list.mockRejectedValue(new Error('network down'));
 
-    render(<PriceSheetSection />);
+    renderSection();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Không tải được danh sách bảng tính giá');
     expect(screen.getByRole('button', { name: 'Thử lại' })).toBeInTheDocument();
@@ -182,11 +190,11 @@ describe('lỗi tải — không nuốt thành danh sách rỗng im lặng', () 
     priceSheetApi.list.mockRejectedValueOnce(new Error('network down'));
     priceSheetApi.list.mockResolvedValueOnce({ data: [summaryRow()] });
 
-    render(<PriceSheetSection />);
+    renderSection();
     await screen.findByRole('alert');
     await user.click(screen.getByRole('button', { name: 'Thử lại' }));
 
-    expect(await screen.findByText('1 bảng')).toBeInTheDocument();
+    await expectSheetCount(1);
   });
 });
 
@@ -197,15 +205,15 @@ describe('tìm kiếm', () => {
       data: [summaryRow({ id: 's1', name: 'Legend Shirt' }), summaryRow({ id: 's2', name: 'Night Light', vendorRef: 'CR7', productTypeNames: ['Night Light'] })],
     });
 
-    render(<PriceSheetSection />);
-    await screen.findByText('2 bảng');
+    renderSection();
+    await expectSheetCount(2);
 
     await user.type(screen.getByPlaceholderText(/Tìm bảng/), 'night');
 
     expect(screen.queryByText('Legend Shirt')).not.toBeInTheDocument();
     // Tên bảng "Night Light" lặp lại ở chip productType cùng dòng.
     expect(screen.getAllByText('Night Light').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('1 bảng')).toBeInTheDocument();
+    await expectSheetCount(1);
   });
 });
 
@@ -227,8 +235,8 @@ describe('project lưu dạng nhãn — regression 2026-08', () => {
       ],
     });
 
-    render(<PriceSheetSection />);
-    await screen.findByText('4 bảng');
+    renderSection();
+    await expectSheetCount(4);
 
     expect(screen.getByRole('button', { name: /^Creative Project/ })).toHaveTextContent('3');
     expect(screen.getByRole('button', { name: /^Happy Project/ })).toHaveTextContent('1');
@@ -243,20 +251,20 @@ describe('project lưu dạng nhãn — regression 2026-08', () => {
       ],
     });
 
-    render(<PriceSheetSection />);
+    renderSection();
     await screen.findByText('Bang Creative');
 
     await user.click(screen.getByRole('button', { name: /^Creative Project/ }));
     expect(screen.getByText('Bang Creative')).toBeInTheDocument();
     expect(screen.queryByText('Bang Happy')).not.toBeInTheDocument();
-    expect(screen.getByText('1 bảng')).toBeInTheDocument();
+    await expectSheetCount(1);
   });
 
   it('badge cột Project hiện nhãn chuẩn, không hiện chuỗi thô của DB', async () => {
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow({ id: 's1', project: 'hapify84 project' })] });
 
-    render(<PriceSheetSection />);
-    await screen.findByText('1 bảng');
+    renderSection();
+    await expectSheetCount(1);
 
     // Nhãn xuất hiện ở cả chip lọc lẫn badge của dòng → đếm số lần, không dùng có/không.
     expect(screen.getAllByText('Hapify84 Project').length).toBeGreaterThanOrEqual(2);
@@ -272,8 +280,8 @@ describe('project lưu dạng nhãn — regression 2026-08', () => {
       ],
     });
 
-    render(<PriceSheetSection />);
-    await screen.findByText('3 bảng');
+    renderSection();
+    await expectSheetCount(3);
 
     const countOf = (name) => Number(screen.getByRole('button', { name }).textContent.match(/(\d+)$/)[1]);
     const all = countOf(/^Tất cả/);
@@ -287,8 +295,8 @@ describe('project lưu dạng nhãn — regression 2026-08', () => {
   it('không có bảng nào chưa gán thì KHÔNG bày thêm chip rỗng', async () => {
     priceSheetApi.list.mockResolvedValue({ data: [summaryRow({ id: 's1', project: 'Happy Project' })] });
 
-    render(<PriceSheetSection />);
-    await screen.findByText('1 bảng');
+    renderSection();
+    await expectSheetCount(1);
 
     expect(screen.queryByRole('button', { name: /Chưa gán project/ })).not.toBeInTheDocument();
   });
@@ -302,7 +310,7 @@ describe('project lưu dạng nhãn — regression 2026-08', () => {
       ],
     });
 
-    render(<PriceSheetSection />);
+    renderSection();
     await screen.findByText('Bang Happy');
 
     await user.click(screen.getByRole('button', { name: /^Chưa gán project/ }));
