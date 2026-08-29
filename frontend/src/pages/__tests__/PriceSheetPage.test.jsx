@@ -13,10 +13,18 @@ import userEvent from '@testing-library/user-event';
 import PriceSheetPage from '../PriceSheetPage';
 import { priceSheetApi } from '../../services/api';
 
-const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+const { mockNavigate, routerState } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  routerState: { location: { state: null } },
+}));
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
-  return { ...actual, useNavigate: () => mockNavigate, useParams: () => ({ id: 'sheet_1' }) };
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useParams: () => ({ id: 'sheet_1' }),
+    useLocation: () => routerState.location,
+  };
 });
 
 const authState = vi.hoisted(() => ({ isAdmin: false }));
@@ -56,6 +64,7 @@ beforeEach(() => {
   priceSheetApi.versions.mockClear();
   mockNavigate.mockReset();
   authState.isAdmin = false;
+  routerState.location = { state: null };
 });
 
 describe('4 trạng thái tải', () => {
@@ -94,6 +103,29 @@ describe('4 trạng thái tải', () => {
 
     await screen.findByTestId('workspace');
     expect(priceSheetApi.get).toHaveBeenCalledTimes(2);
+  });
+
+  // Bảng vừa tạo đi kèm router state: POST lưu lên server có thể chưa xong nên
+  // GET sẽ 404 — phải mở thẳng bằng bản trong state, không được rơi vào thẻ
+  // "Không tìm thấy bảng tính giá" bắt người dùng quay lại danh sách.
+  it('bảng vừa tạo (router state) mở thẳng workspace, không gọi get()', async () => {
+    routerState.location = { state: { sheet: fullSheet({ name: 'Bảng vừa tạo' }) } };
+    priceSheetApi.get.mockRejectedValue(httpError(404));
+
+    render(<PriceSheetPage />);
+
+    expect(await screen.findByTestId('ws-name')).toHaveTextContent('Bảng vừa tạo');
+    expect(priceSheetApi.get).not.toHaveBeenCalled();
+  });
+
+  it('router state của bảng KHÁC thì bỏ qua, vẫn tải theo id trên URL', async () => {
+    routerState.location = { state: { sheet: fullSheet({ id: 'sheet_khac', name: 'Bảng khác' }) } };
+    priceSheetApi.get.mockResolvedValue({ data: fullSheet({ name: 'Bảng đúng' }) });
+
+    render(<PriceSheetPage />);
+
+    expect(await screen.findByTestId('ws-name')).toHaveTextContent('Bảng đúng');
+    expect(priceSheetApi.get).toHaveBeenCalledWith('sheet_1');
   });
 });
 

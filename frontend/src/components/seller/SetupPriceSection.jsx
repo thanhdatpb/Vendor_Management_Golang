@@ -145,9 +145,14 @@ export default function SetupPriceSection({ onTotalCountChange } = {}) {
   };
 
   const handleCreate = (sheet) => {
-    commitSheet(sheet);
+    commitSheet(sheet).catch((err) => {
+      console.warn('Tạo bảng tính giá thất bại:', err?.message || err);
+    });
     setShowCreate(false);
-    navigate(priceSheetPath(sheet.id)); // bảng mới tạo đã đủ dữ liệu, không cần tải lại
+    // Truyền thẳng sheet vừa tạo qua router state — PriceSheetPage dùng ngay
+    // thay vì GET /price-sheets/{id}, vì request lưu lên server (POST ở trên)
+    // có thể CHƯA xong → GET sẽ 404 (sheet chưa tồn tại trên server).
+    navigate(priceSheetPath(sheet.id), { state: { sheet } });
   };
 
   /**

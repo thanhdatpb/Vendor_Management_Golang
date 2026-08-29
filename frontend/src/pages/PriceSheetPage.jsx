@@ -13,7 +13,7 @@
 //      gần như không đổi giao diện).
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { priceSheetApi } from '../services/api';
 import { saveSheetToServer } from '../utils/priceSheetCommit';
@@ -66,15 +66,21 @@ function StatusCard({ icon, title, message, actionLabel, onAction, backLabel, on
 export default function PriceSheetPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAdmin } = useAuth();
+  // Bảng vừa tạo được truyền qua router state (SetupPriceSection.handleCreate).
+  // Dùng thẳng, KHÔNG gọi GET: lúc điều hướng thì POST lưu lên server có thể
+  // chưa xong nên GET trả 404 → người dùng gặp màn "Không tìm thấy bảng tính giá"
+  // và phải quay lại danh sách mới mở được.
+  const seededSheet = location.state?.sheet?.id === id ? location.state.sheet : null;
   // Về ĐÚNG mục Bảng Tính Giá, không phải dashboard trống: '/seller' | '/admin'
   // remount dashboard và rơi về mục mặc định (Seller rớt sang Quản Lý Sản Phẩm,
   // Admin rớt về Tổng Quan) — đúng mục là nơi người dùng vừa bấm mở bảng này.
   const backTo = isAdmin ? ADMIN_PRICE_SHEETS_PATH : SELLER_PRICE_SHEETS_PATH;
   const backLabel = '← Về Bảng tính giá'; // cả 2 role đều về mục Bảng Tính Giá của mình
 
-  const [sheet, setSheet] = useState(null);
-  const [status, setStatus] = useState('loading'); // loading | ready | not_found | forbidden | error
+  const [sheet, setSheet] = useState(seededSheet);
+  const [status, setStatus] = useState(seededSheet ? 'ready' : 'loading'); // loading | ready | not_found | forbidden | error
   const [toast, setToast] = useState(null);
   const [historyFor, setHistoryFor] = useState(null);
 
@@ -100,7 +106,8 @@ export default function PriceSheetPage() {
     }
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  const hasSeed = !!seededSheet;
+  useEffect(() => { if (!hasSeed) load(); }, [load, hasSeed]);
 
   const handleCopyLink = async () => {
     try {
