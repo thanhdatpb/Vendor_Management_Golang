@@ -155,9 +155,14 @@ function collectGeneralInfo(rows) {
  * (vendorExcel.js), record trong index không tra được vendor nào, và dải thông
  * tin phôi trên bảng tính giá hiện toàn "—". Suy ngược từ Section 1:
  *   1) khớp thẳng theo Ký hiệu / Vendor Name;
- *   2) chưa khớp → khớp theo TÊN PHÔI nếu Section 1 có ĐÚNG một dòng cùng phôi;
+ *   2) dòng giá KHÔNG ghi Ký hiệu → khớp theo TÊN PHÔI nếu Section 1 có ĐÚNG
+ *      một dòng cùng phôi;
  *   3) vẫn chưa → file chỉ có ĐÚNG một dòng thông tin phôi thì lấy dòng đó.
  * Nhiều dòng mà không dòng nào khớp thì để trống — KHÔNG đoán bừa.
+ *
+ * Dòng giá ĐÃ ghi Ký hiệu mà Section 1 không có vendor đó thì để TRỐNG, dừng ở
+ * bước 1: vendor khác là chất liệu / AVG TG khác, gán nhầm còn tệ hơn "—" (2
+ * vendor cùng cấp một tên phôi là ca thật, xem VendorLibraryIndexTest.php).
  *
  * `vendorInferred` chỉ là nhãn chờ: `vendorCode` giữ nguyên giá trị thô (rỗng)
  * cho tới sau bước gộp record vendor trống, để recordKey của bảng đã lưu và
@@ -166,6 +171,7 @@ function collectGeneralInfo(rows) {
 function resolveGeneralInfo(general, vendorCode, productType) {
   const direct = general.byVendor[normalizeKey(vendorCode)];
   if (direct) return { info: direct, vendorInferred: '' };
+  if (vendorCode) return { info: undefined, vendorInferred: '' };
 
   const key = normalizeKey(productType);
   const sameType = general.rows.filter((r) => normalizeKey(r.productType) === key);
@@ -174,7 +180,7 @@ function resolveGeneralInfo(general, vendorCode, productType) {
     : (general.rows.length === 1 ? general.rows[0] : null);
   if (!row) return { info: undefined, vendorInferred: '' };
 
-  return { info: row.info, vendorInferred: vendorCode ? '' : row.vendorCode };
+  return { info: row.info, vendorInferred: row.vendorCode };
 }
 
 /**

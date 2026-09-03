@@ -225,9 +225,14 @@ final class VendorLibraryIndexBuilder
      * rỗng (vendorExcel.js), record trong index không tra được vendor nào, và
      * dải thông tin phôi trên bảng tính giá hiện toàn "—". Suy ngược từ Section 1:
      *   1) khớp thẳng theo Ký hiệu / Vendor Name;
-     *   2) chưa khớp → khớp theo TÊN PHÔI nếu Section 1 có ĐÚNG một dòng cùng phôi;
+     *   2) dòng giá KHÔNG ghi Ký hiệu → khớp theo TÊN PHÔI nếu Section 1 có ĐÚNG
+     *      một dòng cùng phôi;
      *   3) vẫn chưa → file chỉ có ĐÚNG một dòng thông tin phôi thì lấy dòng đó.
      * Nhiều dòng mà không dòng nào khớp thì để trống — KHÔNG đoán bừa.
+     *
+     * Dòng giá ĐÃ ghi Ký hiệu mà Section 1 không có vendor đó thì để TRỐNG, dừng
+     * ở bước 1: vendor khác là chất liệu / AVG TG khác, gán nhầm còn tệ hơn "—"
+     * (2 vendor cùng cấp một tên phôi là ca thật, xem VendorLibraryIndexTest).
      *
      * `vendorInferred` là nhãn CHỜ, KHÔNG ghi đè `vendorCode`: record vẫn giữ ký
      * hiệu thô (rỗng) để recordKey của bảng đã lưu không đổi, và để bước gộp
@@ -242,6 +247,10 @@ final class VendorLibraryIndexBuilder
         $direct = $general['byVendor'][strtolower($vendorCode)] ?? null;
         if ($direct !== null) {
             return ['info' => $direct, 'vendorInferred' => ''];
+        }
+
+        if ($vendorCode !== '') {
+            return ['info' => [], 'vendorInferred' => ''];
         }
 
         $sameType = array_values(array_filter(

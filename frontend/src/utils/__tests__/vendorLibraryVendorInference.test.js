@@ -87,7 +87,7 @@ describe('loadVendorLibraryIndex — suy vendor + info phôi khi "Về giá" thi
     expect(records[0].chatLieu).toBe('');
   });
 
-  it('dòng giá có Ký hiệu rồi → giữ nguyên vendor thô, KHÔNG bị Section 1 ghi đè', async () => {
+  it('dòng giá có Ký hiệu mà Section 1 không có vendor đó → giữ vendor thô, info để TRỐNG', async () => {
     __setLibraryFixture([{
       filename: 'HC_Named_P.Global_16.xlsx',
       generalInfo: [info({ kyHieu: 'CN1', vendorName: 'CN1' })],
@@ -99,6 +99,10 @@ describe('loadVendorLibraryIndex — suy vendor + info phôi khi "Về giá" thi
 
     expect(records).toHaveLength(1);
     expect(records[0].vendorCode).toBe('VN9');
+    // Chất liệu / AVG TG của CN1 KHÔNG được gán cho VN9 — vendor khác là phôi
+    // khác, gán nhầm còn tệ hơn "—" (ca 2 vendor cùng tên phôi).
+    expect(records[0].chatLieu).toBe('');
+    expect(records[0].avgTimeVendor).toBe('');
   });
 
   it('Section 1 chỉ điền "Vendor Name" (Ký hiệu trống) → vẫn tra ra vendor đó', async () => {
