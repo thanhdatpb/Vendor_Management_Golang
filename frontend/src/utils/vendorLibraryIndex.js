@@ -101,6 +101,100 @@ function pickGeneralInfo(source) {
   return out;
 }
 
+/** Thu gọn MỘT dòng "Thông tin chung về phôi" thành info phôi cho index. */
+function generalInfoRow(row) {
+  // Ảnh nhúng qua formula Excel đôi khi là base64/data-URI khổng lồ thay vì URL
+  // bình thường — cùng ngưỡng MAX_IMAGE_URL_LENGTH phía backend, để 2 đường
+  // build index (lean-index server / blob-fallback) không lệch hành vi tuỳ
+  // server có endpoint gọn hay không.
+  const images = (Array.isArray(row.images) ? row.images : [])
+    .filter((img) => typeof img === 'string' && img && img.length <= MAX_IMAGE_URL_LENGTH)
+    .slice(0, MAX_IMAGES_PER_RECORD);
+  const sizeGuide = row.chiTietSizeImage || '';
+  return {
+    chatLieu: row.chatLieu || '', chiTietSize: row.chiTietSize || '',
+    image: images[0] || '',
+    images,
+    chiTietSizeImage: sizeGuide.length > MAX_IMAGE_URL_LENGTH ? '' : sizeGuide,
+    avgTimeVendor: row.avgTimeVendor || '', avgTimeActual: row.avgTimeActual || '',
+  };
+}
+
+/**
+ * Gom Section "Thông tin chung về phôi" của MỘT file:
+ *   byVendor — tra theo Ký hiệu VÀ theo "Vendor Name" (bí danh), vì có file chỉ
+ *              điền một trong hai cột; vendor gặp trước thắng;
+ *   rows     — danh sách phẳng, để suy vendor theo TÊN PHÔI khi phần "Về giá"
+ *              không ghi Ký hiệu dòng nào (xem resolveGeneralInfo).
+ */
+function collectGeneralInfo(rows) {
+  const byVendor = {};
+  const list = [];
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    if (!row) return;
+    const info = generalInfoRow(row);
+    [row.kyHieu, row.vendorName].forEach((alias) => {
+      const k = normalizeKey(alias);
+      if (k && !byVendor[k]) byVendor[k] = info;
+    });
+    list.push({
+      vendorCode: (row.kyHieu || row.vendorName || '').toString().trim(),
+      productType: (row.productType || '').toString().trim(),
+      info,
+    });
+  });
+  return { byVendor, rows: list };
+}
+
+/**
+ * Info phôi + vendor cho một record của phần "Về giá".
+ *
+ * Bug thật (2026-09): file HC_Football Jersey_P.Global_16 có đủ thông tin phôi
+ * ở Section 1 (vendor CN1, chất liệu, AVG TG), nhưng template phần "Về giá"
+ * của file đó KHÔNG có cột Ký hiệu → mọi dòng giá parse ra `kyHieu` rỗng
+ * (vendorExcel.js), record trong index không tra được vendor nào, và dải thông
+ * tin phôi trên bảng tính giá hiện toàn "—". Suy ngược từ Section 1:
+ *   1) khớp thẳng theo Ký hiệu / Vendor Name;
+ *   2) chưa khớp → khớp theo TÊN PHÔI nếu Section 1 có ĐÚNG một dòng cùng phôi;
+ *   3) vẫn chưa → file chỉ có ĐÚNG một dòng thông tin phôi thì lấy dòng đó.
+ * Nhiều dòng mà không dòng nào khớp thì để trống — KHÔNG đoán bừa.
+ *
+ * `vendorInferred` chỉ là nhãn chờ: `vendorCode` giữ nguyên giá trị thô (rỗng)
+ * cho tới sau bước gộp record vendor trống, để recordKey của bảng đã lưu và
+ * mergeBlankVendorRecords không đổi hành vi (xem applyInferredVendor).
+ */
+function resolveGeneralInfo(general, vendorCode, productType) {
+  const direct = general.byVendor[normalizeKey(vendorCode)];
+  if (direct) return { info: direct, vendorInferred: '' };
+
+  const key = normalizeKey(productType);
+  const sameType = general.rows.filter((r) => normalizeKey(r.productType) === key);
+  const row = sameType.length === 1
+    ? sameType[0]
+    : (general.rows.length === 1 ? general.rows[0] : null);
+  if (!row) return { info: undefined, vendorInferred: '' };
+
+  return { info: row.info, vendorInferred: vendorCode ? '' : row.vendorCode };
+}
+
+/**
+ * Chốt vendor suy ra — chạy SAU mergeBlankVendorRecords: record vendor trống
+ * nào đã gộp được vào record có tên vendor thì biến mất ở bước trên, chỉ record
+ * còn trống thật sự mới lấy nhãn vendor của Section 1.
+ */
+function applyInferredVendor(byProductTypeKey) {
+  Object.values(byProductTypeKey).forEach((records) => {
+    records.forEach((r) => {
+      if (!r.vendorCode && r.vendorInferred) {
+        r.vendorCode = r.vendorInferred;
+        r.vendor = r.vendorInferred;
+      }
+      delete r.vendorInferred;
+    });
+  });
+  return byProductTypeKey;
+}
+
 function indexFromRecords(records) {
   const byKey = {};
   records.forEach((record) => {
@@ -123,10 +217,11 @@ function indexFromRecords(records) {
     (byKey[key] ||= []).push({
       recordKey, productType: ptName, vendorCode, vendor: vendorCode,
       filename, project: record.project, sizes: sizeLabels, bySize,
+      vendorInferred: (record.vendorInferred || '').toString().trim(),
       ...pickGeneralInfo(record), // server đã lồng sẵn (VendorLibraryIndexBuilder)
     });
   });
-  return buildLegacyView(mergeBlankVendorRecords(byKey));
+  return buildLegacyView(applyInferredVendor(mergeBlankVendorRecords(byKey)));
 }
 
 /**
@@ -227,26 +322,7 @@ function indexFromFiles(files, projectKey, skip) {
 
     // Info phôi (mục 02) không nằm trong `pricing` — gom theo `kyHieu`, vendor
     // gặp trước thắng, cùng quy ước với backend (VendorLibraryIndexBuilder).
-    const generalByVendor = {};
-    (Array.isArray(file.generalInfo) ? file.generalInfo : []).forEach((row) => {
-      const vCode = normalizeKey(row?.kyHieu);
-      if (!vCode || generalByVendor[vCode]) return;
-      // Ảnh nhúng qua formula Excel đôi khi là base64/data-URI khổng lồ thay vì
-      // URL bình thường — cùng ngưỡng MAX_IMAGE_URL_LENGTH phía backend, để 2
-      // đường build index (lean-index server / blob-fallback này) không lệch
-      // hành vi tuỳ server có endpoint gọn hay không.
-      const images = (Array.isArray(row.images) ? row.images : [])
-        .filter((img) => typeof img === 'string' && img && img.length <= MAX_IMAGE_URL_LENGTH)
-        .slice(0, MAX_IMAGES_PER_RECORD);
-      const sizeGuide = row.chiTietSizeImage || '';
-      generalByVendor[vCode] = {
-        chatLieu: row.chatLieu || '', chiTietSize: row.chiTietSize || '',
-        image: images[0] || '',
-        images,
-        chiTietSizeImage: sizeGuide.length > MAX_IMAGE_URL_LENGTH ? '' : sizeGuide,
-        avgTimeVendor: row.avgTimeVendor || '', avgTimeActual: row.avgTimeActual || '',
-      };
-    });
+    const general = collectGeneralInfo(file.generalInfo);
 
     pricing.forEach((p) => {
       const ptName = (p.productType || '').trim();
@@ -259,10 +335,14 @@ function indexFromFiles(files, projectKey, skip) {
 
       const bucket = (byKey[key] ||= new Map());
       if (!bucket.has(recordKey)) {
+        // Dòng giá không ghi Ký hiệu vẫn phải tra ra vendor + info phôi của
+        // Section 1 (xem resolveGeneralInfo).
+        const resolved = resolveGeneralInfo(general, vendorCode, ptName);
         bucket.set(recordKey, {
           recordKey, productType: ptName, vendorCode, vendor: vendorCode,
           filename, project, sizes: [], bySize: {},
-          ...pickGeneralInfo(generalByVendor[normalizeKey(vendorCode)]),
+          vendorInferred: resolved.vendorInferred,
+          ...pickGeneralInfo(resolved.info),
         });
       }
       const rec = bucket.get(recordKey);
@@ -279,7 +359,7 @@ function indexFromFiles(files, projectKey, skip) {
 
   const byKeyArrays = {};
   Object.entries(byKey).forEach(([key, bucket]) => { byKeyArrays[key] = [...bucket.values()]; });
-  return buildLegacyView(mergeBlankVendorRecords(byKeyArrays));
+  return buildLegacyView(applyInferredVendor(mergeBlankVendorRecords(byKeyArrays)));
 }
 
 /**

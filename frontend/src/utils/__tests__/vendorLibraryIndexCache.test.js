@@ -178,3 +178,27 @@ describe('đường lùi khi server chưa có endpoint index', () => {
     expect(Object.keys(index)).toHaveLength(0);
   });
 });
+
+describe('vendor suy ra từ Section 1 (server gửi kèm vendorInferred)', () => {
+  it('record vendorCode rỗng + vendorInferred → index chốt nhãn vendor đó', async () => {
+    vendorLibraryApi.index.mockResolvedValue(okResponse([{
+      recordKey: 'f00tba11',
+      productType: 'Football',
+      vendorCode: '',            // dòng "Về giá" của file không có cột Ký hiệu
+      vendorInferred: 'CN1',     // VendorLibraryIndexBuilder::resolveGeneralInfo
+      chatLieu: 'Polyester',
+      filename: 'HC_Football Jersey_P.Global_16.05.xlsx',
+      project: 'global',
+      sizes: [{ size: 'Men S', pricing1: 11.94 }],
+    }]));
+
+    const index = await loadVendorLibraryIndex('global');
+    const entry = findLibraryEntry(index, 'Football');
+
+    expect(entry.vendor).toBe('CN1');
+    expect(entry.chatLieu).toBe('Polyester');
+    expect(entry.records[0].vendorCode).toBe('CN1');
+    // Nhãn chờ không được rò ra ngoài index.
+    expect(entry.records[0].vendorInferred).toBeUndefined();
+  });
+});

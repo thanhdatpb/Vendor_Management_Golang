@@ -162,7 +162,7 @@ final class PriceSheetSummary
         $summary = self::summarize($sheet);
 
         return [
-            'vendor_ref'         => $sheet['vendorRef'] ?? null,
+            'vendor_ref'         => self::vendorRef($sheet),
             'source_file'        => $sheet['_sourceFile'] ?? null,
             'product_type_names' => json_encode(self::productTypeNames($sheet), JSON_UNESCAPED_UNICODE),
             'size_count'         => $summary['count'],
@@ -197,6 +197,41 @@ final class PriceSheetSummary
      * @param  array<string,mixed>  $sheet
      * @return list<string>
      */
+    /**
+     * Vendor của bảng — cột "Vendor" ở màn danh sách bảng tính giá.
+     *
+     * `vendorRef` chỉ được đặt MỘT LẦN lúc tạo bảng (CreateSheetModal), nên bảng
+     * tạo từ record thư viện chưa tra được ký hiệu vendor (dòng "Về giá" thiếu
+     * cột Ký hiệu — xem VendorLibraryIndexBuilder::resolveGeneralInfo) nằm mãi ở
+     * "—" dù thư viện đã nhận ra vendor. Thiếu thì suy lại từ chính các Product
+     * Type của bảng, để lần lưu kế tiếp là cột đó đúng.
+     *
+     * @param  array<string,mixed>  $sheet
+     */
+    public static function vendorRef(array $sheet): ?string
+    {
+        $explicit = trim((string) ($sheet['vendorRef'] ?? ''));
+        if ($explicit !== '') {
+            return $explicit;
+        }
+
+        $codes = [];
+        foreach (($sheet['productTypes'] ?? []) as $productType) {
+            if (!is_array($productType)) {
+                continue;
+            }
+            $code = trim((string) ($productType['vendorCode'] ?? ''));
+            if ($code === '' && is_array($productType['libRef'] ?? null)) {
+                $code = trim((string) ($productType['libRef']['vendorCode'] ?? ''));
+            }
+            if ($code !== '' && !in_array($code, $codes, true)) {
+                $codes[] = $code;
+            }
+        }
+
+        return $codes === [] ? null : implode(', ', $codes);
+    }
+
     public static function productTypeNames(array $sheet): array
     {
         $names = [];

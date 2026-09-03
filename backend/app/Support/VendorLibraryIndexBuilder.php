@@ -15,7 +15,7 @@ namespace App\Support;
  */
 final class VendorLibraryIndexBuilder
 {
-    /** Ngưỡng an toàn cho URL ảnh — xem indexGeneralInfoByVendor(). */
+    /** Ngưỡng an toàn cho URL ảnh — xem generalInfoOfFile(). */
     private const MAX_IMAGE_URL_LENGTH = 300;
 
     /**
@@ -137,24 +137,26 @@ final class VendorLibraryIndexBuilder
 
     /**
      * Thông tin phôi (mục 02, không phải giá) từ Section 1 của Excel — chất
-     * liệu, ảnh đầu tiên, chi tiết size, AVG TG — gom theo `kyHieu` (vendor gặp
-     * trước thắng, cùng quy ước "vendor gặp trước" đang dùng ở chỗ khác trong
-     * hệ thống). Không phải khoá giá nên KHÔNG cần lọc theo `$seesPrices`.
+     * liệu, ảnh, chi tiết size, AVG TG. Không phải khoá giá nên KHÔNG cần lọc
+     * theo `$seesPrices`.
+     *
+     * Trả về 2 dạng tra cứu của CÙNG một file:
+     *   'byVendor' — theo `kyHieu` VÀ theo `vendorName` (bí danh, vì có file chỉ
+     *                điền một trong hai cột); vendor gặp trước thắng, cùng quy
+     *                ước "vendor gặp trước" đang dùng ở chỗ khác trong hệ thống;
+     *   'rows'     — danh sách phẳng, để suy vendor theo TÊN PHÔI khi phần "Về
+     *                giá" không ghi Ký hiệu dòng nào (xem resolveGeneralInfo).
      *
      * @param  array<int,mixed>  $rows  `$file['generalInfo']`
-     * @return array<string,array<string,mixed>>  kyHieu (lowercase) → info
+     * @return array{byVendor: array<string,array<string,mixed>>, rows: list<array<string,mixed>>}
      */
-    private static function indexGeneralInfoByVendor(array $rows): array
+    private static function generalInfoOfFile(array $rows): array
     {
         $byVendor = [];
+        $list     = [];
 
         foreach ($rows as $row) {
             if (!is_array($row)) {
-                continue;
-            }
-
-            $vendorCode = strtolower(trim((string) ($row['kyHieu'] ?? '')));
-            if ($vendorCode === '' || isset($byVendor[$vendorCode])) {
                 continue;
             }
 
@@ -180,7 +182,7 @@ final class VendorLibraryIndexBuilder
                 $chiTietSizeImage = '';
             }
 
-            $byVendor[$vendorCode] = [
+            $info = [
                 'chatLieu'         => (string) ($row['chatLieu'] ?? ''),
                 'chiTietSize'      => (string) ($row['chiTietSize'] ?? ''),
                 // `image` = ảnh đại diện, GIỮ NGUYÊN cho code cũ đang đọc field
@@ -191,9 +193,75 @@ final class VendorLibraryIndexBuilder
                 'avgTimeVendor'    => (string) ($row['avgTimeVendor'] ?? ''),
                 'avgTimeActual'    => (string) ($row['avgTimeActual'] ?? ''),
             ];
+
+            foreach ([$row['kyHieu'] ?? '', $row['vendorName'] ?? ''] as $alias) {
+                $alias = strtolower(trim((string) $alias));
+                if ($alias !== '' && !isset($byVendor[$alias])) {
+                    $byVendor[$alias] = $info;
+                }
+            }
+
+            $vendorCode = trim((string) ($row['kyHieu'] ?? ''));
+            if ($vendorCode === '') {
+                $vendorCode = trim((string) ($row['vendorName'] ?? ''));
+            }
+
+            $list[] = [
+                'vendorCode'  => $vendorCode,
+                'productType' => trim((string) ($row['productType'] ?? '')),
+                'info'        => $info,
+            ];
         }
 
-        return $byVendor;
+        return ['byVendor' => $byVendor, 'rows' => $list];
+    }
+
+    /**
+     * Info phôi + vendor cho MỘT record của phần "Về giá".
+     *
+     * Bug thật (2026-09): file HC_Football Jersey_P.Global_16 có đủ thông tin
+     * phôi ở Section 1 (vendor CN1, chất liệu, AVG TG), nhưng template phần "Về
+     * giá" của file đó KHÔNG có cột Ký hiệu → mọi dòng giá parse ra `kyHieu`
+     * rỗng (vendorExcel.js), record trong index không tra được vendor nào, và
+     * dải thông tin phôi trên bảng tính giá hiện toàn "—". Suy ngược từ Section 1:
+     *   1) khớp thẳng theo Ký hiệu / Vendor Name;
+     *   2) chưa khớp → khớp theo TÊN PHÔI nếu Section 1 có ĐÚNG một dòng cùng phôi;
+     *   3) vẫn chưa → file chỉ có ĐÚNG một dòng thông tin phôi thì lấy dòng đó.
+     * Nhiều dòng mà không dòng nào khớp thì để trống — KHÔNG đoán bừa.
+     *
+     * `vendorInferred` là nhãn CHỜ, KHÔNG ghi đè `vendorCode`: record vẫn giữ ký
+     * hiệu thô (rỗng) để recordKey của bảng đã lưu không đổi, và để bước gộp
+     * record vendor trống bên frontend (mergeBlankVendorRecords) còn nhận ra đâu
+     * là dòng thiếu vendor. Frontend chốt nhãn sau bước gộp đó.
+     *
+     * @param  array{byVendor: array<string,array<string,mixed>>, rows: list<array<string,mixed>>}  $general
+     * @return array{info: array<string,mixed>, vendorInferred: string}
+     */
+    private static function resolveGeneralInfo(array $general, string $vendorCode, string $productType): array
+    {
+        $direct = $general['byVendor'][strtolower($vendorCode)] ?? null;
+        if ($direct !== null) {
+            return ['info' => $direct, 'vendorInferred' => ''];
+        }
+
+        $sameType = array_values(array_filter(
+            $general['rows'],
+            static fn (array $r) => $r['productType'] !== ''
+                && strcasecmp($r['productType'], trim($productType)) === 0
+        ));
+
+        $row = count($sameType) === 1
+            ? $sameType[0]
+            : (count($general['rows']) === 1 ? $general['rows'][0] : null);
+
+        if ($row === null) {
+            return ['info' => [], 'vendorInferred' => ''];
+        }
+
+        return [
+            'info'           => $row['info'],
+            'vendorInferred' => $vendorCode === '' ? $row['vendorCode'] : '',
+        ];
     }
 
     /**
@@ -218,7 +286,7 @@ final class VendorLibraryIndexBuilder
                 continue;
             }
 
-            $generalByVendor = self::indexGeneralInfoByVendor(
+            $general = self::generalInfoOfFile(
                 is_array($file['generalInfo'] ?? null) ? $file['generalInfo'] : []
             );
 
@@ -237,21 +305,26 @@ final class VendorLibraryIndexBuilder
                 $key        = self::recordKey($filename, $vendorCode, $productType);
 
                 if (!isset($records[$key])) {
-                    $general = $generalByVendor[strtolower($vendorCode)] ?? [];
+                    $resolved = self::resolveGeneralInfo($general, $vendorCode, $productType);
+                    $info     = $resolved['info'];
                     $records[$key] = [
                         'recordKey'     => $key,
                         'productType'   => $productType,
                         'vendorCode'    => $vendorCode,
+                        // Vendor suy ra từ Section 1 khi dòng giá không ghi Ký
+                        // hiệu — frontend chốt lại sau bước gộp record vendor
+                        // trống (applyInferredVendor, vendorLibraryIndex.js).
+                        'vendorInferred'   => $resolved['vendorInferred'],
                         'filename'      => $filename,
                         'project'       => self::fileProjectTag($file),
                         'sizes'         => [],
-                        'chatLieu'         => $general['chatLieu'] ?? '',
-                        'chiTietSize'      => $general['chiTietSize'] ?? '',
-                        'image'            => $general['image'] ?? '',
-                        'images'           => $general['images'] ?? [],
-                        'chiTietSizeImage' => $general['chiTietSizeImage'] ?? '',
-                        'avgTimeVendor'    => $general['avgTimeVendor'] ?? '',
-                        'avgTimeActual'    => $general['avgTimeActual'] ?? '',
+                        'chatLieu'         => $info['chatLieu'] ?? '',
+                        'chiTietSize'      => $info['chiTietSize'] ?? '',
+                        'image'            => $info['image'] ?? '',
+                        'images'           => $info['images'] ?? [],
+                        'chiTietSizeImage' => $info['chiTietSizeImage'] ?? '',
+                        'avgTimeVendor'    => $info['avgTimeVendor'] ?? '',
+                        'avgTimeActual'    => $info['avgTimeActual'] ?? '',
                     ];
                 }
 

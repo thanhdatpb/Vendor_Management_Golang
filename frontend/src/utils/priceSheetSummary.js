@@ -30,6 +30,16 @@ const numOrNull = (v) => {
  *   createdBy: string, isFull: boolean
  * } | null}
  */
+/** Ký hiệu các vendor có trong bảng — khớp PriceSheetSummary::vendorRef bên server. */
+function vendorRefOfProductTypes(productTypes) {
+  const codes = [];
+  (productTypes || []).forEach((pt) => {
+    const code = text(pt?.vendorCode).trim() || text(pt?.libRef?.vendorCode).trim();
+    if (code && !codes.includes(code)) codes.push(code);
+  });
+  return codes.join(', ');
+}
+
 export function normalizeSheetRow(row) {
   if (!row || typeof row !== 'object' || !row.id) return null;
 
@@ -57,6 +67,12 @@ export function normalizeSheetRow(row) {
     const sum = summarizeSheet(row);
     return {
       ...base,
+      // `vendorRef` chỉ được đặt MỘT LẦN lúc tạo bảng, nên bảng tạo hồi thư
+      // viện chưa tra được ký hiệu vendor (dòng "Về giá" thiếu cột Ký hiệu, xem
+      // resolveGeneralInfo trong vendorLibraryIndex.js) nằm mãi ở "—". Sheet đầy
+      // đủ thì suy lại ngay từ Product Type — server cũng suy y hệt khi lưu
+      // (PriceSheetSummary::vendorRef).
+      vendorRef: base.vendorRef || vendorRefOfProductTypes(row.productTypes),
       productTypeNames: row.productTypes
         .map((pt) => text(pt?.name).trim())
         .filter(Boolean),
