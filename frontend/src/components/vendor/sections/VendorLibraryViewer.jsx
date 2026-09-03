@@ -481,9 +481,9 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                   </div>
                 </td>
               )}
-              <td style={{ ...TD(i) }}>
+              <td style={{ ...TD(i), textAlign: 'center', verticalAlign: 'middle' }}>
                 {isEditing ? (
-                  <input type="text" placeholder="Vendor Name..." value={editForm.vendorName} onChange={e => setEditForm(p => ({ ...p, vendorName: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box' }} />
+                  <input type="text" placeholder="Vendor Name..." value={editForm.vendorName} onChange={e => setEditForm(p => ({ ...p, vendorName: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, boxSizing: 'border-box', textAlign: 'center' }} />
                 ) : (
                   r.vendorName
                     ? <span style={{ fontWeight: 700, color: HC.ink }}>{r.vendorName}</span>
@@ -886,7 +886,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
             const isEditing = editIdx === i;
             return (
               <tr key={i}>
-                <td style={{ ...TD(i) }}>
+                <td style={{ ...TD(i), textAlign: 'center', verticalAlign: 'middle' }}>
                   {isEditing ? (
                     <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
                   ) : (() => {
