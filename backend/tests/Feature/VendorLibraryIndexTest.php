@@ -137,12 +137,15 @@ class VendorLibraryIndexTest extends TestCase
         // library() ở trên) để bẫy đúng lỗi "index gọn cõng luôn ảnh nặng" —
         // builder phải loại nó ra, không phải giữ lại (xem MAX_IMAGE_URL_LENGTH).
         $this->assertSame('', $vn3['image']);
+        $this->assertSame([], $vn3['images']);
 
         // CN1 không có generalInfo — không được vỡ, các trường info phôi rỗng
         // thay vì thiếu khoá (client dựa vào khoá này tồn tại để hiện UI).
         $cn1 = collect($records)->firstWhere('vendorCode', 'CN1');
         $this->assertSame('', $cn1['chatLieu']);
         $this->assertSame('', $cn1['image']);
+        $this->assertSame([], $cn1['images']);
+        $this->assertSame('', $cn1['chiTietSizeImage']);
         $this->assertSame('', $cn1['avgTimeVendor']);
         $this->assertSame('', $cn1['avgTimeActual']);
         $this->assertSame('', $cn1['chiTietSize']);
@@ -157,6 +160,7 @@ class VendorLibraryIndexTest extends TestCase
                 'generalInfo' => [[
                     'kyHieu' => 'VN9', 'productType' => 'Sticker',
                     'images' => ['https://cdn.example/sticker-vn9.jpg'],
+                    'chiTietSizeImage' => 'https://cdn.example/size-guide-vn9.jpg',
                 ]],
                 'pricing' => [[
                     'kyHieu' => 'VN9', 'productType' => 'Sticker', 'size' => 'S', 'pricing1' => 1.5,
@@ -173,6 +177,54 @@ class VendorLibraryIndexTest extends TestCase
 
         $vn9 = collect($records)->firstWhere('vendorCode', 'VN9');
         $this->assertSame('https://cdn.example/sticker-vn9.jpg', $vn9['image']);
+        $this->assertSame(['https://cdn.example/sticker-vn9.jpg'], $vn9['images']);
+        $this->assertSame('https://cdn.example/size-guide-vn9.jpg', $vn9['chiTietSizeImage']);
+    }
+
+    /**
+     * Dải thông tin phôi trên bảng tính giá hiện NHIỀU ảnh như bảng Thư viện
+     * Vendor — nhưng index vẫn phải gọn: giữ tối đa MAX_IMAGES_PER_RECORD ảnh,
+     * và ảnh nào vượt ngưỡng độ dài thì bị loại lẻ (không kéo cả danh sách rỗng).
+     */
+    public function test_index_giu_nhieu_anh_nhung_cat_bot_va_loai_anh_nang(): void
+    {
+        $heavy = str_repeat('https://cdn.example/data-uri-khong-lo.jpg ', 200);
+
+        DB::table('vendor_library')->update([
+            'data' => json_encode([[
+                'filename'    => 'HappyC_VendorLibrary_p.happy_2026-06.xlsx',
+                'generalInfo' => [[
+                    'kyHieu' => 'VN9', 'productType' => 'Sticker',
+                    'images' => [
+                        'https://cdn.example/a1.jpg',
+                        $heavy,
+                        'https://cdn.example/a2.jpg',
+                        'https://cdn.example/a3.jpg',
+                        'https://cdn.example/a4.jpg',
+                        'https://cdn.example/a5.jpg',
+                    ],
+                ]],
+                'pricing' => [[
+                    'kyHieu' => 'VN9', 'productType' => 'Sticker', 'size' => 'S', 'pricing1' => 1.5,
+                ]],
+            ]]),
+            'updated_at' => now()->addMinute(),
+        ]);
+
+        $records = $this->actingAs($this->user('seller', 'happy'))
+            ->getJson('/api/vendor-library/index')
+            ->assertOk()
+            ->json();
+
+        $vn9 = collect($records)->firstWhere('vendorCode', 'VN9');
+        $this->assertSame([
+            'https://cdn.example/a1.jpg',
+            'https://cdn.example/a2.jpg',
+            'https://cdn.example/a3.jpg',
+            'https://cdn.example/a4.jpg',
+        ], $vn9['images']);
+        // Ảnh đại diện vẫn là ảnh hợp lệ đầu tiên.
+        $this->assertSame('https://cdn.example/a1.jpg', $vn9['image']);
     }
 
     public function test_index_nhe_hon_han_blob_day_du(): void

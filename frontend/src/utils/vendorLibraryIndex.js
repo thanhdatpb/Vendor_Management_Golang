@@ -9,6 +9,14 @@ import { extractFileProject, fileSharedProjects, fileVisibleToProject } from '..
 
 export const normalizeKey = (s) => (s ?? '').toString().trim().toLowerCase();
 
+// Ảnh nhúng qua formula Excel đôi khi là base64/data-URI khổng lồ thay vì URL
+// bình thường — index gọn không được cõng nó. Hai hằng dưới đây phải KHỚP với
+// VendorLibraryIndexBuilder.php (MAX_IMAGE_URL_LENGTH / MAX_IMAGES_PER_RECORD)
+// để 2 đường build index (lean-index server / blob-fallback dưới đây) cho ra
+// cùng kết quả, không lệch tuỳ server có endpoint gọn hay không.
+const MAX_IMAGE_URL_LENGTH = 300;
+const MAX_IMAGES_PER_RECORD = 4;
+
 // Project của một file: ưu tiên danh sách chia sẻ tường minh do Vendor/Admin đặt
 // (`file.projects`), file chưa chia sẻ thì vẫn suy theo ký hiệu `P.xxx` trong tên.
 // Trả về id project khi file thuộc đúng MỘT project, còn lại null (= dùng chung).
@@ -79,11 +87,17 @@ async function loadLeanRecords(projectKey, skip) {
  * findLibraryEntry và mọi bảng giá cũ tiếp tục chạy đúng như trước — không
  * có migration nào, không có bảng nào tự đổi số khi mở lại.
  */
-/** 5 field "info phôi" (mục 02) — không phải giá, chỉ copy nguyên qua nếu có. */
-const GENERAL_INFO_FIELDS = ['chatLieu', 'chiTietSize', 'image', 'avgTimeVendor', 'avgTimeActual'];
+/**
+ * Field "info phôi" (mục 02) — không phải giá, chỉ copy nguyên qua nếu có.
+ * `images` là DANH SÁCH: dải thông tin phôi trên bảng tính giá hiện nhiều ảnh
+ * như bảng Thư viện Vendor. `image` (ảnh đại diện) GIỮ NGUYÊN cho code cũ.
+ */
+const GENERAL_INFO_TEXT_FIELDS = ['chatLieu', 'chiTietSize', 'image', 'chiTietSizeImage', 'avgTimeVendor', 'avgTimeActual'];
 function pickGeneralInfo(source) {
   const out = {};
-  GENERAL_INFO_FIELDS.forEach((f) => { out[f] = source?.[f] || ''; });
+  GENERAL_INFO_TEXT_FIELDS.forEach((f) => { out[f] = source?.[f] || ''; });
+  // Mặc định [] chứ KHÔNG phải '' — UI map thẳng trên field này.
+  out.images = Array.isArray(source?.images) ? source.images : [];
   return out;
 }
 
@@ -221,10 +235,15 @@ function indexFromFiles(files, projectKey, skip) {
       // URL bình thường — cùng ngưỡng MAX_IMAGE_URL_LENGTH phía backend, để 2
       // đường build index (lean-index server / blob-fallback này) không lệch
       // hành vi tuỳ server có endpoint gọn hay không.
-      const rawImage = (Array.isArray(row.images) && row.images[0]) || '';
+      const images = (Array.isArray(row.images) ? row.images : [])
+        .filter((img) => typeof img === 'string' && img && img.length <= MAX_IMAGE_URL_LENGTH)
+        .slice(0, MAX_IMAGES_PER_RECORD);
+      const sizeGuide = row.chiTietSizeImage || '';
       generalByVendor[vCode] = {
         chatLieu: row.chatLieu || '', chiTietSize: row.chiTietSize || '',
-        image: rawImage.length > 300 ? '' : rawImage,
+        image: images[0] || '',
+        images,
+        chiTietSizeImage: sizeGuide.length > MAX_IMAGE_URL_LENGTH ? '' : sizeGuide,
         avgTimeVendor: row.avgTimeVendor || '', avgTimeActual: row.avgTimeActual || '',
       };
     });

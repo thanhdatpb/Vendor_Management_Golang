@@ -38,42 +38,67 @@ describe('Badge mã vendor (mục 03/04)', () => {
   });
 });
 
-describe('Dòng "info phôi" (mục 02) — ảnh/chất liệu/chi tiết size/AVG TG', () => {
-  it('libEntry có đủ field → hiện chất liệu, chi tiết size và ảnh', () => {
+describe('Dải thông tin phôi trên đầu card — đúng một dòng của bảng Thư viện Vendor', () => {
+  const libEntry = {
+    vendor: 'VN3', sizes: [],
+    chatLieu: 'Giấy ảnh 200gsm', chiTietSize: '8x12" - 24x36"',
+    image: 'https://cdn.example/poster.jpg',
+    images: ['https://cdn.example/poster.jpg', 'https://cdn.example/poster-2.jpg'],
+    avgTimeVendor: '3-5 ngày', avgTimeActual: '4 ngày',
+  };
+
+  it('libEntry đủ field → hiện đủ nhãn cột và giá trị, AVG TG là CHỮ chứ không còn nằm trong tooltip', () => {
     const pt = { id: 'pt1', name: 'Poster', vendorCode: 'VN3', sizes: [], customizeInfos: [] };
-    render(<ProductTypeCard {...baseProps} pt={pt} libEntry={{
-      vendor: 'VN3', sizes: [],
-      chatLieu: 'Giấy ảnh 200gsm', chiTietSize: '8x12" - 24x36"',
-      image: 'https://cdn.example/poster.jpg', avgTimeVendor: '3-5 ngày', avgTimeActual: '4 ngày',
-    }} />);
+    render(<ProductTypeCard {...baseProps} pt={pt} libEntry={libEntry} />);
+
+    expect(screen.getByText('Chất liệu')).toBeInTheDocument();
+    expect(screen.getByText('Chi tiết Size')).toBeInTheDocument();
+    expect(screen.getByText('AVG TG (Vendor)')).toBeInTheDocument();
+    expect(screen.getByText('AVG TG (Thực tế)')).toBeInTheDocument();
 
     expect(screen.getByText(/Giấy ảnh 200gsm/)).toBeInTheDocument();
     expect(screen.getByText(/8x12" - 24x36"/)).toBeInTheDocument();
-    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://cdn.example/poster.jpg');
+    expect(screen.getByText('3-5 ngày')).toBeInTheDocument();
+    expect(screen.getByText('4 ngày')).toBeInTheDocument();
   });
 
-  it('libEntry không có field nào trong 5 field info phôi → KHÔNG hiện dòng thừa', () => {
-    const pt = { id: 'pt1', name: 'Football Jersey', vendorCode: 'VN7', sizes: [], customizeInfos: [] };
-    render(<ProductTypeCard {...baseProps} pt={pt} libEntry={{ vendor: 'VN7', sizes: [] }} />);
-
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-  });
-
-  it('Product Type nhập tay (không có libEntry) → không hiện dòng info phôi', () => {
-    const pt = { id: 'pt1', name: 'Phôi tự nhập', sizes: [], customizeInfos: [] };
-    render(<ProductTypeCard {...baseProps} pt={pt} libEntry={null} />);
-
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
-  });
-
-  it('có AVG TG thì hiện icon kèm tooltip đủ cả 2 giá trị', () => {
+  it('nhiều ảnh → render đủ thumbnail (không chỉ ảnh đầu tiên như cụm chip cũ)', () => {
     const pt = { id: 'pt1', name: 'Poster', vendorCode: 'VN3', sizes: [], customizeInfos: [] };
-    render(<ProductTypeCard {...baseProps} pt={pt} libEntry={{
-      vendor: 'VN3', sizes: [], avgTimeVendor: '3-5 ngày', avgTimeActual: '4 ngày',
-    }} />);
+    const { container } = render(<ProductTypeCard {...baseProps} pt={pt} libEntry={libEntry} />);
 
-    expect(screen.getByTitle(/AVG TG \(Vendor\): 3-5 ngày/)).toBeInTheDocument();
-    expect(screen.getByTitle(/AVG TG \(Thực tế\): 4 ngày/)).toBeInTheDocument();
+    // MediaThumb (dùng chung với Thư viện Vendor) render <img alt=""> — ảnh
+    // trang trí, role "presentation" chứ không phải "img" — nên hỏi thẳng DOM.
+    const srcs = [...container.querySelectorAll('img')].map((i) => i.getAttribute('src'));
+    expect(srcs).toEqual([
+      'https://cdn.example/poster.jpg',
+      'https://cdn.example/poster-2.jpg',
+    ]);
+  });
+
+  it('index bản cũ chỉ có `image` (backend chưa deploy) → vẫn hiện ảnh đại diện', () => {
+    const pt = { id: 'pt1', name: 'Poster', vendorCode: 'VN3', sizes: [], customizeInfos: [] };
+    const { container } = render(<ProductTypeCard {...baseProps} pt={pt}
+      libEntry={{ vendor: 'VN3', sizes: [], image: 'https://cdn.example/poster.jpg' }} />);
+
+    const srcs = [...container.querySelectorAll('img')].map((i) => i.getAttribute('src'));
+    expect(srcs).toEqual(['https://cdn.example/poster.jpg']);
+  });
+
+  it('libEntry không có info phôi nào → vẫn có dải (vendor + tên phôi), ô trống hiện dấu gạch', () => {
+    const pt = { id: 'pt1', name: 'Football Jersey', vendorCode: 'VN7', sizes: [], customizeInfos: [] };
+    const { container } = render(<ProductTypeCard {...baseProps} pt={pt} libEntry={{ vendor: 'VN7', sizes: [] }} />);
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+
+    expect(screen.getByText('Vendor Name')).toBeInTheDocument();
+    expect(screen.getByText('Không có ảnh')).toBeInTheDocument();
+  });
+
+  it('Product Type nhập tay (không có libEntry) → KHÔNG render dải', () => {
+    const pt = { id: 'pt1', name: 'Phôi tự nhập', sizes: [], customizeInfos: [] };
+    const { container } = render(<ProductTypeCard {...baseProps} pt={pt} libEntry={null} />);
+
+    expect(screen.queryByText('Vendor Name')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('img')).toHaveLength(0);
   });
 });
 

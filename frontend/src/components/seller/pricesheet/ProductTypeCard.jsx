@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { PS } from './tokens';
 import { Btn, IconBtn, Badge, Segmented, ConfirmDialog } from './primitives';
 import PriceTable from './PriceTable';
+import ProductTypeInfoStrip from './ProductTypeInfoStrip';
 import { SHIP_METHODS } from '../../../utils/vendorLibraryIndex';
 
 export default function ProductTypeCard({
@@ -25,12 +26,6 @@ export default function ProductTypeCard({
   // rơi về `libEntry.vendor` cho bảng cũ resolve theo tên (đường lùi).
   const vendorLabel = pt.vendorCode || libEntry?.vendor || '';
   const recordMissing = pt.warning === 'record-missing';
-  // "Info phôi" (mục 02) — chỉ có khi PT lấy từ thư viện VÀ thư viện thật sự
-  // có ít nhất 1 trong 5 field này (file cũ import trước khi có Section 1
-  // đầy đủ thì rỗng hết — không hiện dòng trống vô nghĩa).
-  const hasGeneralInfo = Boolean(libEntry && (
-    libEntry.image || libEntry.chatLieu || libEntry.chiTietSize || libEntry.avgTimeVendor || libEntry.avgTimeActual
-  ));
 
   return (
     <section aria-label={`Product type ${pt.name || 'chưa đặt tên'}`} style={{
@@ -38,6 +33,10 @@ export default function ProductTypeCard({
       background: PS.bgSurface, border: `1px solid ${PS.border}`, borderRadius: 12,
       boxShadow: PS.shadowCard, overflow: 'hidden',
     }}>
+      {/* ── Dải thông tin phôi — đúng một dòng của bảng Thư viện Vendor ──
+          Chỉ có với PT lấy từ thư viện; PT nhập thủ công không có gì để tra. */}
+      <ProductTypeInfoStrip vendorName={vendorLabel} productType={pt.name} info={libEntry} />
+
       {/* ── Toolbar — nền amber-50, tên PT có thanh accent dọc (spec §5) ── */}
       <div style={{
         padding: '10px 16px', background: PS.accentBg, borderBottom: `1px solid ${PS.accentSoft}`,
@@ -102,35 +101,6 @@ export default function ProductTypeCard({
             title={`${compareCount} block cùng tên "${pt.name}" trong bảng này — so sánh giá giữa các vendor/chiến lược giá khác nhau.`}>
             🔍 So sánh · {compareCount}
           </Badge>
-        )}
-        {hasGeneralInfo && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            {libEntry.image && (
-              <img src={libEntry.image} alt="Ảnh phôi" loading="lazy"
-                style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'cover', border: `1px solid ${PS.border}`, flexShrink: 0 }} />
-            )}
-            {libEntry.chatLieu && (
-              <span title={libEntry.chatLieu} style={{
-                fontSize: 11.5, color: PS.textSecondary, maxWidth: 140, overflow: 'hidden',
-                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>🧵 {libEntry.chatLieu}</span>
-            )}
-            {libEntry.chiTietSize && (
-              <span title={libEntry.chiTietSize} style={{
-                fontSize: 11.5, color: PS.textSecondary, maxWidth: 140, overflow: 'hidden',
-                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>📏 {libEntry.chiTietSize}</span>
-            )}
-            {(libEntry.avgTimeVendor || libEntry.avgTimeActual) && (
-              <span
-                title={`AVG TG (Vendor): ${libEntry.avgTimeVendor || '—'}\nAVG TG (Thực tế): ${libEntry.avgTimeActual || '—'}`}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'help',
-                  width: 18, height: 18, borderRadius: '50%', fontSize: 10.5, fontWeight: 700,
-                  border: `1px solid ${PS.borderStrong}`, color: PS.textMuted, flexShrink: 0,
-                }}>⏱</span>
-            )}
-          </div>
         )}
 
         {/* Actions */}

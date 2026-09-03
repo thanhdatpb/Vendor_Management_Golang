@@ -15,8 +15,16 @@ namespace App\Support;
  */
 final class VendorLibraryIndexBuilder
 {
-    /** Ngưỡng an toàn cho field `image` — xem indexGeneralInfoByVendor(). */
+    /** Ngưỡng an toàn cho URL ảnh — xem indexGeneralInfoByVendor(). */
     private const MAX_IMAGE_URL_LENGTH = 300;
+
+    /**
+     * Số ảnh tối đa kèm theo mỗi record. Bảng tính giá hiện dải thông tin phôi
+     * y như một dòng của Thư viện Vendor (ảnh, chất liệu, chi tiết size, AVG
+     * TG) nên cần nhiều hơn một ảnh — nhưng index vẫn phải GỌN, không cõng cả
+     * album (xem test_index_nhe_hon_han_blob_day_du).
+     */
+    private const MAX_IMAGES_PER_RECORD = 4;
 
     /**
      * Suy ra project từ tên file — khớp `extractFileProject` bên frontend.
@@ -134,7 +142,7 @@ final class VendorLibraryIndexBuilder
      * hệ thống). Không phải khoá giá nên KHÔNG cần lọc theo `$seesPrices`.
      *
      * @param  array<int,mixed>  $rows  `$file['generalInfo']`
-     * @return array<string,array<string,string>>  kyHieu (lowercase) → info
+     * @return array<string,array<string,mixed>>  kyHieu (lowercase) → info
      */
     private static function indexGeneralInfoByVendor(array $rows): array
     {
@@ -150,23 +158,38 @@ final class VendorLibraryIndexBuilder
                 continue;
             }
 
-            $images = is_array($row['images'] ?? null) ? $row['images'] : [];
-            $image  = (string) ($images[0] ?? '');
             // Ảnh nhúng qua formula Excel đôi khi là base64/data-URI khổng lồ
             // thay vì một URL bình thường — index GỌN không được cõng nó
             // (đúng mục đích ban đầu "không kèm ảnh/generalInfo" của index này,
             // xem test_index_nhe_hon_han_blob_day_du). URL ảnh thật không bao
             // giờ cần dài quá ngưỡng này.
-            if (mb_strlen($image) > self::MAX_IMAGE_URL_LENGTH) {
-                $image = '';
+            $images = [];
+            foreach (is_array($row['images'] ?? null) ? $row['images'] : [] as $img) {
+                $img = (string) $img;
+                if ($img === '' || mb_strlen($img) > self::MAX_IMAGE_URL_LENGTH) {
+                    continue;
+                }
+                $images[] = $img;
+                if (count($images) >= self::MAX_IMAGES_PER_RECORD) {
+                    break;
+                }
+            }
+
+            $chiTietSizeImage = (string) ($row['chiTietSizeImage'] ?? '');
+            if (mb_strlen($chiTietSizeImage) > self::MAX_IMAGE_URL_LENGTH) {
+                $chiTietSizeImage = '';
             }
 
             $byVendor[$vendorCode] = [
-                'chatLieu'      => (string) ($row['chatLieu'] ?? ''),
-                'chiTietSize'   => (string) ($row['chiTietSize'] ?? ''),
-                'image'         => $image,
-                'avgTimeVendor' => (string) ($row['avgTimeVendor'] ?? ''),
-                'avgTimeActual' => (string) ($row['avgTimeActual'] ?? ''),
+                'chatLieu'         => (string) ($row['chatLieu'] ?? ''),
+                'chiTietSize'      => (string) ($row['chiTietSize'] ?? ''),
+                // `image` = ảnh đại diện, GIỮ NGUYÊN cho code cũ đang đọc field
+                // này (bảng giá đã lưu, client bản cũ) — `images` là phần thêm.
+                'image'            => $images[0] ?? '',
+                'images'           => $images,
+                'chiTietSizeImage' => $chiTietSizeImage,
+                'avgTimeVendor'    => (string) ($row['avgTimeVendor'] ?? ''),
+                'avgTimeActual'    => (string) ($row['avgTimeActual'] ?? ''),
             ];
         }
 
@@ -222,11 +245,13 @@ final class VendorLibraryIndexBuilder
                         'filename'      => $filename,
                         'project'       => self::fileProjectTag($file),
                         'sizes'         => [],
-                        'chatLieu'      => $general['chatLieu'] ?? '',
-                        'chiTietSize'   => $general['chiTietSize'] ?? '',
-                        'image'         => $general['image'] ?? '',
-                        'avgTimeVendor' => $general['avgTimeVendor'] ?? '',
-                        'avgTimeActual' => $general['avgTimeActual'] ?? '',
+                        'chatLieu'         => $general['chatLieu'] ?? '',
+                        'chiTietSize'      => $general['chiTietSize'] ?? '',
+                        'image'            => $general['image'] ?? '',
+                        'images'           => $general['images'] ?? [],
+                        'chiTietSizeImage' => $general['chiTietSizeImage'] ?? '',
+                        'avgTimeVendor'    => $general['avgTimeVendor'] ?? '',
+                        'avgTimeActual'    => $general['avgTimeActual'] ?? '',
                     ];
                 }
 
