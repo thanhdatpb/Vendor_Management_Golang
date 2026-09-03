@@ -664,7 +664,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
         filterValue={modalFilterValue}
         initialStatus={modalInitialStatus}
         allProducts={allProducts}
-        
+        getSellerName={getSellerName}
       />
 
       <ProductViewerModal
