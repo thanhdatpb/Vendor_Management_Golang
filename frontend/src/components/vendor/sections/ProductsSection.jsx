@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
 import { lsGet, lsSet, fmtDate, getMediaUrls } from '../utils/helpers';
 import { Spinner, EmptyState, Field, inp, focusStyle } from '../ui/VendorUI';
@@ -37,6 +37,9 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState('');
   const [search, setSearch] = useState('');
+  // '' = mọi project. Danh sách lựa chọn suy từ chính các request đang thấy được
+  // (projectOptions, dưới) nên không cần hard-code danh sách project.
+  const [projectFilter, setProjectFilter] = useState('');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackProduct, setFeedbackProduct] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
@@ -268,9 +271,23 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
     finally { setSendingFeedback(false); }
   };
 
+  // Danh sách project để chọn ở ô lọc — suy từ chính các request đang xem được,
+  // KHÔNG phụ thuộc search/projectFilter hiện tại: đổi lựa chọn không được làm
+  // rụng bớt lựa chọn khác.
+  const projectOptions = useMemo(() => {
+    const names = new Set();
+    submittedProducts.forEach(p => {
+      const name = (p.project || '').toString().trim();
+      if (name) names.add(name);
+    });
+    return [...names].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [submittedProducts]);
+
   const filteredProducts = submittedProducts.filter(p => {
     const hay = `${p.product_type || ''} ${p.other_specs || ''}`.toLowerCase();
-    return !search || hay.includes(search.toLowerCase());
+    if (search && !hay.includes(search.toLowerCase())) return false;
+    if (projectFilter && (p.project || '').toString().trim() !== projectFilter) return false;
+    return true;
   });
 
   if (loading) return <Spinner />;
@@ -356,11 +373,29 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
             onBlur={e => e.target.style.borderColor = HC.border}
           />
         </div>
-        {search && <button onClick={() => setSearch('')} style={{ padding: '6px 12px', borderRadius: 9, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Xóa lọc</button>}
+        {/* Lọc theo project — danh sách suy từ chính các request đang xem được */}
+        <select
+          value={projectFilter}
+          onChange={e => setProjectFilter(e.target.value)}
+          title="Lọc theo project"
+          style={{
+            ...inp,
+            flex: '0 1 190px', minWidth: 150, width: 'auto',
+            color: projectFilter ? HC.ink : HC.muted,
+            fontWeight: projectFilter ? 800 : 600,
+            cursor: 'pointer',
+          }}
+          onFocus={e => e.target.style.borderColor = HC.orange}
+          onBlur={e => e.target.style.borderColor = HC.border}
+        >
+          <option value="">Tất cả project</option>
+          {projectOptions.map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
+        {(search || projectFilter) && <button onClick={() => { setSearch(''); setProjectFilter(''); }} style={{ padding: '6px 12px', borderRadius: 9, border: '1.5px solid #fecaca', background: '#fef2f2', color: HC.danger, fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Xóa lọc</button>}
         <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, color: HC.muted, fontWeight: 700, paddingLeft: 4, whiteSpace: 'nowrap' }}>{filteredProducts.length} / {submittedProducts.length} sản phẩm</div>
       </div>
       {filteredProducts.length === 0
-        ? <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào được Admin duyệt' : 'Không tìm thấy kết quả phù hợp'} />
+        ? <EmptyState msg={submittedProducts.length === 0 ? 'Chưa có sản phẩm nào được Admin duyệt' : (!search && projectFilter) ? `Project "${projectFilter}" chưa có request nào` : 'Không tìm thấy kết quả phù hợp'} />
         : <>
           <div style={{ overflowX: 'auto', borderRadius: 14, border: `1.5px solid ${HC.border}`, boxShadow: HC.shadow }}>
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 13, background: HC.surface }}>
