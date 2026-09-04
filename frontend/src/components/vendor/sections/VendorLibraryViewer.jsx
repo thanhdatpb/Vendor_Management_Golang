@@ -256,6 +256,12 @@ function isWithinCurrentWeek(importedAt) {
   return t >= vnStartOfWeek();
 }
 
+// Tên vendor có trong MỘT file — dùng chung cho badge trên card (LibraryCard)
+// và ô lọc theo vendor của toàn danh sách, để hai chỗ không lệch nhau.
+function fileVendorNames(entry) {
+  return [...new Set((entry?.generalInfo || []).map(r => r.vendorName).filter(Boolean))];
+}
+
 // ── Ô số click-để-sửa tại chỗ ────────────────────────────────────────────────
 // Vendor không có nút "Sửa" nên cho phép nhấn thẳng vào từng giá trị để chỉnh.
 // Enter/blur = lưu (gọi onCommit → onSave), Esc = huỷ. readOnly → chỉ hiển thị.
@@ -1129,7 +1135,7 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
   const importDate = fmtVNDateTimeShort(entry.importedAt);
 
   // Badge: tên các vendor đang có trong phôi này (thay vì category) để nhìn nhanh phôi có vendor nào.
-  const vendorNames = [...new Set((entry.generalInfo || []).map(r => r.vendorName).filter(Boolean))];
+  const vendorNames = fileVendorNames(entry);
   const vendorNamesLabel = vendorNames.length ? vendorNames.join(', ') : entry.title;
 
   return (
@@ -1622,6 +1628,9 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   const [shareTarget, setShareTarget] = useState(null);
   const [sharingSave, setSharingSave] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // '' = mọi vendor. Danh sách lựa chọn suy từ chính các file đang thấy được
+  // (vendorOptions, dưới) nên không cần đồng bộ với đâu khác.
+  const [vendorFilter, setVendorFilter] = useState('');
   const fileInputRef = useRef(null);
   const highlightRef = useRef(null);
   // Bỏ qua đúng một tín hiệu realtime kế tiếp — dùng khi chính máy này vừa ghi
@@ -1753,6 +1762,15 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     })();
   }, [readOnly, dataLoaded, rawFiles]);
 
+  // Danh sách vendor để chọn ở ô lọc — suy từ chính thư viện đang xem (đã qua
+  // giới hạn project/mode của libraryFiles), KHÔNG phụ thuộc searchQuery/
+  // vendorFilter hiện tại — đổi lựa chọn không được làm rụng bớt lựa chọn khác.
+  const vendorOptions = useMemo(() => {
+    const names = new Set();
+    libraryFiles.forEach(file => fileVendorNames(file).forEach(v => names.add(v)));
+    return [...names].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [libraryFiles]);
+
   // File đã filter theo mode + search — dùng cho cả badge count lẫn list render
   const displayFiles = useMemo(() => {
     let files = libraryFiles;
@@ -1775,6 +1793,9 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
         (file.pricing || []).some(r => (r.productType || '').toLowerCase().includes(q))
       );
     }
+    if (vendorFilter) {
+      files = files.filter(file => fileVendorNames(file).includes(vendorFilter));
+    }
     // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B/Admin thấy tất cả).
     // Tab "New Arrivals" (new_products): vendor upload lên đây phải hiển thị cho TẤT CẢ
     // project/seller, không lọc theo project.
@@ -1794,7 +1815,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
       const tb = timeValue(b.importedAt);
       return tb - ta;
     });
-  }, [libraryFiles, mode, bestSellerIds, searchQuery]);
+  }, [libraryFiles, mode, bestSellerIds, searchQuery, vendorFilter]);
 
   /**
    * @param {{ silent?: boolean }} opts
@@ -2090,6 +2111,24 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
               <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: HC.muted, fontSize: 14, lineHeight: 1, padding: 2 }}>✕</button>
             )}
           </div>
+          {/* Lọc theo vendor — danh sách suy từ chính các file đang xem được */}
+          <select
+            value={vendorFilter}
+            onChange={e => setVendorFilter(e.target.value)}
+            title="Lọc theo vendor"
+            style={{
+              paddingLeft: 12, paddingRight: 28, paddingTop: 7, paddingBottom: 7,
+              borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`,
+              background: HC.surface, color: vendorFilter ? HC.ink : HC.muted, fontSize: 12,
+              fontFamily: "'Inter',sans-serif", outline: 'none', cursor: 'pointer',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)', maxWidth: 160,
+            }}
+            onFocus={e => { e.target.style.borderColor = HC.orangeDark; e.target.style.boxShadow = `0 0 0 3px ${HC.orangeGlow}`; }}
+            onBlur={e => { e.target.style.borderColor = HC.borderStrong; e.target.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
+          >
+            <option value="">Tất cả vendor</option>
+            {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
           <button
@@ -2179,15 +2218,19 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           }
 
           if (displayFiles.length === 0) {
-            const isSearch = !!searchQuery.trim();
+            const isSearch = !!searchQuery.trim() || !!vendorFilter;
             return (
               <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
                 <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{isSearch ? '🔍' : (mode === 'bestseller' || mode === 'best_seller') ? '⭐' : '📂'}</div>
                 <div style={{ fontWeight: 800, color: HC.muted, fontSize: 14 }}>
-                  {isSearch ? `Không tìm thấy file nào khớp với "${searchQuery}"` : (mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor mới'}
+                  {searchQuery.trim()
+                    ? `Không tìm thấy file nào khớp với "${searchQuery}"`
+                    : vendorFilter
+                      ? `Không có file nào của vendor "${vendorFilter}"`
+                      : (mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor mới'}
                 </div>
                 {isSearch
-                  ? <button onClick={() => setSearchQuery('')} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 20, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>Xóa tìm kiếm</button>
+                  ? <button onClick={() => { setSearchQuery(''); setVendorFilter(''); }} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 20, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>Xóa bộ lọc</button>
                   : (mode === 'bestseller' || mode === 'best_seller') && <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Hãy vào "Tổng quan Vendor & Sản phẩm" và click biểu tượng ⭐ trên sản phẩm để đánh dấu.</div>
                 }
               </div>
