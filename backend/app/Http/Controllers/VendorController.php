@@ -431,10 +431,15 @@ class VendorController extends Controller
             NotificationService::send(
                 $product->created_by,
                 'vendor_assigned',
-                '🏪 Vendor đã được gán',
-                "Sản phẩm \"{$product->product_type}\" đã được gán vendor: " .
+                '🏪 Vendor đã được cung cấp',
+                "Request \"{$product->product_type}\" đã được cung cấp vendor: " .
                 "{$vendor->vendor_type} - {$vendor->product_type}" .
-                ($vendor->vendor_category ? " [{$vendor->vendor_category}]" : '') . "."
+                ($vendor->vendor_category ? " [{$vendor->vendor_category}]" : '') . ".",
+                [
+                    'product_id'   => (int) $product->id,
+                    'product_type' => $product->product_type,
+                    'project'      => $product->creator?->project,
+                ]
             );
         }
 

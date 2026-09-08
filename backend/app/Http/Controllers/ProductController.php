@@ -415,7 +415,7 @@ public function update(Request $request, $id)
         NotificationService::sendToRole(
             'admin',
             'new_form',
-            'Yêu cầu duyệt sản phẩm mới',
+            'Request mới cần duyệt',
             "Seller của project {$projectName} vừa gửi form request mới.",
             [
                 'product_id'   => (int) $product->id,
@@ -462,16 +462,20 @@ public function pendingApprovals()
         $product->save();
 
         $pt = $product->product_type;
-        $notifData = ['product_id' => (int)$product->id, 'product_type' => $pt];
+        $notifData = [
+            'product_id'   => (int) $product->id,
+            'product_type' => $pt,
+            'project'      => $product->creator?->project,
+        ];
 
         if ($product->created_by) {
             $message = $isApproved
-                ? "Sản phẩm \"{$pt}\" đã được Admin phê duyệt."
-                : "Sản phẩm \"{$pt}\" bị Admin từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '');
+                ? "Request \"{$pt}\" đã được Admin phê duyệt."
+                : "Request \"{$pt}\" bị Admin từ chối." . ($request->reason ? " Lý do: {$request->reason}" : '');
             NotificationService::send(
                 $product->created_by,
                 $isApproved ? 'approved' : 'rejected',
-                $isApproved ? '✅ Sản phẩm đã được duyệt' : '❌ Sản phẩm bị từ chối',
+                $isApproved ? '✅ Request đã được duyệt' : '❌ Request bị từ chối',
                 $message,
                 $notifData
             );
@@ -481,8 +485,8 @@ public function pendingApprovals()
             NotificationService::sendToRole(
                 ['staff_b', 'vendor'],
                 'needs_vendor',
-                '🔧 Sản phẩm cần gán vendor',
-                "Sản phẩm \"{$pt}\" đã được Admin duyệt, cần gán vendor.",
+                '🔧 Request cần cung cấp vendor',
+                "Request \"{$pt}\" đã được Admin duyệt, cần cung cấp vendor. Vui lòng cung cấp thông tin vendor và đặt deadline cho request này.",
                 $notifData
             );
         }
@@ -507,9 +511,13 @@ public function pendingApprovals()
             NotificationService::send(
                 $product->created_by,
                 'rejected',
-                '❌ Sản phẩm bị từ chối',
-                "Sản phẩm \"{$product->product_type}\" bị Admin từ chối." . ($request->reason ? " Lý do: {$request->reason}" : ''),
-                ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
+                '❌ Request bị từ chối',
+                "Request \"{$product->product_type}\" bị Admin từ chối." . ($request->reason ? " Lý do: {$request->reason}" : ''),
+                [
+                    'product_id'   => (int) $product->id,
+                    'product_type' => $product->product_type,
+                    'project'      => $product->creator?->project,
+                ]
             );
         }
 
@@ -533,7 +541,7 @@ public function pendingApprovals()
                 $product->created_by,
                 'feedback',
                 '💬 Có phản hồi mới từ Staff B',
-                "Sản phẩm \"{$product->product_type}\": {$validated['feedback']}",
+                "Request \"{$product->product_type}\": {$validated['feedback']}",
                 ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
             );
         }
@@ -634,8 +642,12 @@ public function approvedProducts()
                 $product->created_by,
                 'deadline_updated',
                 '📅 Deadline đã được cập nhật',
-                "Sản phẩm \"{$product->product_type}\" có deadline mới: " . date('d/m/Y', strtotime($validated['deadline_date'])),
-                ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
+                "Request \"{$product->product_type}\" có deadline mới: " . date('d/m/Y', strtotime($validated['deadline_date'])),
+                [
+                    'product_id'    => (int) $product->id,
+                    'product_type'  => $product->product_type,
+                    'deadline_date' => date('d/m/Y', strtotime($validated['deadline_date'])),
+                ]
             );
         }
 
@@ -674,14 +686,18 @@ public function approvedProducts()
                 $firstVendorName = $first['vendorName'] ?? ($first['name'] ?? '');
             }
             $vendorBody = $firstVendorName
-                ? "Vendor \"{$firstVendorName}\" đã được gán cho sản phẩm \"{$product->product_type}\"."
-                : "Sản phẩm \"{$product->product_type}\" đã được gán " . count($vendors) . " vendor để tham khảo.";
+                ? "Vendor \"{$firstVendorName}\" đã được cung cấp cho request \"{$product->product_type}\"."
+                : "Request \"{$product->product_type}\" đã được cung cấp " . count($vendors) . " vendor để tham khảo.";
             NotificationService::send(
                 $product->created_by,
                 'vendor_assigned',
-                '🏪 Vendor đã được gán',
+                '🏪 Vendor đã được cung cấp',
                 $vendorBody,
-                ['product_id' => (int)$product->id, 'product_type' => $product->product_type]
+                [
+                    'product_id'   => (int) $product->id,
+                    'product_type' => $product->product_type,
+                    'project'      => $product->creator?->project,
+                ]
             );
         }
 

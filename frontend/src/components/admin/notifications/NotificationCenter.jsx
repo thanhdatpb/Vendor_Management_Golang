@@ -13,6 +13,7 @@ const TYPE_META = {
   feedback:                { icon: '💬', label: 'Phản hồi',       color: '#6366F1', bg: '#eef2ff', border: '#c7d2fe' },
   deadline_updated:        { icon: '📅', label: 'Deadline',       color: '#7C3AED', bg: '#f5f3ff', border: '#ddd6fe' },
   news:                    { icon: '📰', label: 'Tin tức',        color: '#0891b2', bg: '#f0f9ff', border: '#bae6fd' },
+  library_updated:         { icon: '📚', label: 'Thư viện',       color: '#0891b2', bg: '#f0f9ff', border: '#bae6fd' },
 };
 const DEF_META = { icon: '📢', label: 'Thông báo', color: '#6B7280', bg: '#f9fafb', border: '#e5e7eb' };
 const NEWS_COLOR = '#0891b2';

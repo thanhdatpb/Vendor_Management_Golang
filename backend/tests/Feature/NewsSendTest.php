@@ -63,14 +63,23 @@ class NewsSendTest extends TestCase
         $this->assertSame(0, Notification::count());
     }
 
-    /** Bấm Gửi → mọi tài khoản Admin & Seller nhận notification, news bị đóng dấu. */
-    public function test_gui_tao_notification_cho_moi_admin_va_seller(): void
+    /**
+     * Bấm Gửi → mọi tài khoản Admin, Seller, PD, CSF, Marvel nhận notification
+     * (chuông web), news bị đóng dấu.
+     *
+     * PD/CSF/Marvel được thêm vào RECIPIENT_ROLES theo kế hoạch thông báo email
+     * đã duyệt (2026-09) — họ chỉ nhận ở CHUÔNG, loại 'news' không gửi mail cho
+     * bất kỳ ai (xem config/notification_mail.php, NewsController::RECIPIENT_ROLES).
+     */
+    public function test_gui_tao_notification_cho_moi_admin_seller_pd_csf_marvel(): void
     {
         $vendor  = $this->makeUser('vendor');
         $admin   = $this->makeUser('admin');
         $seller1 = $this->makeUser('seller', '1');
         $seller2 = $this->makeUser('seller', '2');
-        $csf     = $this->makeUser('csf');   // không nằm trong danh sách nhận
+        $pd      = $this->makeUser('pd');
+        $csf     = $this->makeUser('csf');
+        $marvel  = $this->makeUser('marvel');
         $news    = $this->makeNews();
 
         $res = $this->actingAs($vendor)->postJson("/api/news/{$news->id}/send");
@@ -78,9 +87,9 @@ class NewsSendTest extends TestCase
         $res->assertStatus(200);
         $this->assertNotNull($res->json('sent_at'), 'response phải trả sent_at đã đóng dấu');
 
-        // Đúng 3 người nhận: 1 admin + 2 seller. Vendor tự gửi và CSF đều không nhận.
-        $this->assertSame(3, Notification::where('type', 'news')->count());
-        foreach ([$admin, $seller1, $seller2] as $recipient) {
+        // Đúng 6 người nhận: admin + 2 seller + pd + csf + marvel. Vendor tự gửi không nhận.
+        $this->assertSame(6, Notification::where('type', 'news')->count());
+        foreach ([$admin, $seller1, $seller2, $pd, $csf, $marvel] as $recipient) {
             $this->assertDatabaseHas('notifications', [
                 'user_id' => $recipient->id,
                 'type'    => 'news',
@@ -88,7 +97,6 @@ class NewsSendTest extends TestCase
                 'is_read' => false,
             ]);
         }
-        $this->assertDatabaseMissing('notifications', ['user_id' => $csf->id]);
         $this->assertDatabaseMissing('notifications', ['user_id' => $vendor->id]);
 
         $this->assertNotNull($news->fresh()->sent_at);

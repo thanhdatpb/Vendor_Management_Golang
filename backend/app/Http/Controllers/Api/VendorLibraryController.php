@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Events\VendorLibraryChanged;
 use App\Http\Controllers\Controller;
+use App\Services\LibraryUpdateNotifier;
 use App\Support\HandlesMediaStorage;
 use App\Support\VendorFieldVisibility;
+use App\Support\VendorLibraryDiff;
 use App\Support\VendorLibraryIndexBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -171,6 +173,16 @@ class VendorLibraryController extends Controller
 
         $row = $this->getRow();
 
+        // Chụp lại bản CŨ trước khi ghi đè — đây là cách DUY NHẤT biết file nào
+        // vừa đổi, vì cột `data` là một blob JSON duy nhất cho toàn hệ thống.
+        // Chỉ dùng để tính diff trong bộ nhớ, KHÔNG đổi cách lưu (vẫn ghi
+        // nguyên chuỗi `$data` như trước — không đổi định dạng lưu trữ).
+        $oldFiles = [];
+        if ($row) {
+            $decodedOld = json_decode((string) $row->data, true);
+            $oldFiles = is_array($decodedOld) ? $decodedOld : [];
+        }
+
         if ($row) {
             DB::table('vendor_library')->where('id', $row->id)->update([
                 'data'       => $data,
@@ -185,8 +197,34 @@ class VendorLibraryController extends Controller
         }
 
         $this->announce('import');
+        $this->notifyLibraryUpdated($request, $oldFiles, $data);
 
         return response()->json(['message' => 'Library saved successfully']);
+    }
+
+    /**
+     * Phát notification `library_updated` cho từng file thực sự đổi nội dung.
+     * Lỗi ở đây (vd actor null trong 1 kịch bản lạ nào đó) KHÔNG được phép làm
+     * hỏng thao tác lưu đã thành công — cùng triết lý với announce() ở trên.
+     */
+    private function notifyLibraryUpdated(Request $request, array $oldFiles, string $newDataRaw): void
+    {
+        $actor = $request->user();
+        if (!$actor) {
+            return;
+        }
+
+        try {
+            $decodedNew = json_decode($newDataRaw, true);
+            $newFiles = is_array($decodedNew) ? $decodedNew : [];
+
+            $changedFiles = VendorLibraryDiff::changedFiles($oldFiles, $newFiles);
+            LibraryUpdateNotifier::notify($changedFiles, $actor);
+        } catch (\Throwable $e) {
+            Log::warning('Không phát được notification cập nhật Thư viện Vendor.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

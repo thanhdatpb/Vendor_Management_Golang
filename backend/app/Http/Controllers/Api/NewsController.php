@@ -32,7 +32,10 @@ use Illuminate\Support\Facades\Schema;
 class NewsController extends Controller
 {
     /** Role nhận thông báo — kèm cả tên role cũ để không sót tài khoản legacy. */
-    private const RECIPIENT_ROLES = ['admin', 'seller', 'staff_a'];
+    // PD/CSF/Marvel chỉ nhận ở CHUÔNG WEB — loại 'news' cố tình không có trong
+    // config/notification_mail.php nên không bao giờ sinh mail cho ai, kể cả
+    // Admin/Seller. Thêm role vào đây chỉ ảnh hưởng ai thấy tin trên chuông.
+    private const RECIPIENT_ROLES = ['admin', 'seller', 'staff_a', 'pd', 'csf', 'marvel'];
 
     public function index()
     {
