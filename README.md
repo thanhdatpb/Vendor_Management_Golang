@@ -68,7 +68,7 @@ flowchart LR
 
 ## 3. Vai trò & Luồng nghiệp vụ (Roles & Workflow)
 
-Hệ thống có 5 vai trò — 3 vai trò tham gia luồng duyệt và 2 vai trò chỉ-xem:
+Hệ thống có 6 vai trò — 3 vai trò tham gia luồng duyệt và 3 vai trò chỉ-xem:
 
 | Vai trò | Nhiệm vụ |
 |---|---|
@@ -77,6 +77,7 @@ Hệ thống có 5 vai trò — 3 vai trò tham gia luồng duyệt và 2 vai tr
 | **Vendor / Staff B** | Tiếp nhận Request, quản lý Thư viện Vendor (import Excel), gán vendor phù hợp cho từng sản phẩm. |
 | **CSF** *(Customer Service & Fulfillment)* | **Read-only** Thư viện Vendor, **ẩn giá**. Sidebar cố định **4 project**: Happy · Creative · Global · Hapify84. |
 | **PD** *(Product Design)* | **Read-only** Thư viện Vendor, **ẩn giá**. Sidebar liệt kê **đúng các project được phân công cho email này** — một PD có thể phụ trách nhiều project. |
+| **Marvel** | **Read-only** Thư viện Vendor, **ẩn giá** — quyền giống hệt CSF (phục vụ mọi project), chỉ khác tên vai trò và đường dẫn dashboard (/marvel). |
 
 ### Một email — nhiều vai trò / nhiều project
 
@@ -123,6 +124,7 @@ sequenceDiagram
 - **Quản Lý Thông Báo (News)** — Vendor đăng tin/thông báo cho Admin & Seller; **lưu ở DB** (bảng `news`), không mất khi F5 hay đổi máy.
 - **Tra cứu read-only cho CSF/PD** — xem Thư viện Vendor không kèm giá, đúng phạm vi project.
 - **Thông báo cross-role** — chuông thông báo nhắc việc giữa các vai trò (Admin ↔ Staff B ↔ Staff A) theo từng bước của luồng duyệt.
+- **Mirror thông báo qua email** — mọi thông báo đáng chú ý trên chuông được gửi song song vào hộp thư của đúng người nhận, chạy nền qua hàng đợi. Chi tiết ở mục 9.
 - **Xuất Excel** — export danh sách sản phẩm và bảng giá.
 - **Media vendor** — upload ảnh/video, lightbox xem nhanh.
 
@@ -238,7 +240,7 @@ Base: `/api` · phần lớn nằm sau `auth:sanctum`.
 | **Vendors** | `GET·POST /vendors`, `GET·PUT·DELETE /vendors/{id}`, `POST /vendors/import`, `GET /vendors/compare` |
 | **Vendor Library** | `GET·POST /vendor-library`, `POST /vendor-library/sample-status·best-seller·upload-images·restore-backup` |
 | **Price Sheets** | `GET /price-sheets`, `POST /price-sheets`, `DELETE /price-sheets/{id}` |
-| **News (Thông báo)** | `GET·POST /news`, `PUT·DELETE /news/{id}` |
+| **News (Thông báo)** | `GET·POST /news`, `PUT·DELETE /news/{id}`, `POST /news/{id}/send` |
 | **Notifications** | `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read` |
 | **Nhân sự (Admin)** | `GET·POST /admin/users`, `PATCH /admin/users/{id}`, `PATCH /admin/users/{id}/status` |
 
@@ -365,3 +367,147 @@ erDiagram
 - **`products.total_cost` là chuỗi, không phải số** — nó chứa khoảng giá do Seller nhập (`100-150`). Mọi chỗ so sánh với giá vendor phải đi qua [`frontend/src/utils/targetCost.js`](frontend/src/utils/targetCost.js) (lấy cận trên của khoảng làm trần), **không dùng `Number()` trực tiếp** vì `Number("100-150")` = `NaN`.
 - Migrations còn các bảng `customers`, `orders`, `order_items`, `payments`, `inventory_logs` từ scaffold ban đầu — **không dùng** trong luồng nghiệp vụ hiện tại (legacy).
 
+---
+
+## 9. Mirror thông báo qua Email
+
+Chuông trong app chỉ thấy được khi người ta đang mở app. Nhiều bước trong luồng duyệt lại là **chờ người khác** (Admin chờ request mới, Seller chờ vendor được gán, Vendor chờ yêu cầu cung cấp vendor) — nên mỗi `Notification` đáng chú ý được **mirror sang email**, chạy nền qua hàng đợi, không chặn request nghiệp vụ.
+
+### Luồng gửi
+
+```mermaid
+flowchart LR
+    N["Notification::created<br/>(bảng notifications)"] --> J["Job SendNotificationEmail<br/>(queue · afterCommit)"]
+    J --> P{"NotificationEmailPolicy<br/>4 lớp kiểm tra"}
+    P -->|bị chặn| Skip["Ghi lý do vào<br/>notifications.email_error"]
+    P -->|cho phép| M["NotificationMail<br/>(blade HTML + text)"]
+    M --> SMTP["SMTP"]
+```
+
+### Bốn lớp kiểm tra trước khi gửi
+
+Toàn bộ quyết định nằm ở [`app/Services/NotificationEmailPolicy.php`](backend/app/Services/NotificationEmailPolicy.php), theo thứ tự:
+
+1. **Người nhận hợp lệ** — user còn tồn tại, `is_active`, email đúng định dạng.
+2. **Role allow-list cứng** — khai báo ở [`config/notification_mail.php`](backend/config/notification_mail.php). Role không nằm trong danh sách của loại đó **không bao giờ** nhận mail, bất kể cài đặt nói gì.
+3. **Ma trận cài đặt** — bảng `notification_email_settings` (`role` × `type` × `enabled`), seed sẵn ngay trong migration, để Admin bật/tắt được mà không cần deploy code.
+4. **Chống trùng & trần số lượng** — cùng một thông báo không gửi lại trong **5 phút** (riêng `library_updated` là **15 phút**); trần `MAIL_HOURLY_CAP` mail/giờ (mặc định 300, đặt 0 để bỏ giới hạn) bảo vệ quota SMTP.
+
+### Các loại được gửi mail
+
+| Loại (`type`) | Người nhận | Nội dung |
+|---|---|---|
+| `new_form` | Admin | Có Product Request mới cần duyệt |
+| `approved` / `rejected` | Seller | Request được duyệt / bị từ chối (kèm lý do) |
+| `needs_vendor` | Vendor | Request cần cung cấp vendor |
+| `deadline_updated` | Seller | Deadline của request thay đổi |
+| `vendor_assigned` | Seller | Staff B đã gán vendor đề xuất |
+| `library_updated` | Admin · Vendor · Seller · PD · CSF · Marvel | Thư viện Vendor có file/dòng giá thay đổi — Seller/PD chỉ nhận nếu file thuộc project của mình (lọc ở [`VendorLibraryDiff`](backend/app/Support/VendorLibraryDiff.php)) |
+
+> Các loại `news`, `feedback`, `pending` **cố ý không có trong config** nên chỉ chạy trên chuông web, không gửi mail.
+
+### Thêm một loại mail mới
+
+Sửa **đúng một chỗ**: thêm khoá vào `types` trong `config/notification_mail.php` (icon, label, nút bấm, `roles` được phép, các trường `meta` hiển thị), thêm route đích ở `routes`, rồi thêm dòng `(role, type)` vào migration của `notification_email_settings`. Không rải điều kiện ra các controller.
+
+### Biến môi trường liên quan
+
+```env
+QUEUE_CONNECTION=database      # job gửi mail chạy nền; cần chạy queue worker
+FRONTEND_URL=https://vendorhub.viehana.com   # ghép thành link nút bấm trong mail
+
+MAIL_MAILER=smtp
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=
+MAIL_FROM_NAME="HappyC Hub"
+MAIL_HOURLY_CAP=300            # trần mail/giờ, 0 = không giới hạn
+```
+
+Với `QUEUE_CONNECTION=database`, production phải có worker chạy thường trực (`php artisan queue:work`, nên bọc bằng supervisor/systemd) — nếu không, job nằm mãi trong bảng `jobs` và **không có mail nào được gửi**.
+
+---
+
+## 10. Cài đặt & chạy local
+
+**Yêu cầu:** PHP ≥ 8.2 · Composer · Node.js ≥ 18 · MySQL 8.0 (hoặc dùng `docker-compose.yml` kèm sẵn).
+
+### Backend (Laravel 12)
+
+```bash
+cd backend
+composer install
+cp .env.example .env          # điền DB_*, FRONTEND_URL, MAIL_*, (tuỳ chọn) AWS_* cho R2
+php artisan key:generate
+php artisan migrate
+php artisan storage:link      # symlink cho ảnh/video vendor
+php artisan serve             # http://127.0.0.1:8000
+php artisan queue:work        # cửa sổ riêng — bắt buộc nếu muốn nhận email
+```
+
+### Frontend (React 19 + Vite)
+
+```bash
+cd frontend
+npm install
+npm run dev                   # http://localhost:5173
+npm run test                  # Vitest
+npm run lint
+```
+
+### Database bằng Docker (tuỳ chọn)
+
+```bash
+docker compose up -d          # MySQL 8.0 + phpMyAdmin
+```
+
+### Chạy test backend
+
+```bash
+cd backend
+php artisan test              # gồm test phân quyền giá, rò rỉ giá CSF/PD, policy email
+```
+
+---
+
+## 11. Build & Deploy — ⚠️ Đọc trước khi sửa frontend
+
+Repo **commit cả thư mục build `frontend/dist/`**, và production serve **trực tiếp bundle đã commit** (deploy thủ công: SSH vào VPS, `git pull`, serve `dist/` — **không rebuild trên server**). Hệ quả:
+
+1. **Sửa source frontend ⇒ BẮT BUỘC rebuild:**
+   ```bash
+   cd frontend && npx vite build
+   ```
+   rồi commit **cả `src/` lẫn `dist/`**. Chỉ commit source mà quên rebuild ⇒ production chạy code cũ.
+
+2. **Push git KHÔNG tự deploy.** Sau khi merge vào `main` phải redeploy thủ công (pull + serve lại `dist/`); bundle có thể trùng tên hash nên đảm bảo file mới **đè** file cũ.
+
+3. **Đổi schema ⇒ chạy `php artisan migrate` trên production.** Dự án không chạy `db:seed` ở production — dữ liệu khởi tạo bắt buộc phải seed ngay trong migration.
+
+### ⛔ Tuyệt đối không resolve conflict thủ công trong `frontend/dist/`
+
+`dist/assets/index-*.js` là **JS đã minify**. Resolve tay (giữ cả hai bên, hoặc sót marker `<<<<<<<` / `=======` / `>>>>>>>`) sẽ làm hỏng cú pháp bundle ⇒ **React không mount ⇒ trắng trang toàn bộ app**. Đây là sự cố có thật (16/07/2026): bundle lỗi SyntaxError: Identifier 'Of' has already been declared.
+
+**Cách xử lý đúng:** bỏ qua nội dung conflict của bundle, chạy lại `npx vite build` để **tái tạo** `dist/` từ source đã resolve, rồi `git add -A frontend/dist`.
+
+### Kiểm chứng bundle trước khi deploy
+
+```bash
+cd frontend && npx vite preview
+```
+Mở bằng trình duyệt (hoặc Chrome headless) và kiểm tra `#root` có render (`childElementCount > 0`) và console không có exception — bắt lỗi trắng trang **trước** khi lên production.
+
+### Quy ước Git
+
+- Nhánh tính năng đặt theo tiền tố `feat/`, `fix/`, `chore/`, `docs/`; commit theo Conventional Commits (`feat(pricesheet): …`).
+- Mỗi thay đổi đi qua PR vào `main`, squash-merge.
+- **Đóng bớt PR trùng đang mở** — nhiều PR cùng nhánh sẽ đẩy bản `dist/` cũ lên `main` và gây conflict lặp lại ở bundle; mỗi lần resolve là một lần rủi ro hỏng bundle như sự cố ở trên.
+
+### Những thứ KHÔNG commit
+
+`node_modules/` (mọi cấp), file `.env` thật (chỉ commit `.env*.example`), log, file tạm của editor/AI agent — xem [`.gitignore`](.gitignore) ở thư mục gốc và `.gitignore` riêng của `backend/`, `frontend/`.
+
+> Ngoại lệ có chủ đích: `frontend/dist/` và `backend/vendor/` **được commit** vì production deploy thủ công bằng `git pull`, không chạy build/`composer install` trên server.
