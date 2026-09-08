@@ -53,8 +53,7 @@ class LibraryUpdateNotifier
             return;
         }
 
-        $actorRole  = NotificationEmailPolicy::canonicalRole($actor->role);
-        $actorNoun  = $actorRole === 'admin' ? ('Admin ' . self::displayName($actor)) : 'Vendor';
+        $actorNoun  = self::displayName($actor);
         $newCount   = count($changed['newProductTypes']);
         $preview    = self::productTypesPreview($changed['newProductTypes']);
 
@@ -77,7 +76,7 @@ class LibraryUpdateNotifier
         $data = [
             'filename'        => $changed['filename'],
             'changes_summary' => implode(' · ', $summaryParts),
-            'actor_label'     => $actorRole === 'admin' ? ('Admin — ' . self::displayName($actor)) : 'Vendor',
+            'actor_label'     => self::actorLabel($actor),
         ];
 
         foreach ($recipients as $user) {
@@ -103,14 +102,13 @@ class LibraryUpdateNotifier
             return;
         }
 
-        $actorRole = NotificationEmailPolicy::canonicalRole($actor->role);
-        $actorNoun = $actorRole === 'admin' ? ('Admin ' . self::displayName($actor)) : 'Vendor';
+        $actorNoun = self::displayName($actor);
         $count     = count($changedFiles);
 
         $data = [
             // Cố ý KHÔNG có 'filename': nút trong mail trỏ về trang thư viện gốc
             // thay vì một file cụ thể vì có nhiều file cùng đổi.
-            'actor_label' => $actorRole === 'admin' ? ('Admin — ' . self::displayName($actor)) : 'Vendor',
+            'actor_label' => self::actorLabel($actor),
         ];
 
         foreach ($recipients as $user) {
@@ -170,6 +168,28 @@ class LibraryUpdateNotifier
     private static function displayName(User $user): string
     {
         return $user->full_name ?: $user->name;
+    }
+
+    /**
+     * Nhãn "Người cập nhật" hiển thị trong thư: TÊN NGƯỜI thật, kèm vai trò
+     * trong ngoặc để người nhận biết ngay ai vừa động vào thư viện —
+     * vd "Dat Tran (Vendor)", "Uyen Ho (Admin)".
+     *
+     * Trước đây chỉ ghi trống trơn "Vendor" nên mọi tài khoản Vendor đều hiện
+     * như nhau, không truy được người thao tác.
+     */
+    private static function actorLabel(User $actor): string
+    {
+        $name = self::displayName($actor);
+        $role = NotificationEmailPolicy::canonicalRole($actor->role);
+
+        $roleLabel = match ($role) {
+            'admin'  => 'Admin',
+            'vendor' => 'Vendor',
+            default  => null,
+        };
+
+        return $roleLabel ? "{$name} ({$roleLabel})" : $name;
     }
 
     private static function productTypesPreview(array $newProductTypes): string

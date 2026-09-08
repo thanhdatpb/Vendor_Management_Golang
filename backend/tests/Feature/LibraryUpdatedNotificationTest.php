@@ -48,7 +48,7 @@ class LibraryUpdatedNotificationTest extends TestCase
 
     public function test_vendor_import_bao_cho_admin_csf_marvel_va_seller_dung_project(): void
     {
-        $vendor        = $this->makeUser('vendor');
+        $vendor        = $this->makeUser('vendor', ['full_name' => 'Dat Tran']);
         $otherVendor   = $this->makeUser('vendor');
         $admin         = $this->makeUser('admin');
         $csf           = $this->makeUser('csf');
@@ -79,8 +79,10 @@ class LibraryUpdatedNotificationTest extends TestCase
         $n = Notification::where('user_id', $admin->id)->where('type', 'library_updated')->first();
         $data = json_decode($n->data, true);
         $this->assertSame('P.HAPPY.xlsx', $data['filename']);
-        $this->assertSame('Vendor', $data['actor_label']);
-        $this->assertStringContainsString('Vendor vừa thêm 1 phôi mới', $n->body);
+        // Nhãn người cập nhật phải là TÊN NGƯỜI thật kèm vai trò — không phải
+        // mỗi chữ "Vendor" chung chung (mọi tài khoản Vendor sẽ hiện như nhau).
+        $this->assertSame('Dat Tran (Vendor)', $data['actor_label']);
+        $this->assertStringContainsString('Dat Tran vừa thêm 1 phôi mới', $n->body);
         $this->assertStringContainsString('Ceramic Mug 11oz', $n->body);
     }
 
@@ -101,8 +103,8 @@ class LibraryUpdatedNotificationTest extends TestCase
 
         $n = Notification::where('user_id', $vendor->id)->where('type', 'library_updated')->first();
         $data = json_decode($n->data, true);
-        $this->assertSame('Admin — Minh Trí', $data['actor_label']);
-        $this->assertStringContainsString('Admin Minh Trí vừa thêm', $n->body);
+        $this->assertSame('Minh Trí (Admin)', $data['actor_label']);
+        $this->assertStringContainsString('Minh Trí vừa thêm', $n->body);
 
         // Actor Admin không tự báo cho chính mình.
         $this->assertDatabaseMissing('notifications', ['user_id' => $admin->id, 'type' => 'library_updated']);

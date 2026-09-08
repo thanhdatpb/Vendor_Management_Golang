@@ -33,6 +33,11 @@ class NotificationMail extends Mailable
 
         $title = $this->stripLeadingEmoji((string) $this->notification->title);
         $subjectSuffix = $data['product_type'] ?? $data['project'] ?? $data['filename'] ?? null;
+        // Bỏ hậu tố nếu tiêu đề đã chứa sẵn nó — vd library_updated có tiêu đề
+        // 'File "X" vừa được cập nhật', ghép thêm '— X' thành lặp tên file 2 lần.
+        if ($subjectSuffix !== null && str_contains($title, (string) $subjectSuffix)) {
+            $subjectSuffix = null;
+        }
         $subject = '[VendorHub] ' . $title . ($subjectSuffix ? ' — ' . $subjectSuffix : '');
 
         $createdAt = $this->notification->created_at

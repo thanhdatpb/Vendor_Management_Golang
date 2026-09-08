@@ -183,6 +183,26 @@ class NotificationEmailDispatchTest extends TestCase
         $this->assertStringContainsString('/seller/products?product=482', $html);
     }
 
+    public function test_subject_khong_lap_ten_file_hai_lan(): void
+    {
+        // Tiêu đề của library_updated đã chứa sẵn tên file, ghép thêm hậu tố
+        // '— {filename}' nữa thành lặp 2 lần trong cùng một dòng Subject.
+        $seller = $this->makeUser('seller');
+        $notification = Notification::create([
+            'user_id' => $seller->id,
+            'type'    => 'library_updated',
+            'title'   => '📚 File "HC_Croptop_Check" vừa được cập nhật',
+            'body'    => 'Dat Tran vừa thêm 5 phôi mới trong file này.',
+            'is_read' => false,
+            'data'    => json_encode(['filename' => 'HC_Croptop_Check', 'changes_summary' => '5 phôi mới']),
+        ]);
+
+        $mail = (new NotificationMail($notification))->build();
+
+        $this->assertSame('[VendorHub] File "HC_Croptop_Check" vừa được cập nhật', $mail->subject);
+        $this->assertSame(1, substr_count($mail->subject, 'HC_Croptop_Check'));
+    }
+
     public function test_library_updated_button_dung_tham_so_file_khong_phai_product(): void
     {
         $seller = $this->makeUser('seller');
