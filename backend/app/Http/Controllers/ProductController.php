@@ -78,6 +78,23 @@ class ProductController extends Controller
                 $query->where('product_type', 'like', "%{$q}%");
             }
 
+            if ($request->filled('status')) {
+                $status = $request->input('status');
+                if ($status === 'rejected') {
+                    $query->whereIn('status', ['rejected', 'reject']);
+                } else {
+                    $query->where('status', $status);
+                }
+            }
+
+            if ($request->filled('project')) {
+                $project = strtolower(trim($request->input('project')));
+                $short = str_replace(' project', '', $project);
+                $query->whereHas('creator', function ($q) use ($project, $short) {
+                    $q->whereRaw('LOWER(TRIM(project)) IN (?, ?)', [$project, $short]);
+                });
+            }
+
             $paginated = $query->paginate((int)($request->input('per_page', 20)));
             $paginated->getCollection()->transform(function ($product) {
                 if ($product->creator) {
@@ -448,6 +465,57 @@ public function pendingApprovals()
     
     return response()->json($products);
 }
+
+    // Thống kê tổng + theo project cho Overview admin.
+    // Trước đây FE tự tính từ danh sách /products (bị paginate 20/trang) nên
+    // form đã duyệt "biến mất" khỏi số liệu khi có form mới đẩy nó khỏi trang 1.
+    // Dùng COUNT theo DB thay vì kéo hết bản ghi về, vừa đúng vừa nhẹ.
+    public function stats()
+    {
+        $cacheKey = 'products_stats_' . $this->productCacheVersion();
+
+        $data = Cache::remember($cacheKey, 3600, function () {
+            $rows = Product::query()
+                ->join('users', 'users.id', '=', 'products.created_by')
+                ->selectRaw("LOWER(TRIM(users.project)) as project, products.status as status, COUNT(*) as cnt")
+                ->groupBy('project', 'status')
+                ->get();
+
+            $projectKeyMap = [
+                'happy' => 'Happy Project', 'happy project' => 'Happy Project',
+                'creative' => 'Creative Project', 'creative project' => 'Creative Project',
+                'global' => 'Global Project', 'global project' => 'Global Project',
+                'hapify84' => 'Hapify84 Project', 'hapify84 project' => 'Hapify84 Project',
+            ];
+
+            $overall = ['pending' => 0, 'approved' => 0, 'rejected' => 0, 'total' => 0];
+            $projects = [];
+            foreach (array_unique(array_values($projectKeyMap)) as $label) {
+                $projects[$label] = ['pending' => 0, 'approved' => 0, 'rejected' => 0, 'total' => 0];
+            }
+
+            foreach ($rows as $row) {
+                $status = $row->status === 'reject' ? 'rejected' : $row->status;
+                if (!in_array($status, ['pending', 'approved', 'rejected'], true)) {
+                    continue; // bỏ 'draft' — chưa submit tới Admin, không tính vào tổng
+                }
+                $cnt = (int) $row->cnt;
+
+                $overall[$status] += $cnt;
+                $overall['total'] += $cnt;
+
+                $label = $projectKeyMap[$row->project] ?? null;
+                if ($label) {
+                    $projects[$label][$status] += $cnt;
+                    $projects[$label]['total'] += $cnt;
+                }
+            }
+
+            return ['overall' => $overall, 'projects' => $projects];
+        });
+
+        return response()->json($data);
+    }
 
     // Admin duyệt/từ chối
     public function approve(Request $request, $id)

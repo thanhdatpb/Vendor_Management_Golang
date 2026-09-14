@@ -188,8 +188,12 @@ function ProjectCard({ project, stats, onClick, onStatusClick }) {
 
 // ── Main Component ─────────────────────────────────────────
 export default function OverviewSection({ externalViewProduct, setExternalViewProduct }) {
-  const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Danh sách "thô" chỉ để nuôi FormHistoryModal (bảng lịch sử form khi bấm vào 1
+  // project/trạng thái) — KHÔNG dùng để tính số liệu thống kê nữa (xem loadAllData).
+  // per_page nới rộng ra 500 (thay vì mặc định 20 của BE) để modal lịch sử không bị
+  // hụt dữ liệu các form cũ; số liệu 4 card thống kê giờ đến từ productApi.stats().
+  const [allProducts, setAllProducts] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalFilterType, setModalFilterType] = useState('');
@@ -253,44 +257,39 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     }
   }, [externalViewProduct, setExternalViewProduct]);
 
-  const computeStats = useCallback((products) => {
-    const pending  = products.filter(p => p.status === 'pending').length;
-    const approved = products.filter(p => p.status === 'approved').length;
-    const rejected = products.filter(p => p.status === 'rejected' || p.status === 'reject').length;
-    setFormStats({ pending, approved, rejected, total: products.length });
-    const projects = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
-    const ps = {};
-    projects.forEach(proj => {
-      const pp = products.filter(p => {
-        const dbProj = (p.project || '').toLowerCase().trim();
-        const uiProj = proj.toLowerCase().replace(' project', '');
-        return dbProj === uiProj || dbProj === proj.toLowerCase();
-      });
-      ps[proj] = {
-        approved: pp.filter(p => p.status === 'approved').length,
-        rejected: pp.filter(p => p.status === 'rejected' || p.status === 'reject').length,
-        pending:  pp.filter(p => p.status === 'pending').length,
-        // Không tính Draft (chưa submit tới Admin) vào tổng số form
-        total: pp.filter(p => p.status !== 'draft').length,
-      };
-    });
-    setProjectStats(ps);
-  }, []);
-
+  // Đếm ở DB (COUNT theo status/project) thay vì tự đếm từ /products — endpoint đó bị
+  // paginate 20/trang nên form cũ (kể cả đã duyệt) rớt khỏi trang 1 khi có form mới,
+  // làm số liệu "tự nhảy mất". Xem ProductController::stats().
   const loadAllData = useCallback(async () => {
     try {
-      const allRes = await productApi.list();
-      const all = normalizeList(allRes).map(normalizeProduct);
-      setAllProducts(all);
-      computeStats(all);
+      const res = await productApi.stats();
+      const body = res.data || {};
+      const overall = body.overall || { pending: 0, approved: 0, rejected: 0, total: 0 };
+      setFormStats(overall);
 
+      const defaultProjectStat = { approved: 0, rejected: 0, pending: 0, total: 0 };
+      const projects = ['Happy Project', 'Creative Project', 'Global Project', 'Hapify84 Project'];
+      const ps = {};
+      projects.forEach(proj => {
+        ps[proj] = { ...defaultProjectStat, ...(body.projects?.[proj] || {}) };
+      });
+      setProjectStats(ps);
     } catch (err) {
-      console.error('Lỗi tải dữ liệu:', err);
+      console.error('Lỗi tải thống kê:', err);
       setFormStats({ pending: 0, approved: 0, rejected: 0, total: 0 });
     } finally {
       setLoading(false);
     }
-  }, [computeStats]);
+  }, []);
+
+  const loadHistoryList = useCallback(async () => {
+    try {
+      const res = await productApi.list({ per_page: 500 });
+      setAllProducts(normalizeList(res).map(normalizeProduct));
+    } catch (err) {
+      console.error('Lỗi tải lịch sử form:', err);
+    }
+  }, []);
 
   const loadPending = useCallback(() => {
     return productApi.pendingApprovals()
@@ -338,14 +337,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       });
 
       setPendingProducts(prev => prev.filter(p => p.id !== product.id));
-      setAllProducts(prev => {
-        const exists = prev.find(p => p.id === product.id);
-        if (exists) {
-          return prev.map(p => p.id === product.id ? { ...p, status: 'approved' } : p);
-        } else {
-          return [...prev, { ...product, status: 'approved' }];
-        }
-      });
       loadAllData(); // Refresh stats
 
       setToast({
@@ -390,14 +381,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
       });
 
       setPendingProducts(prev => prev.filter(p => p.id !== product.id));
-      setAllProducts(prev => {
-        const exists = prev.find(p => p.id === product.id);
-        if (exists) {
-          return prev.map(p => p.id === product.id ? { ...p, status: 'rejected' } : p);
-        } else {
-          return [...prev, { ...product, status: 'rejected' }];
-        }
-      });
       loadAllData(); // Refresh stats
 
       setToast({
@@ -454,22 +437,22 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
   };
 
   useEffect(() => {
-    Promise.all([loadAllData(), loadPending()]);
+    Promise.all([loadAllData(), loadPending(), loadHistoryList()]);
 
     // Pusher đẩy real-time khi có thay đổi ở tab/tài khoản khác — không cần F5.
     const unsubscribe = subscribeProductChanges(() => {
-      loadAllData(); loadPending();
+      loadAllData(); loadPending(); loadHistoryList();
     });
 
     // Polling giữ lại làm lưới an toàn (phòng khi mất kết nối Pusher), tần suất thấp hơn
     // vì giờ real-time đã lo phần chính.
     const interval = setInterval(() => {
       if (document.hidden) return; // tab không active thì bỏ qua, đỡ tốn CPU server
-      loadAllData(); loadPending();
+      loadAllData(); loadPending(); loadHistoryList();
     }, 120000);
 
     return () => { clearInterval(interval); unsubscribe(); };
-  }, [loadAllData, loadPending]);
+  }, [loadAllData, loadPending, loadHistoryList]);
 
   const TABLE_COLS = ['STT', 'Project', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];
 
@@ -556,7 +539,7 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
               {pendingProducts.length} form chờ xử lý
             </span>
           )}
-          {refreshBtn(async () => { await Promise.all([loadAllData(), loadPending()]); })}
+          {refreshBtn(async () => { await Promise.all([loadAllData(), loadPending(), loadHistoryList()]); })}
         </div>
 
         {pendingProducts.length === 0 ? (

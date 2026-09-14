@@ -122,6 +122,9 @@ Route::middleware(['auth:sanctum', 'seen'])->group(function () {
         // Products waiting approval
         Route::get('/admin/product-approvals', [ProductController::class, 'pendingApprovals']);
 
+        // Thống kê tổng + theo project cho Overview (COUNT theo DB, không paginate)
+        Route::get('/admin/products/stats', [ProductController::class, 'stats']);
+
         // Approve / Reject
         Route::post('/admin/products/{id}/approve', [ProductController::class, 'approve']);
         Route::post('/admin/products/{id}/reject',  [ProductController::class, 'reject']);

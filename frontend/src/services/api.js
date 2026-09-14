@@ -180,6 +180,23 @@ export const productApi = {
     }
   ),
 
+  // Thống kê tổng + theo project (COUNT ở DB) — dùng cho Overview thay vì tự
+  // đếm từ /products (bị paginate 20/trang nên form cũ hay "biến mất" khỏi số liệu).
+  stats: withMock(
+    () => api.get("/admin/products/stats"),
+    () => {
+      const all = getMockProducts();
+      const overall = { pending: 0, approved: 0, rejected: 0, total: 0 };
+      all.forEach(p => {
+        const s = p.status === 'reject' ? 'rejected' : p.status;
+        if (['pending', 'approved', 'rejected'].includes(s)) {
+          overall[s]++; overall.total++;
+        }
+      });
+      return { data: { overall, projects: {} } };
+    }
+  ),
+
   approve: withMock(
     (id, data) => api.post(`/admin/products/${id}/approve`, data),
     (id, data) => {
