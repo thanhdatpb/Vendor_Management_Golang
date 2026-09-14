@@ -28,9 +28,15 @@ class NotificationService
      */
     public static function sendToRole(string|array $role, string $type, string $title, string $body, ?array $data = null): void
     {
-        $users = User::whereIn('role', (array) $role)->get();
-        foreach ($users as $user) {
-            self::send($user->id, $type, $title, $body, $data);
+        // pluck('id') thay vì get(): chỉ cần id, không việc gì phải nạp cả model
+        // (avatar_url TEXT, pd_projects JSON...) cho mỗi lần bắn thông báo.
+        // Vẫn tạo từng bản ghi qua Model — KHÔNG gộp thành insert hàng loạt, vì
+        // insert thẳng bỏ qua event `created` của Notification, tức mất cả
+        // broadcast Pusher lẫn job gửi email mirror.
+        $userIds = User::whereIn('role', (array) $role)->pluck('id');
+
+        foreach ($userIds as $userId) {
+            self::send($userId, $type, $title, $body, $data);
         }
     }
 
