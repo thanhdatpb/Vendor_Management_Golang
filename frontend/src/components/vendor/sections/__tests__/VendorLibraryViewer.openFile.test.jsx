@@ -183,6 +183,19 @@ describe('bấm vào một file', () => {
     expect(writeText.mock.calls[0][0]).toContain('/library/file_pillow/hc-pillow-p-happy-18-08');
     expect(screen.getByTestId('url')).toHaveTextContent('/vendor/library');
   });
+
+  it('copy trong cửa sổ đổi nút thành Copied và không hiện toast thành công', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+
+    renderWithBackgroundRoute();
+    await userEvent.click(await screen.findByText('HC_Pillow_P.Happy_18.08'));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Copy link' }));
+
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    expect(screen.queryByText(/Đã copy link file/)).not.toBeInTheDocument();
+  });
 });
 
 describe('vào thẳng bằng URL của file', () => {

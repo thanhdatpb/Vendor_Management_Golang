@@ -25,6 +25,7 @@ import { renderChiTietSizeText } from '../vendor/sections/VendorLibraryViewer';
 import { fileVisibleToProject } from '../../constants/projects';
 import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../utils/vnTime';
 import LibraryFileModal from '../library/LibraryFileModal';
+import LibraryCopyLinkButton from '../library/LibraryCopyLinkButton';
 import { copyLibraryFileLink, libraryFilePath, parseLibraryFilePath } from '../../utils/libraryFileLink';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
@@ -563,14 +564,13 @@ export default function VendorLibraryView({ projectKey, department }) {
             }}>{openedFile.title}</span>
           }
           actions={
-            <button
-              onClick={() => handleCopyLink(openedFile)}
-              style={{
-                padding: '6px 12px', borderRadius: 9, cursor: 'pointer',
-                border: `1.5px solid ${HC.borderStrong}`, background: HC.surface,
-                color: HC.brown, fontSize: 11.5, fontWeight: 800,
+            <LibraryCopyLinkButton
+              file={openedFile}
+              onError={(err) => {
+                console.warn('Copy link file thư viện thất bại:', err?.message || err);
+                showToast('error', 'Copy link thất bại. Kiểm tra quyền truy cập clipboard rồi thử lại.');
               }}
-            >🔗 Copy link</button>
+            />
           }
           footer="Esc, bấm ra ngoài, hoặc nút Back của trình duyệt đều đóng cửa sổ này."
           onClose={closeFile}

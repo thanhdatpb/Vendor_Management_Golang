@@ -21,10 +21,10 @@ import { HC } from '../constants/sellerTheme';
 import { libraryPathForRole } from '../constants/dashboardSections';
 import { canSeeLeadTime, canSeePrices } from '../constants/vendorFieldVisibility';
 import LibraryFileModal from '../components/library/LibraryFileModal';
+import LibraryCopyLinkButton from '../components/library/LibraryCopyLinkButton';
 import { LibraryCard } from '../components/vendor/sections/VendorLibraryViewer';
 import { MergedInfoTable } from '../components/csfpd/VendorLibraryView';
 import {
-  copyLibraryFileLink,
   libraryFilePath,
   LIBRARY_BY_NAME,
 } from '../utils/libraryFileLink';
@@ -82,7 +82,6 @@ export default function LibraryFilePage({ initialFile = null }) {
     : null;
   const [file, setFile] = useState(matchingInitialFile);
   const [status, setStatus] = useState(matchingInitialFile ? 'ready' : 'loading'); // loading | ready | not_found | forbidden | error
-  const [copied, setCopied] = useState(false);
 
   // `/library/by-name/<tên file>`: link cũ trong mail chỉ mang tên file. Tra ra
   // id rồi viết lại URL sang dạng chuẩn bằng `replace` — không đẻ thêm một bước
@@ -121,16 +120,6 @@ export default function LibraryFilePage({ initialFile = null }) {
   }, [byName, fileId, matchingInitialFile, navigate]);
 
   useEffect(() => { load(); }, [load]);
-
-  const handleCopyLink = async () => {
-    try {
-      await copyLibraryFileLink(file.id, file.filename);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch (err) {
-      console.warn('Copy link file thư viện thất bại:', err?.message || err);
-    }
-  };
 
   if (status === 'loading') {
     return <StatusCard icon="⏳" title="Đang mở file thư viện..." message="Vui lòng chờ trong giây lát." />;
@@ -186,16 +175,10 @@ export default function LibraryFilePage({ initialFile = null }) {
           </span>
         )}
         actions={
-          <button
-            onClick={handleCopyLink}
-            style={{
-              padding: '6px 12px', borderRadius: 9, cursor: 'pointer',
-              border: `1.5px solid ${copied ? HC.success : HC.borderStrong}`,
-              background: copied ? '#ecfdf5' : HC.surface,
-              color: copied ? '#047857' : HC.brown,
-              fontSize: 11.5, fontWeight: 800,
-            }}
-          >{copied ? '✓ Đã copy' : '🔗 Copy link'}</button>
+          <LibraryCopyLinkButton
+            file={file}
+            onError={(err) => console.warn('Copy link file thư viện thất bại:', err?.message || err)}
+          />
         }
         footer="Đóng cửa sổ để về Thư viện Vendor."
         onClose={() => matchingInitialFile ? navigate(-1) : navigate(backTo)}
