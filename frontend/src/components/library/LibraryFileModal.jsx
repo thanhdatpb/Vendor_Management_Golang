@@ -137,17 +137,50 @@ export default function LibraryFileModal({
         @keyframes hcLibModalIn { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
         .hc-lib-modal { animation: hcLibModalIn 140ms ease-out; }
         /* Keep the active section and its column headings visible while browsing rows. */
-        .hc-lib-scroll-body { --hc-lib-section-tabs-height: 46px; }
-        .hc-lib-scroll-body .hc-library-section-tabs {
-          position: sticky; top: 0; z-index: 20; min-height: var(--hc-lib-section-tabs-height);
-          box-sizing: border-box; box-shadow: 0 2px 5px rgba(81, 52, 10, 0.10);
+        .hc-lib-scroll-body {
+          --hc-lib-scroll-pad: 16px;
+          --hc-lib-section-tabs-height: 46px;
+          padding: var(--hc-lib-scroll-pad);
         }
-        .hc-lib-scroll-body .hc-library-table > thead {
-          position: sticky; top: var(--hc-lib-section-tabs-height); z-index: 10;
-          box-shadow: 0 2px 4px rgba(81, 52, 10, 0.10);
+        /* Sticky offsets start at the scroll body's content edge, so pinned layers
+           keep the same 16px gap under the file title as before scrolling. The
+           solid shadow fills that gap; otherwise scrolled rows show through it. */
+        .hc-lib-scroll-body .hc-library-section-tabs {
+          position: sticky; top: 0; z-index: 20;
+          min-height: var(--hc-lib-section-tabs-height); box-sizing: border-box;
+          box-shadow: 0 2px 5px rgba(81, 52, 10, 0.10), 0 calc(-1 * var(--hc-lib-scroll-pad)) 0 0 ${HC.surface};
+        }
+        /* Tuck the table header 1px under the tabs: at fractional offsets a 0px
+           seam still lets anti-aliased text from scrolled rows bleed through. */
+        .hc-lib-scroll-body .hc-library-sections { --hc-lib-table-head-top: calc(var(--hc-lib-section-tabs-height) - 1px); }
+        /* Sticky on table sections is inconsistent between browsers. Pin each
+           header cell instead, so it remains reliable for one- and two-row headers. */
+        .hc-lib-scroll-body .hc-library-table > thead > tr > th {
+          position: sticky; top: var(--hc-lib-table-head-top, 0px); z-index: 10;
+        }
+        /* Collapsed borders are painted by the table and stay behind when cells
+           pin, leaving see-through grid lines that scrolled text bleeds into.
+           Repaint each pinned cell's border in its own colour. (box-shadow is
+           not an option: Chrome ignores it on collapsed-border cells.) */
+        .hc-lib-scroll-body .hc-library-table > thead > tr > th::after {
+          content: ''; position: absolute; inset: -1px; pointer-events: none;
+          border: 1px solid; border-color: inherit;
+        }
+        /* Tables without section tabs pin straight under the title, so they fill the gap themselves. */
+        .hc-lib-scroll-body .hc-library-table > thead > tr:first-child > th::before {
+          content: ''; position: absolute; left: -1px; right: -1px; bottom: 100%;
+          height: calc(var(--hc-lib-scroll-pad) + 1px); background: ${HC.surface}; pointer-events: none;
+        }
+        /* The table reports its real first-row height, which varies with fonts and zoom. */
+        .hc-lib-scroll-body .hc-library-table > thead > .hc-library-header-row--secondary > th {
+          top: calc(var(--hc-lib-table-head-top, 0px) + var(--hc-library-header-row-1-height, 30px));
+          z-index: 11;
+        }
+        .hc-lib-scroll-body .hc-library-table > thead > .hc-library-header-row--primary > th[rowspan] {
+          z-index: 12;
         }
         /* A nested horizontal scroller would keep the header from following the modal's vertical scroll. */
-        .hc-lib-scroll-body .hc-library-pricing-table { overflow: visible !important; }
+        .hc-lib-scroll-body .hc-library-table-scroll { overflow: visible !important; }
         @media (prefers-reduced-motion: reduce) { .hc-lib-modal { animation: none; } }
         @media (max-width: 720px) {
           .hc-lib-scrim-pad { padding: 0 !important; }
@@ -203,7 +236,7 @@ export default function LibraryFileModal({
         {/* Thân — vùng cuộn duy nhất của cửa sổ */}
         <div style={{
           flex: 1, minHeight: 0, overflow: 'auto', overscrollBehavior: 'contain',
-          padding: 16, background: HC.surface,
+          background: HC.surface,
         }} className="hc-lib-scroll-body">
           {children}
         </div>

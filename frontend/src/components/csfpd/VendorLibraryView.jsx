@@ -143,8 +143,8 @@ export function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
   const singleVendorFile = rows.length === 1;
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed', minWidth: 1000 }}>
+    <div className="hc-library-table-scroll" style={{ overflowX: 'auto' }}>
+      <table className="hc-library-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed', minWidth: 1000 }}>
         <thead>
           <tr>
             <th style={{ ...TH(), width: '9%', textAlign: 'left' }}>Vendor Name</th>

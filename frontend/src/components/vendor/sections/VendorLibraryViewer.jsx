@@ -678,6 +678,20 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
   // Admin vẫn không được sửa trực tiếp giá trị ô (chỉ được dọn dòng thừa).
   const showActionsCol = showActions || canDeleteRow;
 
+  // Header 2 tầng dính trong cửa sổ file: tầng dưới phải dính ngay dưới tầng
+  // trên, mà chiều cao tầng trên đổi theo font/zoom → đo thật thay vì đoán số.
+  const primaryHeaderRef = useRef(null);
+  const [primaryHeaderHeight, setPrimaryHeaderHeight] = useState(null);
+  useEffect(() => {
+    const row = primaryHeaderRef.current;
+    if (!row || typeof ResizeObserver === 'undefined') return undefined;
+    const update = () => setPrimaryHeaderHeight(row.getBoundingClientRect().height);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [rows?.length]);
+
   const mkAddForm = () => ({
     kyHieu: '', productType: '', size: '', optional: '',
     pricing1: '', pricing2: '',
@@ -852,8 +866,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
   const naStyle = { background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' };
 
   return (
-    <div className="hc-library-pricing-table" style={{ overflowX: 'auto' }}>
-      <table className="hc-library-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1160, tableLayout: 'fixed' }}>
+    <div className="hc-library-table-scroll" style={{ overflowX: 'auto' }}>
+      <table className="hc-library-table" style={{
+        width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1160, tableLayout: 'fixed',
+        ...(primaryHeaderHeight ? { '--hc-library-header-row-1-height': `${primaryHeaderHeight}px` } : {}),
+      }}>
         <colgroup>
           <col style={{ width: 78 }} />{/* Vendor Name */}
           <col style={{ width: 104 }} />{/* Product Type */}
@@ -870,7 +887,7 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
           {showActionsCol && <col style={{ width: 54 }} />}
         </colgroup>
         <thead>
-          <tr>
+          <tr ref={primaryHeaderRef} className="hc-library-header-row--primary">
             <th rowSpan={2} style={{ ...TH(), whiteSpace: 'normal', lineHeight: 1.15 }}>Vendor Name</th>
             <th rowSpan={2} style={{ ...TH() }}>Product Type</th>
             <th colSpan={2} style={{ ...TH() }}>Detail</th>
@@ -881,14 +898,16 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
             <th rowSpan={2} style={{ ...TH(), whiteSpace: 'normal', lineHeight: 1.15 }}>Link Template</th>
             {showActionsCol && <th rowSpan={2} style={{ ...TH() }}>Thao tác</th>}
           </tr>
-          <tr>
+          <tr className="hc-library-header-row--secondary">
             <th style={{ ...TH() }}>Size</th>
             <th style={{ ...TH() }}>Optional</th>
             <th style={{ ...TH({ background: '#b45309' }) }}>P1</th>
             <th style={{ ...TH({ background: '#b45309' }) }}>P2</th>
             {shipMethods.map((m, si) => [
-              <th key={`${m.label}-price`} style={{ ...THnum({ background: shipBg[si], opacity: 0.85 }) }}>Price Ship</th>,
-              <th key={`${m.label}-item2`} style={{ ...THnum({ background: shipBg[si], opacity: 0.7 }) }}>Price Ship Item 2</th>,
+              // Nhạt màu bằng color-mix thay cho opacity: header dính mà trong suốt
+              // thì các dòng cuộn bên dưới sẽ lộ xuyên qua.
+              <th key={`${m.label}-price`} style={{ ...THnum({ background: `color-mix(in srgb, ${shipBg[si]} 85%, ${HC.surface})` }) }}>Price Ship</th>,
+              <th key={`${m.label}-item2`} style={{ ...THnum({ background: `color-mix(in srgb, ${shipBg[si]} 70%, ${HC.surface})` }) }}>Price Ship Item 2</th>,
               <th key={`${m.label}-total`} style={{ ...THnum({ background: shipBg[si] }) }}>Total (fulfill)</th>,
             ])}
           </tr>
@@ -1160,7 +1179,7 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onOpe
   // 2 tab nội dung — dùng chung cho card trong danh sách (khi chưa chuyển sang
   // mở bằng URL) và cho bản nhúng trong cửa sổ file.
   const renderSections = () => (
-    <div>
+    <div className="hc-library-sections">
       {/* Section Tabs */}
       <div className="hc-library-section-tabs" style={{ display: 'flex', gap: 0, background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
         {[
