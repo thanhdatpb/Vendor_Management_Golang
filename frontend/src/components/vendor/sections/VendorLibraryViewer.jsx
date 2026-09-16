@@ -444,7 +444,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   const canToggleSample = isVendorUser && typeof onSampleStatusChange === 'function';
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+    <table className="hc-library-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
       <thead>
         <tr>
           {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: '3%', textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
@@ -852,8 +852,8 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
   const naStyle = { background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' };
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1160, tableLayout: 'fixed' }}>
+    <div className="hc-library-pricing-table" style={{ overflowX: 'auto' }}>
+      <table className="hc-library-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1160, tableLayout: 'fixed' }}>
         <colgroup>
           <col style={{ width: 78 }} />{/* Vendor Name */}
           <col style={{ width: 104 }} />{/* Product Type */}
@@ -1162,7 +1162,7 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onOpe
   const renderSections = () => (
     <div>
       {/* Section Tabs */}
-      <div style={{ display: 'flex', gap: 0, background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
+      <div className="hc-library-section-tabs" style={{ display: 'flex', gap: 0, background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
         {[
           { id: 'general', label: '📋 Thông tin chung về phôi', count: entry.generalInfo?.length },
           { id: 'pricing', label: '💰 Về giá', count: entry.pricing?.length },

@@ -136,6 +136,18 @@ export default function LibraryFileModal({
       <style>{`
         @keyframes hcLibModalIn { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
         .hc-lib-modal { animation: hcLibModalIn 140ms ease-out; }
+        /* Keep the active section and its column headings visible while browsing rows. */
+        .hc-lib-scroll-body { --hc-lib-section-tabs-height: 46px; }
+        .hc-lib-scroll-body .hc-library-section-tabs {
+          position: sticky; top: 0; z-index: 20; min-height: var(--hc-lib-section-tabs-height);
+          box-sizing: border-box; box-shadow: 0 2px 5px rgba(81, 52, 10, 0.10);
+        }
+        .hc-lib-scroll-body .hc-library-table > thead {
+          position: sticky; top: var(--hc-lib-section-tabs-height); z-index: 10;
+          box-shadow: 0 2px 4px rgba(81, 52, 10, 0.10);
+        }
+        /* A nested horizontal scroller would keep the header from following the modal's vertical scroll. */
+        .hc-lib-scroll-body .hc-library-pricing-table { overflow: visible !important; }
         @media (prefers-reduced-motion: reduce) { .hc-lib-modal { animation: none; } }
         @media (max-width: 720px) {
           .hc-lib-scrim-pad { padding: 0 !important; }
@@ -192,7 +204,7 @@ export default function LibraryFileModal({
         <div style={{
           flex: 1, minHeight: 0, overflow: 'auto', overscrollBehavior: 'contain',
           padding: 16, background: HC.surface,
-        }}>
+        }} className="hc-lib-scroll-body">
           {children}
         </div>
 

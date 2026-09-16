@@ -114,6 +114,11 @@ describe('nền phía sau', () => {
     expect(dialog).toHaveStyle({ width: '100%' });
   });
 
+  it('exposes its one scroll region for sticky file-table controls', () => {
+    const { container } = open();
+    expect(container.querySelector('.hc-lib-scroll-body')).toBeInTheDocument();
+  });
+
   it('khoá cuộn khi mở và trả lại đúng giá trị cũ khi đóng', () => {
     document.body.style.overflow = 'auto';
 
