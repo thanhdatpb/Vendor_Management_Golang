@@ -306,11 +306,15 @@ class VendorLibraryFilePermalinkTest extends TestCase
         $vendor = $this->user('vendor');
         $admin  = $this->user('admin');
 
+        // VendorLibraryDiff so sánh theo các dòng `pricing` (xem indexRows), nên
+        // "có thay đổi" nghĩa là thêm/sửa dòng giá — thêm dòng generalInfo thôi
+        // thì không có thông báo nào được phát.
         $updated = $this->file('file_happy_1', 'P.HAPPY_Baby Bodysuit', ['happy'], '2026-09-16T10:00:00Z');
-        $updated['generalInfo'][] = [
-            'id'          => 'file_happy_1_row2',
-            'vendorName'  => 'US2',
+        $updated['pricing'][] = [
+            'kyHieu'      => 'US2',
             'productType' => 'Baby Bodysuit_US2W',
+            'size'        => 'NB - 24M',
+            'pricing1'    => 7.9,
         ];
 
         $this->actingAs($vendor)->postJson('/api/vendor-library', [$updated])->assertOk();
