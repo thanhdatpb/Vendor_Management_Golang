@@ -75,10 +75,11 @@ describe('bấm vào một file', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
-  it('có nút copy link ngay trên hàng file', async () => {
+  it('không có nút copy link trên hàng file', async () => {
     renderAt();
 
-    expect(await screen.findByRole('button', { name: /Copy link file/ })).toBeInTheDocument();
+    await screen.findByText(/HappyC_VendorLibrary_p\.happy_2026-06/);
+    expect(screen.queryByRole('button', { name: /Copy link file/ })).not.toBeInTheDocument();
   });
 
   it('cửa sổ không dựng cột giá nào', async () => {

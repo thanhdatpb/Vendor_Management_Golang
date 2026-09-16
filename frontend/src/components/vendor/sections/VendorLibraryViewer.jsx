@@ -18,7 +18,7 @@ import LibraryCopyLinkButton from '../../library/LibraryCopyLinkButton';
 import LibraryMonthSection from '../../library/LibraryMonthSection';
 import { fileSharedProjects, fileVisibleToProject, PROJECTS } from '../../../constants/projects';
 import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../../utils/vnTime';
-import { copyLibraryFileLink, libraryFilePath, parseLibraryFilePath } from '../../../utils/libraryFileLink';
+import { libraryFilePath, parseLibraryFilePath } from '../../../utils/libraryFileLink';
 import { groupLibraryFilesByMonth } from '../../../utils/libraryMonthGroups';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
@@ -1113,7 +1113,7 @@ function ShareButton({ onClick, title }) {
  * Không có `onOpen` thì giữ nguyên hành vi bung tại chỗ như cũ, để nơi gọi nào
  * chưa chuyển sang URL vẫn chạy.
  */
-export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onCopyLink, onOpen, embedded = false, canShare, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, onSampleStatusChange }) {
+export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onOpen, embedded = false, canShare, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, onSampleStatusChange }) {
   const [activeSection, setActiveSection] = useState('general');
   const [expanded, setExpanded] = useState(!!highlighted || embedded);
   const [hovered, setHovered] = useState(false);
@@ -1330,20 +1330,6 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onCop
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          {onCopyLink && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onCopyLink(entry); }}
-              title="Copy link tới file này"
-              aria-label={`Copy link file ${entry.filename}`}
-              style={{
-                width: 26, height: 26, borderRadius: 7, cursor: 'pointer',
-                border: `1px solid ${HC.border}`, background: HC.surface,
-                color: HC.brown, fontSize: 12, lineHeight: 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s',
-              }}
-            >🔗</button>
-          )}
           {canShare && (
             <button
               onClick={(e) => {
@@ -1427,7 +1413,7 @@ function FieldGroup({ label, children }) {
   );
 }
 
-function ManualAddModal({ onClose, onSave, mode }) {
+export function ManualAddModal({ onClose, onSave, mode }) {
   const [activeTab, setActiveTab] = useState('general');
   const [filename, setFilename] = useState('');
   const [title, setTitle] = useState('');
@@ -1693,7 +1679,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   const [showExportPicker, setShowExportPicker] = useState(false);
   const [toast, setToast] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [showManualAdd, setShowManualAdd] = useState(false);
   // File đang mở hộp thoại "Chia sẻ cho project" (null = đóng)
   const [shareTarget, setShareTarget] = useState(null);
   const [sharingSave, setSharingSave] = useState(false);
@@ -2017,19 +2002,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     navigate(-1);
   }, [navigate]);
 
-  const handleCopyLink = useCallback(async (entry) => {
-    try {
-      await copyLibraryFileLink(entry.id, entry.filename);
-      showToast('success', 'Đã copy link file — dán vào Slack hoặc email để gửi đi.');
-    } catch (err) {
-      console.warn('Copy link file thư viện thất bại:', err?.message || err);
-      showToast('error', 'Copy link thất bại. Kiểm tra quyền truy cập clipboard rồi thử lại.');
-    }
-    // showToast dựng lại mỗi render nhưng chỉ đụng state của chính nó — không
-    // đưa vào deps để handler giữ nguyên identity giữa các lần render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const saveLibrary = async (newData) => {
     if (!dataLoaded) {
       showToast('error', 'Dữ liệu chưa được tải xong, không thể lưu. Vui lòng thử lại.');
@@ -2184,12 +2156,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     if (saved) setShareTarget(null);
   };
 
-  const handleManualAdd = async (entry) => {
-    const updated = [...rawFiles, entry];
-    const saved = await saveLibrary(updated);
-    if (saved) setShowManualAdd(false);
-  };
-
   return (
     <div>
       {/* Hidden file input — multiple */}
@@ -2286,19 +2252,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           </button>
           {canManageLibrary && (
           <>
-            <button
-              onClick={() => setShowManualAdd(true)}
-              style={{
-                padding: '9px 18px', borderRadius: 10,
-                border: `1.5px solid ${HC.orangeMid}`,
-                background: HC.orangeLight, color: HC.orangeDark,
-                fontSize: 12, fontWeight: 800, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 7,
-                transition: 'all 0.15s',
-              }}
-            >
-              ➕ Thêm mới vendor
-            </button>
             <button
               onClick={() => downloadVendorLibraryTemplate()}
               title="Tải file Excel mẫu — điền vào rồi import ngược lên"
@@ -2407,7 +2360,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
                       onDelete={handleDelete}
                       onUpdate={handleUpdateEntry}
                       onShare={setShareTarget}
-                      onCopyLink={handleCopyLink}
                       onOpen={openFile}
                       canShare={canManageLibrary}
                       readOnly={readOnly}
@@ -2480,15 +2432,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           saving={sharingSave}
           onConfirm={handleShareSave}
           onClose={() => { if (!sharingSave) setShareTarget(null); }}
-        />
-      )}
-
-      {/* Manual Add Modal */}
-      {showManualAdd && (
-        <ManualAddModal
-          mode={mode}
-          onClose={() => setShowManualAdd(false)}
-          onSave={handleManualAdd}
         />
       )}
 

@@ -113,6 +113,7 @@ describe('bấm vào một file', () => {
     expect(screen.getByTestId('vendor-library-file-grid')).toHaveClass('hc-library-month-list');
     expect(document.querySelector('.hc-library-month-grid')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Tháng 8/2026' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Thêm mới vendor/i })).not.toBeInTheDocument();
     expect(screen.queryByText('↗')).not.toBeInTheDocument();
   });
 
@@ -191,18 +192,11 @@ describe('bấm vào một file', () => {
     expect(screen.getByTestId('url')).toHaveTextContent('/vendor/library');
   });
 
-  it('bấm nút 🔗 chỉ copy link, KHÔNG mở file', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-
+  it('không hiển thị nút copy link trên từng hàng file', async () => {
     renderAt();
     await screen.findByText('HC_Pillow_P.Happy_18.08');
 
-    await userEvent.click(screen.getByRole('button', { name: /Copy link file/ }));
-
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    expect(writeText.mock.calls[0][0]).toContain('/library/file_pillow/hc-pillow-p-happy-18-08');
-    expect(screen.getByTestId('url')).toHaveTextContent('/vendor/library');
+    expect(screen.queryByRole('button', { name: /Copy link file/ })).not.toBeInTheDocument();
   });
 
   it('copy trong cửa sổ đổi nút thành Copied và không hiện toast thành công', async () => {

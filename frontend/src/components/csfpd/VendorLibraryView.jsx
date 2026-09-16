@@ -27,7 +27,7 @@ import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../utils/vnTime
 import LibraryFileModal from '../library/LibraryFileModal';
 import LibraryCopyLinkButton from '../library/LibraryCopyLinkButton';
 import LibraryMonthSection from '../library/LibraryMonthSection';
-import { copyLibraryFileLink, libraryFilePath, parseLibraryFilePath } from '../../utils/libraryFileLink';
+import { libraryFilePath, parseLibraryFilePath } from '../../utils/libraryFileLink';
 import { groupLibraryFilesByMonth } from '../../utils/libraryMonthGroups';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ export function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
 }
 
 // ── Card cho 1 file thư viện ───────────────────────────────────────────────────
-function LibraryCard({ entry, highlighted, showLeadTime, onOpen, onCopyLink }) {
+function LibraryCard({ entry, highlighted, showLeadTime, onOpen }) {
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
 
@@ -274,20 +274,6 @@ function LibraryCard({ entry, highlighted, showLeadTime, onOpen, onCopyLink }) {
           </div>
         </div>
 
-        {onCopyLink && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onCopyLink(entry); }}
-            title="Copy link tới file này"
-            aria-label={`Copy link file ${entry.filename}`}
-            style={{
-              width: 26, height: 26, borderRadius: 7, cursor: 'pointer', flexShrink: 0,
-              border: `1px solid ${HC.border}`, background: HC.surface,
-              color: HC.brown, fontSize: 12, lineHeight: 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >🔗</button>
-        )}
-
         <div style={{
           width: 22, height: 22, borderRadius: 6, background: HC.orangeLight,
           border: `1px solid ${HC.orangeMid}`, display: 'flex', alignItems: 'center',
@@ -344,16 +330,6 @@ export default function VendorLibraryView({ projectKey, department }) {
 
   const closeFile = useCallback(() => { navigate(-1); }, [navigate]);
 
-  const handleCopyLink = useCallback(async (entry) => {
-    try {
-      await copyLibraryFileLink(entry.id, entry.filename);
-      showToast('success', 'Đã copy link file — dán vào Slack hoặc email để gửi đi.');
-    } catch (err) {
-      console.warn('Copy link file thư viện thất bại:', err?.message || err);
-      showToast('error', 'Copy link thất bại. Kiểm tra quyền truy cập clipboard rồi thử lại.');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   // Best Seller lưu trên server (field `bestSeller` trong từng dòng generalInfo)
   // → derive từ dữ liệu fetch về, không đọc localStorage nữa.
   const bestSellerIds = useMemo(() => {
@@ -560,7 +536,6 @@ export default function VendorLibraryView({ projectKey, department }) {
                     entry={entry}
                     showLeadTime={dept.showLeadTime}
                     onOpen={openFile}
-                    onCopyLink={handleCopyLink}
                   />
                 ))}
               </div>
