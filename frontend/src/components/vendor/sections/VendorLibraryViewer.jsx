@@ -1971,24 +1971,41 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   // `location.state.libraryBackground`, nên vị trí cuộn và bộ lọc giữ nguyên.
   const navigate = useNavigate();
   const location = useLocation();
+  const routeFileId = parseLibraryFilePath(location.pathname)?.id || null;
+  const [openedFileId, setOpenedFileId] = useState(routeFileId);
 
   const openedFile = useMemo(() => {
-    const link = parseLibraryFilePath(location.pathname);
-    if (!link) return null;
-    return rawFiles.find((f) => String(f.id) === link.id) || null;
-  }, [location.pathname, rawFiles]);
+    const id = openedFileId || routeFileId;
+    if (!id) return null;
+    return rawFiles.find((f) => String(f.id) === id) || null;
+  }, [openedFileId, routeFileId, rawFiles]);
+
+  // Back/Forward của trình duyệt phải đóng/mở đúng modal dù dashboard đang được
+  // React Router giữ ở location nền và vì vậy useLocation() bên trong danh sách
+  // không nhận pathname overlay.
+  useEffect(() => {
+    const syncModalWithBrowserUrl = () => {
+      setOpenedFileId(parseLibraryFilePath(window.location.pathname)?.id || null);
+    };
+    window.addEventListener('popstate', syncModalWithBrowserUrl);
+    return () => window.removeEventListener('popstate', syncModalWithBrowserUrl);
+  }, []);
 
   const openFile = useCallback((entry) => {
+    setOpenedFileId(String(entry.id));
     navigate(libraryFilePath(entry.id, entry.filename), {
-      // App giữ dashboard làm nền; LibraryFilePage dùng luôn entry đã tải để mở
-      // tức thì, không tạo một khoảng chỉ có lớp nền mờ trong lúc gọi API lần nữa.
-      state: { libraryBackground: location, libraryFile: entry },
+      // Modal do chính danh sách dựng để giữ đầy đủ callback sửa/lưu/xoá của
+      // Vendor. App chỉ giữ dashboard làm nền và không dựng thêm LibraryFilePage.
+      state: { libraryBackground: location, libraryFile: entry, libraryInline: true },
     });
   }, [navigate, location]);
 
   // Lùi một bước thay vì navigate(path): danh sách đang ở bước trước nên
   // component không remount — không phải tải lại thư viện, không mất chỗ cuộn.
-  const closeFile = useCallback(() => { navigate(-1); }, [navigate]);
+  const closeFile = useCallback(() => {
+    setOpenedFileId(null);
+    navigate(-1);
+  }, [navigate]);
 
   const handleCopyLink = useCallback(async (entry) => {
     try {

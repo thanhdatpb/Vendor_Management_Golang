@@ -12,7 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import VendorLibraryViewer from '../VendorLibraryViewer';
 import { vendorLibraryApi } from '../../../../services/api';
 import { parseHappyCreativeLibrary } from '../../../../utils/vendorExcel';
@@ -73,6 +73,29 @@ const renderAt = (path = '/vendor/library') => render(
   </MemoryRouter>
 );
 
+/** Mô phỏng đúng App.jsx: khi URL đổi, dashboard vẫn nhận location nền. */
+function BackgroundRouteHarness() {
+  const location = useLocation();
+  const background = location.state?.libraryBackground;
+  const inline = location.state?.libraryInline === true;
+
+  return (
+    <>
+      <Routes location={background || location}>
+        <Route path="/vendor/library" element={<VendorLibraryViewer />} />
+      </Routes>
+      {background && !inline && <div data-testid="route-overlay">route overlay</div>}
+      <LocationProbe />
+    </>
+  );
+}
+
+const renderWithBackgroundRoute = () => render(
+  <MemoryRouter initialEntries={['/vendor/library']}>
+    <BackgroundRouteHarness />
+  </MemoryRouter>
+);
+
 beforeEach(() => {
   vendorLibraryApi.get.mockReset();
   vendorLibraryApi.save.mockReset();
@@ -83,6 +106,25 @@ beforeEach(() => {
 });
 
 describe('bấm vào một file', () => {
+  it('giữ modal của danh sách để Vendor vẫn sửa và lưu được dữ liệu', async () => {
+    renderWithBackgroundRoute();
+
+    await userEvent.click(await screen.findByText('HC_Pillow_P.Happy_18.08'));
+
+    expect(await screen.findByRole('dialog', { name: 'HC_Pillow_P.Happy_18.08' })).toBeInTheDocument();
+    expect(screen.queryByTestId('route-overlay')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Sửa/ }));
+    const material = screen.getByPlaceholderText('Chất liệu...');
+    await userEvent.clear(material);
+    await userEvent.type(material, 'Linen');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
+
+    await waitFor(() => expect(vendorLibraryApi.save).toHaveBeenCalled());
+    const saved = vendorLibraryApi.save.mock.calls.at(-1)[0];
+    expect(saved[0].generalInfo[0].chatLieu).toBe('Linen');
+  });
+
   it('đổi URL sang /library/:fileId và mang theo location cũ làm nền', async () => {
     renderAt();
     const title = await screen.findByText('HC_Pillow_P.Happy_18.08');

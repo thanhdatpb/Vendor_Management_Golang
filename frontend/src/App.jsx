@@ -26,6 +26,9 @@ export default function App() {
   // Mở THẲNG từ link dán vào Slack thì không có state này → khớp URL thật →
   // LibraryFilePage tự tải file và dựng cửa sổ trên nền trống.
   const libraryBackground = location.state?.libraryBackground;
+  // Danh sách Admin/Vendor/Seller tự dựng modal bằng chính state và callback
+  // đang có sẵn để giữ nguyên quyền sửa. Các view chỉ-đọc vẫn dùng route overlay.
+  const libraryInline = location.state?.libraryInline === true;
 
   return (
     <>
@@ -138,7 +141,7 @@ export default function App() {
           dashboard không unmount. Route overlay này phải dùng location thật,
           nếu không component danh sách chỉ thấy /vendor/library và URL file
           sẽ đổi nhưng cửa sổ không thể tự dựng. */}
-      {libraryBackground && (
+      {libraryBackground && !libraryInline && (
         <Routes location={location}>
           <Route
             path="/library/:fileId/:slug?"
