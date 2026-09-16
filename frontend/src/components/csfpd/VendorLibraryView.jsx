@@ -26,7 +26,9 @@ import { fileVisibleToProject } from '../../constants/projects';
 import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../utils/vnTime';
 import LibraryFileModal from '../library/LibraryFileModal';
 import LibraryCopyLinkButton from '../library/LibraryCopyLinkButton';
+import LibraryMonthSection from '../library/LibraryMonthSection';
 import { copyLibraryFileLink, libraryFilePath, parseLibraryFilePath } from '../../utils/libraryFileLink';
+import { groupLibraryFilesByMonth } from '../../utils/libraryMonthGroups';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -431,6 +433,11 @@ export default function VendorLibraryView({ projectKey, department }) {
     });
   }, [rawFiles, projectKey, activeTab, searchQuery, bestSellerIds]);
 
+  const displayFileGroups = useMemo(
+    () => groupLibraryFilesByMonth(displayFiles),
+    [displayFiles],
+  );
+
   const handleExportSelected = async (selectedIds) => {
     const selectedFiles = displayFiles.filter((f) => selectedIds.includes(f.id));
     setExporting(true);
@@ -528,7 +535,7 @@ export default function VendorLibraryView({ projectKey, department }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>
         ) : displayFiles.length === 0 ? (
@@ -539,14 +546,25 @@ export default function VendorLibraryView({ projectKey, department }) {
             </div>
           </div>
         ) : (
-          displayFiles.map(entry => (
-            <LibraryCard
-              key={entry.id}
-              entry={entry}
-              showLeadTime={dept.showLeadTime}
-              onOpen={openFile}
-              onCopyLink={handleCopyLink}
-            />
+          displayFileGroups.map((group) => (
+            <LibraryMonthSection
+              key={group.key}
+              monthKey={group.key}
+              label={group.label}
+              count={group.files.length}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {group.files.map((entry) => (
+                  <LibraryCard
+                    key={entry.id}
+                    entry={entry}
+                    showLeadTime={dept.showLeadTime}
+                    onOpen={openFile}
+                    onCopyLink={handleCopyLink}
+                  />
+                ))}
+              </div>
+            </LibraryMonthSection>
           ))
         )}
       </div>

@@ -15,9 +15,11 @@ import ShareProjectsModal from '../../shared/ShareProjectsModal';
 import Lightbox from '../components/Lightbox';
 import LibraryFileModal from '../../library/LibraryFileModal';
 import LibraryCopyLinkButton from '../../library/LibraryCopyLinkButton';
+import LibraryMonthSection from '../../library/LibraryMonthSection';
 import { fileSharedProjects, fileVisibleToProject, PROJECTS } from '../../../constants/projects';
 import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../../utils/vnTime';
 import { copyLibraryFileLink, libraryFilePath, parseLibraryFilePath } from '../../../utils/libraryFileLink';
+import { groupLibraryFilesByMonth } from '../../../utils/libraryMonthGroups';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -1885,6 +1887,11 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     });
   }, [libraryFiles, mode, bestSellerIds, searchQuery, vendorFilter]);
 
+  const displayFileGroups = useMemo(
+    () => groupLibraryFilesByMonth(displayFiles),
+    [displayFiles],
+  );
+
   /**
    * @param {{ silent?: boolean }} opts
    *   silent = làm mới NỀN (realtime / quay lại tab). Bản đang hiển thị vẫn
@@ -2341,20 +2348,25 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
 
 
 
-      {/* Library list — hai cột giúp quét nhiều file nhanh hơn; về một cột khi
-          vùng nội dung hẹp để tên file, badge và các nút quản trị không chồng lên nhau. */}
+      {/* Mỗi tháng là một nhịp quét riêng. File trong tháng vẫn dùng hai cột;
+          vùng nội dung hẹp thì về một cột để tên, badge và nút không chồng nhau. */}
       <style>{`
-        .hc-library-file-grid {
+        .hc-library-month-list {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .hc-library-month-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 12px;
           align-items: start;
         }
         @media (max-width: 1280px) {
-          .hc-library-file-grid { grid-template-columns: minmax(0, 1fr); }
+          .hc-library-month-grid { grid-template-columns: minmax(0, 1fr); }
         }
       `}</style>
-      <div className="hc-library-file-grid" data-testid="vendor-library-file-grid">
+      <div className="hc-library-month-list" data-testid="vendor-library-file-grid">
         {(() => {
           if (loading) {
              return <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>;
@@ -2380,29 +2392,39 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
             );
           }
 
-          return displayFiles.map((entry, idx) => (
-            <div key={entry.id} ref={highlightFileId === entry.id ? highlightRef : null}>
-              <LibraryCard
-                entry={entry}
-                idx={idx}
-                onDelete={handleDelete}
-                onUpdate={handleUpdateEntry}
-                onShare={setShareTarget}
-                onCopyLink={handleCopyLink}
-                onOpen={openFile}
-                canShare={canManageLibrary}
-                readOnly={readOnly}
-                selectable={selectable}
-                selectedIds={selectedIds}
-                onSelectRow={onSelectRow}
-                onSelectAll={onSelectAll}
-                bestSellerIds={bestSellerIds}
-                toggleBestSeller={toggleBestSeller}
-                mode={mode}
-                highlighted={highlightFileId === entry.id}
-                onSampleStatusChange={handleSampleStatusChange}
-              />
-            </div>
+          return displayFileGroups.map((group) => (
+            <LibraryMonthSection
+              key={group.key}
+              monthKey={group.key}
+              label={group.label}
+              count={group.files.length}
+            >
+              <div className="hc-library-month-grid">
+                {group.files.map((entry) => (
+                  <div key={entry.id} ref={highlightFileId === entry.id ? highlightRef : null}>
+                    <LibraryCard
+                      entry={entry}
+                      onDelete={handleDelete}
+                      onUpdate={handleUpdateEntry}
+                      onShare={setShareTarget}
+                      onCopyLink={handleCopyLink}
+                      onOpen={openFile}
+                      canShare={canManageLibrary}
+                      readOnly={readOnly}
+                      selectable={selectable}
+                      selectedIds={selectedIds}
+                      onSelectRow={onSelectRow}
+                      onSelectAll={onSelectAll}
+                      bestSellerIds={bestSellerIds}
+                      toggleBestSeller={toggleBestSeller}
+                      mode={mode}
+                      highlighted={highlightFileId === entry.id}
+                      onSampleStatusChange={handleSampleStatusChange}
+                    />
+                  </div>
+                ))}
+              </div>
+            </LibraryMonthSection>
           ));
         })()}
       </div>

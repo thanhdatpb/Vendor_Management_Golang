@@ -10,7 +10,7 @@
 //       đã gửi đi; sinh id mới là link cũ chết im lặng.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import VendorLibraryViewer from '../VendorLibraryViewer';
@@ -106,12 +106,33 @@ beforeEach(() => {
 });
 
 describe('bấm vào một file', () => {
-  it('danh sách file dùng lưới hai cột và không còn nút mở file riêng', async () => {
+  it('danh sách file dùng từng nhóm tháng với lưới hai cột và không còn nút mở file riêng', async () => {
     renderAt();
     await screen.findByText('HC_Pillow_P.Happy_18.08');
 
-    expect(screen.getByTestId('vendor-library-file-grid')).toHaveClass('hc-library-file-grid');
+    expect(screen.getByTestId('vendor-library-file-grid')).toHaveClass('hc-library-month-list');
+    expect(document.querySelector('.hc-library-month-grid')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Tháng 8/2026' })).toBeInTheDocument();
     expect(screen.queryByText('↗')).not.toBeInTheDocument();
+  });
+
+  it('hiển thị tháng mới trước cùng số file của từng tháng', async () => {
+    vendorLibraryApi.get.mockResolvedValue({ data: [
+      libraryFile({ id: 'sep-new', filename: 'September New', importedAt: '2026-09-15T08:00:00.000Z' }),
+      libraryFile({ id: 'aug', filename: 'August File', importedAt: '2026-08-28T08:00:00.000Z' }),
+      libraryFile({ id: 'sep-old', filename: 'September Old', importedAt: '2026-09-01T08:00:00.000Z' }),
+    ] });
+
+    renderAt();
+
+    const september = await screen.findByRole('region', { name: 'Tháng 9/2026' });
+    const august = screen.getByRole('region', { name: 'Tháng 8/2026' });
+    expect(within(september).getByText('2 file')).toBeInTheDocument();
+    expect(within(august).getByText('1 file')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      'Tháng 9/2026',
+      'Tháng 8/2026',
+    ]);
   });
 
   it('giữ modal của danh sách để Vendor vẫn sửa và lưu được dữ liệu', async () => {

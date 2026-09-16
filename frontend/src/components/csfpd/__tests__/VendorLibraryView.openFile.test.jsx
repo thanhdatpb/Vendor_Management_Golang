@@ -64,6 +64,7 @@ describe('bấm vào một file', () => {
     await waitFor(() => {
       expect(screen.getByTestId('url')).toHaveTextContent('/library/f1/');
     });
+    expect(screen.getByRole('region', { name: 'Tháng 6/2026' })).toBeInTheDocument();
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getAllByText('Football Jersey').length).toBeGreaterThan(0);
   });
