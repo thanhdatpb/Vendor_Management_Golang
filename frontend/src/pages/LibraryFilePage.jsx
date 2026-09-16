@@ -65,7 +65,7 @@ function StatusCard({ icon, title, message, actionLabel, onAction, backLabel, on
   );
 }
 
-export default function LibraryFilePage() {
+export default function LibraryFilePage({ initialFile = null }) {
   const { fileId, slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -74,8 +74,14 @@ export default function LibraryFilePage() {
   const backTo = libraryPathForRole(role);
   const backLabel = '← Về Thư viện Vendor';
 
-  const [file, setFile] = useState(null);
-  const [status, setStatus] = useState('loading'); // loading | ready | not_found | forbidden | error
+  // Khi mở từ danh sách, file đã có sẵn trong dashboard. Dùng ngay snapshot đó để
+  // cửa sổ xuất hiện trong cùng frame với lần click, thay vì phủ nền rồi chờ thêm
+  // một request GET /files/:id. Mở thẳng permalink/F5 vẫn tải từ endpoint riêng.
+  const matchingInitialFile = initialFile && String(initialFile.id) === String(fileId)
+    ? initialFile
+    : null;
+  const [file, setFile] = useState(matchingInitialFile);
+  const [status, setStatus] = useState(matchingInitialFile ? 'ready' : 'loading'); // loading | ready | not_found | forbidden | error
   const [copied, setCopied] = useState(false);
 
   // `/library/by-name/<tên file>`: link cũ trong mail chỉ mang tên file. Tra ra
@@ -84,6 +90,12 @@ export default function LibraryFilePage() {
   const byName = fileId === LIBRARY_BY_NAME ? (slug || '') : null;
 
   const load = useCallback(async () => {
+    if (matchingInitialFile && !byName) {
+      setFile(matchingInitialFile);
+      setStatus('ready');
+      return;
+    }
+
     setStatus('loading');
     try {
       const res = byName
@@ -106,7 +118,7 @@ export default function LibraryFilePage() {
         setStatus('error');
       }
     }
-  }, [byName, fileId, navigate]);
+  }, [byName, fileId, matchingInitialFile, navigate]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -186,7 +198,7 @@ export default function LibraryFilePage() {
           >{copied ? '✓ Đã copy' : '🔗 Copy link'}</button>
         }
         footer="Đóng cửa sổ để về Thư viện Vendor."
-        onClose={() => navigate(backTo)}
+        onClose={() => matchingInitialFile ? navigate(-1) : navigate(backTo)}
       >
         {canSeePrices(role) ? (
           // Role xem được giá: dùng lại đúng 2 tab của danh sách (Thông tin

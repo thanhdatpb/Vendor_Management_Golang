@@ -1980,7 +1980,9 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
 
   const openFile = useCallback((entry) => {
     navigate(libraryFilePath(entry.id, entry.filename), {
-      state: { libraryBackground: location },
+      // App giữ dashboard làm nền; LibraryFilePage dùng luôn entry đã tải để mở
+      // tức thì, không tạo một khoảng chỉ có lớp nền mờ trong lúc gọi API lần nữa.
+      state: { libraryBackground: location, libraryFile: entry },
     });
   }, [navigate, location]);
 

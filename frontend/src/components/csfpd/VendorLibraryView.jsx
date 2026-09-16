@@ -335,7 +335,7 @@ export default function VendorLibraryView({ projectKey, department }) {
 
   const openFile = useCallback((entry) => {
     navigate(libraryFilePath(entry.id, entry.filename), {
-      state: { libraryBackground: location },
+      state: { libraryBackground: location, libraryFile: entry },
     });
   }, [navigate, location]);
 

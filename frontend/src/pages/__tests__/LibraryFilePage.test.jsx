@@ -106,6 +106,16 @@ describe('bốn trạng thái tải', () => {
 });
 
 describe('view theo role', () => {
+  it('mở từ danh sách dùng ngay file đã tải, không chờ gọi API lần hai', async () => {
+    render(<LibraryFilePage initialFile={file()} />);
+
+    expect(screen.getByRole('dialog', { name: 'Baby Bodysuit' })).toBeInTheDocument();
+    expect(vendorLibraryApi.getFile).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng cửa sổ file' }));
+    expect(mockNavigate).toHaveBeenCalledWith(-1);
+  });
+
   it('role xem được giá → 2 tab quen thuộc của thư viện', async () => {
     vendorLibraryApi.getFile.mockResolvedValue({ data: file() });
 

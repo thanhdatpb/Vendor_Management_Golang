@@ -61,6 +61,7 @@ function LocationProbe() {
     <div data-testid="url">
       {location.pathname}
       <span data-testid="co-nen">{location.state?.libraryBackground ? 'co' : 'khong'}</span>
+      <span data-testid="co-file">{location.state?.libraryFile?.id || 'khong'}</span>
     </div>
   );
 }
@@ -92,6 +93,7 @@ describe('bấm vào một file', () => {
       expect(screen.getByTestId('url')).toHaveTextContent('/library/file_pillow/hc-pillow-p-happy-18-08');
     });
     expect(screen.getByTestId('co-nen')).toHaveTextContent('co');
+    expect(screen.getByTestId('co-file')).toHaveTextContent('file_pillow');
   });
 
   it('bấm vào TÊN file cũng mở file — không nhảy ra ô đổi tên như trước', async () => {

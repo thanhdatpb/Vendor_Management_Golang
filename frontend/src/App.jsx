@@ -115,7 +115,7 @@ export default function App() {
         path="/library/:fileId/:slug?"
         element={
           <ProtectedRoute>
-            <LibraryFilePage />
+            <LibraryFilePage initialFile={location.state?.libraryFile} />
           </ProtectedRoute>
         }
       />
@@ -144,7 +144,7 @@ export default function App() {
             path="/library/:fileId/:slug?"
             element={
               <ProtectedRoute>
-                <LibraryFilePage />
+                <LibraryFilePage initialFile={location.state?.libraryFile} />
               </ProtectedRoute>
             }
           />
