@@ -108,7 +108,7 @@ export default function ShareProjectsModal({ HC, entry, saving = false, onConfir
                     fontSize: 12.5, fontWeight: checked ? 800 : 600,
                     color: checked ? HC.orangeDark : HC.ink,
                   }}>
-                    {p.label}
+                    {p.shortLabel || p.label}
                   </span>
                 </label>
               );

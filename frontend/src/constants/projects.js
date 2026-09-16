@@ -9,10 +9,10 @@
 //  extractFileProject) — đó là thứ quyết định file thuộc project nào.
 // ════════════════════════════════════════════════════════
 export const PROJECTS = [
-  { id: 'happy',    label: 'Happy Project' },
-  { id: 'creative', label: 'Creative Project' },
-  { id: 'global',   label: 'Global Project' },
-  { id: 'hapify84', label: 'Hapify84 Project' },
+  { id: 'happy',    label: 'Happy Project',    shortLabel: 'Happy' },
+  { id: 'creative', label: 'Creative Project', shortLabel: 'Creative' },
+  { id: 'global',   label: 'Global Project',   shortLabel: 'Global' },
+  { id: 'hapify84', label: 'Hapify84 Project', shortLabel: 'Hapify84' },
 ];
 
 /**

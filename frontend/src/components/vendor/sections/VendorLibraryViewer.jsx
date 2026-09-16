@@ -1145,9 +1145,9 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onOpe
   const sharedProjects = fileSharedProjects(entry);
   const shareLabel = (() => {
     if (!sharedProjects) return null; // file cũ: vẫn theo ký hiệu P.xxx trong tên
-    if (sharedProjects.length === 0) return 'Mọi project';
+    if (sharedProjects.length === 0) return 'All';
     return sharedProjects
-      .map(id => PROJECTS.find(p => p.id === id)?.label || id)
+      .map(id => PROJECTS.find(p => p.id === id)?.shortLabel || id)
       .join(', ');
   })();
 
@@ -1322,7 +1322,7 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onOpe
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}
               >
-                {sharedProjects.length === 0 ? '🌐 Mọi project' : `👥 ${shareLabel}`}
+                {sharedProjects.length === 0 ? '🌐 All' : `👥 ${shareLabel}`}
               </span>
             )}
           </div>
