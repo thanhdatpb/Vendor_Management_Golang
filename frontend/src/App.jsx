@@ -28,7 +28,8 @@ export default function App() {
   const libraryBackground = location.state?.libraryBackground;
 
   return (
-    <Routes location={libraryBackground || location}>
+    <>
+      <Routes location={libraryBackground || location}>
       {/* :section? = mục đang mở trong dashboard (tab sidebar). Mỗi mục có URL
           riêng để bookmark / gửi link / F5 / Back đều đúng mục — trước đây cả
           role chỉ có một URL nên mọi lần remount đều rớt về mục mặc định.
@@ -131,6 +132,24 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-    </Routes>
+      </Routes>
+
+      {/* Khi mở từ danh sách, Routes phía trên cố ý dùng location nền để
+          dashboard không unmount. Route overlay này phải dùng location thật,
+          nếu không component danh sách chỉ thấy /vendor/library và URL file
+          sẽ đổi nhưng cửa sổ không thể tự dựng. */}
+      {libraryBackground && (
+        <Routes location={location}>
+          <Route
+            path="/library/:fileId/:slug?"
+            element={
+              <ProtectedRoute>
+                <LibraryFilePage />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      )}
+    </>
   );
 }
