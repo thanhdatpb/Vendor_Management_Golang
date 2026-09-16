@@ -130,7 +130,7 @@ export default function LibraryFileModal({
         position: 'fixed', inset: 0, zIndex: 1200,
         background: 'rgba(26,15,0,0.46)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 16,
+        padding: '16px 1.5cm', boxSizing: 'border-box',
       }}
     >
       <style>{`
@@ -151,7 +151,7 @@ export default function LibraryFileModal({
         aria-label={title}
         tabIndex={-1}
         style={{
-          width: 'min(92vw, 1440px)',
+          width: '100%', boxSizing: 'border-box',
           height: 'min(92vh, 900px)',
           background: HC.surface,
           border: `1.5px solid ${HC.borderStrong}`,

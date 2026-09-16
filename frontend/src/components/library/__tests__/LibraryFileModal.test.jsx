@@ -105,6 +105,15 @@ describe('nhiều lớp chồng nhau', () => {
 });
 
 describe('nền phía sau', () => {
+  it('cửa sổ tận dụng chiều ngang và cách hai lề màn hình 1,5 cm', () => {
+    const { container } = open();
+    const scrim = container.firstChild;
+    const dialog = screen.getByRole('dialog', { name: 'Baby Bodysuit' });
+
+    expect(scrim.style.padding).toBe('16px 1.5cm');
+    expect(dialog).toHaveStyle({ width: '100%' });
+  });
+
   it('khoá cuộn khi mở và trả lại đúng giá trị cũ khi đóng', () => {
     document.body.style.overflow = 'auto';
 
