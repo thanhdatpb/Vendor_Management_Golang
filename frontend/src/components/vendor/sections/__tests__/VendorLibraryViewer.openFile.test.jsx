@@ -106,6 +106,14 @@ beforeEach(() => {
 });
 
 describe('bấm vào một file', () => {
+  it('danh sách file dùng lưới hai cột và không còn nút mở file riêng', async () => {
+    renderAt();
+    await screen.findByText('HC_Pillow_P.Happy_18.08');
+
+    expect(screen.getByTestId('vendor-library-file-grid')).toHaveClass('hc-library-file-grid');
+    expect(screen.queryByText('↗')).not.toBeInTheDocument();
+  });
+
   it('giữ modal của danh sách để Vendor vẫn sửa và lưu được dữ liệu', async () => {
     renderWithBackgroundRoute();
 

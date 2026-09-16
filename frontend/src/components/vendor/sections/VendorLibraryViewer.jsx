@@ -1212,7 +1212,7 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onCop
         borderRadius: 12,
         border: `1.5px solid ${highlighted ? HC.orange : hovered ? HC.orangeMid : HC.border}`,
         boxShadow: highlighted ? `0 0 0 3px ${HC.orangeGlow}, 0 6px 20px rgba(0,0,0,0.09)` : hovered ? '0 6px 20px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.06)',
-        overflow: 'hidden', marginBottom: 14,
+        overflow: 'hidden',
         transition: 'box-shadow 0.2s, border-color 0.2s, transform 0.18s',
         transform: hovered ? 'translateY(-1px)' : 'none',
         background: highlighted ? HC.orangePale || '#fffbeb' : '#fff',
@@ -1379,18 +1379,20 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onCop
               }}
             >Xóa</button>
           )}
-          <div style={{
-            width: 22, height: 22, borderRadius: 6,
-            background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <span style={{
-              fontSize: 11, color: HC.orangeDark,
-              transition: 'transform 0.2s',
-              transform: (onOpen || expanded) ? 'rotate(0deg)' : 'rotate(-90deg)',
-              display: 'inline-block',
-            }}>{onOpen ? '↗' : '▾'}</span>
-          </div>
+          {!onOpen && (
+            <div style={{
+              width: 22, height: 22, borderRadius: 6,
+              background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <span style={{
+                fontSize: 11, color: HC.orangeDark,
+                transition: 'transform 0.2s',
+                transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                display: 'inline-block',
+              }}>▾</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -2338,8 +2340,20 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
 
 
 
-      {/* Library list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Library list — hai cột giúp quét nhiều file nhanh hơn; về một cột khi
+          vùng nội dung hẹp để tên file, badge và các nút quản trị không chồng lên nhau. */}
+      <style>{`
+        .hc-library-file-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          align-items: start;
+        }
+        @media (max-width: 1280px) {
+          .hc-library-file-grid { grid-template-columns: minmax(0, 1fr); }
+        }
+      `}</style>
+      <div className="hc-library-file-grid" data-testid="vendor-library-file-grid">
         {(() => {
           if (loading) {
              return <div style={{ textAlign: 'center', padding: 40, color: HC.muted }}>Đang tải thư viện...</div>;
