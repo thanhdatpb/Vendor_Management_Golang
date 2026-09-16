@@ -9,7 +9,9 @@ export default function ProtectedRoute({ children }) {
   if (loading) return <div>Loading...</div>;
 
   if (!isAuthenticated) {
-    rememberPostLoginRedirect(location.pathname);
+    // Truyền cả `location` (không chỉ pathname) để giữ luôn ?row= và #tab —
+    // link trỏ tới một phôi cụ thể phải mở đúng phôi đó sau khi đăng nhập.
+    rememberPostLoginRedirect(location);
     return <Navigate to="/" />;
   }
 

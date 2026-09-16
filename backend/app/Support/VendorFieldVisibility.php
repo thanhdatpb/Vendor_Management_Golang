@@ -135,6 +135,45 @@ final class VendorFieldVisibility
     }
 
     /**
+     * Bỏ mọi khoá giá khỏi MỘT file thư viện (cả `pricing` lẫn `generalInfo`).
+     *
+     * Dùng cho endpoint trả một file theo id: đó là đường MỚI vào cùng dữ liệu
+     * mà `getLibrary` đang phục vụ, nên nó phải tự lọc chứ không được trông chờ
+     * UI giấu cột — nếu không sẽ thành lỗ thủng thứ hai bên cạnh `getLibrary`
+     * (xem tests/Feature/VendorLibraryPriceLeakTest.php, nhóm pending).
+     *
+     * Các khoá phi giá của dòng `pricing` (kyHieu, productType, size,
+     * linkTemplate) được GIỮ: giao diện CSF/PD/Marvel dựa vào chúng để suy ra
+     * Link Template cho từng phôi.
+     *
+     * @param  array<string,mixed>  $file
+     * @return array<string,mixed>
+     */
+    public static function filterFilePrices(array $file, $role): array
+    {
+        if (self::seesPrices($role)) {
+            return $file;
+        }
+
+        foreach (['pricing', 'generalInfo'] as $section) {
+            if (!is_array($file[$section] ?? null)) {
+                continue;
+            }
+            foreach ($file[$section] as &$row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                foreach (self::PRICE_FIELDS as $field) {
+                    unset($row[$field]);
+                }
+            }
+            unset($row);
+        }
+
+        return $file;
+    }
+
+    /**
      * Lọc một dòng dữ liệu về đúng các khoá role được thấy.
      *
      * @param  array<string,mixed>  $row

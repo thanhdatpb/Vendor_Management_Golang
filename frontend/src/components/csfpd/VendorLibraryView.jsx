@@ -12,6 +12,7 @@
 //   - Gộp "Thông tin chung về phôi" + "Link Template" (lấy từ phần Về giá) vào 1 bảng duy nhất
 // ════════════════════════════════════════════════════════════════════════════
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { HC } from '../../constants/sellerTheme';
 import { vendorLibraryApi } from '../../services/api';
 import { subscribeVendorLibraryChanges } from '../../services/echo';
@@ -23,6 +24,8 @@ import ExportVendorFilesModal from '../shared/ExportVendorFilesModal';
 import { renderChiTietSizeText } from '../vendor/sections/VendorLibraryViewer';
 import { fileVisibleToProject } from '../../constants/projects';
 import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../utils/vnTime';
+import LibraryFileModal from '../library/LibraryFileModal';
+import { copyLibraryFileLink, libraryFilePath, parseLibraryFilePath } from '../../utils/libraryFileLink';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -125,7 +128,7 @@ function pickLinkTemplate(generalRow, processedPricing, singleVendorFile) {
 }
 
 // ── Bảng gộp: Thông tin chung về phôi + Link Template ─────────────────────────
-function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
+export function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
   const rows = generalInfo || [];
   const processedPricing = useMemo(() => withStickyKy(pricing), [pricing]);
 
@@ -208,7 +211,7 @@ function MergedInfoTable({ generalInfo, pricing, showLeadTime }) {
 }
 
 // ── Card cho 1 file thư viện ───────────────────────────────────────────────────
-function LibraryCard({ entry, highlighted, showLeadTime }) {
+function LibraryCard({ entry, highlighted, showLeadTime, onOpen, onCopyLink }) {
   const [expanded, setExpanded] = useState(!!highlighted);
   const [hovered, setHovered] = useState(false);
 
@@ -229,7 +232,13 @@ function LibraryCard({ entry, highlighted, showLeadTime }) {
       }}
     >
       <div
-        onClick={() => setExpanded(p => !p)}
+        onClick={() => (onOpen ? onOpen(entry) : setExpanded(p => !p))}
+        role={onOpen ? 'button' : undefined}
+        tabIndex={onOpen ? 0 : undefined}
+        onKeyDown={onOpen ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(entry); }
+        } : undefined}
+        title={onOpen ? 'Mở file' : undefined}
         style={{
           padding: '10px 14px',
           background: hovered ? HC.orangeLight : '#fff',
@@ -262,16 +271,30 @@ function LibraryCard({ entry, highlighted, showLeadTime }) {
           </div>
         </div>
 
+        {onCopyLink && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onCopyLink(entry); }}
+            title="Copy link tới file này"
+            aria-label={`Copy link file ${entry.filename}`}
+            style={{
+              width: 26, height: 26, borderRadius: 7, cursor: 'pointer', flexShrink: 0,
+              border: `1px solid ${HC.border}`, background: HC.surface,
+              color: HC.brown, fontSize: 12, lineHeight: 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >🔗</button>
+        )}
+
         <div style={{
           width: 22, height: 22, borderRadius: 6, background: HC.orangeLight,
           border: `1px solid ${HC.orangeMid}`, display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexShrink: 0,
         }}>
-          <span style={{ fontSize: 11, color: HC.orangeDark, transition: 'transform 0.2s', transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>▾</span>
+          <span style={{ fontSize: 11, color: HC.orangeDark, transition: 'transform 0.2s', transform: (onOpen || expanded) ? 'rotate(0deg)' : 'rotate(-90deg)', display: 'inline-block' }}>{onOpen ? '↗' : '▾'}</span>
         </div>
       </div>
 
-      {expanded && (
+      {expanded && !onOpen && (
         <div style={{ background: HC.surface }}>
           <MergedInfoTable generalInfo={entry.generalInfo} pricing={entry.pricing} showLeadTime={showLeadTime} />
         </div>
@@ -297,6 +320,37 @@ export default function VendorLibraryView({ projectKey, department }) {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3500);
   };
+
+  // ─── Cửa sổ 1 file, điều khiển bằng URL ─────────────────────────────
+  // Cùng cơ chế với danh sách của Admin/Vendor/Seller: /library/:fileId mở cửa
+  // sổ, lùi một bước là đóng. Danh sách không unmount nên giữ nguyên chỗ cuộn.
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const openedFile = useMemo(() => {
+    const link = parseLibraryFilePath(location.pathname);
+    if (!link) return null;
+    return rawFiles.find((f) => String(f.id) === link.id) || null;
+  }, [location.pathname, rawFiles]);
+
+  const openFile = useCallback((entry) => {
+    navigate(libraryFilePath(entry.id, entry.filename), {
+      state: { libraryBackground: location },
+    });
+  }, [navigate, location]);
+
+  const closeFile = useCallback(() => { navigate(-1); }, [navigate]);
+
+  const handleCopyLink = useCallback(async (entry) => {
+    try {
+      await copyLibraryFileLink(entry.id, entry.filename);
+      showToast('success', 'Đã copy link file — dán vào Slack hoặc email để gửi đi.');
+    } catch (err) {
+      console.warn('Copy link file thư viện thất bại:', err?.message || err);
+      showToast('error', 'Copy link thất bại. Kiểm tra quyền truy cập clipboard rồi thử lại.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Best Seller lưu trên server (field `bestSeller` trong từng dòng generalInfo)
   // → derive từ dữ liệu fetch về, không đọc localStorage nữa.
   const bestSellerIds = useMemo(() => {
@@ -484,9 +538,50 @@ export default function VendorLibraryView({ projectKey, department }) {
             </div>
           </div>
         ) : (
-          displayFiles.map(entry => <LibraryCard key={entry.id} entry={entry} showLeadTime={dept.showLeadTime} />)
+          displayFiles.map(entry => (
+            <LibraryCard
+              key={entry.id}
+              entry={entry}
+              showLeadTime={dept.showLeadTime}
+              onOpen={openFile}
+              onCopyLink={handleCopyLink}
+            />
+          ))
         )}
       </div>
+
+      {/* Cửa sổ 1 file — mở theo URL /library/:fileId */}
+      {openedFile && (
+        <LibraryFileModal
+          title={(openedFile.filename || '').replace(/\.xlsx?$/i, '')}
+          subtitle={`${openedFile.generalInfo?.length || 0} phôi · ${fmtVNDateTimeShort(openedFile.importedAt)}`}
+          badges={
+            <span style={{
+              padding: '2px 8px', borderRadius: 99, background: HC.orangeLight,
+              border: `1px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 9.5,
+              fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
+            }}>{openedFile.title}</span>
+          }
+          actions={
+            <button
+              onClick={() => handleCopyLink(openedFile)}
+              style={{
+                padding: '6px 12px', borderRadius: 9, cursor: 'pointer',
+                border: `1.5px solid ${HC.borderStrong}`, background: HC.surface,
+                color: HC.brown, fontSize: 11.5, fontWeight: 800,
+              }}
+            >🔗 Copy link</button>
+          }
+          footer="Esc, bấm ra ngoài, hoặc nút Back của trình duyệt đều đóng cửa sổ này."
+          onClose={closeFile}
+        >
+          <MergedInfoTable
+            generalInfo={openedFile.generalInfo}
+            pricing={openedFile.pricing}
+            showLeadTime={dept.showLeadTime}
+          />
+        </LibraryFileModal>
+      )}
     </div>
   );
 }

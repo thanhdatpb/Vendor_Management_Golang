@@ -6,7 +6,12 @@
 //  JSX thì người dùng vẫn thấy cột — đó mới là lỗi thật.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render as rtlRender, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+
+// View đọc URL để biết có đang mở cửa sổ một file hay không (/library/:fileId)
+// nên mọi lần render phải nằm trong Router.
+const render = (ui, options) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>, options);
 import userEvent from '@testing-library/user-event';
 import CsfVendorLibrary from '../CsfVendorLibrary';
 import PdVendorLibrary from '../PdVendorLibrary';

@@ -3,6 +3,7 @@
 //  Mỗi file Excel import → lưu localStorage → hiển thị thành card riêng
 // ════════════════════════════════════════════════════════════════════════════
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate, exportVendorLibraryFiles } from '../../../utils/vendorExcel';
 import api, { vendorLibraryApi } from '../../../services/api';
@@ -12,8 +13,10 @@ import AppToast from '../../shared/AppToast';
 import ExportVendorFilesModal from '../../shared/ExportVendorFilesModal';
 import ShareProjectsModal from '../../shared/ShareProjectsModal';
 import Lightbox from '../components/Lightbox';
+import LibraryFileModal from '../../library/LibraryFileModal';
 import { fileSharedProjects, fileVisibleToProject, PROJECTS } from '../../../constants/projects';
 import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../../utils/vnTime';
+import { copyLibraryFileLink, libraryFilePath, parseLibraryFilePath } from '../../../utils/libraryFileLink';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -1094,9 +1097,22 @@ function ShareButton({ onClick, title }) {
   );
 }
 
-function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, onSampleStatusChange }) {
+/**
+ * Một file trong thư viện.
+ *
+ * Hai chế độ:
+ *   • trong DANH SÁCH (mặc định) — chỉ hàng tiêu đề; bấm vào là gọi `onOpen`
+ *     để mở cửa sổ riêng theo URL /library/:fileId. Trước đây bấm vào là bung
+ *     nội dung tại chỗ, đẩy 104 file còn lại xuống dưới.
+ *   • NHÚNG trong cửa sổ (`embedded`) — bỏ hàng tiêu đề (cửa sổ đã có tên file
+ *     ở đầu) và luôn mở sẵn 2 tab nội dung.
+ *
+ * Không có `onOpen` thì giữ nguyên hành vi bung tại chỗ như cũ, để nơi gọi nào
+ * chưa chuyển sang URL vẫn chạy.
+ */
+export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onCopyLink, onOpen, embedded = false, canShare, readOnly, selectable, selectedIds, onSelectRow, onSelectAll, bestSellerIds, toggleBestSeller, mode, highlighted, onSampleStatusChange }) {
   const [activeSection, setActiveSection] = useState('general');
-  const [expanded, setExpanded] = useState(!!highlighted);
+  const [expanded, setExpanded] = useState(!!highlighted || embedded);
   const [hovered, setHovered] = useState(false);
   const [renamingFile, setRenamingFile] = useState(false);
   const [filenameDraft, setFilenameDraft] = useState('');
@@ -1138,6 +1154,56 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
   const vendorNames = fileVendorNames(entry);
   const vendorNamesLabel = vendorNames.length ? vendorNames.join(', ') : entry.title;
 
+  // 2 tab nội dung — dùng chung cho card trong danh sách (khi chưa chuyển sang
+  // mở bằng URL) và cho bản nhúng trong cửa sổ file.
+  const renderSections = () => (
+    <div>
+      {/* Section Tabs */}
+      <div style={{ display: 'flex', gap: 0, background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
+        {[
+          { id: 'general', label: '📋 Thông tin chung về phôi', count: entry.generalInfo?.length },
+          { id: 'pricing', label: '💰 Về giá', count: entry.pricing?.length },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setActiveSection(tab.id)} style={{
+            padding: '11px 20px', border: 'none',
+            borderBottom: activeSection === tab.id ? `2.5px solid ${HC.orange}` : '2.5px solid transparent',
+            background: activeSection === tab.id ? HC.surface : 'transparent',
+            color: activeSection === tab.id ? HC.orangeDark : HC.muted,
+            fontSize: 12, fontWeight: activeSection === tab.id ? 900 : 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+            fontFamily: "'Inter',sans-serif", transition: 'all 0.15s',
+          }}>
+            {tab.label}
+            <span style={{
+              padding: '1px 8px', borderRadius: 99,
+              background: activeSection === tab.id ? HC.orangeLight : HC.border,
+              color: activeSection === tab.id ? HC.orangeDark : HC.muted,
+              fontSize: 10, fontWeight: 800,
+            }}>
+              {tab.count ?? 0}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Section Content */}
+      <div style={{ background: HC.surface }}>
+        {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} onSampleStatusChange={onSampleStatusChange} />}
+        {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} canDeleteRow={canShare} />}
+      </div>
+    </div>
+  );
+
+  // Nhúng trong cửa sổ: bỏ khung viền/đổ bóng của card và bỏ luôn hàng tiêu đề
+  // — cửa sổ đã có tên file, chip vendor, chip project và nút đóng ở đầu.
+  if (embedded) {
+    return (
+      <div style={{ background: HC.surface }}>
+        {renderSections()}
+      </div>
+    );
+  }
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -1154,7 +1220,13 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
     >
       {/* Card Header */}
       <div
-        onClick={() => setExpanded(p => !p)}
+        onClick={() => (onOpen ? onOpen(entry) : setExpanded(p => !p))}
+        role={onOpen ? 'button' : undefined}
+        tabIndex={onOpen ? 0 : undefined}
+        onKeyDown={onOpen ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(entry); }
+        } : undefined}
+        title={onOpen ? 'Mở file' : undefined}
         style={{
           padding: '10px 14px',
           background: hovered ? HC.orangeLight : '#fff',
@@ -1195,19 +1267,16 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
                 }}
               />
             ) : (
+              // Tên file KHÔNG còn là nút đổi tên. Vùng tên rộng gần hết hàng,
+              // nên bấm vào đó phải làm việc hay làm nhất — mở file. Đổi tên
+              // lùi về nút ✎ riêng bên phải, nơi người dùng chủ đích tìm tới.
               <span
-                onClick={canShare ? (e) => {
-                  e.stopPropagation();
-                  setFilenameDraft(entry.filename.replace(/\.xlsx?$/i, ''));
-                  setRenamingFile(true);
-                } : undefined}
-                title={canShare ? 'Bấm để đổi tên file' : entry.filename}
+                title={entry.filename}
                 style={{
                   fontWeight: 800, fontSize: 12.5, color: HC.ink,
                   fontFamily: "'Inter',sans-serif",
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   flex: 1, minWidth: 0,
-                  cursor: canShare ? 'text' : 'default',
                 }}
               >
                 {entry.filename.replace(/\.xlsx?$/i, '')}
@@ -1258,6 +1327,38 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+          {onCopyLink && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCopyLink(entry); }}
+              title="Copy link tới file này"
+              aria-label={`Copy link file ${entry.filename}`}
+              style={{
+                width: 26, height: 26, borderRadius: 7, cursor: 'pointer',
+                border: `1px solid ${HC.border}`, background: HC.surface,
+                color: HC.brown, fontSize: 12, lineHeight: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}
+            >🔗</button>
+          )}
+          {canShare && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFilenameDraft(entry.filename.replace(/\.xlsx?$/i, ''));
+                setRenamingFile(true);
+              }}
+              title="Đổi tên file"
+              aria-label={`Đổi tên file ${entry.filename}`}
+              style={{
+                width: 26, height: 26, borderRadius: 7, cursor: 'pointer',
+                border: `1px solid ${HC.border}`, background: HC.surface,
+                color: HC.brown, fontSize: 12, lineHeight: 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}
+            >✎</button>
+          )}
           {canShare && (
             <ShareButton
               onClick={(e) => { e.stopPropagation(); onShare(entry); }}
@@ -1286,50 +1387,14 @@ function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, canShare, re
             <span style={{
               fontSize: 11, color: HC.orangeDark,
               transition: 'transform 0.2s',
-              transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+              transform: (onOpen || expanded) ? 'rotate(0deg)' : 'rotate(-90deg)',
               display: 'inline-block',
-            }}>▾</span>
+            }}>{onOpen ? '↗' : '▾'}</span>
           </div>
         </div>
       </div>
 
-      {expanded && (
-        <div>
-          {/* Section Tabs */}
-          <div style={{ display: 'flex', gap: 0, background: HC.cream, borderBottom: `1.5px solid ${HC.border}` }}>
-            {[
-              { id: 'general', label: '📋 Thông tin chung về phôi', count: entry.generalInfo?.length },
-              { id: 'pricing', label: '💰 Về giá', count: entry.pricing?.length },
-            ].map(tab => (
-              <button key={tab.id} onClick={() => setActiveSection(tab.id)} style={{
-                padding: '11px 20px', border: 'none',
-                borderBottom: activeSection === tab.id ? `2.5px solid ${HC.orange}` : '2.5px solid transparent',
-                background: activeSection === tab.id ? HC.surface : 'transparent',
-                color: activeSection === tab.id ? HC.orangeDark : HC.muted,
-                fontSize: 12, fontWeight: activeSection === tab.id ? 900 : 700,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                fontFamily: "'Inter',sans-serif", transition: 'all 0.15s',
-              }}>
-                {tab.label}
-                <span style={{
-                  padding: '1px 8px', borderRadius: 99,
-                  background: activeSection === tab.id ? HC.orangeLight : HC.border,
-                  color: activeSection === tab.id ? HC.orangeDark : HC.muted,
-                  fontSize: 10, fontWeight: 800,
-                }}>
-                  {tab.count ?? 0}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Section Content */}
-          <div style={{ background: HC.surface }}>
-            {activeSection === 'general' && <GeneralInfoTable rows={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, generalInfo: newRows })} readOnly={readOnly} selectable={selectable} selectedIds={selectedIds} onSelectRow={onSelectRow} onSelectAll={handleSelectAllInFile} bestSellerIds={bestSellerIds} toggleBestSeller={toggleBestSeller} mode={mode} onSampleStatusChange={onSampleStatusChange} />}
-            {activeSection === 'pricing' && <PricingTable rows={entry.pricing} generalInfo={entry.generalInfo} onSave={(newRows) => onUpdate({ ...entry, pricing: newRows })} readOnly={readOnly} canDeleteRow={canShare} />}
-          </div>
-        </div>
-      )}
+      {expanded && renderSections()}
     </div>
   );
 }
@@ -1898,6 +1963,44 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     setTimeout(() => setToast(null), 3500);
   };
 
+  // ─── Cửa sổ 1 file, điều khiển bằng URL ─────────────────────────────
+  // URL là nguồn sự thật: /library/:fileId mở cửa sổ, quay lại danh sách thì
+  // đóng. Nhờ vậy F5 vẫn đúng file, gửi link cho người khác cũng mở đúng file.
+  //
+  // Danh sách KHÔNG unmount khi cửa sổ mở: App.jsx render dashboard theo
+  // `location.state.libraryBackground`, nên vị trí cuộn và bộ lọc giữ nguyên.
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const openedFile = useMemo(() => {
+    const link = parseLibraryFilePath(location.pathname);
+    if (!link) return null;
+    return rawFiles.find((f) => String(f.id) === link.id) || null;
+  }, [location.pathname, rawFiles]);
+
+  const openFile = useCallback((entry) => {
+    navigate(libraryFilePath(entry.id, entry.filename), {
+      state: { libraryBackground: location },
+    });
+  }, [navigate, location]);
+
+  // Lùi một bước thay vì navigate(path): danh sách đang ở bước trước nên
+  // component không remount — không phải tải lại thư viện, không mất chỗ cuộn.
+  const closeFile = useCallback(() => { navigate(-1); }, [navigate]);
+
+  const handleCopyLink = useCallback(async (entry) => {
+    try {
+      await copyLibraryFileLink(entry.id, entry.filename);
+      showToast('success', 'Đã copy link file — dán vào Slack hoặc email để gửi đi.');
+    } catch (err) {
+      console.warn('Copy link file thư viện thất bại:', err?.message || err);
+      showToast('error', 'Copy link thất bại. Kiểm tra quyền truy cập clipboard rồi thử lại.');
+    }
+    // showToast dựng lại mỗi render nhưng chỉ đụng state của chính nó — không
+    // đưa vào deps để handler giữ nguyên identity giữa các lần render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveLibrary = async (newData) => {
     if (!dataLoaded) {
       showToast('error', 'Dữ liệu chưa được tải xong, không thể lưu. Vui lòng thử lại.');
@@ -1959,7 +2062,13 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
 
     if (newEntries.length > 0) {
       const map = Object.fromEntries(libraryFiles.map(e => [e.filename, e]));
-      newEntries.forEach(ne => { map[ne.filename] = ne; });
+      newEntries.forEach(ne => {
+        // Import đè một file trùng tên thì GIỮ NGUYÊN id cũ. Id là địa chỉ của
+        // link /library/:fileId đã gửi đi trong Slack, mail, form duyệt — sinh
+        // id mới là mọi link cũ chết im lặng, không ai biết cho tới lúc bấm.
+        const existing = map[ne.filename];
+        map[ne.filename] = existing?.id ? { ...ne, id: existing.id } : ne;
+      });
       const updated = Object.values(map);
       await saveLibrary(updated);
     }
@@ -2245,6 +2354,8 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
                 onDelete={handleDelete}
                 onUpdate={handleUpdateEntry}
                 onShare={setShareTarget}
+                onCopyLink={handleCopyLink}
+                onOpen={openFile}
                 canShare={canManageLibrary}
                 readOnly={readOnly}
                 selectable={selectable}
@@ -2261,6 +2372,50 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           ));
         })()}
       </div>
+
+      {/* Cửa sổ 1 file — mở theo URL /library/:fileId */}
+      {openedFile && (
+        <LibraryFileModal
+          title={openedFile.filename.replace(/\.xlsx?$/i, '')}
+          subtitle={`${openedFile.generalInfo?.length || 0} phôi · ${openedFile.pricing?.length || 0} dòng giá · ${fmtVNDateTimeShort(openedFile.importedAt)}`}
+          badges={
+            <span style={{
+              padding: '2px 8px', borderRadius: 99,
+              background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
+              color: HC.orangeDark, fontSize: 9.5, fontWeight: 800,
+              letterSpacing: '0.05em', textTransform: 'uppercase',
+            }}>
+              {fileVendorNames(openedFile).join(', ') || openedFile.title}
+            </span>
+          }
+          actions={
+            <button
+              onClick={() => handleCopyLink(openedFile)}
+              style={{
+                padding: '6px 12px', borderRadius: 9, cursor: 'pointer',
+                border: `1.5px solid ${HC.borderStrong}`, background: HC.surface,
+                color: HC.brown, fontSize: 11.5, fontWeight: 800,
+              }}
+            >🔗 Copy link</button>
+          }
+          footer="Esc, bấm ra ngoài, hoặc nút Back của trình duyệt đều đóng cửa sổ này."
+          guardWhileEditing={canManageLibrary}
+          onClose={closeFile}
+        >
+          <LibraryCard
+            entry={openedFile}
+            embedded
+            onUpdate={handleUpdateEntry}
+            onDelete={handleDelete}
+            canShare={canManageLibrary}
+            readOnly={readOnly}
+            bestSellerIds={bestSellerIds}
+            toggleBestSeller={toggleBestSeller}
+            mode={mode}
+            onSampleStatusChange={handleSampleStatusChange}
+          />
+        </LibraryFileModal>
+      )}
 
       {/* Share to projects Modal */}
       {shareTarget && (

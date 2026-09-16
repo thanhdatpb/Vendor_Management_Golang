@@ -1,4 +1,4 @@
-﻿import { Routes, Route, Navigate } from "react-router-dom";
+﻿import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
@@ -9,13 +9,26 @@ import CsfDashboard from "./pages/CsfDashboard";
 import MarvelVendorLibrary from "./components/csfpd/MarvelVendorLibrary";
 import PdDashboard from "./pages/PdDashboard";
 import PriceSheetPage from "./pages/PriceSheetPage";
+import LibraryFilePage from "./pages/LibraryFilePage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
 
 export default function App() {
+  const location = useLocation();
+  // Mở một file thư viện TỪ DANH SÁCH đổi URL sang /library/:fileId nhưng phải
+  // giữ nguyên dashboard phía sau: cửa sổ file phủ lên danh sách, đóng ra là
+  // thấy đúng chỗ đang lướt và đúng bộ lọc. Muốn vậy thì `Routes` phải khớp
+  // theo location CŨ (lưu trong state lúc điều hướng) chứ không theo URL mới —
+  // nếu khớp theo URL mới thì dashboard unmount, tải lại cả thư viện, mất chỗ
+  // cuộn. Cửa sổ do chính danh sách dựng (VendorLibraryViewer đọc URL thật).
+  //
+  // Mở THẲNG từ link dán vào Slack thì không có state này → khớp URL thật →
+  // LibraryFilePage tự tải file và dựng cửa sổ trên nền trống.
+  const libraryBackground = location.state?.libraryBackground;
+
   return (
-    <Routes>
+    <Routes location={libraryBackground || location}>
       {/* :section? = mục đang mở trong dashboard (tab sidebar). Mỗi mục có URL
           riêng để bookmark / gửi link / F5 / Back đều đúng mục — trước đây cả
           role chỉ có một URL nên mọi lần remount đều rớt về mục mặc định.
@@ -88,6 +101,20 @@ export default function App() {
             <RoleRoute allow={["pd"]}>
               <PdDashboard />
             </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Link riêng cho 1 file Thư viện Vendor. Mở cho MỌI role đã đăng nhập:
+          một link gửi cho ai cũng mở được, còn thấy gì (giá, AVG TG, phạm vi
+          project) do server quyết định ở GET /vendor-library/files/{id} —
+          không chặn theo role ở đây để khỏi trả 403 oan cho người có quyền xem.
+          `:slug?` chỉ để link đọc được khi dán vào Slack, không dùng để tra cứu. */}
+      <Route
+        path="/library/:fileId/:slug?"
+        element={
+          <ProtectedRoute>
+            <LibraryFilePage />
           </ProtectedRoute>
         }
       />

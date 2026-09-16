@@ -47,3 +47,29 @@ export const sectionPath = (basePath, sections, id) => {
 // thay vì `/seller` | `/admin` trống (vốn rơi về mục mặc định).
 export const SELLER_PRICE_SHEETS_PATH = sectionPath('/seller', SELLER_SECTIONS, 'setup_price');
 export const ADMIN_PRICE_SHEETS_PATH = sectionPath('/admin', ADMIN_SECTIONS, 'pricesheets');
+
+/**
+ * Mục Thư Viện Vendor của từng role — đích "quay lại" khi đóng cửa sổ một file
+ * được mở thẳng từ link (/library/:fileId), lúc không có bước lịch sử nào để lùi.
+ *
+ * CSF/Marvel/PD không có mục thư viện riêng: cả dashboard của họ LÀ thư viện,
+ * chia theo project, nên trỏ về gốc để useSectionRoute tự chọn project mặc định.
+ */
+const LIBRARY_PATH_BY_ROLE = {
+  admin:  sectionPath('/admin', ADMIN_SECTIONS, 'vendors'),
+  seller: sectionPath('/seller', SELLER_SECTIONS, 'vendors'),
+  staffa: sectionPath('/seller', SELLER_SECTIONS, 'vendors'),
+  staff:  sectionPath('/seller', SELLER_SECTIONS, 'vendors'),
+  vendor: sectionPath('/vendor', VENDOR_SECTIONS, 'library'),
+  staffb: sectionPath('/vendor', VENDOR_SECTIONS, 'library'),
+  csf:    '/csf',
+  marvel: '/marvel',
+  pd:     '/pd',
+};
+
+/** Role lạ → về trang đăng nhập, giống UNKNOWN_ROLE_ROUTE của utils/roleRoute. */
+export const libraryPathForRole = (role) => {
+  const key = (typeof role === 'object' && role ? role.name : role ?? '')
+    .toString().toLowerCase().replace(/[-_\s]/g, '');
+  return LIBRARY_PATH_BY_ROLE[key] || '/';
+};

@@ -150,6 +150,13 @@ Route::middleware(['auth:sanctum', 'seen'])->group(function () {
     //    thứ tự khớp không đổi khi thêm route mới.
     // Index gọn cho bảng tính giá: chỉ size + giá vốn, và là nơi strip giá theo role.
     Route::get('/vendor-library/index', [VendorLibraryController::class, 'index']);
+    // ⚠️ `by-name` PHẢI đứng TRƯỚC `files/{id}`: để sau thì Laravel hiểu
+    //    "by-name" là {id} và link cũ theo tên file luôn trả 404.
+    // Link riêng cho 1 file thư viện (/library/:fileId) — trả đúng 1 phần tử của
+    // blob, đã lọc giá/AVG TG theo role và chặn 403 nếu ngoài phạm vi project.
+    Route::get('/vendor-library/files/by-name/{filename}', [VendorLibraryController::class, 'showFileByName'])
+        ->where('filename', '.*');
+    Route::get('/vendor-library/files/{id}', [VendorLibraryController::class, 'showFile']);
     Route::get('/vendor-library', [VendorLibraryController::class, 'getLibrary']);
     Route::post('/vendor-library', [VendorLibraryController::class, 'saveLibrary']);
     // Cập nhật nhẹ 1 field trạng thái Sample — chỉ Vendor (tên cũ: Staff B) được phép

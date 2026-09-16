@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function Lightbox({ mediaUrls, initialIndex, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const isVideo = (url) => url && (url.match(/\.(mp4|webm|mov)$/i) || url.includes('video'));
+
+  // Esc đóng ảnh phóng to (trước đây chỉ bấm được ✕ hoặc nền).
+  // `data-esc-layer` ở dưới là tín hiệu cho cửa sổ file bên ngoài: đang có lớp
+  // trên cùng tự xử lý Esc, đừng đóng theo — Esc phải đóng từng lớp một.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose?.();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   const next = () => setCurrentIndex((prev) => (prev + 1) % mediaUrls.length);
   const prev = () => setCurrentIndex((prev) => (prev - 1 + mediaUrls.length) % mediaUrls.length);
@@ -18,6 +32,7 @@ export default function Lightbox({ mediaUrls, initialIndex, onClose }) {
   return createPortal((
     <div
       onClick={onClose}
+      data-esc-layer="lightbox"
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 10000,
         display: 'flex', alignItems: 'center', justifyContent: 'center',

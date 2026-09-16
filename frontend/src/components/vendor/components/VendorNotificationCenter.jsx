@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { HC } from '../utils/constants';
 import { toDate, timeValue, fmtVNDate, fmtVNDateTime } from '../../../utils/vnTime';
+import { libraryTargetFromNotification } from '../../../utils/libraryFileLink';
 
 const TYPE_META = {
   approved:                { icon: '✅', label: 'Đã duyệt',      color: '#10B981', bg: '#ecfdf5', border: '#bbf7d0' },
@@ -176,6 +177,23 @@ export default function VendorNotificationCenter({
                       <span style={{ fontSize: 11, color: HC.muted, width: 90 }}>🕒 Thời gian</span>
                       <span style={{ fontSize: 12, color: HC.brown }}>{selectedNotif.time || (selectedNotif.timestamp ? fmtVNDateTime(selectedNotif.timestamp) : '')}</span>
                     </div>
+                    {/* Thông báo cập nhật thư viện giờ trỏ thẳng tới file. Dùng
+                        thẻ <a> chứ không phải nút: bấm chuột giữa mở tab mới,
+                        chuột phải copy được link để gửi tiếp cho người khác. */}
+                    {libraryTargetFromNotification(selectedNotif) && (
+                      <a
+                        href={libraryTargetFromNotification(selectedNotif)}
+                        style={{
+                          marginTop: 10, display: 'block', textAlign: 'center',
+                          padding: '9px 10px', background: HC.orangeLight,
+                          border: `1.5px solid ${HC.orangeMid}`, borderRadius: 10,
+                          color: HC.orangeDark, fontSize: 12.5, fontWeight: 800,
+                          textDecoration: 'none', fontFamily: "'Inter',sans-serif",
+                        }}
+                      >
+                        📚 Mở file trong Thư viện Vendor
+                      </a>
+                    )}
                     {selectedNotif.reason && (
                       <div style={{ marginTop: 8, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, fontSize: 12, color: HC.danger, lineHeight: 1.5 }}>
                         <b>Lý do từ chối:</b> {selectedNotif.reason}

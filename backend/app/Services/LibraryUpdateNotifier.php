@@ -75,6 +75,12 @@ class LibraryUpdateNotifier
 
         $data = [
             'filename'        => $changed['filename'],
+            // Id của file trong blob thư viện — chuông và mail dựng nút "Mở file"
+            // trỏ thẳng tới /library/{file_id}. Trước đây thông báo chỉ có tên
+            // file nên người nhận phải tự mò trong danh sách.
+            // Có thể rỗng với dữ liệu cũ tạo trước khi mỗi file có id: lúc đó
+            // client lùi về tra theo tên (endpoint files/by-name).
+            'file_id'         => (string) ($changed['file']['id'] ?? ''),
             'changes_summary' => implode(' · ', $summaryParts),
             'actor_label'     => self::actorLabel($actor),
         ];

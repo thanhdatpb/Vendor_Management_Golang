@@ -162,6 +162,159 @@ class VendorLibraryController extends Controller
         return false;
     }
 
+    /**
+     * MỘT FILE THEO ID — nguồn dữ liệu cho link riêng `/library/:fileId`.
+     *
+     * Trước đây muốn xem một file phải gọi `getLibrary` và tải NGUYÊN blob của
+     * cả hệ thống (kèm ảnh/notes/link folder của mọi file) rồi tự tìm trong đó.
+     * Endpoint này trả đúng một phần tử, và cũng là nơi THỰC THI phân quyền:
+     *
+     *   • ngoài phạm vi project  → 403 (KHÔNG phải 404: người nhận link cần
+     *     biết file có thật, chỉ là không thuộc phạm vi của họ);
+     *   • role không xem được giá → các khoá giá bị loại khỏi `pricing`;
+     *   • role không xem được AVG TG → 2 cột thời gian bị loại khỏi `generalInfo`.
+     *
+     * ETag theo (updated_at của blob, file, role, phạm vi project): mở lại cùng
+     * một link thì nhận 304, không tải lại gì.
+     */
+    public function showFile(Request $request, string $id)
+    {
+        return $this->respondWithFile(
+            $request,
+            static fn (array $file): bool => (string) ($file['id'] ?? '') === $id,
+            'id:' . $id
+        );
+    }
+
+    /**
+     * MỘT FILE THEO TÊN — cứu các link cũ chỉ mang `filename`.
+     *
+     * Thông báo `library_updated` phát trước phiên bản này không kèm `file_id`,
+     * nên nút "Mở file" trong mail cũ chỉ có tên file để bám vào. Trả về file
+     * kèm `id` để client chuyển hướng sang dạng chuẩn.
+     *
+     * Tên file trong thư viện KHÔNG đảm bảo duy nhất; lấy bản import gần nhất
+     * để khỏi phụ thuộc thứ tự phần tử trong blob.
+     */
+    public function showFileByName(Request $request, string $filename)
+    {
+        $needle = $this->normalizeFilename($filename);
+
+        return $this->respondWithFile(
+            $request,
+            fn (array $file): bool => $this->normalizeFilename((string) ($file['filename'] ?? '')) === $needle,
+            'name:' . $needle,
+            true
+        );
+    }
+
+    /**
+     * Thân chung của 2 endpoint trên: tìm → kiểm quyền → lọc trường → ETag.
+     *
+     * @param  callable(array):bool  $matches     điều kiện nhận diện file
+     * @param  string                $etagSubject phần định danh đưa vào ETag
+     * @param  bool                  $newestWins  nhiều file khớp thì lấy bản import gần nhất
+     */
+    private function respondWithFile(Request $request, callable $matches, string $etagSubject, bool $newestWins = false)
+    {
+        $user = $request->user();
+        $role = $user->role ?? '';
+
+        $row = $this->getRow();
+        if (!$row) {
+            return response()->json(['message' => 'Thư viện đang trống.'], 404);
+        }
+
+        $etag = '"' . sha1(implode('|', [
+            'vendor-library-file',
+            (string) $row->updated_at,
+            $etagSubject,
+            VendorFieldVisibility::normalizeRole($role),
+            $this->fileProjectKey($user),
+        ])) . '"';
+
+        $ifNoneMatch = trim((string) $request->header('If-None-Match'));
+        if ($ifNoneMatch !== '' && $this->etagMatches($ifNoneMatch, $etag)) {
+            return response('', 304)->header('ETag', $etag);
+        }
+
+        $files = json_decode((string) $row->data, true);
+        if (!is_array($files)) {
+            return response()->json(['message' => 'Dữ liệu thư viện không hợp lệ.'], 422);
+        }
+
+        $found = null;
+        foreach ($files as $file) {
+            if (!is_array($file) || !$matches($file)) {
+                continue;
+            }
+            if (!$newestWins) {
+                $found = $file;
+                break;
+            }
+            if ($found === null || (string) ($file['importedAt'] ?? '') > (string) ($found['importedAt'] ?? '')) {
+                $found = $file;
+            }
+        }
+
+        if ($found === null) {
+            return response()->json(['message' => 'Không tìm thấy file này trong thư viện.'], 404);
+        }
+
+        $projectKey = $this->fileProjectKey($user);
+        if ($projectKey !== '' && !VendorLibraryIndexBuilder::fileVisibleToProject($found, $projectKey)) {
+            return response()->json([
+                'message' => 'File này thuộc một project khác với tài khoản của bạn.',
+            ], 403);
+        }
+
+        return response()->json($this->visibleFile($found, $role))
+            ->header('ETag', $etag)
+            ->header('Cache-Control', 'private, must-revalidate');
+    }
+
+    /**
+     * Phạm vi project áp cho một file. Chuỗi rỗng = xem được mọi project.
+     *
+     * Giữ ĐÚNG danh sách role của `indexProjectKey` (admin, marvel, staffb,
+     * vendor, csf, pd) để hai đường vào cùng dữ liệu không nói hai chuyện khác
+     * nhau; khác biệt duy nhất là ở đây không nhận `?project=` từ client, vì
+     * link trỏ tới một file cụ thể chứ không phải một danh sách cần lọc.
+     */
+    private function fileProjectKey($user): string
+    {
+        $role = VendorFieldVisibility::normalizeRole($user->role ?? '');
+        if (in_array($role, ['admin', 'marvel', 'staffb', 'vendor', 'csf', 'pd'], true)) {
+            return '';
+        }
+
+        return strtolower(trim((string) ($user->project ?? '')));
+    }
+
+    /**
+     * Bản của file mà role này được phép nhận, kèm `counts` để client khỏi tự
+     * đếm mỗi nơi một kiểu — hàng ở bảng tổng và đầu cửa sổ file hiện cùng một
+     * con số, đếm ở 2 chỗ là 2 cơ hội lệch.
+     */
+    private function visibleFile(array $file, $role): array
+    {
+        $file = VendorFieldVisibility::filterLeadTime([$file], $role)[0];
+        $file = VendorFieldVisibility::filterFilePrices($file, $role);
+
+        $file['counts'] = [
+            'generalInfo' => is_array($file['generalInfo'] ?? null) ? count($file['generalInfo']) : 0,
+            'pricing'     => is_array($file['pricing'] ?? null) ? count($file['pricing']) : 0,
+        ];
+
+        return $file;
+    }
+
+    /** So tên file bỏ qua hoa/thường, khoảng trắng thừa và đuôi .xlsx/.xls. */
+    private function normalizeFilename(string $name): string
+    {
+        return mb_strtolower(trim((string) preg_replace('/\.xlsx?$/i', '', $name)));
+    }
+
     public function saveLibrary(Request $request)
     {
         $data = $request->getContent();

@@ -311,6 +311,12 @@ export const vendorLibraryApi = {
     headers,
     validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
   }),
+  // MỘT file theo id — nguồn của link riêng /library/:fileId. Không tải cả blob
+  // thư viện chỉ để xem một file, và server lọc sẵn giá/AVG TG theo role.
+  getFile: (id) => api.get(`/vendor-library/files/${encodeURIComponent(id)}`),
+  // Tra theo TÊN file: cứu link cũ trong mail (thông báo phát trước 2026-09
+  // không mang `file_id`). Trả về file kèm id để chuyển hướng sang dạng chuẩn.
+  getFileByName: (filename) => api.get(`/vendor-library/files/by-name/${encodeURIComponent(filename)}`),
   save: (data, mode = 'all') => api.post(`/vendor-library?mode=${mode}`, data),
   // Cập nhật nhẹ trạng thái Sample của 1 dòng generalInfo (không gửi cả blob)
   setSampleStatus: (rowId, sampleStatus) =>

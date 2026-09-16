@@ -12,7 +12,8 @@
 //  càng rộng → gần như lần nào cũng dính. Vendor không import được file nào.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import VendorLibraryViewer from '../VendorLibraryViewer';
 import { vendorLibraryApi } from '../../../../services/api';
 import { parseHappyCreativeLibrary } from '../../../../utils/vendorExcel';
@@ -44,6 +45,11 @@ vi.stubGlobal('localStorage', {
   getItem: (k) => (k === 'user' ? JSON.stringify({ role: 'vendor', name: 'Vendor A' }) : null),
   setItem: () => {}, removeItem: () => {}, clear: () => {},
 });
+
+// Viewer đọc URL để biết có đang mở cửa sổ một file hay không (/library/:fileId)
+// nên mọi lần render phải nằm trong Router. Bọc ở đây để các ca test bên dưới
+// giữ nguyên `render(<VendorLibraryViewer />)` như cũ.
+const render = (ui, options) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>, options);
 
 const libraryFile = (name = 'HC_Pillow_P.Happy_18.08') => ({
   id: `id_${name}`,
