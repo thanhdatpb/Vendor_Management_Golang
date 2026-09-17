@@ -8,6 +8,36 @@ import { SearchOutlined } from '@ant-design/icons';
 import VendorLibraryViewer from './VendorLibraryViewer';
 import AppToast from '../../shared/AppToast';
 import { vnFileStamp } from '../../../utils/vnTime';
+import { useNavigate } from 'react-router-dom';
+import { buildAssignedVendors, mergeAssignedVendors } from '../../../utils/libraryAssign';
+import { parseLibraryFilePath } from '../../../utils/libraryFileLink';
+
+const parseAssigned = (raw) => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try { const v = JSON.parse(raw); return Array.isArray(v) ? v : []; } catch { return []; }
+};
+
+/**
+ * Đang ở cửa sổ file (/library/:fileId, mở từ danh sách) thì lùi một bước để
+ * đóng cửa sổ, rồi mới cho nơi gọi chuyển mục. Chuyển mục ngay (push URL mới)
+ * trong khi history.back() còn treo sẽ bị lùi đè ngược về cửa sổ file.
+ */
+const leaveLibraryFileWindow = (navigate) => new Promise((resolve) => {
+  if (!parseLibraryFilePath(window.location.pathname)) { resolve(); return; }
+  let done = false;
+  let timer = null;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    window.removeEventListener('popstate', finish);
+    clearTimeout(timer);
+    resolve();
+  };
+  timer = setTimeout(finish, 500);
+  window.addEventListener('popstate', finish);
+  navigate(-1);
+});
 
 export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
   const [activeTab, setActiveTab] = useState('all'); 
@@ -132,128 +162,63 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     setAssignConfirmOpen(true);
   };
 
-  const handleAssignVendor = () => {
-    if (selectedIds.size === 0) return;
+  const navigate = useNavigate();
+  const [assigning, setAssigning] = useState(false);
+
+  const handleAssignVendor = async () => {
+    if (selectedIds.size === 0 || assigning) return;
 
     let selected = vendorList.filter(v => selectedIds.has(v.id));
 
     if (activeTab === 'all' || activeTab === 'bestseller') {
-      const excelSelected = [];
+      // Cùng MỘT cách dựng bản chụp với ngăn kéo "Cung cấp vendor" (utils/libraryAssign).
+      const providedAt = new Date().toISOString();
+      selected = [];
       excelVendors.forEach(file => {
-        if (file.generalInfo) {
-          const uniqueLinks = [...new Set(file.generalInfo.map(r => (r.linkFolder || '').trim()).filter(Boolean))];
-          const fileLevelLink = uniqueLinks.length === 1 ? uniqueLinks[0] : null;
-          const matched = file.generalInfo.filter(r => selectedIds.has(r.id));
-          matched.forEach(m => {
-            const baseData = {
-              excel_row_id: m.id,
-              name: m.vendorName || m.kyHieu || 'Excel Vendor',
-              vendor_type: m.productType || m.kyHieu || 'New',
-              overview: m.chatLieu || '',
-              media_url: (m.images && m.images.length > 0) ? m.images[0] : '',
-              link_folder: m.linkFolder || fileLevelLink || '',
-              is_excel: true,
-              kyHieu: m.kyHieu || '',
-              source_file_id: file.id,
-              source_file_name: file.filename || '',
-              avg_time_vendor: m.avgTimeVendor || '',
-              avg_time_actual: m.avgTimeActual || '',
-            };
-            const norm = s => (s || '').toString().trim().toLowerCase();
-            const mk = norm(m.kyHieu);
-
-            // Tập kyHieu + vendorName của các vendor KHÁC trong cùng file (để loại trừ)
-            const otherKeys = new Set();
-            (file.generalInfo || []).forEach(g => {
-              if (g.id !== m.id) {
-                if (g.kyHieu) otherKeys.add(norm(g.kyHieu));
-                if (g.vendorName) otherKeys.add(norm(g.vendorName));
-              }
-            });
-
-            // Bước 1: khớp chính xác theo kyHieu (bao gồm cả hai đều trống)
-            let pricingRows = (file.pricing || []).filter(p => norm(p.kyHieu) === mk);
-
-            // Bước 2: kyHieu generalInfo trống nhưng pricing rows không trống →
-            //         thử khớp kyHieu của pricing row theo vendorName (e.g. generalInfo.kyHieu='' nhưng row.kyHieu='VN3')
-            if (pricingRows.length === 0 && !mk && m.vendorName) {
-              const mvk = norm(m.vendorName);
-              pricingRows = (file.pricing || []).filter(p => norm(p.kyHieu) === mvk);
-            }
-
-            // Bước 3: productType match, loại trừ rows thuộc vendor khác
-            if (pricingRows.length === 0 && m.productType) {
-              const mpt = norm(m.productType);
-              pricingRows = (file.pricing || []).filter(p => {
-                const pk = norm(p.kyHieu);
-                if (pk && otherKeys.has(pk)) return false;
-                const ppt = norm(p.productType || '');
-                return mpt && ppt && (ppt === mpt || ppt.includes(mpt) || mpt.includes(ppt));
-              });
-            }
-
-            // Bước 4 (fallback cuối): 1 vendor được chọn → lấy rows không thuộc vendor khác
-            if (pricingRows.length === 0 && matched.length === 1) {
-              pricingRows = (file.pricing || []).filter(p => {
-                const pk = norm(p.kyHieu);
-                return !pk || !otherKeys.has(pk);
-              });
-            }
-
-            if (pricingRows.length > 0) {
-              pricingRows.forEach((p, pi) => {
-                excelSelected.push({
-                  ...baseData,
-                  id: `${m.id}_${pi}`,
-                  size: p.size || m.chiTietSize || '',
-                  optional: p.optional || '',
-                  product_type: p.productType || '',
-                  eco_total: p.eco_total ?? null,
-                  eco_price: p.eco_price ?? null,
-                  pricing1: p.pricing1 ?? null,
-                  pricing2: p.pricing2 ?? null,
-                  fast_total: p.fast_total ?? null,
-                  fast_price: p.fast_price ?? null,
-                  express_total: p.express_total ?? null,
-                  express_price: p.express_price ?? null,
-                  ground_total: p.ground_total ?? null,
-                  ground_price: p.ground_price ?? null,
-                  twoday_total: p.twoday_total ?? null,
-                  twoday_price: p.twoday_price ?? null,
-                  overnight_total: p.overnight_total ?? null,
-                  overnight_price: p.overnight_price ?? null,
-                });
-              });
-            } else {
-              excelSelected.push({ ...baseData, id: m.id, size: m.chiTietSize || '' });
-            }
-          });
-        }
+        const ids = (file.generalInfo || []).filter(r => selectedIds.has(r.id)).map(r => r.id);
+        if (ids.length) selected.push(...buildAssignedVendors(file, ids, { providedAt }));
       });
-      selected = excelSelected;
     }
 
     const productId = filterProductId;
     if (!productId) { setToast({ type: 'error', msg: 'Không xác định được sản phẩm.' }); setAssignConfirmOpen(false); return; }
-    
+
     if (selected.length === 0) {
       setToast({ type: 'error', msg: 'Không tìm thấy dữ liệu vendor đã chọn.' });
       setAssignConfirmOpen(false);
       return;
     }
 
-    const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = selected; lsSet(LS_PRODUCT_VENDORS, all);
-    window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
+    setAssigning(true);
+    try {
+      // Gộp với danh sách đang có trên server — gán thêm không được xoá vendor
+      // đã cung cấp trước đó. Đọc server thay vì cache local vì máy khác có thể
+      // vừa cung cấp thêm.
+      let existing = lsGet(LS_PRODUCT_VENDORS, {})[productId] || [];
+      try {
+        const res = await productApi.getById(productId);
+        const product = res?.data?.data ?? res?.data;
+        if (product && 'assigned_vendors' in product) existing = parseAssigned(product.assigned_vendors);
+      } catch {
+        // không đọc được thì gộp với bản cache local
+      }
+      const merged = mergeAssignedVendors(existing, selected);
 
-    // Đồng bộ lên API để các thiết bị khác nhận được
-    productApi.assignVendors(productId, selected).catch(err => {
-      console.error('Lỗi đồng bộ vendor lên API:', err);
-    });
+      await productApi.assignVendors(productId, merged);
 
-    setToast({ type: 'success', msg: `Đã gán ${selected.length} vendor cho sản phẩm!` });
-    setSelectedIds(new Set());
-    setAssignConfirmOpen(false);
-    onAssignComplete();
+      const all = lsGet(LS_PRODUCT_VENDORS, {}); all[productId] = merged; lsSet(LS_PRODUCT_VENDORS, all);
+      window.dispatchEvent(new StorageEvent('storage', { key: LS_PRODUCT_VENDORS }));
+
+      setToast({ type: 'success', msg: `Đã gán ${selectedIds.size} vendor cho sản phẩm!` });
+      setSelectedIds(new Set());
+      setAssignConfirmOpen(false);
+      await leaveLibraryFileWindow(navigate);
+      onAssignComplete();
+    } catch (err) {
+      setToast({ type: 'error', msg: `Chưa gán được vendor: ${getDetailedError(err)}` });
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const getDetailedError = (err) => {
@@ -631,6 +596,26 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     );
   };
 
+  // Nút gán ngay trong cửa sổ file — thanh nổi phía dưới nằm ngoài cửa sổ và
+  // dễ bị bỏ qua khi đang cuộn bảng phôi.
+  const assignFromWindowButton = filterProductId ? (
+    <button
+      type="button"
+      onClick={openAssignConfirm}
+      disabled={selectedIds.size === 0}
+      title={selectedIds.size === 0 ? 'Tick chọn phôi trong bảng trước' : undefined}
+      style={{
+        padding: '6px 14px', borderRadius: 9, border: 'none', whiteSpace: 'nowrap',
+        background: selectedIds.size === 0 ? HC.muted2 : HC.success, color: '#fff',
+        fontSize: 12, fontWeight: 900, cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer',
+      }}
+    >
+      {selectedIds.size === 0
+        ? `Tick phôi để gán cho “${filterProductType || 'sản phẩm'}”`
+        : `Gán ${selectedIds.size} vendor cho “${filterProductType || 'sản phẩm'}”`}
+    </button>
+  ) : null;
+
   const TabButton = ({ id, label, icon }) => (
     <button
       onClick={() => setActiveTab(id)}
@@ -656,10 +641,10 @@ export default function VendorsSection({ filterProductType = '', filterProductId
           <div style={{ background: '#fff', borderRadius: 16, padding: '24px 32px', width: 400, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}></div>
             <h3 style={{ margin: '0 0 10px 0', fontSize: 18, color: HC.ink, fontWeight: 900 }}>Xác nhận gán Vendor</h3>
-            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted }}>Bạn có chắc chắn muốn gán <b>{selectedIds.size}</b> vendor đã chọn cho sản phẩm này không?</p>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: HC.muted }}>Gán <b>{selectedIds.size}</b> vendor đã chọn cho <b>{filterProductType || 'sản phẩm này'}</b>? Vendor đã cung cấp trước đó được giữ nguyên.</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button onClick={() => setAssignConfirmOpen(false)} style={{ padding: '10px 24px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={handleAssignVendor} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: HC.success, color: '#fff', fontSize: 13, fontWeight: 900, cursor: 'pointer' }}>Gán Vendor</button>
+              <button onClick={() => setAssignConfirmOpen(false)} disabled={assigning} style={{ padding: '10px 24px', borderRadius: 10, border: `1.5px solid ${HC.border}`, background: HC.surface, color: HC.muted, fontSize: 13, fontWeight: 800, cursor: assigning ? 'not-allowed' : 'pointer' }}>Hủy</button>
+              <button onClick={handleAssignVendor} disabled={assigning} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: assigning ? HC.muted2 : HC.success, color: '#fff', fontSize: 13, fontWeight: 900, cursor: assigning ? 'not-allowed' : 'pointer' }}>{assigning ? 'Đang gán…' : 'Gán Vendor'}</button>
             </div>
           </div>
         </div>
@@ -693,7 +678,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #0284c7`, background: '#fff', color: '#0284c7', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
             </div>
           )}
-          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} />
+          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} fileWindowActions={assignFromWindowButton} initialSearch={filterProductType} />
         </>
       )}
 
@@ -714,7 +699,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #eab308`, background: '#fff', color: '#ca8a04', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
             </div>
           )}
-          <VendorLibraryViewer mode="bestseller" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} />
+          <VendorLibraryViewer mode="bestseller" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} fileWindowActions={assignFromWindowButton} />
         </>
       )}
 

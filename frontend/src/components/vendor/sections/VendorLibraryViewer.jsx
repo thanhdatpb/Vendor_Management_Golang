@@ -1686,7 +1686,7 @@ export function ManualAddModal({ onClose, onSave, mode }) {
  *   vendor, tải template, import Excel, chia sẻ project) kể cả khi readOnly.
  *   Admin xem read-only nhưng có toàn quyền quản lý thư viện nên bật cờ này.
  */
-export default function VendorLibraryViewer({ readOnly = false, canManage = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared }) {
+export default function VendorLibraryViewer({ readOnly = false, canManage = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared, fileWindowActions = null, initialSearch = '' }) {
   // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1701,7 +1701,10 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   // File đang mở hộp thoại "Chia sẻ cho project" (null = đóng)
   const [shareTarget, setShareTarget] = useState(null);
   const [sharingSave, setSharingSave] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Đi từ "Duyệt Thư viện Vendor" của một request: ô tìm điền sẵn Product Type
+  // của request để khỏi phải lục cả thư viện. Người dùng xoá đi là xem tất cả.
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  useEffect(() => { setSearchQuery(initialSearch); }, [initialSearch]);
   // '' = mọi vendor. Danh sách lựa chọn suy từ chính các file đang thấy được
   // (vendorOptions, dưới) nên không cần đồng bộ với đâu khác.
   const [vendorFilter, setVendorFilter] = useState('');
@@ -2450,13 +2453,17 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
             </span>
           }
           actions={
-            <LibraryCopyLinkButton
-              file={openedFile}
-              onError={(err) => {
-                console.warn('Copy link file thư viện thất bại:', err?.message || err);
-                showToast('error', 'Copy link thất bại. Kiểm tra quyền truy cập clipboard rồi thử lại.');
-              }}
-            />
+            <>
+              {/* Nút của nơi gọi — ví dụ "Gán N vendor" khi đang tìm vendor cho một request */}
+              {fileWindowActions}
+              <LibraryCopyLinkButton
+                file={openedFile}
+                onError={(err) => {
+                  console.warn('Copy link file thư viện thất bại:', err?.message || err);
+                  showToast('error', 'Copy link thất bại. Kiểm tra quyền truy cập clipboard rồi thử lại.');
+                }}
+              />
+            </>
           }
           footer="Esc, bấm ra ngoài, hoặc nút Back của trình duyệt đều đóng cửa sổ này."
           guardWhileEditing={canManageLibrary}
@@ -2469,6 +2476,12 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
             onDelete={handleDelete}
             canShare={canManageLibrary}
             readOnly={readOnly}
+            // Ô tick chọn phôi để gán vendor — trước đây chỉ truyền cho card trong
+            // danh sách; từ khi file mở thành cửa sổ thì cột tick biến mất.
+            selectable={selectable}
+            selectedIds={selectedIds}
+            onSelectRow={onSelectRow}
+            onSelectAll={onSelectAll}
             bestSellerIds={bestSellerIds}
             toggleBestSeller={toggleBestSeller}
             mode={mode}

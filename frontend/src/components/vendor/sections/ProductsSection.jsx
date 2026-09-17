@@ -3,6 +3,7 @@ import { HC, LS_PRODUCT_VENDORS } from '../utils/constants';
 import { lsGet, lsSet, fmtDate, getMediaUrls } from '../utils/helpers';
 import { Spinner, EmptyState, Field, inp, focusStyle } from '../ui/VendorUI';
 import VendorViewerModal from '../components/VendorViewerModal';
+import ProvideVendorsDrawer from '../components/provideVendors/ProvideVendorsDrawer';
 import { productApi } from '../../../services/api';
 import { subscribeProductChanges } from '../../../services/echo';
 import { SearchOutlined } from '@ant-design/icons';
@@ -45,6 +46,8 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
   const [feedbackText, setFeedbackText] = useState('');
   const [sendingFeedback, setSendingFeedback] = useState(false);
   const [viewVendorProduct, setViewVendorProduct] = useState(null);
+  // Request đang mở ngăn kéo "Cung cấp vendor" (null = đóng)
+  const [provideProduct, setProvideProduct] = useState(null);
   const [productVendors, setProductVendors] = useState(() => lsGet(LS_PRODUCT_VENDORS, {}));
   const [libraryVendorCounts, setLibraryVendorCounts] = useState({});
   const [libraryVendorNames, setLibraryVendorNames] = useState({});
@@ -419,6 +422,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                   const apiAssignedVendors = parseAssignedVendors(p.assigned_vendors);
                   const assignedVendors = apiAssignedVendors.length > 0 ? apiAssignedVendors : (productVendors[p.id] || []);
                   const vendorNames = [...new Set(assignedVendors.map(v => (v.name || v.vendor_name || v['Vendor Name'] || '').toString().trim()).filter(Boolean))];
+                  const sourceFileCount = new Set(assignedVendors.map(v => v.source_file_id).filter(Boolean)).size;
                   const uniqueVendorCount = vendorNames.length || assignedVendors.length;
                   const hasVendors = assignedVendors.length > 0;
                   const aSelections = lsGet(LS_A_SELECTIONS, {})[p.id] || {};
@@ -473,6 +477,7 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
                             <span style={{ fontSize: 12, fontWeight: 700, color: HC.ink }}>
                               {vendorNames.length > 0 ? vendorNames.join(', ') : `${uniqueVendorCount} vendor`}
                             </span>
+                            {sourceFileCount > 0 && <span style={{ fontSize: 10.5, color: HC.muted }}>từ {sourceFileCount} file thư viện</span>}
                             {aSelectedCount > 0 && <span style={{ fontSize: 11, color: HC.success, fontWeight: 600 }}>✓ A đã chọn {aSelectedCount}</span>}
                           </div>
                         ) : libraryNames.length > 0 ? (
@@ -485,8 +490,8 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
 
                       <td style={{ padding: '12px 13px' }}>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={(e) => { e.stopPropagation(); onGotoVendors(p.product_type, p.id); }} style={{ padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orange}`, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: '#fff' }}>
-                            Tìm Vendor
+                          <button onClick={(e) => { e.stopPropagation(); setProvideProduct(p); }} style={{ padding: '5px 12px', borderRadius: 7, border: `1.5px solid ${HC.orange}`, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, cursor: 'pointer', fontSize: 11, fontWeight: 800, color: '#fff' }}>
+                            {hasVendors ? 'Sửa vendor' : 'Cung cấp Vendor'}
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleOpenDeadlineModal(p); }}
@@ -529,6 +534,29 @@ export default function ProductsSection({ onGotoVendors, selectedProductId, setS
             if (setSelectedProductId) {
               setSelectedProductId(null);
             }
+          }}
+        />
+      )}
+      {provideProduct && (
+        <ProvideVendorsDrawer
+          product={provideProduct}
+          requesterName={getSellerName(provideProduct)}
+          onClose={() => setProvideProduct(null)}
+          onBrowseLibrary={() => {
+            const p = provideProduct;
+            setProvideProduct(null);
+            onGotoVendors(p.product_type, p.id);
+          }}
+          onProvided={({ product, vendors, added, removed, refreshed }) => {
+            setSubmittedProducts(prev => prev.map(p => (p.id === product.id ? { ...p, assigned_vendors: vendors } : p)));
+            setProductVendors(lsGet(LS_PRODUCT_VENDORS, {}));
+            setProvideProduct(null);
+            const parts = [
+              added ? `cung cấp ${added} vendor` : null,
+              removed ? `gỡ ${removed} vendor` : null,
+              refreshed ? `cập nhật giá ${refreshed} vendor` : null,
+            ].filter(Boolean).join(', ');
+            showToast(`Đã ${parts || 'lưu thay đổi'} cho “${product.product_type || `#${product.id}`}”.${added && getSellerName(product) !== '—' ? ` ${getSellerName(product)} đã nhận thông báo.` : ''}`, 'success');
           }}
         />
       )}

@@ -38,11 +38,6 @@ export default function SellerDashboard() {
   const [productsTotalCount, setProductsTotalCount] = useState(null);
   const [priceSheetsTotalCount, setPriceSheetsTotalCount] = useState(null);
 
-  const handleViewVendorLibrary = (fileId) => {
-    setVendorHighlightFileId(fileId || null);
-    setActive('vendors');
-  };
-
   const PAGE_TITLES = {
     products: 'Danh Sách Sản Phẩm',
     vendors: 'Vendors — Nhà Cung Cấp',
@@ -252,7 +247,7 @@ export default function SellerDashboard() {
 
   const renderSection = () => {
     switch (active) {
-      case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} onViewVendorLibrary={handleViewVendorLibrary} onTotalCountChange={setProductsTotalCount} />;
+      case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} onTotalCountChange={setProductsTotalCount} />;
       case 'vendors': return <VendorsSection highlightFileId={vendorHighlightFileId} onHighlightCleared={() => setVendorHighlightFileId(null)} />;
       case 'setup_price': return <SetupPriceSection onTotalCountChange={setPriceSheetsTotalCount} />;
       default: return null;

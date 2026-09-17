@@ -746,16 +746,43 @@ public function approvedProducts()
 
         $this->clearProductsCache();
 
-        // Gửi thông báo cho Seller (người tạo sản phẩm)
-        if ($product->created_by) {
-            $firstVendorName = '';
-            if (!empty($vendors) && is_array($vendors) && isset($vendors[0])) {
-                $first = $vendors[0];
-                $firstVendorName = $first['vendorName'] ?? ($first['name'] ?? '');
+        // Gửi thông báo cho Seller (người tạo sản phẩm). Danh sách rỗng (Vendor
+        // gỡ hết) thì không báo "đã cung cấp 0 vendor".
+        $vendorList = is_array($vendors) ? array_values(array_filter($vendors, 'is_array')) : [];
+        if ($product->created_by && $vendorList !== []) {
+            // Một vendor có nhiều dòng (mỗi size một dòng) → gom theo tên.
+            $names     = [];
+            $fileIds   = [];
+            $fileNames = [];
+            foreach ($vendorList as $v) {
+                $name = trim((string) ($v['vendorName'] ?? ($v['name'] ?? '')));
+                if ($name !== '') {
+                    $names[$name] = true;
+                }
+                $fileId = trim((string) ($v['source_file_id'] ?? ''));
+                if ($fileId !== '') {
+                    $fileIds[$fileId] = true;
+                    $fileName = trim((string) ($v['source_file_name'] ?? ''));
+                    if ($fileName !== '') {
+                        $fileNames[$fileName] = true;
+                    }
+                }
             }
-            $vendorBody = $firstVendorName
-                ? "Vendor \"{$firstVendorName}\" đã được cung cấp cho request \"{$product->product_type}\"."
-                : "Request \"{$product->product_type}\" đã được cung cấp " . count($vendors) . " vendor để tham khảo.";
+            $names     = array_map('strval', array_keys($names));
+            $fileNames = array_map('strval', array_keys($fileNames));
+
+            if (count($names) === 1) {
+                $vendorBody = "Vendor \"{$names[0]}\" đã được cung cấp cho request \"{$product->product_type}\".";
+            } elseif (count($names) > 1) {
+                $shown = implode(', ', array_slice($names, 0, 5)) . (count($names) > 5 ? ', …' : '');
+                $vendorBody = count($names) . " vendor ({$shown}) đã được cung cấp cho request \"{$product->product_type}\".";
+            } else {
+                $vendorBody = "Request \"{$product->product_type}\" đã được cung cấp " . count($vendorList) . " vendor để tham khảo.";
+            }
+            if ($fileNames !== []) {
+                $vendorBody .= ' Nguồn: ' . implode(', ', array_slice($fileNames, 0, 3)) . (count($fileNames) > 3 ? ', …' : '') . '.';
+            }
+
             NotificationService::send(
                 $product->created_by,
                 'vendor_assigned',
@@ -765,6 +792,8 @@ public function approvedProducts()
                     'product_id'   => (int) $product->id,
                     'product_type' => $product->product_type,
                     'project'      => $product->creator?->project,
+                    'vendor_names' => $names,
+                    'file_ids'     => array_map('strval', array_keys($fileIds)),
                 ]
             );
         }

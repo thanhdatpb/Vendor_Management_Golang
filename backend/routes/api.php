@@ -154,6 +154,8 @@ Route::middleware(['auth:sanctum', 'seen'])->group(function () {
     //    "by-name" là {id} và link cũ theo tên file luôn trả 404.
     // Link riêng cho 1 file thư viện (/library/:fileId) — trả đúng 1 phần tử của
     // blob, đã lọc giá/AVG TG theo role và chặn 403 nếu ngoài phạm vi project.
+    // Danh sách file GỌN (không giá) cho ô tìm file khi cung cấp vendor cho request.
+    Route::get('/vendor-library/files', [VendorLibraryController::class, 'listFiles']);
     Route::get('/vendor-library/files/by-name/{filename}', [VendorLibraryController::class, 'showFileByName'])
         ->where('filename', '.*');
     Route::get('/vendor-library/files/{id}', [VendorLibraryController::class, 'showFile']);

@@ -2,10 +2,11 @@
 //  PRODUCT VIEWER MODAL (Seller)
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback } from 'react';
-import { LeftOutlined, RightOutlined, DeleteOutlined } from '@ant-design/icons';
+import { LeftOutlined, RightOutlined, DeleteOutlined, ExportOutlined, FileOutlined } from '@ant-design/icons';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_A_SELECTIONS, LS_B_SELECTIONS, LS_PRODUCT_VENDORS, LS_SAMPLE_DECISIONS, LS_A_FEEDBACK_RESPONSE, LS_B_SUBMITTED_FEEDBACK } from '../../constants/sellerTheme';
 import { lsGet, lsSet, fmtDate, getMediaUrls, getMediaUrl, getProductImages, getProductLinks, toImageEmbedUrl } from '../../utils/sellerHelpers';
 import { targetCostCeiling } from '../../utils/targetCost';
+import { libraryFilePath } from '../../utils/libraryFileLink';
 import { pushNotif } from '../../utils/notifUtils';
 import { Badge, CardHeader, InfoRow, Field, MediaGallery, inp, EMPTY_FORM } from './SellerUI';
 import useIsMobile from '../../hooks/useIsMobile';
@@ -16,7 +17,7 @@ function ThumbnailImg({ src }) {
   return <img src={src} alt="" loading="lazy" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 }
 
-export default function ProductViewerModal({ product, productVendors, onClose, getStatus, onViewVendorLibrary }) {
+export default function ProductViewerModal({ product, productVendors, onClose, getStatus }) {
   const isMobile = useIsMobile();
   // Ưu tiên dùng assigned_vendors từ API, fallback về localStorage
   const [vendors, setVendors] = useState(() => product?.assigned_vendors || productVendors[product?.id] || []);
@@ -703,13 +704,20 @@ export default function ProductViewerModal({ product, productVendors, onClose, g
                                         {!isWithinTarget && bestPrice != null && target != null && (
                                           <span style={{ padding: '1px 7px', borderRadius: 4, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 9, fontWeight: 700, color: '#dc2626' }}>Vượt target</span>
                                         )}
-                                        {onViewVendorLibrary && v.source_file_id && (
-                                          <button
-                                            onClick={() => { onClose(); onViewVendorLibrary(v.source_file_id); }}
-                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, fontWeight: 700, color: HC.orange, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 4, padding: '1px 7px', cursor: 'pointer' }}
+                                        {v.source_file_id && (
+                                          // Mở đúng file gốc (link riêng /library/:fileId) ở tab mới — modal
+                                          // này vẫn mở để so tiếp. File chưa chia sẻ cho project của Seller
+                                          // thì trang file tự báo 403; thông tin ở đây vẫn đủ để duyệt.
+                                          <a
+                                            href={libraryFilePath(v.source_file_id, v.source_file_name)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={e => e.stopPropagation()}
+                                            title={v.source_file_name ? `Mở file gốc: ${v.source_file_name}` : 'Mở file gốc trong Thư viện Vendor'}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 3, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 9, fontWeight: 700, color: HC.orangeDark, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 4, padding: '1px 7px', textDecoration: 'none' }}
                                             onMouseEnter={e => { e.currentTarget.style.background = HC.orangeMid; }}
                                             onMouseLeave={e => { e.currentTarget.style.background = HC.orangeLight; }}
-                                          >Xem thư viện</button>
+                                          ><FileOutlined aria-hidden="true" /> {v.source_file_name ? v.source_file_name.replace(/\.xlsx?$/i, '') : 'File gốc'} <ExportOutlined aria-hidden="true" /></a>
                                         )}
                                       </div>
                                     </td>

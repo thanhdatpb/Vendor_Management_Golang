@@ -47,7 +47,7 @@ function LinkPreviewImg({ src }) {
   );
 }
 
-export default function ProductsSection({ highlightedProductId, onHighlightCleared, onViewVendorLibrary, onTotalCountChange }) {
+export default function ProductsSection({ highlightedProductId, onHighlightCleared, onTotalCountChange }) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [viewProduct, setViewProduct] = useState(null);
@@ -1396,7 +1396,7 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
         </div>
       )}
 
-      {viewProduct && <ProductViewerModal product={viewProduct} productVendors={productVendors} onClose={() => setViewProduct(null)} getStatus={getStatus} onViewVendorLibrary={onViewVendorLibrary} />}
+      {viewProduct && <ProductViewerModal product={viewProduct} productVendors={productVendors} onClose={() => setViewProduct(null)} getStatus={getStatus} />}
 
       {/* ── Export Confirm Modal ── */}
       {showExportModal && (() => {

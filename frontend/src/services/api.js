@@ -317,6 +317,9 @@ export const vendorLibraryApi = {
   // Tra theo TÊN file: cứu link cũ trong mail (thông báo phát trước 2026-09
   // không mang `file_id`). Trả về file kèm id để chuyển hướng sang dạng chuẩn.
   getFileByName: (filename) => api.get(`/vendor-library/files/by-name/${encodeURIComponent(filename)}`),
+  // Danh sách file GỌN (id, tên, ngày nhập, Product Type, vendor, số đếm — không
+  // giá) cho ô "Tìm file trong thư viện" khi Vendor cung cấp vendor cho request.
+  listFiles: () => api.get('/vendor-library/files'),
   save: (data, mode = 'all') => api.post(`/vendor-library?mode=${mode}`, data),
   // Cập nhật nhẹ trạng thái Sample của 1 dòng generalInfo (không gửi cả blob)
   setSampleStatus: (rowId, sampleStatus) =>

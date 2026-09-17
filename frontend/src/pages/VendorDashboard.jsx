@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
@@ -36,8 +37,13 @@ export default function VendorDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLogout, setShowLogout] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
-  const [filterProductType, setFilterProductType] = useState('');
-  const [filterProductId, setFilterProductId] = useState('');
+  // Ngữ cảnh "đang tìm vendor cho request X" nằm trên URL
+  // (/vendor/library?assign=<id>&type=<Product Type>) — F5 hoặc mở file rồi
+  // Back vẫn còn, trước đây nằm trong state nên F5 là mất.
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const filterProductType = active === 'library' ? (searchParams.get('type') || '') : '';
+  const filterProductId = active === 'library' ? (searchParams.get('assign') || '') : '';
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [requestNotifications, setRequestNotifications] = useState([]);
   const [newsNotifications, setNewsNotifications] = useState([]);
@@ -171,14 +177,16 @@ export default function VendorDashboard() {
   useEffect(() => { if (!sidebarOpen) setShowLogout(false); }, [sidebarOpen]);
 
   const handleGotoVendors = (productType, productId) => {
-    setFilterProductType(productType); setFilterProductId(String(productId)); setActive('library');
+    const query = new URLSearchParams({ assign: String(productId), type: productType || '' });
+    navigate(`/vendor/library?${query}`);
   };
+  const handleClearFilter = () => navigate('/vendor/library', { replace: true });
   const handleAssignComplete = () => { setActive('products'); };
 
   const renderSection = () => {
     switch (active) {
       case 'products': return <ProductsSection onGotoVendors={handleGotoVendors} selectedProductId={selectedProductId} setSelectedProductId={setSelectedProductId} />;
-      case 'library': return <VendorsSection filterProductType={filterProductType} filterProductId={filterProductId} onClearFilter={() => { setFilterProductType(''); setFilterProductId(''); }} onAssignComplete={handleAssignComplete} />;
+      case 'library': return <VendorsSection filterProductType={filterProductType} filterProductId={filterProductId} onClearFilter={handleClearFilter} onAssignComplete={handleAssignComplete} />;
       case 'news': return <NewsManagementSection />;
       default: return null;
     }

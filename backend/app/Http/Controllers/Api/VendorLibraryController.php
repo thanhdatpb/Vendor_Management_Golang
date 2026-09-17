@@ -163,6 +163,89 @@ class VendorLibraryController extends Controller
     }
 
     /**
+     * DANH SÁCH FILE GỌN — nguồn của ô "Tìm file trong thư viện" khi Vendor cung
+     * cấp vendor cho một request.
+     *
+     * Chỉ trả phần cần để TÌM và CHỌN file (id, tên, ngày nhập, Product Type,
+     * tên vendor, số đếm) — KHÔNG có một khoá giá nào, không ảnh, không notes —
+     * nên an toàn cho mọi role. Nội dung đầy đủ của file chọn xong mới tải qua
+     * `showFile` (nơi lọc giá theo role).
+     *
+     * Phạm vi project giống hệt `showFile`: file ngoài phạm vi không xuất hiện.
+     * ETag theo (updated_at của blob, phạm vi project): mở lại ngăn kéo là 304.
+     */
+    public function listFiles(Request $request)
+    {
+        $user       = $request->user();
+        $projectKey = $this->fileProjectKey($user);
+
+        $row = $this->getRow();
+        $etag = '"' . sha1(implode('|', [
+            'vendor-library-file-list',
+            $row ? (string) $row->updated_at : '0',
+            $projectKey,
+        ])) . '"';
+
+        $ifNoneMatch = trim((string) $request->header('If-None-Match'));
+        if ($ifNoneMatch !== '' && $this->etagMatches($ifNoneMatch, $etag)) {
+            return response('', 304)->header('ETag', $etag);
+        }
+
+        $files = $row ? json_decode((string) $row->data, true) : [];
+        $list  = [];
+
+        foreach (is_array($files) ? $files : [] as $file) {
+            if (!is_array($file) || empty($file['id'])) {
+                continue;
+            }
+            if ($projectKey !== '' && !VendorLibraryIndexBuilder::fileVisibleToProject($file, $projectKey)) {
+                continue;
+            }
+
+            $general = is_array($file['generalInfo'] ?? null) ? $file['generalInfo'] : [];
+            $pricing = is_array($file['pricing'] ?? null) ? $file['pricing'] : [];
+
+            $vendors      = [];
+            $productTypes = [];
+            foreach ($general as $g) {
+                if (!is_array($g)) {
+                    continue;
+                }
+                $name = trim((string) ($g['vendorName'] ?? '')) ?: trim((string) ($g['kyHieu'] ?? ''));
+                if ($name !== '') {
+                    $vendors[$name] = true;
+                }
+                $type = trim((string) ($g['productType'] ?? ''));
+                if ($type !== '') {
+                    $productTypes[$type] = true;
+                }
+            }
+
+            $list[] = [
+                'id'           => (string) $file['id'],
+                'filename'     => (string) ($file['filename'] ?? ''),
+                'title'        => (string) ($file['title'] ?? ''),
+                'importedAt'   => $file['importedAt'] ?? null,
+                'sourceTab'    => $file['sourceTab'] ?? null,
+                'project'      => VendorLibraryIndexBuilder::fileProjectTag($file),
+                'vendors'      => array_map('strval', array_keys($vendors)),
+                'productTypes' => array_map('strval', array_keys($productTypes)),
+                'counts'       => [
+                    'generalInfo' => count($general),
+                    'pricing'     => count($pricing),
+                ],
+            ];
+        }
+
+        // File nhập gần nhất lên đầu — cùng thứ tự với danh sách thư viện.
+        usort($list, static fn (array $a, array $b) => strcmp((string) $b['importedAt'], (string) $a['importedAt']));
+
+        return response()->json($list)
+            ->header('ETag', $etag)
+            ->header('Cache-Control', 'private, must-revalidate');
+    }
+
+    /**
      * MỘT FILE THEO ID — nguồn dữ liệu cho link riêng `/library/:fileId`.
      *
      * Trước đây muốn xem một file phải gọi `getLibrary` và tải NGUYÊN blob của

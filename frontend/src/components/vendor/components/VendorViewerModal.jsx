@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ExportOutlined, FileOutlined } from '@ant-design/icons';
 import { HC, LS_PRODUCT_VENDORS, LS_B_SELECTIONS } from '../utils/constants';
 import { lsGet, lsSet, getMediaUrls, fmtDate } from '../utils/helpers';
 import { pushNotif } from '../../../utils/notifUtils';
 import { targetCostCeiling } from '../../../utils/targetCost';
+import { libraryFilePath } from '../../../utils/libraryFileLink';
 import PriceComparisonMatrix from './PriceComparisonMatrix';
 import Lightbox from './Lightbox';
 import { BestSellerBadge } from '../ui/VendorUI';
@@ -482,6 +484,15 @@ export default function VendorViewerModal({ product, onClose }) {
                                       )}
                                       {!isWithinTarget && bestPrice != null && target != null && (
                                         <span style={{ padding: '1px 7px', borderRadius: 4, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 9, fontWeight: 700, color: '#dc2626' }}>Vượt target</span>
+                                      )}
+                                      {v.source_file_id && (
+                                        <a
+                                          href={libraryFilePath(v.source_file_id, v.source_file_name)}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          title={v.source_file_name ? `Mở file gốc: ${v.source_file_name}` : 'Mở file gốc trong Thư viện Vendor'}
+                                          style={{ display: 'inline-flex', alignItems: 'center', gap: 3, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 9, fontWeight: 700, color: HC.orangeDark, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 4, padding: '1px 7px', textDecoration: 'none' }}
+                                        ><FileOutlined aria-hidden="true" /> {v.source_file_name ? v.source_file_name.replace(/\.xlsx?$/i, '') : 'File gốc'} <ExportOutlined aria-hidden="true" /></a>
                                       )}
                                     </div>
                                   </td>
