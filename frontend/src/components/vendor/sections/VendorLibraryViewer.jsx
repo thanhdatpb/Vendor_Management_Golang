@@ -1705,6 +1705,12 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   // '' = mọi vendor. Danh sách lựa chọn suy từ chính các file đang thấy được
   // (vendorOptions, dưới) nên không cần đồng bộ với đâu khác.
   const [vendorFilter, setVendorFilter] = useState('');
+  // '' = mọi project. Chỉ có ở view quản lý thư viện (Vendor/Admin) — Seller/
+  // CSF/PD vốn đã bị giới hạn theo project của tài khoản.
+  const [projectFilter, setProjectFilter] = useState('');
+  // Quản lý thư viện = thêm vendor / template / import Excel / chia sẻ project.
+  // Vendor (không readOnly) và Admin (readOnly nhưng canManage) đều được.
+  const canManageLibrary = !readOnly || canManage;
   const fileInputRef = useRef(null);
   const highlightRef = useRef(null);
   // Bỏ qua đúng một tín hiệu realtime kế tiếp — dùng khi chính máy này vừa ghi
@@ -1870,6 +1876,12 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     if (vendorFilter) {
       files = files.filter(file => fileVendorNames(file).includes(vendorFilter));
     }
+    // Lọc theo project do Vendor/Admin chọn: dùng đúng quy tắc quyết định seller
+    // của project đó thấy file nào — file share All + file share cho project đó
+    // (file cũ chưa share thì theo ký hiệu P.xxx trong tên, không có ký hiệu = All).
+    if (canManageLibrary && projectFilter) {
+      files = files.filter(file => fileVisibleToProject(file, projectFilter));
+    }
     // Lọc theo project của user (chỉ áp dụng khi readOnly — Staff B/Admin thấy tất cả).
     // Tab "New Arrivals" (new_products): vendor upload lên đây phải hiển thị cho TẤT CẢ
     // project/seller, không lọc theo project.
@@ -1889,7 +1901,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
       const tb = timeValue(b.importedAt);
       return tb - ta;
     });
-  }, [libraryFiles, mode, bestSellerIds, searchQuery, vendorFilter]);
+  }, [libraryFiles, mode, bestSellerIds, searchQuery, vendorFilter, canManageLibrary, projectFilter]);
 
   const displayFileGroups = useMemo(
     () => groupLibraryFilesByMonth(displayFiles),
@@ -1967,10 +1979,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
   }, [fetchLibrary]);
-
-  // Quản lý thư viện = thêm vendor / template / import Excel / chia sẻ project.
-  // Vendor (không readOnly) và Admin (readOnly nhưng canManage) đều được.
-  const canManageLibrary = !readOnly || canManage;
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -2252,6 +2260,27 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
             <option value="">Tất cả vendor</option>
             {vendorOptions.map(v => <option key={v} value={v}>{v}</option>)}
           </select>
+          {/* Lọc theo project — thứ tự theo PROJECTS (Happy, Creative, Global, Hapify84) */}
+          {canManageLibrary && (
+            <select
+              value={projectFilter}
+              onChange={e => setProjectFilter(e.target.value)}
+              title="Lọc theo project được chia sẻ"
+              aria-label="Lọc theo project"
+              style={{
+                paddingLeft: 12, paddingRight: 28, paddingTop: 7, paddingBottom: 7,
+                borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`,
+                background: HC.surface, color: projectFilter ? HC.ink : HC.muted, fontSize: 12,
+                fontFamily: "'Inter',sans-serif", outline: 'none', cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)', maxWidth: 170,
+              }}
+              onFocus={e => { e.target.style.borderColor = HC.orangeDark; e.target.style.boxShadow = `0 0 0 3px ${HC.orangeGlow}`; }}
+              onBlur={e => { e.target.style.borderColor = HC.borderStrong; e.target.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
+            >
+              <option value="">Tất cả Project</option>
+              {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
           <button
@@ -2345,7 +2374,10 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           }
 
           if (displayFiles.length === 0) {
-            const isSearch = !!searchQuery.trim() || !!vendorFilter;
+            const activeProject = canManageLibrary && projectFilter
+              ? (PROJECTS.find(p => p.id === projectFilter)?.label || projectFilter)
+              : '';
+            const isSearch = !!searchQuery.trim() || !!vendorFilter || !!activeProject;
             return (
               <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
                 <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>{isSearch ? '🔍' : (mode === 'bestseller' || mode === 'best_seller') ? '⭐' : '📂'}</div>
@@ -2354,10 +2386,12 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
                     ? `Không tìm thấy file nào khớp với "${searchQuery}"`
                     : vendorFilter
                       ? `Không có file nào của vendor "${vendorFilter}"`
-                      : (mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor mới'}
+                      : activeProject
+                        ? `Không có file nào chia sẻ cho ${activeProject}`
+                        : (mode === 'bestseller' || mode === 'best_seller') ? 'Chưa có sản phẩm nào được đánh dấu Best Seller' : 'Chưa có thư viện vendor mới'}
                 </div>
                 {isSearch
-                  ? <button onClick={() => { setSearchQuery(''); setVendorFilter(''); }} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 20, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>Xóa bộ lọc</button>
+                  ? <button onClick={() => { setSearchQuery(''); setVendorFilter(''); setProjectFilter(''); }} style={{ marginTop: 12, padding: '6px 16px', borderRadius: 20, border: `1px solid ${HC.borderStrong}`, background: HC.surface, color: HC.muted, fontSize: 12, cursor: 'pointer' }}>Xóa bộ lọc</button>
                   : (mode === 'bestseller' || mode === 'best_seller') && <div style={{ fontSize: 12, color: HC.muted2, marginTop: 6 }}>Hãy vào "Tổng quan Vendor & Sản phẩm" và click biểu tượng ⭐ trên sản phẩm để đánh dấu.</div>
                 }
               </div>
