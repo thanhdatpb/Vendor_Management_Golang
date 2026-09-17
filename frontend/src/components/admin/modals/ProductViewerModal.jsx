@@ -13,11 +13,15 @@ export default function ProductViewerModal({ product, onClose, onApprove, onReje
 
   const isVideo = (url) => url && (url.match(/\.(mp4|webm|mov)$/i) || url.includes('video'));
 
+  // Deadline do role Vendor đặt sau khi Admin duyệt → form chưa duyệt (chờ duyệt / từ chối)
+  // chưa có deadline, nên ẩn dòng Deadline và badge deadline ở header thẻ.
+  const showDeadline = product.status === 'approved';
+
   const productRows = [
     { label: 'Seller Name', value: product.seller_name || product.sellerName || product.user_name || product.userName || '—', color: HC.orange, bold: true },
     { label: 'Project', value: product.project || '—', color: HC.orangeDark, bold: true },
     { label: 'Date Request', value: fmtDate(product.created_at), color: HC.ink2, bold: false },
-    { label: 'Deadline', value: fmtDate(product.deadline_date), color: HC.danger, bold: true },
+    ...(showDeadline ? [{ label: 'Deadline', value: fmtDate(product.deadline_date), color: HC.danger, bold: true }] : []),
     { label: 'Product Type', value: product.product_type, color: HC.orangeDark, bold: true },
     { label: 'Đặc tính KT', value: product.other_specs, color: HC.ink2, bold: false },
     { label: 'Chất liệu', value: product.material, color: HC.ink2, bold: false },
@@ -178,7 +182,7 @@ export default function ProductViewerModal({ product, onClose, onApprove, onReje
               border: `1.5px solid ${HC.border}`,
               boxShadow: `0 4px 18px ${HC.orangeGlow}`
             }}>
-              <CardHeader icon="📦" title="Thông tin sản phẩm" subtitle="Product details" badge={fmtDate(product.deadline_date) || 'No deadline'} />
+              <CardHeader icon="📦" title="Thông tin sản phẩm" subtitle="Product details" badge={showDeadline ? (fmtDate(product.deadline_date) || 'No deadline') : undefined} />
               <div style={{ background: HC.surface }}>
                 {productRows.map((r, idx) => <InfoRow key={r.label} label={r.label} value={r.value} valueColor={r.color} valueBold={r.bold} idx={idx} isLast={idx === productRows.length - 1} />)}
               </div>

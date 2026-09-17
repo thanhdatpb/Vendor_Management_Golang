@@ -4,8 +4,9 @@
 //  Trước đây modal chỉ có 7 cột rút gọn và không bấm được vào dòng nào. Test
 //  này chốt 2 điều: (1) bộ cột trùng với bảng danh sách sản phẩm của role
 //  Vendor (ID / Project / Nhân sự request / Product Type / Ảnh / Ngày request /
-//  Deadline Date / Vendor), (2) bấm vào 1 dòng thì gọi API lấy bản đầy đủ và mở
-//  modal chi tiết sản phẩm giống role Vendor.
+//  Deadline Date / Vendor — 2 cột cuối chỉ ở Đã duyệt / Tất cả, vì vendor chỉ gán
+//  vendor + đặt deadline sau khi Admin duyệt), (2) bấm vào 1 dòng thì gọi API lấy
+//  bản đầy đủ và mở modal chi tiết sản phẩm giống role Vendor.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
@@ -81,6 +82,26 @@ describe('FormHistoryModal — bộ cột', () => {
 
     rerender(<FormHistoryModal {...baseProps} initialStatus="all" />);
     expect(screen.getByRole('columnheader', { name: 'Trạng thái' })).toBeInTheDocument();
+  });
+
+  it('ẩn cột Deadline Date / Vendor ở Chờ duyệt và Từ chối, hiện ở Tất cả', () => {
+    const pending = product({ status: 'pending', deadline_date: null, assigned_vendors: null });
+    const expectVendorCols = (visible) => ['Deadline Date', 'Vendor'].forEach(col => {
+      const header = screen.queryByRole('columnheader', { name: col });
+      if (visible) expect(header).toBeInTheDocument();
+      else expect(header).not.toBeInTheDocument();
+    });
+
+    const { rerender } = render(<FormHistoryModal {...baseProps} initialStatus="pending" allProducts={[pending]} />);
+    expect(screen.getByText('Wrapped Canvas')).toBeInTheDocument();
+    expectVendorCols(false);
+
+    rerender(<FormHistoryModal {...baseProps} initialStatus="rejected" allProducts={[{ ...pending, status: 'rejected' }]} />);
+    expect(screen.getByText('Wrapped Canvas')).toBeInTheDocument();
+    expectVendorCols(false);
+
+    rerender(<FormHistoryModal {...baseProps} initialStatus="all" allProducts={[pending, product({ id: 6 })]} />);
+    expectVendorCols(true);
   });
 
   it('điền dữ liệu request: nhân sự, product type, vendor đã gán', () => {

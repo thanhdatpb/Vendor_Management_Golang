@@ -142,6 +142,9 @@ export default function FormHistoryModal({ open, onClose, title, filterType, fil
   // Chỉ hiện cột Trạng thái khi danh sách trộn nhiều trạng thái; khi đã lọc sẵn
   // (Đã duyệt / Chờ duyệt / Từ chối) thì bảng giữ đúng bộ cột như Danh sách sản phẩm.
   const showStatusCol = filterStatus === 'all';
+  // Role Vendor chỉ gán vendor + đặt deadline sau khi Admin duyệt request → khi lọc
+  // Chờ duyệt / Từ chối thì 2 cột này luôn trống, nên chỉ hiện ở Đã duyệt và Tất cả.
+  const showVendorCols = filterStatus === 'all' || filterStatus === 'approved';
 
   const getStatusBadge = (status) => {
     const realStatus = status === 'reject' ? 'rejected' : status;
@@ -234,8 +237,8 @@ export default function FormHistoryModal({ open, onClose, title, filterType, fil
                   <th style={thStyle}>Product Type</th>
                   <th style={thStyle}>Ảnh</th>
                   <th style={thStyle}>Ngày request</th>
-                  <th style={thStyle}>Deadline Date</th>
-                  <th style={thStyle}>Vendor</th>
+                  {showVendorCols && <th style={thStyle}>Deadline Date</th>}
+                  {showVendorCols && <th style={thStyle}>Vendor</th>}
                   {showStatusCol && <th style={thStyle}>Trạng thái</th>}
                 </tr>
               </thead>
@@ -259,8 +262,8 @@ export default function FormHistoryModal({ open, onClose, title, filterType, fil
                     <td style={{ ...tdStyle, fontWeight: 800 }}>{product.product_type || '—'}</td>
                     <td style={tdStyle}><MediaGallery mediaUrls={getMediaUrls(product)} /></td>
                     <td style={tdStyle}>{fmtDate(product.created_at)}</td>
-                    <td style={tdStyle}>{fmtDate(product.deadline_date)}</td>
-                    <td style={tdStyle}>{renderVendorCell(product)}</td>
+                    {showVendorCols && <td style={tdStyle}>{fmtDate(product.deadline_date)}</td>}
+                    {showVendorCols && <td style={tdStyle}>{renderVendorCell(product)}</td>}
                     {showStatusCol && <td style={tdStyle}>{getStatusBadge(product.status)}</td>}
                   </tr>
                 ))}

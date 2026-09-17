@@ -454,7 +454,9 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
     return () => { clearInterval(interval); unsubscribe(); };
   }, [loadAllData, loadPending, loadHistoryList]);
 
-  const TABLE_COLS = ['STT', 'Project', 'Product Type', 'Hình ảnh', 'Date Request', 'Deadline', 'Trạng thái', 'Thao tác'];
+  // Không có cột Deadline: deadline do role Vendor đặt (kèm gán vendor) sau khi Admin
+  // duyệt, nên form đang chờ duyệt luôn chưa có deadline.
+  const TABLE_COLS = ['STT', 'Project', 'Product Type', 'Hình ảnh', 'Date Request', 'Trạng thái', 'Thao tác'];
 
   const sHdr = { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' };
   const h3S = { fontSize: 15, fontWeight: 900, color: HC.ink, margin: 0, fontFamily: "'Inter',sans-serif" };
@@ -592,7 +594,6 @@ export default function OverviewSection({ externalViewProduct, setExternalViewPr
                     cell(p.product_type || p.category || p.name || '—', { color: HC.orangeDark, fontWeight: 700 }),
                     cell(<MediaGallery mediaUrls={getMediaUrls(p)} />),
                     cell(fmtDate(p.created_at)),
-                    cell(fmtDate(p.deadline_date)),
                     cell(<Badge status="pending" />),
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <button
