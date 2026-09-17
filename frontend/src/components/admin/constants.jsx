@@ -27,7 +27,7 @@ export const MENU = [
 
 export const PAGE_TITLES = {
   overview: 'Overview — Tổng Quan',
-  vendors: 'Vendors — Thư Viện Vendor',
+  vendors: 'Thư Viện Vendor',
   pricesheets: 'Danh sách bảng tính giá',
   staff: 'Quản Lý Nhân Sự',
 };

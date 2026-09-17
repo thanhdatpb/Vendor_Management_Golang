@@ -35,8 +35,6 @@ export default function CsfDashboard({ basePath = '/csf', roleLabel = 'CSF', lib
   const [active, setActive] = useSectionRoute({ basePath, sections: PROJECT_SECTIONS, fallback: 'happy' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const activeLabel = PROJECT_MENU.find(m => m.id === active)?.label || '';
-
   return (
     <>
       <style>{`
@@ -66,7 +64,7 @@ export default function CsfDashboard({ basePath = '/csf', roleLabel = 'CSF', lib
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 4, height: 32, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
               <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em' }}>
-                Thư Viện Vendor — {activeLabel}
+                Thư Viện Vendor
               </div>
             </div>
             <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>

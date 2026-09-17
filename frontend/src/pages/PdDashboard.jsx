@@ -35,7 +35,6 @@ export default function PdDashboard() {
     [projectMenu],
   );
   const [projectKey, setActive] = useSectionRoute({ basePath: '/pd', sections: projectSections });
-  const activeLabel = projectMenu.find(m => m.id === projectKey)?.label || '';
 
   return (
     <>
@@ -66,7 +65,7 @@ export default function PdDashboard() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 4, height: 32, borderRadius: 99, background: `linear-gradient(to bottom, ${HC.orange}, ${HC.orangeDark})`, flexShrink: 0 }} />
               <div style={{ color: HC.ink, fontWeight: 900, fontSize: 16, fontFamily: "'Inter',sans-serif", letterSpacing: '-0.01em' }}>
-                Thư Viện Vendor {activeLabel ? `— ${activeLabel}` : ''}
+                Thư Viện Vendor
               </div>
             </div>
             <div style={{ color: HC.muted, fontSize: 12, fontWeight: 600 }}>

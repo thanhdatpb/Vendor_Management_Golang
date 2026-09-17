@@ -40,7 +40,7 @@ export default function SellerDashboard() {
 
   const PAGE_TITLES = {
     products: 'Danh Sách Sản Phẩm',
-    vendors: 'Vendors — Nhà Cung Cấp',
+    vendors: 'Thư Viện Vendor',
     setup_price: 'Setup Price — Cài Đặt Giá',
   };
 
