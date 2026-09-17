@@ -20,6 +20,7 @@ import { fileSharedProjects, fileVisibleToProject, PROJECTS } from '../../../con
 import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../../utils/vnTime';
 import { libraryFilePath, parseLibraryFilePath } from '../../../utils/libraryFileLink';
 import { groupLibraryFilesByMonth } from '../../../utils/libraryMonthGroups';
+import { pricingRowOwners, filterLibraryEntryByVendor, unwrapLibraryVendorView } from '../../../utils/libraryVendorFilter';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -766,30 +767,9 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
   );
 
 
-  // Strip parens/quotes/extra-spaces so "Canvas (1.5")" matches "Canvas 1.5""
-  const normStr = s => (s || '').toString().trim().toLowerCase().replace(/[()'"""'']/g, '').replace(/\s+/g, ' ').trim();
-
-  // kyHieu → vendorName từ generalInfo
-  const kyHieuToVendor = {};
-  (generalInfo || []).forEach(r => { if (r.kyHieu) kyHieuToVendor[r.kyHieu] = r.vendorName || r.kyHieu || ''; });
-
-  // productType → vendorName từ generalInfo (dùng khi pricing row không có kyHieu)
-  const ptToVendor = {};
-  (generalInfo || []).forEach(g => { if (g.productType && g.vendorName) ptToVendor[normStr(g.productType)] = g.vendorName; });
-
-  // Vendor không có kyHieu trong generalInfo → dùng làm fallback cho pricing rows không có kyHieu
-  const untaggedVendorNames = [...new Set((generalInfo || []).filter(g => !g.kyHieu && g.vendorName).map(g => g.vendorName))];
-  const untaggedVendorName = untaggedVendorNames.length === 1 ? untaggedVendorNames[0] : '';
-
-  const uniqueVendorNames = [...new Set((generalInfo || []).map(g => g.vendorName || g.kyHieu).filter(Boolean))];
-
-  // Sticky kyHieu propagation: nhiều Excel chỉ ghi kyHieu ở row đầu của mỗi vendor block
-  let _lastKy = '';
-  const processedRows = rows.map(r => {
-    const pk = (r.kyHieu || '').trim();
-    if (pk) _lastKy = pk;
-    return { ...r, _effKy: pk || _lastKy };
-  });
+  // Vendor của từng dòng — dùng chung với ô lọc theo vendor để hai chỗ không lệch nhau
+  const rowOwners = pricingRowOwners(rows, generalInfo);
+  const processedRows = rows.map((r, i) => ({ ...r, _vendorName: rowOwners[i].vendor }));
 
   const startEdit = (idx, row) => {
     setEditIdx(idx);
@@ -921,27 +901,11 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
                 <td style={{ ...TD(i), textAlign: 'center', verticalAlign: 'middle' }}>
                   {isEditing ? (
                     <input type="text" placeholder="A, B..." value={editForm.kyHieu} onChange={e => setEditForm(p => ({ ...p, kyHieu: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', fontWeight: 900, color: HC.orangeDark }} />
-                  ) : (() => {
-                    const vName = (() => {
-                      // 1. Dùng effective kyHieu (có sticky propagation)
-                      if (r._effKy) return kyHieuToVendor[r._effKy] || r._effKy;
-                      // 2. Lookup trực tiếp theo productType từ generalInfo
-                      const rpt = normStr(r.productType);
-                      if (rpt) {
-                        if (ptToVendor[rpt]) return ptToVendor[rpt];
-                        const matchKey = Object.keys(ptToVendor).find(k => k.includes(rpt) || rpt.includes(k));
-                        if (matchKey) return ptToVendor[matchKey];
-                      }
-                      // 3. Nếu generalInfo chỉ có 1 vendor không có kyHieu → dùng làm mặc định
-                      if (untaggedVendorName) return untaggedVendorName;
-                      // 4. Nếu cả file chỉ có 1 vendor duy nhất
-                      if (uniqueVendorNames.length === 1) return uniqueVendorNames[0];
-                      return '';
-                    })();
-                    return vName
-                      ? <span style={{ fontWeight: 700, color: HC.ink }}>{vName}</span>
-                      : <span style={naStyle}>N/A</span>;
-                  })()}
+                  ) : (
+                    r._vendorName
+                      ? <span style={{ fontWeight: 700, color: HC.ink }}>{r._vendorName}</span>
+                      : <span style={naStyle}>N/A</span>
+                  )}
                 </td>
                 <td style={{ ...TD(i) }}>
                   {isEditing ? (
@@ -1858,6 +1822,14 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   // File đã filter theo mode + search — dùng cho cả badge count lẫn list render
   const displayFiles = useMemo(() => {
     let files = libraryFiles;
+    // Lọc vendor ở mức DÒNG, không chỉ chọn file: file nhiều vendor (CN1, VN1,
+    // VN3) chọn VN1 thì card + cửa sổ file chỉ còn phôi/dòng giá của VN1. Làm
+    // trước các bộ lọc khác để tìm kiếm cũng chỉ xét phôi của vendor đó.
+    if (vendorFilter) {
+      files = files
+        .map(file => filterLibraryEntryByVendor(file, vendorFilter))
+        .filter(file => file.generalInfo.length > 0);
+    }
     if (mode === 'bestseller' || mode === 'best_seller') {
       files = files.map(file => {
         if (!file.generalInfo) return file;
@@ -1876,9 +1848,6 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
         (file.generalInfo || []).some(r => (r.productType || '').toLowerCase().includes(q)) ||
         (file.pricing || []).some(r => (r.productType || '').toLowerCase().includes(q))
       );
-    }
-    if (vendorFilter) {
-      files = files.filter(file => fileVendorNames(file).includes(vendorFilter));
     }
     // Lọc theo project do Vendor/Admin chọn: dùng đúng quy tắc quyết định seller
     // của project đó thấy file nào — file share All + file share cho project đó
@@ -2000,11 +1969,22 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
   const routeFileId = parseLibraryFilePath(location.pathname)?.id || null;
   const [openedFileId, setOpenedFileId] = useState(routeFileId);
 
-  const openedFile = useMemo(() => {
+  const openedRawFile = useMemo(() => {
     const id = openedFileId || routeFileId;
     if (!id) return null;
     return rawFiles.find((f) => String(f.id) === id) || null;
   }, [openedFileId, routeFileId, rawFiles]);
+
+  // Đang lọc theo vendor thì cửa sổ cũng chỉ hiện phôi + dòng giá của vendor
+  // đó. File không có vendor này (VD: mở thẳng bằng link) thì hiện đủ file.
+  const openedFile = useMemo(() => {
+    if (!openedRawFile || !vendorFilter) return openedRawFile;
+    const view = filterLibraryEntryByVendor(openedRawFile, vendorFilter);
+    return view.generalInfo.length > 0 ? view : openedRawFile;
+  }, [openedRawFile, vendorFilter]);
+  const openedFileHiddenCount = openedFile && openedFile !== openedRawFile
+    ? (openedRawFile.generalInfo?.length || 0) - (openedFile.generalInfo?.length || 0)
+    : 0;
 
   // Back/Forward của trình duyệt phải đóng/mở đúng modal dù dashboard đang được
   // React Router giữ ở location nền và vì vậy useLocation() bên trong danh sách
@@ -2150,10 +2130,13 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     // Ở các tab lọc dòng (VD: Best Seller chỉ hiện dòng best-seller), generalInfo
     // truyền lên đây chỉ là tập ĐÃ LỌC. Ghi đè nguyên file bằng tập này sẽ xóa mất
     // các dòng đang bị ẩn → hợp nhất theo id với bản gốc (rawFiles) trước khi lưu.
+    // Đang lọc theo vendor thì "Về giá" chỉ còn dòng của vendor đó — ghép lại
+    // với dòng của vendor khác (dòng giá không có id nên ghép theo vendor).
     const rawEntry = rawFiles.find(e => e.id === updatedEntry.id);
+    const entry = unwrapLibraryVendorView(rawEntry, updatedEntry);
     const merged = rawEntry
-      ? { ...updatedEntry, generalInfo: mergeGeneralInfoById(rawEntry.generalInfo, updatedEntry.generalInfo) }
-      : updatedEntry;
+      ? { ...entry, generalInfo: mergeGeneralInfoById(rawEntry.generalInfo, entry.generalInfo) }
+      : entry;
     const updated = rawFiles.map(e => e.id === merged.id ? merged : e);
     await saveLibrary(updated);
   };
@@ -2251,6 +2234,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
             value={vendorFilter}
             onChange={e => setVendorFilter(e.target.value)}
             title="Lọc theo vendor"
+            aria-label="Lọc theo vendor"
             style={{
               paddingLeft: 12, paddingRight: 28, paddingTop: 7, paddingBottom: 7,
               borderRadius: 20, border: `1.5px solid ${HC.borderStrong}`,
@@ -2300,7 +2284,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
               transition: 'all 0.15s', opacity: exporting ? 0.6 : 1,
             }}
           >
-            📤 Export file Vendor
+            Export file Vendor
           </button>
           {canManageLibrary && (
           <>
@@ -2316,14 +2300,14 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
                 transition: 'all 0.15s',
               }}
             >
-              📄 Template mẫu
+              Template mẫu
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
               style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: importing ? HC.muted2 : `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 12, fontWeight: 800, cursor: importing ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
             >
-              {importing ? 'Đang import...' : 'Import thư viện Excel'}
+              {importing ? 'Đang import...' : 'Import file excel'}
             </button>
           </>
           )}
@@ -2444,14 +2428,29 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
           title={openedFile.filename.replace(/\.xlsx?$/i, '')}
           subtitle={`${openedFile.generalInfo?.length || 0} phôi · ${openedFile.pricing?.length || 0} dòng giá · ${fmtVNDateTimeShort(openedFile.importedAt)}`}
           badges={
-            <span style={{
-              padding: '2px 8px', borderRadius: 99,
-              background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
-              color: HC.orangeDark, fontSize: 9.5, fontWeight: 800,
-              letterSpacing: '0.05em', textTransform: 'uppercase',
-            }}>
-              {fileVendorNames(openedFile).join(', ') || openedFile.title}
-            </span>
+            <>
+              <span style={{
+                padding: '2px 8px', borderRadius: 99,
+                background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`,
+                color: HC.orangeDark, fontSize: 9.5, fontWeight: 800,
+                letterSpacing: '0.05em', textTransform: 'uppercase',
+              }}>
+                {fileVendorNames(openedFile).join(', ') || openedFile.title}
+              </span>
+              {/* Nhắc đang xem bản lọc — không thì tưởng file mất phôi */}
+              {openedFileHiddenCount > 0 && (
+                <span
+                  title="Chọn “Tất cả vendor” ở danh sách để xem đủ file"
+                  style={{
+                    padding: '2px 8px', borderRadius: 99,
+                    background: HC.surface, border: `1px dashed ${HC.borderStrong}`,
+                    color: HC.muted, fontSize: 10, fontWeight: 700,
+                  }}
+                >
+                  Đang lọc vendor · ẩn {openedFileHiddenCount} phôi khác
+                </span>
+              )}
+            </>
           }
           actions={
             <>
