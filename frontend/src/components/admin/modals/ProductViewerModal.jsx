@@ -44,8 +44,8 @@ const splitSpecs = (text) => (typeof text === 'string'
   ? text.split(/[♦•\n]+/).map(s => s.trim().replace(/^[-*+]\s*/, '').trim()).filter(Boolean)
   : []);
 
-// Rộng 960px gốc + 2,5cm mỗi cạnh (1cm CSS ≈ 37,8px → ≈ 95px/cạnh).
-const MODAL_MAX_WIDTH = 'calc(960px + 5cm)';
+// Rộng 960px gốc + 4,5cm mỗi cạnh (2,5cm + 2cm nới thêm; 1cm CSS ≈ 37,8px → ≈ 170px/cạnh).
+const MODAL_MAX_WIDTH = 'calc(960px + 9cm)';
 
 const initials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
