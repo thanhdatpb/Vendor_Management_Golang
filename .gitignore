@@ -6,6 +6,7 @@ node_modules/
 .claude/
 .codex/
 .design-sync/
+.playwright-mcp/
 
 # Documents tài liệu liên quan đến hệ thống
 documents/
