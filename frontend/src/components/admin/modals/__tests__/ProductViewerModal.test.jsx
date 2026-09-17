@@ -72,6 +72,14 @@ describe('ProductViewerModal — bố cục thông tin request', () => {
     expect(items[1]).toHaveTextContent('Double-needle collar');
   });
 
+  it('Đặc tính KT xuống dòng kèm gạch đầu dòng "- " thì bỏ gạch, chỉ giữ dấu tick', () => {
+    renderModal(product({ other_specs: '- Ribbed knit makes the collar highly elastic\n- Twill tape covers the shoulder seams' }));
+
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent(/^Ribbed knit makes the collar highly elastic$/);
+  });
+
   it('Đặc tính KT không có ký tự tách thì hiện nguyên đoạn', () => {
     renderModal(product({ other_specs: 'Vải dày 250gsm' }));
 

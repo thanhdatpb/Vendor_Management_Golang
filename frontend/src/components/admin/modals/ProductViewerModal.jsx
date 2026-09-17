@@ -39,9 +39,13 @@ const shortUrl = (url) => {
 };
 
 // Seller hay nối các đặc tính bằng ♦ / • / xuống dòng → tách thành danh sách.
+// Bỏ gạch đầu dòng "- " Seller tự gõ để không bị 2 ký hiệu cạnh dấu tick.
 const splitSpecs = (text) => (typeof text === 'string'
-  ? text.split(/[♦•\n]+/).map(s => s.trim()).filter(Boolean)
+  ? text.split(/[♦•\n]+/).map(s => s.trim().replace(/^[-*+]\s*/, '').trim()).filter(Boolean)
   : []);
+
+// Rộng 960px gốc + 2,5cm mỗi cạnh (1cm CSS ≈ 37,8px → ≈ 95px/cạnh).
+const MODAL_MAX_WIDTH = 'calc(960px + 5cm)';
 
 const initials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
@@ -164,7 +168,7 @@ export default function ProductViewerModal({ product, onClose, onApprove, onReje
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(26,15,0,0.55)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)', padding: isMobile ? 8 : 16 }}>
-        <div role="dialog" aria-modal="true" aria-label={product.product_type || 'Chi tiết request'} onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 960, background: HC.surface, borderRadius: 16, boxShadow: '0 32px 80px rgba(26,15,0,0.28)', border: `1px solid ${HC.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '92vh', fontFamily: FONT }}>
+        <div role="dialog" aria-modal="true" aria-label={product.product_type || 'Chi tiết request'} onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: MODAL_MAX_WIDTH, background: HC.surface, borderRadius: 16, boxShadow: '0 32px 80px rgba(26,15,0,0.28)', border: `1px solid ${HC.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '92vh', fontFamily: FONT }}>
 
           {/* Header — Product Type làm tiêu đề, Seller / Project / ngày gửi gom 1 dòng */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 12 : 16, padding: isMobile ? '14px 14px 12px' : '18px 22px 16px', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, flexShrink: 0 }}>
