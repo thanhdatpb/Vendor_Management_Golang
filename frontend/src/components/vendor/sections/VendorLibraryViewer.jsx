@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════════════════════════
+﻿// ════════════════════════════════════════════════════════════════════════════
 //  VENDOR LIBRARY VIEWER — Thư Viện File (Happy Creative Format)
 //  Mỗi file Excel import → lưu localStorage → hiển thị thành card riêng
 // ════════════════════════════════════════════════════════════════════════════
@@ -442,13 +442,14 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
   // Lưu qua endpoint riêng (nhẹ) thay vì ghi đè cả blob thư viện.
   const isVendorUser = isCurrentUserVendor();
   const canToggleSample = isVendorUser && typeof onSampleStatusChange === 'function';
+  const showSelection = selectable && !isVendorUser;
 
   return (
     <table className="hc-library-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
       <thead>
         <tr>
           {!readOnly && <th style={{ ...TH({ background: '#8B6914' }), width: '3%', textAlign: 'center' }} title="Đánh dấu Best Seller">⭐</th>}
-          {selectable && (() => {
+          {showSelection && (() => {
             const allChecked = rows.length > 0 && rows.every(r => selectedIds?.has(r.id));
             const someChecked = !allChecked && rows.some(r => selectedIds?.has(r.id));
             return (
@@ -486,7 +487,7 @@ function GeneralInfoTable({ rows, onSave, readOnly, selectable, selectedIds, onS
                   <div style={{ fontSize: 16, transition: 'all 0.25s ease', transform: isBestSeller ? 'scale(1.25)' : 'scale(1)', opacity: isBestSeller ? 1 : 0.15, filter: isBestSeller ? 'drop-shadow(0 0 5px rgba(255,200,0,0.9))' : 'none' }}>⭐</div>
                 </td>
               )}
-              {selectable && (
+              {showSelection && (
                 <td style={{ ...TD(i), textAlign: 'center', cursor: 'pointer', userSelect: 'none' }} onClick={() => onSelectRow(r.id)}>
                   <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${selectedIds?.has(r.id) ? HC.orange : HC.muted2}`, background: selectedIds?.has(r.id) ? HC.orange : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', transition: 'all 0.15s', flexShrink: 0 }}>
                     {selectedIds?.has(r.id) && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900, lineHeight: 1 }}>✓</span>}
