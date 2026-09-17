@@ -95,6 +95,32 @@ describe('bốn trạng thái tải', () => {
     expect(vendorLibraryApi.getFile).toHaveBeenCalledTimes(2);
   });
 
+  it('đang tải → cửa sổ file hiện ngay, KHÔNG chen màn "Đang mở file..." riêng', async () => {
+    let resolveFile;
+    vendorLibraryApi.getFile.mockReturnValue(new Promise((resolve) => { resolveFile = resolve; }));
+
+    render(<LibraryFilePage />);
+
+    const dialog = screen.getByRole('dialog', { name: 'Đang mở file thư viện' });
+    expect(screen.getByRole('status', { name: 'Đang tải nội dung file' })).toBeInTheDocument();
+    expect(screen.queryByText('Đang mở file thư viện...')).not.toBeInTheDocument();
+
+    resolveFile({ data: file() });
+
+    // Dữ liệu điền vào ĐÚNG cửa sổ đang mở — không unmount rồi dựng lại.
+    expect(await screen.findByRole('dialog', { name: 'Baby Bodysuit' })).toBe(dialog);
+    expect(screen.queryByRole('status', { name: 'Đang tải nội dung file' })).not.toBeInTheDocument();
+  });
+
+  it('đang tải mà đóng → về mục thư viện của role', async () => {
+    vendorLibraryApi.getFile.mockReturnValue(new Promise(() => {}));
+
+    render(<LibraryFilePage />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Đóng cửa sổ file' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/vendors');
+  });
+
   it('tải xong → cửa sổ file với tên file trên tiêu đề', async () => {
     vendorLibraryApi.getFile.mockResolvedValue({ data: file() });
 

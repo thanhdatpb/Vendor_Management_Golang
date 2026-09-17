@@ -30,7 +30,7 @@ import {
 } from '../utils/libraryFileLink';
 import { fmtVNDateTimeShort } from '../utils/vnTime';
 
-/** Card trạng thái (đang tải / lỗi) — cùng khuôn với PriceSheetPage. */
+/** Card trạng thái lỗi (404 / 403 / mạng) — cùng khuôn với PriceSheetPage. */
 function StatusCard({ icon, title, message, actionLabel, onAction, backLabel, onBack }) {
   return (
     <div style={{
@@ -60,6 +60,67 @@ function StatusCard({ icon, title, message, actionLabel, onAction, backLabel, on
             }}>{backLabel}</button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const SHIMMER_CSS = `
+  @keyframes hcLibShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+  .hc-lib-loading-bar {
+    display: inline-block; vertical-align: middle; border-radius: 6px;
+    background: linear-gradient(90deg, ${HC.orangeLight} 25%, ${HC.orangePale} 50%, ${HC.orangeLight} 75%);
+    background-size: 200% 100%;
+    animation: hcLibShimmer 1.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .hc-lib-loading-bar { animation: none; } }
+`;
+
+/** Thanh chữ giả — giữ chỗ cho tên file / dòng đếm khi file chưa tải xong. */
+function LoadingBar({ width, height }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="hc-lib-loading-bar"
+      style={{ width, maxWidth: '100%', height }}
+    />
+  );
+}
+
+/** Khung nội dung giả: hàng tab mục + bảng, đúng bố cục cửa sổ sắp hiện. */
+function FileBodySkeleton() {
+  const columns = [1.2, 1, 2.4, 1, 1, 1.4];
+  return (
+    <div role="status" aria-label="Đang tải nội dung file">
+      <style>{SHIMMER_CSS}</style>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <LoadingBar width={170} height={30} />
+        <LoadingBar width={90} height={30} />
+      </div>
+      <div style={{
+        border: `1px solid ${HC.border}`, borderRadius: 12, overflow: 'hidden',
+        background: HC.surface,
+      }}>
+        {Array.from({ length: 9 }, (_, row) => (
+          <div
+            key={row}
+            style={{
+              display: 'grid', gap: 16, alignItems: 'center',
+              gridTemplateColumns: columns.map((w) => `${w}fr`).join(' '),
+              padding: row === 0 ? '12px 14px' : '14px',
+              background: row === 0 ? HC.surface2 : HC.surface,
+              borderTop: row === 0 ? 'none' : `1px solid ${HC.border}`,
+            }}
+          >
+            {columns.map((_, col) => (
+              <LoadingBar
+                key={col}
+                width={row === 0 ? '60%' : `${55 + ((row * 7 + col * 13) % 40)}%`}
+                height={row === 0 ? 9 : 11}
+              />
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -121,10 +182,6 @@ export default function LibraryFilePage({ initialFile = null }) {
 
   useEffect(() => { load(); }, [load]);
 
-  if (status === 'loading') {
-    return <StatusCard icon="⏳" title="Đang mở file thư viện..." message="Vui lòng chờ trong giây lát." />;
-  }
-
   if (status === 'not_found') {
     return (
       <StatusCard icon="🔍" title="Không tìm thấy file này"
@@ -150,6 +207,32 @@ export default function LibraryFilePage({ initialFile = null }) {
     );
   }
 
+  const pageBackground = {
+    minHeight: '100vh',
+    background: `radial-gradient(ellipse at 60% 40%, ${HC.orangeMid} 0%, ${HC.cream} 45%, ${HC.orangePale} 100%)`,
+  };
+  const footer = 'Đóng cửa sổ để về Thư viện Vendor.';
+  const closeFile = () => (matchingInitialFile ? navigate(-1) : navigate(backTo));
+
+  // Mở thẳng từ link: không chen một màn "Đang mở file..." riêng trước cửa sổ.
+  // Cửa sổ hiện ngay với khung nội dung giả, dữ liệu về thì điền vào ĐÚNG cửa
+  // sổ đó — cùng vị trí trong cây nên không mount lại, không nháy animation.
+  if (status === 'loading') {
+    return (
+      <div style={pageBackground}>
+        <LibraryFileModal
+          title={<LoadingBar width={180} height={14} />}
+          ariaLabel="Đang mở file thư viện"
+          subtitle={<LoadingBar width={150} height={10} />}
+          footer={footer}
+          onClose={closeFile}
+        >
+          <FileBodySkeleton />
+        </LibraryFileModal>
+      </div>
+    );
+  }
+
   const generalCount = file.counts?.generalInfo ?? file.generalInfo?.length ?? 0;
   const pricingCount = file.counts?.pricing ?? file.pricing?.length ?? 0;
   const vendorNames = [...new Set((file.generalInfo || [])
@@ -157,10 +240,7 @@ export default function LibraryFilePage({ initialFile = null }) {
     .filter(Boolean))];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: `radial-gradient(ellipse at 60% 40%, ${HC.orangeMid} 0%, ${HC.cream} 45%, ${HC.orangePale} 100%)`,
-    }}>
+    <div style={pageBackground}>
       <LibraryFileModal
         title={(file.filename || '').replace(/\.xlsx?$/i, '')}
         subtitle={`${generalCount} phôi · ${pricingCount} dòng giá · ${fmtVNDateTimeShort(file.importedAt)}`}
@@ -180,8 +260,8 @@ export default function LibraryFilePage({ initialFile = null }) {
             onError={(err) => console.warn('Copy link file thư viện thất bại:', err?.message || err)}
           />
         }
-        footer="Đóng cửa sổ để về Thư viện Vendor."
-        onClose={() => matchingInitialFile ? navigate(-1) : navigate(backTo)}
+        footer={footer}
+        onClose={closeFile}
       >
         {canSeePrices(role) ? (
           // Role xem được giá: dùng lại đúng 2 tab của danh sách (Thông tin

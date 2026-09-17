@@ -25,6 +25,9 @@ const OPEN_EDITOR = 'input:not([data-modal-safe]), textarea:not([data-modal-safe
 
 export default function LibraryFileModal({
   title,
+  // Tên đọc cho trình đọc màn hình khi `title` không phải chữ (ví dụ thanh
+  // skeleton lúc file mở từ link còn đang tải).
+  ariaLabel,
   subtitle,
   badges = null,
   actions = null,
@@ -193,7 +196,7 @@ export default function LibraryFileModal({
         className="hc-lib-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={ariaLabel ?? title}
         tabIndex={-1}
         style={{
           width: '100%', boxSizing: 'border-box',
