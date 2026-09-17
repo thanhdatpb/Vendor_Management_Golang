@@ -67,6 +67,8 @@ export const SETTING_FIELDS = [
  *   Total Cost  = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
  *   Profit      = Total Price − AMZ − Total Cost                     (trước khuyến mãi)
  *   Profit(KM)  = Total Price − AMZ − Variable − Coupon − Total Cost (sau khuyến mãi)
+ *   Margin      = (Profit + Coupon) / Total Price × 100
+ *   Margin(KM)  = Profit(KM) / Total Price × 100
  *
  *   Nguồn ba biến chi phí (bản chỉnh 2026-07-17):
  *     • Item Cost      ← cột P1 (Pricing 1) của thư viện vendor  (giá hàng THUẦN, không gồm ship)
@@ -139,7 +141,7 @@ export function computeSizeRow(settings, productType, size) {
     totalCost,
     profit,
     profitAfter,
-    margin: totalPrice ? (profit / totalPrice) * 100 : 0,
+    margin: totalPrice ? ((profit + couponAmt) / totalPrice) * 100 : 0,
     marginAfter: totalPrice ? (profitAfter / totalPrice) * 100 : 0,
     ratioCost: totalCost ? (profit / totalCost) * 100 : 0,
   };

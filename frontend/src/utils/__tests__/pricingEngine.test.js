@@ -92,8 +92,10 @@ describe('computeSizeRow — cấu trúc công thức', () => {
   });
 
   it('Margin và Margin sau khuyến mãi tính theo Total Price', () => {
-    const r = computeSizeRow(settings, pt, size);
-    expect(r.margin).toBeCloseTo((r.profit / r.totalPrice) * 100, 10);
+    const r = computeSizeRow({ ...settings, couponUsd: 1.2, couponPct: 5 }, pt, size);
+    expect(r.couponAmt).toBeGreaterThan(0);
+    // Margin cộng lại Coupon vào Profit: (Profit + Coupon) / Total Price
+    expect(r.margin).toBeCloseTo(((r.profit + r.couponAmt) / r.totalPrice) * 100, 10);
     expect(r.marginAfter).toBeCloseTo((r.profitAfter / r.totalPrice) * 100, 10);
   });
 
