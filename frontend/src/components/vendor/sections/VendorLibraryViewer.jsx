@@ -22,6 +22,12 @@ import { libraryFilePath, parseLibraryFilePath } from '../../../utils/libraryFil
 import { groupLibraryFilesByMonth } from '../../../utils/libraryMonthGroups';
 import { pricingRowOwners, filterLibraryEntryByVendor, unwrapLibraryVendorView } from '../../../utils/libraryVendorFilter';
 import { getVendorLibraryModeCounts, isWithinCurrentVendorWeek } from '../../../utils/vendorLibraryMode';
+import {
+  SHIP_METHODS, PRICING_GRID_COLUMNS, withRecalculatedTotals,
+  isBlankValue, toNumberOrNull, normalizeRange, isInRange, clampCell,
+  parseClipboardMatrix, buildClipboardText, rangeToMatrix,
+  applyMatrixToRows, clearRangeInRows,
+} from '../../../utils/pricingGrid';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -257,81 +263,9 @@ function fileVendorNames(entry) {
   return [...new Set((entry?.generalInfo || []).map(r => r.vendorName).filter(Boolean))];
 }
 
-// ── Ô số click-để-sửa tại chỗ ────────────────────────────────────────────────
-// Vendor không có nút "Sửa" nên cho phép nhấn thẳng vào từng giá trị để chỉnh.
-// Enter/blur = lưu (gọi onCommit → onSave), Esc = huỷ. readOnly → chỉ hiển thị.
-function EditableNum({ value, display, onCommit, readOnly, align = 'right', extraStyle }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
-  const skip = useRef(false);
-  if (readOnly) return <span style={extraStyle}>{display}</span>;
-  if (!editing) {
-    return (
-      <span
-        onClick={() => { setDraft(value ?? ''); setEditing(true); }}
-        title="Nhấn để sửa"
-        style={{ cursor: 'pointer', display: 'block', borderRadius: 3, padding: '1px 2px', ...extraStyle }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,166,35,0.18)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-      >{display}</span>
-    );
-  }
-  const commit = () => {
-    setEditing(false);
-    if (String(draft ?? '') !== String(value ?? '')) onCommit(draft);
-  };
-  return (
-    <input
-      type="number" step="0.01" autoFocus value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onFocus={(e) => e.currentTarget.select()}
-      onBlur={() => { if (skip.current) { skip.current = false; setEditing(false); } else commit(); }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur();
-        else if (e.key === 'Escape') { skip.current = true; e.currentTarget.blur(); }
-      }}
-      style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.orange}`, textAlign: align, boxSizing: 'border-box', outline: 'none', ...extraStyle }}
-    />
-  );
-}
-
-// Giống EditableNum nhưng cho VĂN BẢN (Product Type / Size / Optional): hiển thị
-// như text bình thường, nhấn mới hiện ô sửa — không luôn hiện khung input.
-// readOnly → chỉ hiển thị (Seller/CSF/PD). `display` = nội dung hiển thị lúc chưa sửa.
-function EditableText({ value, display, onCommit, readOnly, align = 'left', placeholder, extraStyle }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState('');
-  const skip = useRef(false);
-  if (readOnly) return <span style={extraStyle}>{display}</span>;
-  if (!editing) {
-    return (
-      <span
-        onClick={() => { setDraft(value ?? ''); setEditing(true); }}
-        title="Nhấn để sửa"
-        style={{ cursor: 'pointer', display: 'block', borderRadius: 3, padding: '1px 2px', minHeight: 15, ...extraStyle }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,166,35,0.18)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-      >{display}</span>
-    );
-  }
-  const commit = () => {
-    setEditing(false);
-    if (String(draft ?? '') !== String(value ?? '')) onCommit(draft);
-  };
-  return (
-    <input
-      type="text" autoFocus value={draft} placeholder={placeholder}
-      onChange={(e) => setDraft(e.target.value)}
-      onFocus={(e) => e.currentTarget.select()}
-      onBlur={() => { if (skip.current) { skip.current = false; setEditing(false); } else commit(); }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur();
-        else if (e.key === 'Escape') { skip.current = true; e.currentTarget.blur(); }
-      }}
-      style={{ width: '100%', padding: '4px 4px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.orange}`, textAlign: align, boxSizing: 'border-box', outline: 'none', ...extraStyle }}
-    />
-  );
-}
+// Ô click-để-sửa cũ (EditableNum/EditableText) đã được thay bằng lưới kiểu
+// Google Sheets ngay trong PricingTable: một-click = chọn ô (để copy/paste
+// vùng), double-click/Enter = sửa — xem GridCellInput + renderGridCell.
 
 // ── Project visibility helpers ────────────────────────────────────────────────
 // Quy tắc "file này project nào thấy" nằm ở constants/projects.js (dùng chung với
@@ -627,7 +561,7 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
         {[['Pricing 1 (P1)','pricing1'],['Pricing 2 (P2)','pricing2']].map(([lbl,key]) => (
           <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 10, fontWeight: 800, color: HC.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lbl}</label>
-            <input type="number" step="0.01" placeholder="0.00" value={addForm[key]} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))} style={{ padding: '6px 8px', fontSize: 11, borderRadius: 6, border: `1.5px solid ${HC.border}`, boxSizing: 'border-box', textAlign: 'right', color: '#b45309', fontWeight: 700, outline: 'none' }} />
+            <input type="number" step="0.01" placeholder="0.00" value={addForm[key]} onChange={e => setAddForm(p => withRecalculatedTotals({ ...p, [key]: e.target.value }, [key], { blank: '' }))} style={{ padding: '6px 8px', fontSize: 11, borderRadius: 6, border: `1.5px solid ${HC.border}`, boxSizing: 'border-box', textAlign: 'right', color: '#b45309', fontWeight: 700, outline: 'none' }} />
           </div>
         ))}
       </div>
@@ -638,7 +572,7 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
             {[['Price Ship', m.priceKey, HC.muted], ['Price Ship Item 2', m.item2Key, HC.muted], ['Total (fulfill)', m.totalKey, HC.success]].map(([lbl, key, clr]) => (
               <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <label style={{ fontSize: 9, fontWeight: 700, color: HC.muted, textTransform: 'uppercase' }}>{lbl}</label>
-                <input type="number" step="0.01" placeholder="0.00" value={addForm[key]} onChange={e => setAddForm(p => ({ ...p, [key]: e.target.value }))} style={{ padding: '5px 6px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', color: clr, fontWeight: 700, boxSizing: 'border-box', outline: 'none' }} />
+                <input type="number" step="0.01" placeholder="0.00" value={addForm[key]} onChange={e => setAddForm(p => withRecalculatedTotals({ ...p, [key]: e.target.value }, [key], { blank: '' }))} style={{ padding: '5px 6px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', color: clr, fontWeight: 700, boxSizing: 'border-box', outline: 'none' }} />
               </div>
             ))}
           </div>
@@ -653,6 +587,78 @@ function AddRowForm({ addForm, setAddForm, saveAddRow, onCancel, shipMethods }) 
         <button onClick={saveAddRow} style={{ padding: '7px 20px', borderRadius: 7, border: 'none', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>💾 Lưu dòng giá</button>
       </div>
     </div>
+  );
+}
+
+// ── Lưới giá kiểu Google Sheets ───────────────────────────────────────────────
+// Màu nhóm vận chuyển gắn với danh sách chuẩn ở utils/pricingGrid.js (nguồn
+// duy nhất của tên field + công thức Total), tránh khai báo trùng ở nhiều chỗ.
+const SHIP_BG = ['#1d6b3a', HC.orangeDark, '#1e4fa0', '#7c3aed', '#b91c1c'];
+const SHIP_METHODS_UI = SHIP_METHODS.map((m, i) => ({ ...m, bg: SHIP_BG[i] }));
+
+// Vùng chọn: nền cam nhạt cho cả vùng, viền đậm cho ô đang đứng.
+const SEL_BG = 'rgba(245,166,35,0.16)';
+const SEL_BG_ACTIVE = 'rgba(245,166,35,0.3)';
+
+// Clipboard API chỉ chạy ở secure context; giữ đường lui execCommand để bản
+// build mở bằng http nội bộ vẫn copy được.
+function legacyCopyText(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch { return false; }
+}
+
+// Ô đang sửa trong lưới. Không controlled state: mở ra là input mới (defaultValue),
+// Enter/Tab/blur = lưu, Esc = huỷ — nên không cần đồng bộ nháp với cha.
+// Dán nhiều ô ngay khi đang sửa vẫn đi vào lưới (giống Google Sheets) thay vì
+// nhét cả khối TSV vào một ô.
+function GridCellInput({ type, initial, align = 'right', onCommit, onCancel, onPasteMatrix }) {
+  const skipRef = useRef(false);
+  const moveRef = useRef(null);
+  return (
+    <input
+      type={type === 'number' ? 'number' : 'text'}
+      step={type === 'number' ? '0.01' : undefined}
+      autoFocus
+      defaultValue={initial ?? ''}
+      onFocus={(e) => e.currentTarget.select()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
+      onBlur={(e) => {
+        const move = moveRef.current;
+        moveRef.current = null;
+        if (skipRef.current) { skipRef.current = false; onCancel(); return; }
+        onCommit(e.target.value, move);
+      }}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { moveRef.current = 'down'; e.preventDefault(); e.currentTarget.blur(); }
+        else if (e.key === 'Tab') { moveRef.current = e.shiftKey ? 'left' : 'right'; e.preventDefault(); e.currentTarget.blur(); }
+        else if (e.key === 'Escape') { skipRef.current = true; e.currentTarget.blur(); }
+      }}
+      onPaste={(e) => {
+        const text = e.clipboardData?.getData('text/plain') ?? '';
+        if (!/[\t\n\r]/.test(text)) { e.stopPropagation(); return; } // dán 1 ô: để trình duyệt xử lý
+        e.preventDefault();
+        e.stopPropagation();
+        skipRef.current = true;
+        onPasteMatrix(text);
+      }}
+      style={{
+        width: '100%', padding: '4px 3px', fontSize: 11, borderRadius: 4,
+        border: `1.5px solid ${HC.orange}`, textAlign: align, boxSizing: 'border-box', outline: 'none',
+      }}
+    />
   );
 }
 
@@ -721,11 +727,13 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
   };
 
   // Sửa tại chỗ MỘT ô giá trị số (click-để-sửa). '' → null; số hợp lệ → Number.
+  // Sửa P1 / Price Ship / Price Ship Item 2 thì Total (fulfill) của ĐÚNG nhóm
+  // vận chuyển đó tự tính lại (= P1 + Price Ship + Price Ship Item 2).
   const updateCellValue = (idx, field, value) => {
-    const num = (value === '' || value === null || value === undefined) ? null : Number(value);
-    if (num !== null && !Number.isFinite(num)) return; // bỏ qua nhập không hợp lệ
+    const num = isBlankValue(value) ? null : toNumberOrNull(value);
+    if (num === null && !isBlankValue(value)) return; // bỏ qua nhập không hợp lệ
     const newRows = [...rows];
-    newRows[idx] = { ...newRows[idx], [field]: num };
+    newRows[idx] = withRecalculatedTotals({ ...newRows[idx], [field]: num }, [field]);
     if (onSave) onSave(newRows);
   };
 
@@ -737,18 +745,234 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
     if (onSave) onSave(newRows);
   };
 
+  // ── Lưới chọn vùng + copy/paste kiểu Google Sheets ──────────────────────────
+  // Một click = CHỌN ô (để bôi vùng rồi Ctrl+C/Ctrl+V), double-click / Enter /
+  // gõ thẳng = sửa ô. Mọi thao tác hàng loạt (dán, xoá, fill down) hoàn tác
+  // được bằng Ctrl+Z — bài học từ bảng tính giá Seller: kéo chuột không bao
+  // giờ được phép làm mất giá mà không hoàn tác được.
+  const gridRef = useRef(null);
+  const [anchorCell, setAnchorCell] = useState(null);   // ô đang đứng {r,c}
+  const [focusCell, setFocusCell] = useState(null);     // đầu còn lại của vùng
+  const [editCell, setEditCell] = useState(null);       // {r,c,seed}
+  const [gridFocused, setGridFocused] = useState(false);
+  const [gridNotice, setGridNotice] = useState('');
+  const draggingRef = useRef(false);
+  const undoRef = useRef([]);
+  const noticeTimerRef = useRef(null);
+
+  const COL = useMemo(
+    () => Object.fromEntries(PRICING_GRID_COLUMNS.map((c, i) => [c.key, i])),
+    [],
+  );
+  const selRange = useMemo(() => normalizeRange(anchorCell, focusCell), [anchorCell, focusCell]);
+  const rowCount = rows?.length || 0;
+  const colCount = PRICING_GRID_COLUMNS.length;
+
+  useEffect(() => {
+    const stopDrag = () => { draggingRef.current = false; };
+    window.addEventListener('mouseup', stopDrag);
+    return () => window.removeEventListener('mouseup', stopDrag);
+  }, []);
+  useEffect(() => () => { if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current); }, []);
+
+  const flashNotice = (msg) => {
+    setGridNotice(msg);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setGridNotice(''), 2800);
+  };
+  const focusGrid = () => gridRef.current?.focus({ preventScroll: true });
+
+  const selectCell = (r, c, extend) => {
+    setEditCell(null);
+    setFocusCell({ r, c });
+    if (!extend) setAnchorCell({ r, c });
+    focusGrid();
+  };
+  const moveActive = (dir, extend) => {
+    const base = (extend ? focusCell : anchorCell) || anchorCell || focusCell;
+    if (!base || !rowCount) return;
+    const delta = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] }[dir];
+    if (!delta) return;
+    const target = clampCell({ r: base.r + delta[0], c: base.c + delta[1] }, rowCount, colCount);
+    setFocusCell(target);
+    if (!extend) setAnchorCell(target);
+  };
+  const beginCellEdit = (r, c, seed) => {
+    if (readOnly) return;
+    if (!PRICING_GRID_COLUMNS[c] || !rows?.[r]) return;
+    setAnchorCell({ r, c });
+    setFocusCell({ r, c });
+    setEditCell({ r, c, seed });
+  };
+  const commitCellEdit = (r, c, raw, move) => {
+    const col = PRICING_GRID_COLUMNS[c];
+    setEditCell(null);
+    if (col) {
+      if (col.type === 'number') updateCellValue(r, col.key, raw);
+      else updateTextValue(r, col.key, raw ?? '');
+    }
+    if (move) moveActive(move, false);
+    focusGrid();
+  };
+
+  // Thao tác hàng loạt: lưu ảnh chụp trước khi ghi để Ctrl+Z quay lại được.
+  const applyBulk = (nextRows, message) => {
+    undoRef.current = [rows, ...undoRef.current].slice(0, 20);
+    if (onSave) onSave(nextRows);
+    if (message) flashNotice(message);
+  };
+  const undoBulk = () => {
+    const [prev, ...rest] = undoRef.current;
+    if (!prev) { flashNotice('Không còn thao tác hàng loạt để hoàn tác'); return; }
+    undoRef.current = rest;
+    if (onSave) onSave(prev);
+    flashNotice('Đã hoàn tác');
+  };
+
+  const copySelection = async () => {
+    if (!selRange) return;
+    const text = buildClipboardText(rangeToMatrix(rows, PRICING_GRID_COLUMNS, selRange));
+    const cells = (selRange.r2 - selRange.r1 + 1) * (selRange.c2 - selRange.c1 + 1);
+    let ok = false;
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(text); ok = true; }
+    } catch { ok = false; }
+    if (!ok) ok = legacyCopyText(text);
+    flashNotice(ok ? `Đã sao chép ${cells} ô` : 'Trình duyệt chặn sao chép — dùng Ctrl+C lần nữa');
+  };
+
+  const pasteMatrixText = (text) => {
+    if (readOnly || !selRange) return;
+    const matrix = parseClipboardMatrix(text);
+    if (!matrix.length) return;
+    const out = applyMatrixToRows({ rows, columns: PRICING_GRID_COLUMNS, range: selRange, matrix });
+    if (!out.changed) {
+      flashNotice(out.skipped ? 'Không dán được: ô nguồn không phải số' : 'Dữ liệu dán trùng giá trị cũ');
+      return;
+    }
+    const multi = !(matrix.length === 1 && matrix[0].length === 1);
+    if (multi) {
+      const h = matrix.length;
+      const w = Math.max(...matrix.map(line => line.length));
+      setAnchorCell({ r: selRange.r1, c: selRange.c1 });
+      setFocusCell(clampCell({ r: selRange.r1 + h - 1, c: selRange.c1 + w - 1 }, rowCount, colCount));
+    }
+    const extra = [
+      out.clipped ? 'đã cắt phần vượt bảng' : '',
+      out.skipped ? `bỏ qua ${out.skipped} ô không phải số` : '',
+    ].filter(Boolean).join(', ');
+    applyBulk(out.rows, `Đã dán ${out.changed} ô${extra ? ` (${extra})` : ''}`);
+    focusGrid();
+  };
+
+  const clearSelectedCells = () => {
+    if (readOnly || !selRange) return;
+    const out = clearRangeInRows({ rows, columns: PRICING_GRID_COLUMNS, range: selRange });
+    if (!out.changed) return;
+    applyBulk(out.rows, `Đã xoá ${out.changed} ô`);
+  };
+
+  // Ctrl+D — chép dòng đầu vùng chọn xuống các dòng còn lại (Fill Down).
+  const fillDownSelection = () => {
+    if (readOnly || !selRange || selRange.r1 === selRange.r2) return;
+    const head = rangeToMatrix(rows, PRICING_GRID_COLUMNS, { ...selRange, r2: selRange.r1 })[0] || [];
+    const target = { ...selRange, r1: selRange.r1 + 1 };
+    const matrix = Array.from({ length: target.r2 - target.r1 + 1 }, () => head);
+    const out = applyMatrixToRows({ rows, columns: PRICING_GRID_COLUMNS, range: target, matrix });
+    if (!out.changed) return;
+    applyBulk(out.rows, `Đã chép xuống ${out.changed} ô`);
+  };
+
+  const handleGridKeyDown = (e) => {
+    if (editCell) return;                       // ô đang sửa tự xử lý phím
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod) {
+      const k = e.key.toLowerCase();
+      if (k === 'c') { e.preventDefault(); copySelection(); return; }
+      if (k === 'x') { e.preventDefault(); copySelection().then(clearSelectedCells); return; }
+      if (k === 'd') { e.preventDefault(); fillDownSelection(); return; }
+      if (k === 'z') { e.preventDefault(); undoBulk(); return; }
+      return;                                    // Ctrl+V: để sự kiện paste gốc chạy
+    }
+    if (e.key.startsWith('Arrow')) { e.preventDefault(); moveActive(e.key.slice(5).toLowerCase(), e.shiftKey); return; }
+    if (e.key === 'Tab') { e.preventDefault(); moveActive(e.shiftKey ? 'left' : 'right', false); return; }
+    if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); if (anchorCell) beginCellEdit(anchorCell.r, anchorCell.c); return; }
+    if (e.key === 'Escape') { setAnchorCell(null); setFocusCell(null); return; }
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); clearSelectedCells(); return; }
+    if (!readOnly && anchorCell && e.key.length === 1 && !e.altKey) {
+      e.preventDefault();
+      beginCellEdit(anchorCell.r, anchorCell.c, e.key);
+    }
+  };
+
+  const handleGridPaste = (e) => {
+    if (readOnly || !selRange || editCell) return;
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (!text) return;
+    e.preventDefault();
+    pasteMatrixText(text);
+  };
+
+  // Props/khung của 1 ô trong lưới. Dòng đang ở chế độ "Sửa" cả dòng (Admin /
+  // Staff B) không tham gia lưới để không cướp focus của input.
+  const gridCellProps = (r, key, rowEditing) => {
+    const c = COL[key];
+    if (rowEditing || c === undefined) return {};
+    return {
+      onMouseDown: (e) => {
+        if (e.button !== 0) return;
+        if (editCell && editCell.r === r && editCell.c === c) return;
+        e.preventDefault();                       // không bôi đen chữ khi kéo
+        draggingRef.current = true;
+        selectCell(r, c, e.shiftKey);
+      },
+      onMouseEnter: (e) => {
+        if (!draggingRef.current) return;
+        if (e.buttons !== 1) { draggingRef.current = false; return; }
+        setFocusCell({ r, c });
+        window.getSelection?.()?.removeAllRanges?.();
+      },
+      onDoubleClick: () => beginCellEdit(r, c),
+    };
+  };
+  const gridCellStyle = (r, key, rowEditing) => {
+    const c = COL[key];
+    if (rowEditing || c === undefined || !isInRange(selRange, r, c)) return null;
+    const active = anchorCell && anchorCell.r === r && anchorCell.c === c;
+    return {
+      background: active ? SEL_BG_ACTIVE : SEL_BG,
+      boxShadow: active ? `inset 0 0 0 2px ${HC.orange}` : `inset 0 0 0 1px ${HC.orangeMid}`,
+    };
+  };
+  // Nội dung ô: text bình thường, chỉ thành input khi ô đó đang được sửa.
+  const renderGridCell = (r, key, { display, align = 'right', extraStyle } = {}) => {
+    const c = COL[key];
+    const col = PRICING_GRID_COLUMNS[c];
+    if (editCell && editCell.r === r && editCell.c === c) {
+      return (
+        <GridCellInput
+          type={col?.type} align={align}
+          initial={editCell.seed ?? (rows?.[r]?.[key] ?? '')}
+          onCommit={(v, move) => commitCellEdit(r, c, v, move)}
+          onCancel={() => { setEditCell(null); focusGrid(); }}
+          onPasteMatrix={(text) => { setEditCell(null); pasteMatrixText(text); }}
+        />
+      );
+    }
+    return (
+      <span
+        title={readOnly ? undefined : 'Nhấn để chọn · double-click hoặc Enter để sửa'}
+        style={{ display: 'block', minHeight: 15, cursor: readOnly ? 'default' : 'cell', ...extraStyle }}
+      >{display}</span>
+    );
+  };
+
   if (!rows || rows.length === 0) return (
     <div>
       <div style={{ padding: 24, color: HC.muted, textAlign: 'center' }}>Không có dữ liệu giá.</div>
       {!readOnly && (
         addingRow && addForm
-          ? <AddRowForm addForm={addForm} setAddForm={setAddForm} saveAddRow={saveAddRow} onCancel={() => { setAddingRow(false); setAddForm(null); }} shipMethods={[
-              { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total', item2Key: 'eco_price_item2', bg: '#1d6b3a' },
-              { label: 'Ground', priceKey: 'ground_price', totalKey: 'ground_total', item2Key: 'ground_price_item2', bg: HC.orangeDark },
-              { label: 'Express', priceKey: 'express_price', totalKey: 'express_total', item2Key: 'express_price_item2', bg: '#1e4fa0' },
-              { label: '2 Days', priceKey: 'twoday_price', totalKey: 'twoday_total', item2Key: 'twoday_price_item2', bg: '#7c3aed' },
-              { label: 'Overnight', priceKey: 'overnight_price', totalKey: 'overnight_total', item2Key: 'overnight_price_item2', bg: '#b91c1c' },
-            ]} />
+          ? <AddRowForm addForm={addForm} setAddForm={setAddForm} saveAddRow={saveAddRow} onCancel={() => { setAddingRow(false); setAddForm(null); }} shipMethods={SHIP_METHODS_UI} />
           : <button onClick={() => { setAddingRow(true); setAddForm(mkAddForm()); }} style={{ width: '100%', padding: '9px 0', marginTop: 8, borderRadius: 8, border: `1.5px dashed ${HC.orangeMid}`, background: HC.orangeLight, color: HC.orangeDark, fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>➕ Thêm dòng size/giá</button>
       )}
     </div>
@@ -823,19 +1047,30 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
     if (onSave) onSave(newRows);
   };
 
-  const shipMethods = [
-    { label: 'Economy', priceKey: 'eco_price', totalKey: 'eco_total', item2Key: 'eco_price_item2' },
-    { label: 'Ground', priceKey: 'ground_price', totalKey: 'ground_total', item2Key: 'ground_price_item2' },
-    { label: 'Express', priceKey: 'express_price', totalKey: 'express_total', item2Key: 'express_price_item2' },
-    { label: '2 Days', priceKey: 'twoday_price', totalKey: 'twoday_total', item2Key: 'twoday_price_item2' },
-    { label: 'Overnight', priceKey: 'overnight_price', totalKey: 'overnight_total', item2Key: 'overnight_price_item2' },
-  ];
-
-  const shipBg = ['#1d6b3a', HC.orangeDark, '#1e4fa0', '#7c3aed', '#b91c1c'];
+  const shipMethods = SHIP_METHODS_UI;
+  const shipBg = SHIP_BG;
   const naStyle = { background: '#fef3c7', color: '#92400e', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' };
 
   return (
-    <div className="hc-library-table-scroll" style={{ overflowX: 'auto' }}>
+    <div
+      ref={gridRef}
+      className="hc-library-table-scroll"
+      tabIndex={0}
+      // role="group" chứ không phải "grid": bên trong là <table> thật, giữ
+      // nguyên ngữ nghĩa bảng cho trình đọc màn hình; div này chỉ là vùng
+      // nhận phím tắt (copy/paste/di chuyển ô).
+      role="group"
+      aria-label="Bảng giá — chọn ô rồi Ctrl+C sao chép, Ctrl+V dán nhiều dòng"
+      onKeyDown={handleGridKeyDown}
+      onPaste={handleGridPaste}
+      onFocus={() => setGridFocused(true)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setGridFocused(false); }}
+      style={{
+        overflowX: 'auto', outline: 'none', borderRadius: 10,
+        boxShadow: gridFocused ? `0 0 0 2px ${HC.orangeMid}` : 'none',
+        transition: 'box-shadow 160ms ease-out',
+      }}
+    >
       <table className="hc-library-table" style={{
         width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 1160, tableLayout: 'fixed',
         ...(primaryHeaderHeight ? { '--hc-library-header-row-1-height': `${primaryHeaderHeight}px` } : {}),
@@ -895,56 +1130,52 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
                       : <span style={naStyle}>N/A</span>
                   )}
                 </td>
-                <td style={{ ...TD(i) }}>
+                <td {...gridCellProps(i, 'productType', isEditing)} style={{ ...TD(i), ...gridCellStyle(i, 'productType', isEditing) }}>
                   {isEditing ? (
                     <input type="text" placeholder="Product Type..." value={editForm.productType} onChange={e => setEditForm(p => ({ ...p, productType: e.target.value }))} style={{ width: '100%', padding: 5, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}` }} />
-                  ) : (
-                    <EditableText readOnly={readOnly} align="left" placeholder="Product Type..."
-                      value={r.productType} onCommit={v => updateTextValue(i, 'productType', v)}
-                      display={r.productType ? <span style={{ fontWeight: 700 }}>{r.productType}</span> : <span style={naStyle}>N/A</span>} />
-                  )}
+                  ) : renderGridCell(i, 'productType', {
+                    align: 'left',
+                    display: r.productType ? <span style={{ fontWeight: 700 }}>{r.productType}</span> : <span style={naStyle}>N/A</span>,
+                  })}
                 </td>
-                <td style={{ ...TD(i), textAlign: 'center' }}>
+                <td {...gridCellProps(i, 'size', isEditing)} style={{ ...TD(i), textAlign: 'center', ...gridCellStyle(i, 'size', isEditing) }}>
                   {isEditing ? (
                     <input type="text" value={editForm.size} onChange={e => setEditForm(p => ({ ...p, size: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
-                  ) : (
-                    <EditableText readOnly={readOnly} align="center"
-                      value={r.size} onCommit={v => updateTextValue(i, 'size', v)} display={fmtNA(r.size)} />
-                  )}
+                  ) : renderGridCell(i, 'size', { align: 'center', display: fmtNA(r.size) })}
                 </td>
-                <td style={{ ...TD(i), textAlign: 'center' }}>
+                <td {...gridCellProps(i, 'optional', isEditing)} style={{ ...TD(i), textAlign: 'center', ...gridCellStyle(i, 'optional', isEditing) }}>
                   {isEditing ? (
                     <input type="text" value={editForm.optional} onChange={e => setEditForm(p => ({ ...p, optional: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
-                  ) : (
-                    <EditableText readOnly={readOnly} align="center"
-                      value={r.optional} onCommit={v => updateTextValue(i, 'optional', v)} display={fmtNA(r.optional)} />
-                  )}
+                  ) : renderGridCell(i, 'optional', { align: 'center', display: fmtNA(r.optional) })}
                 </td>
-                <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
+                <td {...gridCellProps(i, 'pricing1', isEditing)} style={{ ...TDnum(i), fontWeight: 700, color: '#b45309', ...gridCellStyle(i, 'pricing1', isEditing) }}>
                   {isEditing ? (
                     <input type="number" step="0.01" value={editForm.pricing1} onChange={e => setEditForm(p => ({ ...p, pricing1: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                  ) : <EditableNum readOnly={readOnly} value={r.pricing1} display={fmt$(r.pricing1)} onCommit={v => updateCellValue(i, 'pricing1', v)} />}
+                  ) : renderGridCell(i, 'pricing1', { display: fmt$(r.pricing1) })}
                 </td>
-                <td style={{ ...TDnum(i), fontWeight: 700, color: '#b45309' }}>
+                <td {...gridCellProps(i, 'pricing2', isEditing)} style={{ ...TDnum(i), fontWeight: 700, color: '#b45309', ...gridCellStyle(i, 'pricing2', isEditing) }}>
                   {isEditing ? (
                     <input type="number" step="0.01" value={editForm.pricing2} onChange={e => setEditForm(p => ({ ...p, pricing2: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                  ) : <EditableNum readOnly={readOnly} value={r.pricing2} display={fmt$(r.pricing2)} onCommit={v => updateCellValue(i, 'pricing2', v)} />}
+                  ) : renderGridCell(i, 'pricing2', { display: fmt$(r.pricing2) })}
                 </td>
                 {shipMethods.map((m) => [
-                  <td key={`${m.label}-price`} style={{ ...TDnum(i), color: HC.muted }}>
+                  <td key={`${m.label}-price`} {...gridCellProps(i, m.priceKey, isEditing)} style={{ ...TDnum(i), color: HC.muted, ...gridCellStyle(i, m.priceKey, isEditing) }}>
                     {isEditing ? (
                       <input type="number" step="0.01" value={editForm[m.priceKey]} onChange={e => setEditForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                    ) : <EditableNum readOnly={readOnly} value={r[m.priceKey]} display={fmt$(r[m.priceKey])} onCommit={v => updateCellValue(i, m.priceKey, v)} />}
+                    ) : renderGridCell(i, m.priceKey, { display: fmt$(r[m.priceKey]) })}
                   </td>,
-                  <td key={`${m.label}-item2`} style={{ ...TDnum(i), color: HC.muted }}>
+                  <td key={`${m.label}-item2`} {...gridCellProps(i, m.item2Key, isEditing)} style={{ ...TDnum(i), color: HC.muted, ...gridCellStyle(i, m.item2Key, isEditing) }}>
                     {isEditing ? (
                       <input type="number" step="0.01" value={editForm[m.item2Key]} onChange={e => setEditForm(p => ({ ...p, [m.item2Key]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
-                    ) : <EditableNum readOnly={readOnly} value={r[m.item2Key]} display={fmt$(r[m.item2Key])} onCommit={v => updateCellValue(i, m.item2Key, v)} />}
+                    ) : renderGridCell(i, m.item2Key, { display: fmt$(r[m.item2Key]) })}
                   </td>,
-                  <td key={`${m.label}-total`} style={{ ...TDnum(i), fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2 }}>
+                  <td key={`${m.label}-total`} {...gridCellProps(i, m.totalKey, isEditing)} title={`Tự tính: P1 + Price Ship + Price Ship Item 2 (${m.label})`} style={{ ...TDnum(i), fontWeight: 700, color: r[m.totalKey] != null ? HC.success : HC.muted2, ...gridCellStyle(i, m.totalKey, isEditing) }}>
                     {isEditing ? (
                       <input type="number" step="0.01" value={editForm[m.totalKey]} onChange={e => setEditForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: '4px 2px', fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
-                    ) : <EditableNum readOnly={readOnly} value={r[m.totalKey]} display={fmt$(r[m.totalKey])} onCommit={v => updateCellValue(i, m.totalKey, v)} extraStyle={{ color: r[m.totalKey] != null ? HC.success : HC.muted2, fontWeight: 700 }} />}
+                    ) : renderGridCell(i, m.totalKey, {
+                      display: fmt$(r[m.totalKey]),
+                      extraStyle: { color: r[m.totalKey] != null ? HC.success : HC.muted2, fontWeight: 700 },
+                    })}
                   </td>,
                 ])}
                 <td style={{ ...TD(i) }}>
@@ -1005,14 +1236,19 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
                 <input type="text" placeholder="..." value={addForm.optional} onChange={e => setAddForm(p => ({ ...p, optional: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'center', boxSizing: 'border-box' }} />
               </td>
               <td style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
-                <input type="number" step="0.01" placeholder="0.00" value={addForm.pricing1} onChange={e => setAddForm(p => ({ ...p, pricing1: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: '#b45309', fontWeight: 700 }} />
+                <input type="number" step="0.01" placeholder="0.00" value={addForm.pricing1} onChange={e => setAddForm(p => withRecalculatedTotals({ ...p, pricing1: e.target.value }, ['pricing1'], { blank: '' }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: '#b45309', fontWeight: 700 }} />
               </td>
               <td style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
                 <input type="number" step="0.01" placeholder="0.00" value={addForm.pricing2} onChange={e => setAddForm(p => ({ ...p, pricing2: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: '#b45309', fontWeight: 700 }} />
               </td>
+              {/* Đủ 3 ô mỗi nhóm (Price Ship / Item 2 / Total) đúng như header —
+                  trước đây thiếu ô Item 2 nên dòng thêm mới lệch cột. */}
               {shipMethods.map(m => [
                 <td key={`nadd-${m.label}-p`} style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
-                  <input type="number" step="0.01" placeholder="0.00" value={addForm[m.priceKey]} onChange={e => setAddForm(p => ({ ...p, [m.priceKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                  <input type="number" step="0.01" placeholder="0.00" value={addForm[m.priceKey]} onChange={e => setAddForm(p => withRecalculatedTotals({ ...p, [m.priceKey]: e.target.value }, [m.priceKey], { blank: '' }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
+                </td>,
+                <td key={`nadd-${m.label}-i2`} style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
+                  <input type="number" step="0.01" placeholder="0.00" value={addForm[m.item2Key]} onChange={e => setAddForm(p => withRecalculatedTotals({ ...p, [m.item2Key]: e.target.value }, [m.item2Key], { blank: '' }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box' }} />
                 </td>,
                 <td key={`nadd-${m.label}-t`} style={{ ...TD(processedRows.length), padding: '5px 6px', textAlign: 'right' }}>
                   <input type="number" step="0.01" placeholder="0.00" value={addForm[m.totalKey]} onChange={e => setAddForm(p => ({ ...p, [m.totalKey]: e.target.value }))} style={{ width: '100%', padding: 4, fontSize: 11, borderRadius: 4, border: `1px solid ${HC.border}`, textAlign: 'right', boxSizing: 'border-box', color: HC.success, fontWeight: 700 }} />
@@ -1031,6 +1267,40 @@ function PricingTable({ rows, onSave, readOnly, generalInfo, canDeleteRow }) {
           )}
         </tbody>
       </table>
+      {/* Thanh gợi ý thao tác bảng tính + phản hồi sau mỗi lần dán/xoá.
+          aria-live để trình đọc màn hình cũng nghe được kết quả. */}
+      <div style={{
+        marginTop: 8, padding: '7px 10px', borderRadius: 8,
+        background: gridNotice ? HC.orangeLight : HC.surface2,
+        border: `1px solid ${gridNotice ? HC.orangeMid : HC.border}`,
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        fontSize: 11, color: HC.muted, fontFamily: "'Inter',sans-serif",
+        transition: 'background 160ms ease-out, border-color 160ms ease-out',
+      }}>
+        <span aria-live="polite" style={{ fontWeight: 800, color: gridNotice ? HC.orangeDark : HC.muted2, minWidth: 0 }}>
+          {gridNotice || (readOnly ? 'Chọn ô rồi Ctrl+C để sao chép' : 'Bảng dùng được như Google Sheets:')}
+        </span>
+        {!gridNotice && !readOnly && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              ['Kéo chuột', 'chọn vùng'],
+              ['Ctrl+C / Ctrl+V', 'sao chép / dán nhiều dòng'],
+              ['Ctrl+D', 'chép xuống'],
+              ['Delete', 'xoá ô'],
+              ['Ctrl+Z', 'hoàn tác'],
+              ['Enter / double-click', 'sửa ô'],
+            ].map(([keys, what]) => (
+              <span key={keys} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={{ padding: '1px 6px', borderRadius: 5, background: HC.surface, border: `1px solid ${HC.border}`, boxShadow: `0 1px 0 ${HC.border}`, fontSize: 10, fontWeight: 800, color: HC.ink2, fontFamily: "'Inter',sans-serif" }}>{keys}</kbd>
+                <span>{what}</span>
+              </span>
+            ))}
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto', fontWeight: 700, color: HC.muted2, whiteSpace: 'nowrap' }}>
+          Total (fulfill) = P1 + Price Ship + Item 2
+        </span>
+      </div>
       {!readOnly && !addingRow && (
         <button
           onClick={() => { setAddingRow(true); setAddForm(mkAddForm()); }}
@@ -1417,8 +1687,12 @@ export function ManualAddModal({ onClose, onSave, mode }) {
   const updateGeneral = (key, field, val) =>
     setGeneralRows(prev => prev.map(r => r._key === key ? { ...r, [field]: val } : r));
 
+  // Nhập tay cũng theo công thức Total (fulfill) = P1 + Price Ship + Item 2
+  // (blank '' vì form này giữ giá trị dạng chuỗi).
   const updatePricing = (key, field, val) =>
-    setPricingRows(prev => prev.map(r => r._key === key ? { ...r, [field]: val } : r));
+    setPricingRows(prev => prev.map(r => (
+      r._key === key ? withRecalculatedTotals({ ...r, [field]: val }, [field], { blank: '' }) : r
+    )));
 
   const handleSave = () => {
     if (!filename.trim()) { setSaveError('Vui lòng nhập tên file.'); return; }
