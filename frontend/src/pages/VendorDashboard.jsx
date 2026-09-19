@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LogoutOutlined, ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,7 @@ import { subscribeNotificationChanges } from '../services/echo';
 
 import { HCLogo } from '../components/vendor/ui/VendorUI';
 import UserAvatar from '../components/shared/UserAvatar';
+import SidebarNavGroup from '../components/shared/SidebarNavGroup';
 import VendorNotificationCenter from '../components/vendor/components/VendorNotificationCenter';
 import NewsManagementSection from '../components/vendor/sections/NewsManagementSection';
 import ProductsSection from '../components/vendor/sections/ProductsSection';
@@ -14,6 +15,11 @@ import VendorsSection from '../components/vendor/sections/VendorsSection';
 import { HC, MENU, PAGE_TITLES } from '../components/vendor/utils/constants';
 import { VENDOR_SECTIONS } from '../constants/dashboardSections';
 import useSectionRoute from '../hooks/useSectionRoute';
+import {
+  VENDOR_LIBRARY_SUBMENU,
+  vendorLibraryModeFromSearch,
+  vendorLibraryPathWithMode,
+} from '../utils/vendorLibraryNavigation';
 import { timeValue, fmtVNDateTime, fmtVNLongDate } from '../utils/vnTime';
 
 const DARK = {
@@ -44,6 +50,23 @@ export default function VendorDashboard() {
   const [searchParams] = useSearchParams();
   const filterProductType = active === 'library' ? (searchParams.get('type') || '') : '';
   const filterProductId = active === 'library' ? (searchParams.get('assign') || '') : '';
+  // Chế độ của Thư Viện Vendor cũng nằm trên URL (`?view=`), cạnh assign/type —
+  // đổi chế độ không được làm mất ngữ cảnh "đang tìm vendor cho request X".
+  const librarySearch = searchParams.toString() ? `?${searchParams.toString()}` : '';
+  const vendorLibraryMode = vendorLibraryModeFromSearch(librarySearch);
+  const [vendorLibraryCounts, setVendorLibraryCounts] = useState(null);
+  const openVendorLibraryMode = useCallback((mode) => {
+    navigate(vendorLibraryPathWithMode('/vendor/library', librarySearch, mode));
+  }, [navigate, librarySearch]);
+  const sidebarSubmenus = useMemo(() => ({
+    library: {
+      items: VENDOR_LIBRARY_SUBMENU,
+      activeId: vendorLibraryMode,
+      counts: vendorLibraryCounts,
+      countsPending: active === 'library' && !vendorLibraryCounts,
+      onSelect: openVendorLibraryMode,
+    },
+  }), [vendorLibraryMode, vendorLibraryCounts, active, openVendorLibraryMode]);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [requestNotifications, setRequestNotifications] = useState([]);
   const [newsNotifications, setNewsNotifications] = useState([]);
@@ -186,14 +209,14 @@ export default function VendorDashboard() {
   const renderSection = () => {
     switch (active) {
       case 'products': return <ProductsSection onGotoVendors={handleGotoVendors} selectedProductId={selectedProductId} setSelectedProductId={setSelectedProductId} />;
-      case 'library': return <VendorsSection filterProductType={filterProductType} filterProductId={filterProductId} onClearFilter={handleClearFilter} onAssignComplete={handleAssignComplete} />;
+      case 'library': return <VendorsSection mode={vendorLibraryMode} onModeCountsChange={setVendorLibraryCounts} filterProductType={filterProductType} filterProductId={filterProductId} onClearFilter={handleClearFilter} onAssignComplete={handleAssignComplete} />;
       case 'news': return <NewsManagementSection />;
       default: return null;
     }
   };
 
   // ── Tooltip Nav Item helper ──────────────────────────────
-  function VendorNavItem({ item, isActive, isCollapsed, onClick }) {
+  function VendorNavItem({ item, isActive, isCollapsed, onClick, trailing = null }) {
     const [hov, setHov] = useState(false);
     return (
       <div
@@ -224,7 +247,8 @@ export default function VendorDashboard() {
             <div style={{ fontSize: 13.5, fontWeight: isActive ? 700 : 500, color: isActive ? DARK.textActive : hov ? DARK.text : DARK.textMuted, fontFamily: "'Inter',sans-serif", transition: 'color 0.18s ease', letterSpacing: '0.01em' }}>{item.label}</div>
           </div>
         )}
-        {!isCollapsed && isActive && (
+        {!isCollapsed && trailing}
+        {!isCollapsed && !trailing && isActive && (
           <div style={{ width: 5, height: 5, borderRadius: '50%', background: DARK.accent, boxShadow: `0 0 0 3px ${DARK.accent}30`, flexShrink: 0 }} />
         )}
         {isCollapsed && hov && (
@@ -287,7 +311,11 @@ export default function VendorDashboard() {
           {/* Nav */}
           <nav style={{ flex: 1, padding: sidebarOpen ? '4px 10px' : '4px 8px', overflowY: 'auto', overflowX: 'visible', scrollbarWidth: 'none' }}>
             {MENU.map(item => (
-              <VendorNavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
+              sidebarSubmenus[item.id] ? (
+                <SidebarNavGroup key={item.id} item={item} submenu={sidebarSubmenus[item.id]} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} NavItem={VendorNavItem} accent={DARK.accent} />
+              ) : (
+                <VendorNavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
+              )
             ))}
           </nav>
         </div>

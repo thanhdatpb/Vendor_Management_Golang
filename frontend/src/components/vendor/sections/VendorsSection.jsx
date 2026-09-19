@@ -11,6 +11,7 @@ import { vnFileStamp } from '../../../utils/vnTime';
 import { useNavigate } from 'react-router-dom';
 import { buildAssignedVendors, mergeAssignedVendors } from '../../../utils/libraryAssign';
 import { parseLibraryFilePath } from '../../../utils/libraryFileLink';
+import { VENDOR_LIBRARY_MODES } from '../../../utils/vendorLibraryMode';
 
 const parseAssigned = (raw) => {
   if (!raw) return [];
@@ -39,8 +40,10 @@ const leaveLibraryFileWindow = (navigate) => new Promise((resolve) => {
   navigate(-1);
 });
 
-export default function VendorsSection({ filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
-  const [activeTab, setActiveTab] = useState('all'); 
+export default function VendorsSection({ mode = VENDOR_LIBRARY_MODES.ALL, onModeCountsChange, filterProductType = '', filterProductId = '', onClearFilter, onAssignComplete }) {
+  // Chế độ đến từ submenu sidebar qua URL (`/vendor/library?view=…`). Tên nội bộ
+  // của tab Best Seller ở đây là 'bestseller' (không gạch dưới) nên đổi tại chỗ.
+  const activeTab = mode === VENDOR_LIBRARY_MODES.BEST_SELLER ? 'bestseller' : mode;
   const EMPTY_VENDOR = {
     name: '', vendor_type: '', product_type: '', size: '', optional: '', overview: '',
     avg_time_vendor: '', avg_time_actual: '', notes: '',
@@ -616,23 +619,6 @@ export default function VendorsSection({ filterProductType = '', filterProductId
     </button>
   ) : null;
 
-  const TabButton = ({ id, label, icon }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      style={{
-        padding: '10px 24px', borderRadius: 12, border: `2px solid ${activeTab === id ? (id === 'bestseller' ? HC.gold : HC.orange) : HC.border}`,
-        background: activeTab === id ? (id === 'bestseller' ? HC.goldLight : HC.orangeLight) : HC.surface,
-        color: activeTab === id ? (id === 'bestseller' ? HC.gold : HC.orangeDark) : HC.muted,
-        fontSize: 13, fontWeight: activeTab === id ? 900 : 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s'
-      }}
-      onMouseEnter={e => { if (activeTab !== id) e.currentTarget.style.background = HC.orangePale; }}
-      onMouseLeave={e => { if (activeTab !== id) e.currentTarget.style.background = HC.surface; }}
-    >
-      {icon && <span>{icon}</span>}
-      {label}
-    </button>
-  );
-
   return (
     <div>
       {/* Assign Confirm Modal */}
@@ -653,14 +639,8 @@ export default function VendorsSection({ filterProductType = '', filterProductId
       <input ref={importFileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImportFile} />
       {apiError && <div style={{ marginBottom: 14, padding: '10px 16px', borderRadius: 11, background: '#fef2f2', border: '1.5px solid #fecaca', color: HC.danger, fontSize: 12, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><span>⚠️ {apiError}</span><button onClick={loadVendors} style={{ padding: '4px 12px', borderRadius: 7, border: '1.5px solid #fecaca', background: '#fff', color: HC.danger, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>Thử lại</button></div>}
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
-        <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" />
-        <TabButton id="new_products" label="New Arrivals" />
-        <TabButton id="bestseller" label="Best Seller" />
-      </div>
-
       {/* ── Thư Viện File tab (now Tất cả Vendor và Sản phẩm mới) ───────────────────────── */}
-      {activeTab === 'new_products' && <VendorLibraryViewer mode="new_products" />}
+      {activeTab === 'new_products' && <VendorLibraryViewer mode="new_products" onModeCountsChange={onModeCountsChange} />}
       {activeTab === 'all' && (
         <>
           {filterProductType && (
@@ -678,7 +658,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #0284c7`, background: '#fff', color: '#0284c7', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
             </div>
           )}
-          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} fileWindowActions={assignFromWindowButton} initialSearch={filterProductType} />
+          <VendorLibraryViewer mode="all" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} onModeCountsChange={onModeCountsChange} fileWindowActions={assignFromWindowButton} initialSearch={filterProductType} />
         </>
       )}
 
@@ -699,7 +679,7 @@ export default function VendorsSection({ filterProductType = '', filterProductId
               <button onClick={onClearFilter} style={{ padding: '6px 14px', borderRadius: 8, border: `1.5px solid #eab308`, background: '#fff', color: '#ca8a04', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>✕ Bỏ lọc</button>
             </div>
           )}
-          <VendorLibraryViewer mode="bestseller" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} fileWindowActions={assignFromWindowButton} />
+          <VendorLibraryViewer mode="bestseller" selectable={true} selectedIds={selectedIds} onSelectRow={toggleSelect} onSelectAll={selectAllInFile} onLibraryLoaded={setExcelVendors} onModeCountsChange={onModeCountsChange} fileWindowActions={assignFromWindowButton} />
         </>
       )}
 

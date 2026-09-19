@@ -1,48 +1,29 @@
 // ════════════════════════════════════════════════════════
 //  VENDORS SECTION — Thư Viện File
+//
+//  Ba chế độ (Tổng quan / New Arrivals / Best Seller) chọn ở submenu sidebar và
+//  nằm trên URL (`/seller/vendors?view=…`) — SellerDashboard đọc rồi truyền
+//  `mode` xuống, nên ở đây không còn hàng tab.
 // ════════════════════════════════════════════════════════
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import VendorLibraryViewer from '../vendor/sections/VendorLibraryViewer';
-import { HC } from '../../constants/sellerTheme';
+import { VENDOR_LIBRARY_MODES } from '../../utils/vendorLibraryMode';
 
-export default function VendorsSection({ highlightFileId, onHighlightCleared }) {
-  const [activeTab, setActiveTab] = useState('all');
-
-  // Khi có highlight file → tự động về tab 'all'
-  useEffect(() => {
-    if (highlightFileId) setActiveTab('all');
-  }, [highlightFileId]);
-
-  const TabButton = ({ id, label, icon }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      style={{
-        padding: '10px 24px', borderRadius: 12, border: `2px solid ${activeTab === id ? (id === 'best_seller' ? '#D4A017' : HC.blue) : HC.border}`,
-        background: activeTab === id ? (id === 'best_seller' ? '#FDF5E6' : HC.blueLight || '#E0F2FE') : HC.surface,
-        color: activeTab === id ? (id === 'best_seller' ? '#D4A017' : HC.blueDark) : HC.muted,
-        fontSize: 13, fontWeight: activeTab === id ? 900 : 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s'
-      }}
-      onMouseEnter={e => { if (activeTab !== id) e.currentTarget.style.background = HC.bluePale || '#F0F9FF'; }}
-      onMouseLeave={e => { if (activeTab !== id) e.currentTarget.style.background = HC.surface; }}
-    >
-      {icon && <span style={{ fontSize: 16 }}>{icon}</span>} {label}
-    </button>
-  );
-
+export default function VendorsSection({
+  mode = VENDOR_LIBRARY_MODES.ALL,
+  onModeCountsChange,
+  highlightFileId,
+  onHighlightCleared,
+}) {
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8 }}>
-        <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" />
-        <TabButton id="new_products" label="New Arrivals" />
-        <TabButton id="best_seller" label="Best Seller" />
-      </div>
-
-      <VendorLibraryViewer
-        readOnly={true}
-        mode={activeTab}
-        highlightFileId={activeTab === 'all' ? highlightFileId : null}
-        onHighlightCleared={onHighlightCleared}
-      />
-    </div>
+    <VendorLibraryViewer
+      readOnly={true}
+      mode={mode}
+      onModeCountsChange={onModeCountsChange}
+      // Highlight đi kèm link tới một file cụ thể: chỉ có nghĩa ở danh sách đầy
+      // đủ, hai chế độ còn lại có thể không chứa file đó.
+      highlightFileId={mode === VENDOR_LIBRARY_MODES.ALL ? highlightFileId : null}
+      onHighlightCleared={onHighlightCleared}
+    />
   );
 }

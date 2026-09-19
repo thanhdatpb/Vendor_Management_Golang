@@ -5,7 +5,8 @@
 //  chỉ khác nhãn hiển thị → truyền qua prop `roleLabel` (xem route /marvel
 //  trong App.jsx).
 // ════════════════════════════════════════════════════════
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { HC } from '../constants/sellerTheme';
@@ -13,6 +14,11 @@ import { PROJECTS } from '../constants/projects';
 import useSectionRoute from '../hooks/useSectionRoute';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import CsfVendorLibrary from '../components/csfpd/CsfVendorLibrary';
+import {
+  VENDOR_LIBRARY_SUBMENU,
+  vendorLibraryModeFromSearch,
+  vendorLibraryPathWithMode,
+} from '../utils/vendorLibraryNavigation';
 import { fmtVNLongDate } from '../utils/vnTime';
 
 // Danh sách project khai ở constants/projects.js — dùng chung với PD.
@@ -34,6 +40,27 @@ export default function CsfDashboard({ basePath = '/csf', roleLabel = 'CSF', lib
   const { user, logout } = useAuth();
   const [active, setActive] = useSectionRoute({ basePath, sections: PROJECT_SECTIONS, fallback: 'happy' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Ba chế độ của thư viện nằm dưới chính project đang xem (mỗi project là một
+  // mục ở sidebar) và nằm trên URL: /csf/happy?view=new-arrivals.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const vendorLibraryMode = vendorLibraryModeFromSearch(location.search);
+  const [vendorLibraryCounts, setVendorLibraryCounts] = useState(null);
+  const openVendorLibraryMode = useCallback((mode) => {
+    navigate(vendorLibraryPathWithMode(`${basePath}/${active}`, location.search, mode));
+  }, [navigate, basePath, active, location.search]);
+  // Số file chỉ đúng cho project đang mở (chỉ project đó được tải) nên submenu
+  // chỉ gắn vào mục đang mở.
+  const sidebarSubmenus = useMemo(() => (active ? {
+    [active]: {
+      items: VENDOR_LIBRARY_SUBMENU,
+      activeId: vendorLibraryMode,
+      counts: vendorLibraryCounts,
+      countsPending: !vendorLibraryCounts,
+      onSelect: openVendorLibraryMode,
+    },
+  } : {}), [active, vendorLibraryMode, vendorLibraryCounts, openVendorLibraryMode]);
 
   return (
     <>
@@ -57,6 +84,7 @@ export default function CsfDashboard({ basePath = '/csf', roleLabel = 'CSF', lib
           menu={PROJECT_MENU}
           roleLabel={roleLabel}
           displayName={user?.full_name || roleLabel}
+          submenus={sidebarSubmenus}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -73,7 +101,7 @@ export default function CsfDashboard({ basePath = '/csf', roleLabel = 'CSF', lib
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
-            <LibraryComponent projectKey={active} />
+            <LibraryComponent projectKey={active} mode={vendorLibraryMode} onModeCountsChange={setVendorLibraryCounts} />
           </div>
         </div>
       </div>

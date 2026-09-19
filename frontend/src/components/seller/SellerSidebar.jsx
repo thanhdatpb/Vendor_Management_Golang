@@ -6,6 +6,7 @@ import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { HC } from '../../constants/sellerTheme';
 import { HCLogo, MENU } from './SellerUI';
 import UserAvatar from '../shared/UserAvatar';
+import SidebarNavGroup from '../shared/SidebarNavGroup';
 import useIsMobile from '../../hooks/useIsMobile';
 
 const DARK = {
@@ -21,7 +22,7 @@ const DARK = {
   cardBg:       'var(--hc-dark-bg-hover)',
 };
 
-function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
+function NavTooltipItem({ item, isActive, isCollapsed, onClick, trailing = null }) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -73,7 +74,9 @@ function NavTooltipItem({ item, isActive, isCollapsed, onClick }) {
         </div>
       )}
 
-      {!isCollapsed && isActive && (
+      {!isCollapsed && trailing}
+
+      {!isCollapsed && !trailing && isActive && (
         <div style={{
           width: 5, height: 5, borderRadius: '50%',
           background: DARK.accent, boxShadow: `0 0 0 3px ${DARK.accent}30`, flexShrink: 0,
@@ -185,7 +188,8 @@ function CollapsedUserItem({ user, logout }) {
   );
 }
 
-export default function SellerSidebar({ active, setActive, sidebarOpen, setSidebarOpen, user, logout }) {
+/** @param {object} props.submenus  { [menuId]: submenu } — xem SidebarNavGroup. */
+export default function SellerSidebar({ active, setActive, sidebarOpen, setSidebarOpen, user, logout, submenus = {} }) {
   const [showLogout, setShowLogout] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
 
@@ -340,15 +344,29 @@ export default function SellerSidebar({ active, setActive, sidebarOpen, setSideb
         overflowY: 'auto', overflowX: 'visible', scrollbarWidth: 'none',
       }}>
         <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
-        {MENU.map(item => (
-          <NavTooltipItem
-            key={item.id}
-            item={item}
-            isActive={active === item.id}
-            isCollapsed={!showExpanded}
-            onClick={() => { setActive(item.id); if (isMobile) setSidebarOpen(false); }}
-          />
-        ))}
+        {MENU.map(item => {
+          const onClick = () => { setActive(item.id); if (isMobile) setSidebarOpen(false); };
+          return submenus[item.id] ? (
+            <SidebarNavGroup
+              key={item.id}
+              item={item}
+              submenu={submenus[item.id]}
+              isActive={active === item.id}
+              isCollapsed={!showExpanded}
+              onClick={onClick}
+              NavItem={NavTooltipItem}
+              accent={DARK.accent}
+            />
+          ) : (
+            <NavTooltipItem
+              key={item.id}
+              item={item}
+              isActive={active === item.id}
+              isCollapsed={!showExpanded}
+              onClick={onClick}
+            />
+          );
+        })}
       </nav>
 
 

@@ -6,7 +6,8 @@
 //  project theo từng tài khoản PD ở Quản Lý Nhân Sự (`user.pd_projects`) —
 //  sidebar chỉ liệt kê đúng các project đó, không hiện project chưa được cấp.
 // ════════════════════════════════════════════════════════
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ShopOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import { HC } from '../constants/sellerTheme';
@@ -14,6 +15,11 @@ import { PROJECTS, projectNameToKey } from '../constants/projects';
 import useSectionRoute from '../hooks/useSectionRoute';
 import CsfPdSidebar from '../components/csfpd/CsfPdSidebar';
 import PdVendorLibrary from '../components/csfpd/PdVendorLibrary';
+import {
+  VENDOR_LIBRARY_SUBMENU,
+  vendorLibraryModeFromSearch,
+  vendorLibraryPathWithMode,
+} from '../utils/vendorLibraryNavigation';
 import { fmtVNLongDate } from '../utils/vnTime';
 
 export default function PdDashboard() {
@@ -35,6 +41,25 @@ export default function PdDashboard() {
     [projectMenu],
   );
   const [projectKey, setActive] = useSectionRoute({ basePath: '/pd', sections: projectSections });
+
+  // Ba chế độ của thư viện nằm dưới project đang xem và nằm trên URL:
+  // /pd/happy?view=best-seller.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const vendorLibraryMode = vendorLibraryModeFromSearch(location.search);
+  const [vendorLibraryCounts, setVendorLibraryCounts] = useState(null);
+  const openVendorLibraryMode = useCallback((mode) => {
+    navigate(vendorLibraryPathWithMode(`/pd/${projectKey}`, location.search, mode));
+  }, [navigate, projectKey, location.search]);
+  const sidebarSubmenus = useMemo(() => (projectKey ? {
+    [projectKey]: {
+      items: VENDOR_LIBRARY_SUBMENU,
+      activeId: vendorLibraryMode,
+      counts: vendorLibraryCounts,
+      countsPending: !vendorLibraryCounts,
+      onSelect: openVendorLibraryMode,
+    },
+  } : {}), [projectKey, vendorLibraryMode, vendorLibraryCounts, openVendorLibraryMode]);
 
   return (
     <>
@@ -58,6 +83,7 @@ export default function PdDashboard() {
           menu={projectMenu}
           roleLabel="PD"
           displayName={user?.full_name || 'PD'}
+          submenus={sidebarSubmenus}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -75,7 +101,7 @@ export default function PdDashboard() {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: 32 }}>
             {projectKey ? (
-              <PdVendorLibrary projectKey={projectKey} />
+              <PdVendorLibrary projectKey={projectKey} mode={vendorLibraryMode} onModeCountsChange={setVendorLibraryCounts} />
             ) : (
               <div style={{ padding: 40, textAlign: 'center', background: HC.surface, borderRadius: 16, border: `2px dashed ${HC.border}` }}>
                 <div style={{ fontSize: 40, opacity: 0.5, marginBottom: 10 }}>⚠️</div>

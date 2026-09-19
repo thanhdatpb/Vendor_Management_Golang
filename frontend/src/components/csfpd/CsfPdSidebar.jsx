@@ -6,6 +6,7 @@ import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { HC } from '../../constants/sellerTheme';
 import { HCLogo } from '../seller/SellerUI';
 import UserAvatar from '../shared/UserAvatar';
+import SidebarNavGroup from '../shared/SidebarNavGroup';
 
 const DARK = {
   bg:           'var(--hc-dark-bg)',
@@ -20,7 +21,7 @@ const DARK = {
   cardBg:       'var(--hc-dark-bg-hover)',
 };
 
-function NavItem({ item, isActive, isCollapsed, onClick }) {
+function NavItem({ item, isActive, isCollapsed, onClick, trailing = null }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -49,7 +50,8 @@ function NavItem({ item, isActive, isCollapsed, onClick }) {
           </div>
         </div>
       )}
-      {!isCollapsed && isActive && (
+      {!isCollapsed && trailing}
+      {!isCollapsed && !trailing && isActive && (
         <div style={{ width: 5, height: 5, borderRadius: '50%', background: DARK.accent, boxShadow: `0 0 0 3px ${DARK.accent}30`, flexShrink: 0 }} />
       )}
       {isCollapsed && hovered && (
@@ -62,7 +64,11 @@ function NavItem({ item, isActive, isCollapsed, onClick }) {
   );
 }
 
-export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSidebarOpen, user, logout, menu, roleLabel, displayName }) {
+/**
+ * @param {object} props.submenus  { [projectId]: submenu } — xem SidebarNavGroup.
+ *   CSF/PD dùng cho project ĐANG xem: ba chế độ của thư viện nằm dưới project đó.
+ */
+export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSidebarOpen, user, logout, menu, roleLabel, displayName, submenus = {} }) {
   const [showLogout, setShowLogout] = useState(false);
   const [logoHovered, setLogoHovered] = useState(false);
 
@@ -153,7 +159,11 @@ export default function CsfPdSidebar({ active, setActive, sidebarOpen, setSideba
       <nav style={{ flex: 1, padding: sidebarOpen ? '4px 10px' : '4px 8px', overflowY: 'auto', overflowX: 'visible', scrollbarWidth: 'none' }}>
         <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
         {menu.map(item => (
-          <NavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
+          submenus[item.id] ? (
+            <SidebarNavGroup key={item.id} item={item} submenu={submenus[item.id]} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} NavItem={NavItem} accent={DARK.accent} />
+          ) : (
+            <NavItem key={item.id} item={item} isActive={active === item.id} isCollapsed={!sidebarOpen} onClick={() => setActive(item.id)} />
+          )
         ))}
       </nav>
     </div>

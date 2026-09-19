@@ -8,6 +8,13 @@
 import VendorLibraryView from './VendorLibraryView';
 import { DEPARTMENTS } from './departments';
 
-export default function MarvelVendorLibrary({ projectKey }) {
-  return <VendorLibraryView projectKey={projectKey} department={DEPARTMENTS.marvel} />;
+export default function MarvelVendorLibrary({ projectKey, mode, onModeCountsChange }) {
+  return (
+    <VendorLibraryView
+      projectKey={projectKey}
+      department={DEPARTMENTS.marvel}
+      mode={mode}
+      onModeCountsChange={onModeCountsChange}
+    />
+  );
 }

@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Sidebar from '../Sidebar';
-import { VENDOR_LIBRARY_SUBMENU } from '../vendorLibraryNavigation';
+import { VENDOR_LIBRARY_SUBMENU } from '../../../utils/vendorLibraryNavigation';
 import { VENDOR_LIBRARY_MODES } from '../../../utils/vendorLibraryMode';
 
 const noop = () => {};

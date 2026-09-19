@@ -29,7 +29,11 @@ import LibraryCopyLinkButton from '../library/LibraryCopyLinkButton';
 import LibraryMonthSection from '../library/LibraryMonthSection';
 import { libraryFilePath, parseLibraryFilePath } from '../../utils/libraryFileLink';
 import { groupLibraryFilesByMonth } from '../../utils/libraryMonthGroups';
-import { isWithinCurrentVendorWeek } from '../../utils/vendorLibraryMode';
+import {
+  VENDOR_LIBRARY_MODES,
+  getVendorLibraryModeCounts,
+  isWithinCurrentVendorWeek,
+} from '../../utils/vendorLibraryMode';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -282,14 +286,15 @@ function LibraryCard({ entry, highlighted, showLeadTime, onOpen }) {
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
-export default function VendorLibraryView({ projectKey, department }) {
+export default function VendorLibraryView({ projectKey, department, mode = VENDOR_LIBRARY_MODES.ALL, onModeCountsChange }) {
   // Không có khai báo bộ phận → bản chặt nhất (không thấy gì thêm), thay vì
   // mặc định hiện hết.
   const dept = departmentFor(department?.key ?? department);
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
+  // Chế độ đến từ submenu sidebar qua URL (`?view=`) — xem utils/vendorLibraryNavigation.
+  const activeTab = mode;
   const [searchQuery, setSearchQuery] = useState('');
   const [exporting, setExporting] = useState(false);
   const [showExportPicker, setShowExportPicker] = useState(false);
@@ -331,6 +336,18 @@ export default function VendorLibraryView({ projectKey, department }) {
     return s;
   }, [rawFiles]);
 
+  // Badge ở submenu sidebar đếm FILE trong PHẠM VI PROJECT đang xem, và không
+  // phụ thuộc ô tìm kiếm — người dùng gõ tìm không được làm số chạy theo.
+  const projectFiles = useMemo(
+    () => (projectKey ? rawFiles.filter((f) => fileVisibleToProject(f, projectKey)) : rawFiles),
+    [rawFiles, projectKey],
+  );
+  const modeCounts = useMemo(() => getVendorLibraryModeCounts(projectFiles), [projectFiles]);
+  useEffect(() => {
+    // Chỉ báo sau khi tải xong để sidebar không chớp số 0 giả.
+    if (!loading && !fetchError && onModeCountsChange) onModeCountsChange(modeCounts);
+  }, [loading, fetchError, modeCounts, onModeCountsChange]);
+
   const fetchLibrary = useCallback(async ({ silent = false } = {}) => {
     // `silent`: làm mới nền do realtime — không bật spinner để bảng đang đọc
     // không nhấp nháy dưới tay người dùng.
@@ -371,13 +388,9 @@ export default function VendorLibraryView({ projectKey, department }) {
   }, [fetchLibrary]);
 
   const displayFiles = useMemo(() => {
-    let files = rawFiles;
-
-    // Lọc theo project được chọn — file chưa chia sẻ và không có ký hiệu P.xxx
-    // thì hiện cho mọi project (giữ nguyên hành vi cũ).
-    if (projectKey) {
-      files = files.filter(f => fileVisibleToProject(f, projectKey));
-    }
+    // projectFiles = đã lọc theo project được chọn — file chưa chia sẻ và không
+    // có ký hiệu P.xxx thì hiện cho mọi project (giữ nguyên hành vi cũ).
+    let files = projectFiles;
 
     if (activeTab === 'best_seller') {
       files = files.map(f => f.generalInfo ? { ...f, generalInfo: f.generalInfo.filter(r => bestSellerIds.has(r.id)) } : f)
@@ -396,7 +409,7 @@ export default function VendorLibraryView({ projectKey, department }) {
       const tb = timeValue(b.importedAt);
       return tb - ta;
     });
-  }, [rawFiles, projectKey, activeTab, searchQuery, bestSellerIds]);
+  }, [projectFiles, activeTab, searchQuery, bestSellerIds]);
 
   const displayFileGroups = useMemo(
     () => groupLibraryFilesByMonth(displayFiles),
@@ -416,30 +429,9 @@ export default function VendorLibraryView({ projectKey, department }) {
     }
   };
 
-  const TabButton = ({ id, label }) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      style={{
-        padding: '10px 24px', borderRadius: 12, border: `2px solid ${activeTab === id ? HC.orange : HC.border}`,
-        background: activeTab === id ? HC.orangeLight : HC.surface,
-        color: activeTab === id ? HC.orangeDark : HC.muted,
-        fontSize: 13, fontWeight: activeTab === id ? 900 : 700, cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.2s',
-      }}
-    >
-      {label}
-    </button>
-  );
-
   return (
     <div>
       <AppToast toast={toast} onClose={() => setToast(null)} />
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1.5px solid ${HC.border}`, paddingBottom: 8, flexWrap: 'wrap' }}>
-        <TabButton id="all" label="Tổng quan Vendor & Sản phẩm" />
-        <TabButton id="new_products" label="New Arrivals" />
-        <TabButton id="best_seller" label="Best Seller" />
-      </div>
-
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ padding: '2px 12px', borderRadius: 99, background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`, color: HC.orangeDark, fontSize: 11, fontWeight: 800 }}>

@@ -5,10 +5,10 @@ import { describe, it, expect } from 'vitest';
 import {
   VENDOR_LIBRARY_SUBMENU,
   vendorLibraryModeFromSearch,
-  adminVendorLibraryPath,
+  vendorLibraryPathWithMode,
   formatVendorLibraryCount,
 } from '../vendorLibraryNavigation';
-import { VENDOR_LIBRARY_MODES } from '../../../utils/vendorLibraryMode';
+import { VENDOR_LIBRARY_MODES } from '../vendorLibraryMode';
 
 describe('VENDOR_LIBRARY_SUBMENU', () => {
   it('đúng thứ tự và nhãn như bản phác thảo', () => {
@@ -38,14 +38,30 @@ describe('URL ↔ chế độ', () => {
   });
 
   it('Tổng quan không cần query, hai chế độ còn lại có view', () => {
-    expect(adminVendorLibraryPath(VENDOR_LIBRARY_MODES.ALL)).toBe('/admin/vendors');
-    expect(adminVendorLibraryPath(VENDOR_LIBRARY_MODES.NEW_PRODUCTS)).toBe('/admin/vendors?view=new-arrivals');
-    expect(adminVendorLibraryPath(VENDOR_LIBRARY_MODES.BEST_SELLER)).toBe('/admin/vendors?view=best-seller');
+    expect(vendorLibraryPathWithMode('/admin/vendors', '', VENDOR_LIBRARY_MODES.ALL)).toBe('/admin/vendors');
+    expect(vendorLibraryPathWithMode('/admin/vendors', '', VENDOR_LIBRARY_MODES.NEW_PRODUCTS)).toBe('/admin/vendors?view=new-arrivals');
+    expect(vendorLibraryPathWithMode('/admin/vendors', '', VENDOR_LIBRARY_MODES.BEST_SELLER)).toBe('/admin/vendors?view=best-seller');
+  });
+
+  // Vendor đi từ một request sang thư viện mang theo ?assign=&type= — đổi chế độ
+  // mà mất hai tham số này thì mất luôn ngữ cảnh "đang tìm vendor cho request X".
+  it('giữ nguyên các query khác của trang', () => {
+    const search = '?assign=42&type=Hoodie';
+    expect(vendorLibraryPathWithMode('/vendor/library', search, VENDOR_LIBRARY_MODES.NEW_PRODUCTS))
+      .toBe('/vendor/library?assign=42&type=Hoodie&view=new-arrivals');
+    // Về Tổng quan thì bỏ hẳn `view`, các tham số khác vẫn còn
+    expect(vendorLibraryPathWithMode('/vendor/library', `${search}&view=best-seller`, VENDOR_LIBRARY_MODES.ALL))
+      .toBe('/vendor/library?assign=42&type=Hoodie');
+  });
+
+  it('đổi chế độ khi đang ở một chế độ khác thì thay chứ không cộng dồn', () => {
+    expect(vendorLibraryPathWithMode('/csf/happy', '?view=new-arrivals', VENDOR_LIBRARY_MODES.BEST_SELLER))
+      .toBe('/csf/happy?view=best-seller');
   });
 
   it('đường dẫn sinh ra đọc lại đúng chế độ', () => {
     VENDOR_LIBRARY_SUBMENU.forEach(({ id }) => {
-      const search = adminVendorLibraryPath(id).split('?')[1] || '';
+      const search = vendorLibraryPathWithMode('/admin/vendors', '', id).split('?')[1] || '';
       expect(vendorLibraryModeFromSearch(search ? `?${search}` : '')).toBe(id);
     });
   });

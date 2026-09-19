@@ -10,6 +10,13 @@
 import VendorLibraryView from './VendorLibraryView';
 import { DEPARTMENTS } from './departments';
 
-export default function PdVendorLibrary({ projectKey }) {
-  return <VendorLibraryView projectKey={projectKey} department={DEPARTMENTS.pd} />;
+export default function PdVendorLibrary({ projectKey, mode, onModeCountsChange }) {
+  return (
+    <VendorLibraryView
+      projectKey={projectKey}
+      department={DEPARTMENTS.pd}
+      mode={mode}
+      onModeCountsChange={onModeCountsChange}
+    />
+  );
 }

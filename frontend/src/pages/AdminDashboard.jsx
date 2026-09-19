@@ -16,8 +16,8 @@ import StaffManagementSection from '../components/admin/sections/StaffManagement
 import {
   VENDOR_LIBRARY_SUBMENU,
   vendorLibraryModeFromSearch,
-  adminVendorLibraryPath,
-} from '../components/admin/vendorLibraryNavigation';
+  vendorLibraryPathWithMode,
+} from '../utils/vendorLibraryNavigation';
 import { fmtVNLongDate } from '../utils/vnTime';
 
 window.sendNewsToAdmin = function (newsData) {
@@ -74,8 +74,8 @@ export default function AdminDashboard() {
   const vendorLibraryMode = vendorLibraryModeFromSearch(location.search);
   const [vendorLibraryCounts, setVendorLibraryCounts] = useState(null);
   const openVendorLibraryMode = useCallback((mode) => {
-    navigate(adminVendorLibraryPath(mode));
-  }, [navigate]);
+    navigate(vendorLibraryPathWithMode('/admin/vendors', location.search, mode));
+  }, [navigate, location.search]);
   const sidebarSubmenus = useMemo(() => ({
     vendors: {
       items: VENDOR_LIBRARY_SUBMENU,

@@ -10,6 +10,13 @@
 import VendorLibraryView from './VendorLibraryView';
 import { DEPARTMENTS } from './departments';
 
-export default function CsfVendorLibrary({ projectKey }) {
-  return <VendorLibraryView projectKey={projectKey} department={DEPARTMENTS.csf} />;
+export default function CsfVendorLibrary({ projectKey, mode, onModeCountsChange }) {
+  return (
+    <VendorLibraryView
+      projectKey={projectKey}
+      department={DEPARTMENTS.csf}
+      mode={mode}
+      onModeCountsChange={onModeCountsChange}
+    />
+  );
 }

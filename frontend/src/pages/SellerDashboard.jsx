@@ -2,7 +2,8 @@
 //  STAFF A (SELLER) DASHBOARD — TechStore Hub
 //  Refactored: mỗi component nằm trong file riêng
 // ════════════════════════════════════════════════════════
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { notificationApi } from '../services/api';
 import { subscribeNotificationChanges } from '../services/echo';
@@ -16,6 +17,11 @@ import SellerNotificationCenter from '../components/seller/SellerNotificationCen
 import ProductsSection from '../components/seller/ProductsSection';
 import VendorsSection from '../components/seller/VendorsSection';
 import SetupPriceSection from '../components/seller/SetupPriceSection';
+import {
+  VENDOR_LIBRARY_SUBMENU,
+  vendorLibraryModeFromSearch,
+  vendorLibraryPathWithMode,
+} from '../utils/vendorLibraryNavigation';
 import { timeValue, fmtVNDateTime, fmtVNLongDate } from '../utils/vnTime';
 
 // ══════════════════════════════════════════════════════════
@@ -37,6 +43,25 @@ export default function SellerDashboard() {
   const [vendorHighlightFileId, setVendorHighlightFileId] = useState(null);
   const [productsTotalCount, setProductsTotalCount] = useState(null);
   const [priceSheetsTotalCount, setPriceSheetsTotalCount] = useState(null);
+
+  // Thư Viện Vendor: chế độ con nằm trên query `?view=` để bookmark/Back được.
+  // Số file của New Arrivals / Best Seller do VendorLibraryViewer báo lên.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const vendorLibraryMode = vendorLibraryModeFromSearch(location.search);
+  const [vendorLibraryCounts, setVendorLibraryCounts] = useState(null);
+  const openVendorLibraryMode = useCallback((mode) => {
+    navigate(vendorLibraryPathWithMode('/seller/vendors', location.search, mode));
+  }, [navigate, location.search]);
+  const sidebarSubmenus = useMemo(() => ({
+    vendors: {
+      items: VENDOR_LIBRARY_SUBMENU,
+      activeId: vendorLibraryMode,
+      counts: vendorLibraryCounts,
+      countsPending: active === 'vendors' && !vendorLibraryCounts,
+      onSelect: openVendorLibraryMode,
+    },
+  }), [vendorLibraryMode, vendorLibraryCounts, active, openVendorLibraryMode]);
 
   const PAGE_TITLES = {
     products: 'Danh Sách Sản Phẩm',
@@ -248,7 +273,7 @@ export default function SellerDashboard() {
   const renderSection = () => {
     switch (active) {
       case 'products': return <ProductsSection highlightedProductId={highlightedProductId} onHighlightCleared={() => setHighlightedProductId(null)} onTotalCountChange={setProductsTotalCount} />;
-      case 'vendors': return <VendorsSection highlightFileId={vendorHighlightFileId} onHighlightCleared={() => setVendorHighlightFileId(null)} />;
+      case 'vendors': return <VendorsSection mode={vendorLibraryMode} onModeCountsChange={setVendorLibraryCounts} highlightFileId={vendorHighlightFileId} onHighlightCleared={() => setVendorHighlightFileId(null)} />;
       case 'setup_price': return <SetupPriceSection onTotalCountChange={setPriceSheetsTotalCount} />;
       default: return null;
     }
@@ -268,7 +293,7 @@ export default function SellerDashboard() {
       `}</style>
 
       <div style={{ display: 'flex', height: '100vh', background: `linear-gradient(135deg, ${HC.orangePale} 0%, ${HC.cream} 100%)`, fontFamily: "'Inter',sans-serif", color: HC.ink, overflow: 'hidden' }}>
-        <SellerSidebar active={active} setActive={setActive} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} user={user} logout={logout} />
+        <SellerSidebar active={active} setActive={setActive} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} user={user} logout={logout} submenus={sidebarSubmenus} />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
           {/* Topbar */}
