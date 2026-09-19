@@ -8,6 +8,16 @@
 //  đây là lưới an toàn duy nhất trước khi deploy.
 //
 //  Muốn thay fixture bằng dữ liệu production thật: xem src/test/fixtures/README.md.
+//
+//  ── Lần cập nhật snapshot có chủ đích ──────────────────────────────────────
+//  2026-09-19 — ĐỔI ĐỊNH NGHĨA `margin` (không phải refactor làm lệch tiền):
+//      cũ : margin = (Profit + Coupon) / Total Price × 100
+//      mới: margin = (Profit(KM) + Coupon) / Total Price × 100
+//           ≡ (Total Price − AMZ − Variable − Total Cost) / Total Price × 100
+//      → margin nay ĐÃ trừ Variable Fee, nên tụt đúng bằng Variable / Total Price.
+//      Chỉ cột `margin` (và `avgMargin`) trong snapshot đổi. Mọi con số TIỀN
+//      (totalPrice, couponAmt, amzFee, variableFee, totalCost, profit, profitAfter)
+//      và `marginAfter` giữ nguyên — đó là bằng chứng thay đổi này không đụng tiền.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import legacySheet from '../../test/fixtures/legacySheet.json';
@@ -53,7 +63,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
           "amzFee": 2.3137,
           "couponAmt": 1.29,
           "itemCost": 8.2,
-          "margin": 8.2302,
+          "margin": -2.7651,
           "marginAfter": -11.4228,
           "profit": -0.0637,
           "profitAfter": -1.702,
@@ -67,7 +77,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
           "amzFee": 2.3137,
           "couponAmt": 1.29,
           "itemCost": 8.2,
-          "margin": 8.2302,
+          "margin": -2.7651,
           "marginAfter": -11.4228,
           "profit": -0.0637,
           "profitAfter": -1.702,
@@ -81,7 +91,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
           "amzFee": 2.5432,
           "couponAmt": 1.44,
           "itemCost": 8.6,
-          "margin": 13.7,
+          "margin": 2.5488,
           "marginAfter": -6.2317,
           "profit": 0.8068,
           "profitAfter": -1.022,
@@ -95,7 +105,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
           "amzFee": 2.6962,
           "couponAmt": 1.54,
           "itemCost": 9.1,
-          "margin": 14.3322,
+          "margin": 3.092,
           "marginAfter": -5.7586,
           "profit": 0.9538,
           "profitAfter": -1.002,
@@ -109,7 +119,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
           "amzFee": 2.8492,
           "couponAmt": 1.64,
           "itemCost": 9.6,
-          "margin": 15.9826,
+          "margin": 4.663,
           "marginAfter": -4.25,
           "profit": 1.3008,
           "profitAfter": -0.782,
@@ -123,7 +133,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
           "amzFee": 2.5279,
           "couponAmt": 1.43,
           "itemCost": "6.1",
-          "margin": 53.6939,
+          "margin": 42.5521,
           "marginAfter": 33.7791,
           "profit": 7.3221,
           "profitAfter": 5.506,
@@ -137,7 +147,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
           "amzFee": 2.8033,
           "couponAmt": 1.61,
           "itemCost": "7.2",
-          "margin": 51.6945,
+          "margin": 40.3978,
           "marginAfter": 31.5028,
           "profit": 7.7467,
           "profitAfter": 5.702,
@@ -160,7 +170,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
       avgMargin: money(s.avgMargin),
     }).toMatchInlineSnapshot(`
       {
-        "avgMargin": 23.6948,
+        "avgMargin": 12.5319,
         "count": 7,
         "maxPrice": 18.4,
         "minPrice": 14.9,

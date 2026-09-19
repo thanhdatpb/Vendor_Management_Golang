@@ -94,8 +94,13 @@ describe('computeSizeRow — cấu trúc công thức', () => {
   it('Margin và Margin sau khuyến mãi tính theo Total Price', () => {
     const r = computeSizeRow({ ...settings, couponUsd: 1.2, couponPct: 5 }, pt, size);
     expect(r.couponAmt).toBeGreaterThan(0);
-    // Margin cộng lại Coupon vào Profit: (Profit + Coupon) / Total Price
-    expect(r.margin).toBeCloseTo(((r.profit + r.couponAmt) / r.totalPrice) * 100, 10);
+    // Margin đi từ Profit sau khuyến mãi rồi cộng lại Coupon:
+    // (Profit(KM) + Coupon) / Total Price — tức đã trừ Variable Fee, chưa trừ Coupon.
+    expect(r.margin).toBeCloseTo(((r.profitAfter + r.couponAmt) / r.totalPrice) * 100, 10);
+    expect(r.margin).toBeCloseTo(
+      ((r.totalPrice - r.amzFee - r.variableFee - r.totalCost) / r.totalPrice) * 100,
+      10
+    );
     expect(r.marginAfter).toBeCloseTo((r.profitAfter / r.totalPrice) * 100, 10);
   });
 
