@@ -11,7 +11,8 @@ import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../ut
 import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field, AutoGrowTextarea } from './SellerUI';
 import { productApi } from '../../services/api';
 import { subscribeProductChanges } from '../../services/echo';
-import ProductViewerModal, { MODAL_MAX_WIDTH } from './ProductViewerModal';
+import ProductViewerModal from './ProductViewerModal';
+import { MODAL_MAX_WIDTH } from '../shared/RequestDetailUI';
 import useIsMobile from '../../hooks/useIsMobile';
 import { vnDateStamp } from '../../utils/vnTime';
 

@@ -8,11 +8,21 @@
 //  vendor + đặt deadline sau khi Admin duyệt), (2) bấm vào 1 dòng thì gọi API lấy
 //  bản đầy đủ và mở modal chi tiết sản phẩm giống role Vendor.
 // ════════════════════════════════════════════════════════
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FormHistoryModal from '../FormHistoryModal';
 import { productApi } from '../../../../services/api';
+
+// jsdom không có matchMedia; VendorViewerModal (dùng cho modal chi tiết) gọi
+// useIsMobile() nên cần bản giả (desktop).
+beforeAll(() => {
+  window.matchMedia = () => ({
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  });
+});
 
 vi.mock('../../../../services/api', () => ({
   productApi: {
@@ -131,7 +141,9 @@ describe('FormHistoryModal — mở chi tiết request', () => {
     await userEvent.click(screen.getByText('Wrapped Canvas'));
 
     expect(productApi.getById).toHaveBeenCalledWith(5);
-    expect(await screen.findByText('Chi tiết sản phẩm')).toBeInTheDocument();
+    // Modal chi tiết dùng Product Type làm tiêu đề (không còn nhãn tĩnh
+    // "Chi tiết sản phẩm") — chốt bằng eyebrow "Request sản phẩm" luôn đi kèm.
+    expect(await screen.findByText('Request sản phẩm')).toBeInTheDocument();
   });
 
   it('API lỗi thì vẫn mở chi tiết bằng dữ liệu có sẵn trong danh sách', async () => {
@@ -141,6 +153,6 @@ describe('FormHistoryModal — mở chi tiết request', () => {
     render(<FormHistoryModal {...baseProps} />);
     await userEvent.click(screen.getByText('Wrapped Canvas'));
 
-    expect(await screen.findByText('Chi tiết sản phẩm')).toBeInTheDocument();
+    expect(await screen.findByText('Request sản phẩm')).toBeInTheDocument();
   });
 });
