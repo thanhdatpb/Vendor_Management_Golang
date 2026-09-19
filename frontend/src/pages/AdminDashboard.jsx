@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { productApi, notificationApi } from '../services/api';
 import { subscribeNotificationChanges, subscribeProductChanges } from '../services/echo';
@@ -12,6 +13,11 @@ import OverviewSection from '../components/admin/sections/OverviewSection';
 import VendorsSection from '../components/admin/sections/VendorsSection';
 import PriceSheetSection from '../components/admin/sections/PriceSheetSection';
 import StaffManagementSection from '../components/admin/sections/StaffManagementSection';
+import {
+  VENDOR_LIBRARY_SUBMENU,
+  vendorLibraryModeFromSearch,
+  adminVendorLibraryPath,
+} from '../components/admin/vendorLibraryNavigation';
 import { fmtVNLongDate } from '../utils/vnTime';
 
 window.sendNewsToAdmin = function (newsData) {
@@ -58,6 +64,27 @@ export default function AdminDashboard() {
   // Badge "N bảng" đứng cạnh tiêu đề trên topbar (cùng pattern với Seller) —
   // PriceSheetSection báo số bảng đang hiện lên đây thay vì tự dựng header riêng.
   const [priceSheetsCount, setPriceSheetsCount] = useState(null);
+
+  // Thư Viện Vendor: chế độ con (Tổng quan / New Arrivals / Best Seller) nằm
+  // trên query `?view=` để bookmark/Back được như mục chính. Số file của từng
+  // chế độ do VendorLibraryViewer báo lên; giữ số gần nhất khi rời mục để lần mở
+  // submenu sau không chớp "…".
+  const location = useLocation();
+  const navigate = useNavigate();
+  const vendorLibraryMode = vendorLibraryModeFromSearch(location.search);
+  const [vendorLibraryCounts, setVendorLibraryCounts] = useState(null);
+  const openVendorLibraryMode = useCallback((mode) => {
+    navigate(adminVendorLibraryPath(mode));
+  }, [navigate]);
+  const sidebarSubmenus = useMemo(() => ({
+    vendors: {
+      items: VENDOR_LIBRARY_SUBMENU,
+      activeId: vendorLibraryMode,
+      counts: vendorLibraryCounts,
+      countsPending: active === 'vendors' && !vendorLibraryCounts,
+      onSelect: openVendorLibraryMode,
+    },
+  }), [vendorLibraryMode, vendorLibraryCounts, active, openVendorLibraryMode]);
 
   const loadPendingProducts = useCallback(async () => {
     try {
@@ -341,7 +368,7 @@ export default function AdminDashboard() {
       case 'overview':
         return <OverviewSection externalViewProduct={viewProduct} setExternalViewProduct={setViewProduct} />;
       case 'vendors':
-        return <VendorsSection />;
+        return <VendorsSection mode={vendorLibraryMode} onModeCountsChange={setVendorLibraryCounts} />;
       case 'pricesheets':
         return <PriceSheetSection onTotalCountChange={setPriceSheetsCount} />;
       case 'staff':
@@ -377,6 +404,7 @@ export default function AdminDashboard() {
           setSidebarOpen={setSidebarOpen}
           user={user}
           logout={logout}
+          submenus={sidebarSubmenus}
         />
 
         <div style={{

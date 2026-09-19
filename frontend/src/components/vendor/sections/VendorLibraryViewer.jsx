@@ -17,10 +17,11 @@ import LibraryFileModal from '../../library/LibraryFileModal';
 import LibraryCopyLinkButton from '../../library/LibraryCopyLinkButton';
 import LibraryMonthSection from '../../library/LibraryMonthSection';
 import { fileSharedProjects, fileVisibleToProject, PROJECTS } from '../../../constants/projects';
-import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../../utils/vnTime';
+import { timeValue, fmtVNDateTimeShort } from '../../../utils/vnTime';
 import { libraryFilePath, parseLibraryFilePath } from '../../../utils/libraryFileLink';
 import { groupLibraryFilesByMonth } from '../../../utils/libraryMonthGroups';
 import { pricingRowOwners, filterLibraryEntryByVendor, unwrapLibraryVendorView } from '../../../utils/libraryVendorFilter';
+import { getVendorLibraryModeCounts, isWithinCurrentVendorWeek } from '../../../utils/vendorLibraryMode';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -248,19 +249,6 @@ export function MediaThumb({ url, siblingUrls, index }) {
   return (
     <AuthenticatedImage url={url} siblingUrls={siblingUrls} index={index} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
   );
-}
-
-// Một file "New Arrivals" chỉ còn là hàng mới TRONG TUẦN nó được upload (tuần bắt
-// đầu từ thứ Hai). Sang thứ Hai của tuần kế tiếp, importedAt < mốc thứ Hai tuần
-// hiện tại → hết hiển thị ở tab New Arrivals + hết badge "Mới", trở về file thường.
-function isWithinCurrentWeek(importedAt) {
-  if (!importedAt) return false;
-  const t = timeValue(importedAt, NaN);
-  if (!Number.isFinite(t)) return false;
-  // Ranh giới tuần phải là nửa đêm thứ Hai Ở VIỆT NAM, không phải nửa đêm theo
-  // máy người xem — nếu không, người ngồi khác múi giờ thấy tab New Arrivals
-  // đổi nội dung sớm/muộn hơn phần còn lại của team.
-  return t >= vnStartOfWeek();
 }
 
 // Tên vendor có trong MỘT file — dùng chung cho badge trên card (LibraryCard)
@@ -1273,7 +1261,7 @@ export function LibraryCard({ entry, idx = 0, onDelete, onUpdate, onShare, onOpe
 
           {/* Meta row */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            {mode === 'all' && entry.sourceTab === 'new_products' && isWithinCurrentWeek(entry.importedAt) && (
+            {mode === 'all' && entry.sourceTab === 'new_products' && isWithinCurrentVendorWeek(entry.importedAt) && (
               <span style={{ padding: '1px 6px', borderRadius: 4, background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mới</span>
             )}
             <span
@@ -1651,7 +1639,7 @@ export function ManualAddModal({ onClose, onSave, mode }) {
  *   vendor, tải template, import Excel, chia sẻ project) kể cả khi readOnly.
  *   Admin xem read-only nhưng có toàn quyền quản lý thư viện nên bật cờ này.
  */
-export default function VendorLibraryViewer({ readOnly = false, canManage = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, highlightFileId, onHighlightCleared, fileWindowActions = null, initialSearch = '' }) {
+export default function VendorLibraryViewer({ readOnly = false, canManage = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, onModeCountsChange, highlightFileId, onHighlightCleared, fileWindowActions = null, initialSearch = '' }) {
   // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1755,6 +1743,17 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     return s;
   }, [rawFiles]);
 
+  // Sidebar Admin hiển thị số FILE của hai mode. Derive từ rawFiles để badge
+  // không thay đổi khi người dùng tìm kiếm/lọc vendor/project trong nội dung.
+  // Effect chỉ emit sau lần tải thành công đầu tiên để không chớp số 0 giả.
+  const modeCounts = useMemo(
+    () => getVendorLibraryModeCounts(rawFiles),
+    [rawFiles],
+  );
+  useEffect(() => {
+    if (dataLoaded && onModeCountsChange) onModeCountsChange(modeCounts);
+  }, [dataLoaded, modeCounts, onModeCountsChange]);
+
   // Toggle ⭐: cập nhật lạc quan trong bộ nhớ rồi gọi endpoint nhẹ chỉ sửa 1 field
   // trên server; lỗi thì hoàn tác. Cùng cơ chế với handleSampleStatusChange.
   const toggleBestSeller = useCallback(async (rowId) => {
@@ -1838,7 +1837,7 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     } else if (mode === 'new_products') {
       // Chỉ hiển thị file upload vào New Arrivals TRONG TUẦN hiện tại (từ thứ Hai).
       // Sang tuần mới, file cũ tự rời khỏi đây và về "Tổng quan" như file thường.
-      files = files.filter(file => file.sourceTab === 'new_products' && isWithinCurrentWeek(file.importedAt));
+      files = files.filter(file => file.sourceTab === 'new_products' && isWithinCurrentVendorWeek(file.importedAt));
     }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();

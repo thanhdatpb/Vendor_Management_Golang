@@ -23,12 +23,13 @@ import AppToast from '../shared/AppToast';
 import ExportVendorFilesModal from '../shared/ExportVendorFilesModal';
 import { renderChiTietSizeText } from '../vendor/sections/VendorLibraryViewer';
 import { fileVisibleToProject } from '../../constants/projects';
-import { timeValue, fmtVNDateTimeShort, vnStartOfWeek } from '../../utils/vnTime';
+import { timeValue, fmtVNDateTimeShort } from '../../utils/vnTime';
 import LibraryFileModal from '../library/LibraryFileModal';
 import LibraryCopyLinkButton from '../library/LibraryCopyLinkButton';
 import LibraryMonthSection from '../library/LibraryMonthSection';
 import { libraryFilePath, parseLibraryFilePath } from '../../utils/libraryFileLink';
 import { groupLibraryFilesByMonth } from '../../utils/libraryMonthGroups';
+import { isWithinCurrentVendorWeek } from '../../utils/vendorLibraryMode';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -86,18 +87,6 @@ function MediaThumb({ url }) {
 // Quy tắc "project nào xem được file" nằm ở constants/projects.js, dùng chung với
 // VendorLibraryViewer: ưu tiên danh sách chia sẻ tường minh `file.projects` do
 // Vendor/Admin đặt, file chưa chia sẻ thì vẫn theo ký hiệu `P.xxx` trong tên.
-
-// New Arrivals chỉ hiệu lực trong TUẦN upload (tuần bắt đầu thứ Hai) — giống logic
-// của VendorLibraryViewer. Sang thứ Hai tuần kế tiếp, file rời khỏi tab này.
-function isWithinCurrentWeek(importedAt) {
-  if (!importedAt) return false;
-  const t = timeValue(importedAt, NaN);
-  if (!Number.isFinite(t)) return false;
-  // Ranh giới tuần phải là nửa đêm thứ Hai Ở VIỆT NAM, không phải nửa đêm theo
-  // máy người xem — nếu không, người ngồi khác múi giờ thấy tab New Arrivals
-  // đổi nội dung sớm/muộn hơn phần còn lại của team.
-  return t >= vnStartOfWeek();
-}
 
 // ── Ghép Link Template (từ bảng giá) vào từng dòng thông tin chung ────────────
 const normStr = (s) => (s || '').toString().trim().toLowerCase().replace(/[()'"“”‘’]/g, '').replace(/\s+/g, ' ').trim();
@@ -394,7 +383,7 @@ export default function VendorLibraryView({ projectKey, department }) {
       files = files.map(f => f.generalInfo ? { ...f, generalInfo: f.generalInfo.filter(r => bestSellerIds.has(r.id)) } : f)
         .filter(f => f.generalInfo && f.generalInfo.length > 0);
     } else if (activeTab === 'new_products') {
-      files = files.filter(f => f.sourceTab === 'new_products' && isWithinCurrentWeek(f.importedAt));
+      files = files.filter(f => f.sourceTab === 'new_products' && isWithinCurrentVendorWeek(f.importedAt));
     }
 
     if (searchQuery.trim()) {
