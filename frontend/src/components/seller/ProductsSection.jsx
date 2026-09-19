@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useRef } from 'react';
 import AppToast from '../shared/AppToast';
-import { DeleteOutlined, SearchOutlined, SendOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { CalendarOutlined, DeleteOutlined, SearchOutlined, SendOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useAuth } from '../../context/AuthContext';
 import { HC, STATUS_CFG, ITEMS_PER_PAGE, LS_PRODUCT_VENDORS, EMPTY_FORM } from '../../constants/sellerTheme';
 import { lsGet, fmtDate, fmtDateTime, getMediaUrls, getMediaUrl, exportProductsToExcel } from '../../utils/sellerHelpers';
@@ -11,9 +11,49 @@ import { parseSellerProductsExcel, exportProductsImportTemplate } from '../../ut
 import { Spinner, EmptyState, Badge, Pagination, MediaGallery, inp, Field, AutoGrowTextarea } from './SellerUI';
 import { productApi } from '../../services/api';
 import { subscribeProductChanges } from '../../services/echo';
-import ProductViewerModal from './ProductViewerModal';
+import ProductViewerModal, { MODAL_MAX_WIDTH } from './ProductViewerModal';
 import useIsMobile from '../../hooks/useIsMobile';
 import { vnDateStamp } from '../../utils/vnTime';
+
+const FONT = "'Inter',sans-serif";
+
+// Các mục bắt buộc của form request — dùng để đếm "còn N mục" ở header.
+// validateForm() vẫn là nơi duy nhất quyết định chặn submit.
+const REQUIRED_TEXT_FIELDS = ['product_type', 'production_time', 'shipping_time', 'total_cost', 'material', 'print_area', 'other_specs', 'good_review', 'bad_review', 'packaging_links', 'other_packaging'];
+const TOTAL_REQUIRED = REQUIRED_TEXT_FIELDS.length + 1; // + link hình ảnh
+const countMissingRequired = (form) => {
+  const missing = REQUIRED_TEXT_FIELDS.filter(k => !String(form?.[k] ?? '').trim()).length;
+  const noImage = !form?.product_type_links || form.product_type_links.length === 0;
+  return missing + (noImage ? 1 : 0);
+};
+
+const nameInitials = (name) => name.split(/s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+// Section của form — cùng nhịp tiêu đề với modal chi tiết request.
+function FormSection({ title, last, children }) {
+  return (
+    <section style={{ padding: '16px 0', borderBottom: last ? 'none' : `1px solid ${HC.border}` }}>
+      <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: HC.brown }}>{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+// Số mục (1.1 / 2.3 …) là chip nhỏ trước nhãn, ví dụ xuống dòng gợi ý phía dưới.
+function FormField({ no, label, required, hint, error, children }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+      <label style={{ fontSize: 12.5, fontWeight: 600, color: error ? HC.danger : HC.ink2, lineHeight: 1.35 }}>
+        {no && <span style={{ display: 'inline-block', fontSize: 10.5, fontWeight: 800, color: HC.orangeDeep, background: HC.orangeLight, border: `1px solid ${HC.orangeMid}`, borderRadius: 5, padding: '0 5px', marginRight: 6, fontVariantNumeric: 'tabular-nums' }}>{no}</span>}
+        {label}
+        {required && <span style={{ color: HC.danger, fontWeight: 800 }}> *</span>}
+      </label>
+      {children}
+      {hint && !error && <span style={{ fontSize: 11.5, color: HC.muted, lineHeight: 1.4 }}>{hint}</span>}
+      {error && <span style={{ color: HC.danger, fontSize: 11.5, fontWeight: 600 }}>⚠ {error}</span>}
+    </div>
+  );
+}
 
 function ThumbnailCell({ src }) {
   const [broken, setBroken] = useState(false);
@@ -76,6 +116,9 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
   const fileUploadRef = useRef(null);
   const [tempLink, setTempLink] = useState('');
   const [tempVideoLink, setTempVideoLink] = useState('');
+
+  const sellerDisplayName = user?.full_name || user?.sellerName || user?.seller_name || user?.name || '';
+  const missingRequired = countMissingRequired(form);
 
   // Xóa localStorage cũ khi API đã là source of truth
   useEffect(() => {
@@ -1095,14 +1138,14 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
       {showFormModal && (
         <div onClick={isMobile ? undefined : closeModal} style={{ position: 'fixed', inset: 0, background: isMobile ? HC.surface : 'rgba(26,15,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'stretch' : 'center', zIndex: 1000, backdropFilter: isMobile ? 'none' : 'blur(2px)', padding: isMobile ? 0 : 16 }}>
           <div onClick={e => e.stopPropagation()} style={isMobile
-            ? { width: '100%', height: '100%', overflowY: 'auto', background: HC.surface }
-            : { width: '100%', maxWidth: 900, maxHeight: '85vh', overflowY: 'auto', background: HC.surface, borderRadius: 20, boxShadow: HC.shadowStrong, border: `1.5px solid ${HC.border}` }}>
+            ? { width: '100%', height: '100%', background: HC.surface, overflow: 'hidden', display: 'flex', flexDirection: 'column', fontFamily: FONT }
+            : { width: '100%', maxWidth: MODAL_MAX_WIDTH, maxHeight: '92vh', background: HC.surface, borderRadius: 16, boxShadow: '0 32px 80px rgba(26,15,0,0.28)', border: `1px solid ${HC.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
 
-            {/* Modal Header */}
-            <div style={{ padding: '16px 24px', background: `linear-gradient(135deg, ${HC.orange}, ${HC.orangeDark})`, borderRadius: isMobile ? 0 : '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: isMobile ? 'sticky' : 'static', top: 0, zIndex: 2 }}>
-              <div>
-                <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', fontFamily: "'Inter',sans-serif" }}>
-                  {isEditing ? '✏️ Chỉnh sửa sản phẩm' : (() => {
+            {/* Header — sáng như form duyệt request của Admin */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 12 : 16, padding: isMobile ? '14px 14px 12px' : '18px 22px 16px', background: HC.surface2, borderBottom: `1px solid ${HC.border}`, flexShrink: 0 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: HC.brown }}>
+                  {(() => {
                     const rawName = user?.project || user?.sellerName || user?.seller_name || user?.name || '';
                     let titleName = 'Project Global';
                     if (rawName) {
@@ -1113,61 +1156,61 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                         titleName = rawName;
                       }
                     }
-                    return `${titleName} Request - Product Type`;
+                    return `${titleName} · Request Product Type`;
                   })()}
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
-                  {isEditing ? 'Cập nhật thông tin sản phẩm' : 'Điền đầy đủ thông tin để gửi request sản phẩm mới'}
+                <h2 style={{ margin: '3px 0 9px', fontSize: isMobile ? 18 : 21, fontWeight: 800, letterSpacing: '-0.01em', color: HC.ink, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px', lineHeight: 1.25 }}>
+                  {isEditing ? 'Chỉnh sửa sản phẩm' : 'Request phôi mới'}
+                  {!isEditing && <span style={{ padding: '3px 11px', borderRadius: 999, background: HC.orangeLight, color: HC.brown, fontSize: 11.5, fontWeight: 700 }}>Nháp</span>}
+                </h2>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', fontSize: 13, color: HC.ink2, fontVariantNumeric: 'tabular-nums' }}>
+                  {sellerDisplayName && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                      <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: HC.orangeMid, color: HC.orangeDeep, fontSize: 10, fontWeight: 800, display: 'grid', placeItems: 'center' }}>{nameInitials(sellerDisplayName)}</span>
+                      {sellerDisplayName}
+                    </span>
+                  )}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <CalendarOutlined style={{ color: HC.muted, fontSize: 14 }} />
+                    {isEditing ? 'Đang sửa request đã gửi' : `Tạo ${fmtDate(new Date().toISOString())}`}
+                  </span>
+                  <span style={{ padding: '2px 10px', borderRadius: 999, background: missingRequired > 0 ? HC.orangeLight : '#ecfdf5', border: `1px solid ${missingRequired > 0 ? HC.orangeMid : '#bbf7d0'}`, color: missingRequired > 0 ? HC.orangeDeep : '#065f46', fontSize: 11.5, fontWeight: 700 }}>
+                    {missingRequired > 0 ? `Còn ${missingRequired} / ${TOTAL_REQUIRED} mục bắt buộc` : 'Đã điền đủ mục bắt buộc'}
+                  </span>
                 </div>
               </div>
-              <button onClick={closeModal} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', fontSize: 18, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Đóng"
+                style={{ width: isMobile ? 40 : 36, height: isMobile ? 40 : 36, borderRadius: 10, border: `1px solid ${HC.border}`, background: HC.surface, color: HC.brown, cursor: 'pointer', display: 'grid', placeItems: 'center', flexShrink: 0, fontSize: 15, transition: 'background .15s, color .15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.color = HC.orangeDeep; }}
+                onMouseLeave={e => { e.currentTarget.style.background = HC.surface; e.currentTarget.style.color = HC.brown; }}
+              >✕</button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={isEditing ? handleUpdate : handleSubmit} style={{ padding: '24px' }}>
-              <div style={{ marginBottom: 16 }}>
-                <Field label="1. Product Type (Ghi rõ tên Product Type - Ví dụ: AOP Sweatshirt)" required error={formErrors.product_type}>
-                  <AutoGrowTextarea
-                    placeholder="Câu trả lời của bạn"
-                    value={form.product_type}
-                    onChange={fld('product_type')}
-                    style={{ borderColor: formErrors.product_type ? HC.danger : HC.border }}
-                  />
-                </Field>
-              </div>
+            <form onSubmit={isEditing ? handleUpdate : handleSubmit} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {/* Body — cột trái: media (đúng chỗ ảnh hiện ở modal chi tiết); cột phải: field theo section */}
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '344px minmax(0,1fr)', alignItems: 'stretch' }}>
 
-              {/* 1.1 Hình ảnh sản phẩm — link + upload gộp 1 mục */}
-              <div style={{ marginBottom: 16 }}>
-                <Field label="1.1 Link hình ảnh (Nhiều link, sau mỗi link bấm enter)" required error={formErrors.product_type_links}>
-                  {/* Hidden file input — disabled */}
-
-                  {/* Input row — link + 2 buttons */}
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <input
-                      type="url"
-                      placeholder="Câu trả lời của bạn"
-                      value={tempLink}
-                      onChange={e => setTempLink(e.target.value)}
-                      onKeyPress={e => e.key === 'Enter' && addLink()}
-                      style={{
-                        ...inp,
-                        flex: 1,
-                        borderColor: formErrors.product_type_links ? HC.danger : HC.border
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={addLink}
-                      style={{
-                        padding: '9px 16px', borderRadius: 9,
-                        background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
-                        color: '#fff', border: 'none', fontSize: 12, fontWeight: 700,
-                        cursor: 'pointer', whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Thêm link
-                    </button>
-                  </div>
+                <div style={{ background: HC.cream, borderRight: isMobile ? 'none' : `1px solid ${HC.border}`, borderBottom: isMobile ? `1px solid ${HC.border}` : 'none', padding: isMobile ? 14 : 18, display: 'flex', flexDirection: 'column' }}>
+                  <FormField no="1.1" label="Link hình ảnh" required error={formErrors.product_type_links} hint="Dán nhiều link, mỗi link một lần Enter. Ảnh hiện ngay để đối chiếu.">
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="url"
+                        placeholder="Dán link rồi Enter"
+                        value={tempLink}
+                        onChange={e => setTempLink(e.target.value)}
+                        onKeyPress={e => e.key === 'Enter' && addLink()}
+                        style={{ ...inp, flex: 1, background: HC.surface, borderColor: formErrors.product_type_links ? HC.danger : HC.border }}
+                      />
+                      <button
+                        type="button"
+                        onClick={addLink}
+                        style={{ flexShrink: 0, padding: '0 14px', height: 38, borderRadius: 9, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >+ Thêm</button>
+                    </div>
+                  </FormField>
 
                   {/* Live preview khi đang nhập link */}
                   {tempLink && (
@@ -1175,220 +1218,191 @@ export default function ProductsSection({ highlightedProductId, onHighlightClear
                       <div style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', border: `2px dashed ${HC.orangeMid}`, flexShrink: 0 }}>
                         <LinkPreviewImg src={tempLink} />
                       </div>
-                      <span style={{ fontSize: 11, color: HC.muted, fontStyle: 'italic' }}>Preview — nhấn Enter hoặc "+ Thêm link" để xác nhận</span>
+                      <span style={{ fontSize: 11.5, color: HC.muted, fontStyle: 'italic' }}>Preview — nhấn Enter hoặc "+ Thêm" để xác nhận</span>
                     </div>
                   )}
 
                   {/* Thumbnail grid — links đã thêm */}
                   {form.product_type_links.length > 0 && (
-                    <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 8 }}>
                       {form.product_type_links.map((link, idx) => (
-                        <div key={idx} style={{ position: 'relative', width: 90, borderRadius: 10, overflow: 'hidden', border: `1.5px solid ${HC.orangeMid}`, background: HC.surface, flexShrink: 0 }}>
+                        <div key={idx} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: `1.5px solid ${HC.orangeMid}`, background: HC.surface }}>
                           <LinkPreviewImg src={link} />
                           <button
                             type="button"
                             onClick={() => removeLink(idx)}
-                            style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            aria-label={`Xoá ảnh ${idx + 1}`}
+                            style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: '50%', background: 'rgba(26,15,0,0.6)', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
                           >✕</button>
                           <div
                             onClick={() => openLink(link)}
-                            style={{ padding: '4px 6px', background: HC.orangeLight, fontSize: 9, color: HC.orangeDark, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                            style={{ padding: '4px 6px', background: HC.orangeLight, fontSize: 9.5, color: HC.orangeDeep, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
                             title={link}
                           >
-                            🔗 {link.length > 18 ? link.substring(0, 18) + '…' : link}
+                            {link.replace(/^https?:\/\/(www\.)?/, '')}
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
 
-
-                  {formErrors.product_type_links && (
-                    <span style={{ color: HC.danger, fontSize: 10, marginTop: 2 }}>⚠ {formErrors.product_type_links}</span>
-                  )}
-                </Field>
-              </div>
-
-              {/* 1.2 Link video sản phẩm */}
-              <div style={{ marginBottom: 16 }}>
-                <Field label="1.2 Link video sản phẩm (YouTube, Google Drive, v.v.)">
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <input
-                      type="url"
-                      placeholder="Câu trả lời của bạn"
-                      value={tempVideoLink}
-                      onChange={e => setTempVideoLink(e.target.value)}
-                      onKeyPress={e => e.key === 'Enter' && addVideoLink()}
-                      style={{ ...inp, flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={addVideoLink}
-                      style={{
-                        padding: '9px 16px', borderRadius: 9,
-                        background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`,
-                        color: '#fff', border: 'none', fontSize: 12, fontWeight: 700,
-                        cursor: 'pointer', whiteSpace: 'nowrap'
-                      }}
-                    >
-                      + Thêm link
-                    </button>
-                  </div>
-                  {(form.product_video_links || []).length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {(form.product_video_links || []).map((link, idx) => (
-                        <div key={idx} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '5px 10px', borderRadius: 20,
-                          background: HC.orangeLight, border: `1.5px solid ${HC.orangeMid}`,
-                          fontSize: 11, fontWeight: 700, color: HC.orangeDark, maxWidth: 280,
-                        }}>
-                          <span
-                            onClick={() => openLink(link)}
-                            style={{ cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                            title={link}
-                          >
-                            🎬 {link.length > 32 ? link.substring(0, 32) + '…' : link}
+                  <div style={{ marginTop: 14 }}>
+                    <FormField no="1.2" label="Link video sản phẩm">
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="url"
+                          placeholder="YouTube, Google Drive…"
+                          value={tempVideoLink}
+                          onChange={e => setTempVideoLink(e.target.value)}
+                          onKeyPress={e => e.key === 'Enter' && addVideoLink()}
+                          style={{ ...inp, flex: 1, background: HC.surface }}
+                        />
+                        <button
+                          type="button"
+                          onClick={addVideoLink}
+                          style={{ flexShrink: 0, padding: '0 14px', height: 38, borderRadius: 9, background: `linear-gradient(135deg,${HC.orange},${HC.orangeDark})`, color: '#fff', border: 'none', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >+ Thêm</button>
+                      </div>
+                    </FormField>
+                    {(form.product_video_links || []).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                        {(form.product_video_links || []).map((link, idx) => (
+                          <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%', padding: '4px 10px', borderRadius: 999, background: '#f5f3ff', border: '1px solid #ddd6fe', fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>
+                            <span
+                              onClick={() => openLink(link)}
+                              style={{ cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              title={link}
+                            >
+                              {link.replace(/^https?:\/\/(www\.)?/, '')}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeVideoLink(idx)}
+                              aria-label={`Xoá video ${idx + 1}`}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 12, padding: 0, lineHeight: 1, flexShrink: 0 }}
+                            >✕</button>
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => removeVideoLink(idx)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: HC.orangeDark, fontSize: 12, padding: 0, lineHeight: 1, flexShrink: 0 }}
-                          >✕</button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ marginTop: 'auto', paddingTop: 14, fontSize: 11.5, lineHeight: 1.5, color: HC.muted }}>
+                    Ảnh và video dán ở đây sẽ hiện đúng vị trí này khi mở lại request ở màn chi tiết.
+                  </div>
+                </div>
+
+                <div style={{ minWidth: 0, padding: isMobile ? '4px 14px 10px' : '4px 22px 10px' }}>
+                  <FormSection title="Thông số sản phẩm">
+                    <div style={{ marginBottom: 12 }}>
+                      <FormField no="1" label="Product Type" required error={formErrors.product_type} hint="Ghi rõ tên phôi, ví dụ: AOP Sweatshirt.">
+                        <AutoGrowTextarea
+                          placeholder="Câu trả lời của bạn"
+                          value={form.product_type}
+                          onChange={fld('product_type')}
+                          style={{ borderColor: formErrors.product_type ? HC.danger : HC.border }}
+                        />
+                      </FormField>
                     </div>
-                  )}
-                </Field>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="1.4 Thời gian sản xuất mong muốn (Ví dụ: 1-3)" required error={formErrors.production_time}>
-                  <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ borderColor: formErrors.production_time ? HC.danger : HC.border }} />
-                </Field>
-                <Field label="1.5 Thời gian ship mong muốn (Ví dụ: 3-5)" required error={formErrors.shipping_time}>
-                  <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
-                </Field>
-                <Field label="1.6 Total Cost (Bao gồm Base và Shipping cost, Ví dụ: 100-150)" required error={formErrors.total_cost}>
-                  <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
-                </Field>
-              </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0,1fr))', gap: '12px 16px', marginBottom: 12 }}>
+                      <FormField no="1.4" label="Thời gian sản xuất" required error={formErrors.production_time} hint="Số ngày, ví dụ: 1-3">
+                        <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.production_time} onChange={fld('production_time')} style={{ borderColor: formErrors.production_time ? HC.danger : HC.border }} />
+                      </FormField>
+                      <FormField no="1.5" label="Thời gian ship" required error={formErrors.shipping_time} hint="Số ngày, ví dụ: 3-5">
+                        <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.shipping_time} onChange={fld('shipping_time')} style={{ borderColor: formErrors.shipping_time ? HC.danger : HC.border }} />
+                      </FormField>
+                      <FormField no="1.6" label="Total Cost" required error={formErrors.total_cost} hint="Gồm base + shipping, ví dụ: 100-150">
+                        <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.total_cost} onChange={fld('total_cost')} style={{ borderColor: formErrors.total_cost ? HC.danger : HC.border }} />
+                      </FormField>
+                    </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>2. Đặc tính kỹ thuật (Mô tả về đặc tính Product Type)</div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
-                  <Field label="2.1 Chất liệu (Ví dụ: 100% cotton)" required error={formErrors.material}>
-                    <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ borderColor: formErrors.material ? HC.danger : HC.border }} />
-                  </Field>
-                  {/* Nội dung ở đây hay dài hàng chục dòng (spec, evidence...) — dùng
-                      textarea cố định chiều cao + cuộn như 2.3/2.4/2.5, thay vì
-                      AutoGrowTextarea (cao theo nội dung, đẩy form dài vô tận). */}
-                  <Field label="2.2 Vùng In/Thiết kế (Ví dụ: 2 vùng in trước và sau)" required error={formErrors.print_area}>
-                    <textarea
-                      placeholder="Câu trả lời của bạn"
-                      value={form.print_area}
-                      onChange={fld('print_area')}
-                      style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.print_area ? HC.danger : HC.border }}
-                    />
-                  </Field>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: '12px 20px' }}>
+                      <FormField no="2.1" label="Chất liệu" required error={formErrors.material} hint="Ví dụ: 100% cotton">
+                        <AutoGrowTextarea placeholder="Câu trả lời của bạn" value={form.material} onChange={fld('material')} style={{ borderColor: formErrors.material ? HC.danger : HC.border }} />
+                      </FormField>
+                      {/* Nội dung ở đây hay dài hàng chục dòng (spec, evidence...) — dùng
+                          textarea cố định chiều cao + cuộn, thay vì AutoGrowTextarea
+                          (cao theo nội dung, đẩy form dài vô tận). */}
+                      <FormField no="2.2" label="Vùng in / thiết kế" required error={formErrors.print_area} hint="Ví dụ: 2 vùng in trước và sau">
+                        <textarea
+                          placeholder="Câu trả lời của bạn"
+                          value={form.print_area}
+                          onChange={fld('print_area')}
+                          style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.print_area ? HC.danger : HC.border }}
+                        />
+                      </FormField>
+                    </div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <FormField no="2.3" label="Other đặc tính kỹ thuật" required error={formErrors.other_specs} hint="Mỗi dòng một ý — màn chi tiết sẽ hiện thành danh sách có dấu tick.">
+                        <textarea
+                          placeholder="Câu trả lời của bạn"
+                          value={form.other_specs}
+                          onChange={fld('other_specs')}
+                          style={{ ...inp, minHeight: 80, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.45, borderColor: formErrors.other_specs ? HC.danger : HC.border }}
+                        />
+                      </FormField>
+                    </div>
+                  </FormSection>
+
+                  <FormSection title="Phản hồi khách hàng">
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: '12px 20px' }}>
+                      <FormField no="2.4" label="Good review" required error={formErrors.good_review}>
+                        <textarea
+                          placeholder="Câu trả lời của bạn"
+                          value={form.good_review}
+                          onChange={fld('good_review')}
+                          style={{ ...inp, minHeight: 74, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.45, background: '#f0fdf4', color: '#065f46', borderColor: formErrors.good_review ? HC.danger : '#bbf7d0' }}
+                        />
+                      </FormField>
+                      <FormField no="2.5" label="Bad review" required error={formErrors.bad_review}>
+                        <textarea
+                          placeholder="Câu trả lời của bạn"
+                          value={form.bad_review}
+                          onChange={fld('bad_review')}
+                          style={{ ...inp, minHeight: 74, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.45, background: '#fef2f2', color: '#991b1b', borderColor: formErrors.bad_review ? HC.danger : '#fecaca' }}
+                        />
+                      </FormField>
+                    </div>
+                  </FormSection>
+
+                  <FormSection title="Đóng gói" last>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: '12px 20px' }}>
+                      <FormField no="3.1" label="Packaging" required error={formErrors.packaging_links}>
+                        <textarea
+                          placeholder="Ví dụ: mỗi sản phẩm đóng gói hộp xốp"
+                          value={form.packaging_links}
+                          onChange={fld('packaging_links')}
+                          style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.packaging_links ? HC.danger : HC.border }}
+                        />
+                      </FormField>
+                      <FormField no="3.2" label="Other packaging" required error={formErrors.other_packaging}>
+                        <textarea
+                          placeholder="Phụ kiện kèm theo, ví dụ: thank you card"
+                          value={form.other_packaging}
+                          onChange={fld('other_packaging')}
+                          style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.other_packaging ? HC.danger : HC.border }}
+                        />
+                      </FormField>
+                    </div>
+                  </FormSection>
                 </div>
               </div>
 
-              <div style={{ marginBottom: 16 }}>
-                <Field label="2.3 Other đặc tính kỹ thuật (Ngoài các thông tin trên)" required error={formErrors.other_specs}>
-                  <textarea
-                    placeholder="Câu trả lời của bạn"
-                    value={form.other_specs}
-                    onChange={fld('other_specs')}
-                    style={{ ...inp, minHeight: 72, resize: 'vertical', borderColor: formErrors.other_specs ? HC.danger : HC.border }}
-                  />
-                </Field>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                <Field label="2.4 Good Review" required error={formErrors.good_review}>
-                  <textarea
-                    placeholder="Câu trả lời của bạn"
-                    value={form.good_review}
-                    onChange={fld('good_review')}
-                    style={{
-                      ...inp,
-                      minHeight: 70,
-                      resize: 'vertical',
-                      borderColor: formErrors.good_review ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-                <Field label="2.5 Bad Review" required error={formErrors.bad_review}>
-                  <textarea
-                    placeholder="Câu trả lời của bạn"
-                    value={form.bad_review}
-                    onChange={fld('bad_review')}
-                    style={{
-                      ...inp,
-                      minHeight: 70,
-                      resize: 'vertical',
-                      borderColor: formErrors.bad_review ? HC.danger : HC.border
-                    }}
-                  />
-                </Field>
-              </div>
-
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 800, fontSize: 14, color: HC.ink, marginBottom: 8 }}>3. Packaging & đóng gói (Yêu cầu về đóng gói)</div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
-                  <Field label="3.1 Packaging (Ví dụ: Mỗi sản phẩm được đóng gói hộp xốp)" required error={formErrors.packaging_links}>
-                    <textarea
-                      placeholder="Câu trả lời của bạn"
-                      value={form.packaging_links}
-                      onChange={fld('packaging_links')}
-                      style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.packaging_links ? HC.danger : HC.border }}
-                    />
-                  </Field>
-                  <Field label="3.2 Other Packaging (Phụ kiện đi kèm - Ví dụ: Thank you card)" required error={formErrors.other_packaging}>
-                    <textarea
-                      placeholder="Câu trả lời của bạn"
-                      value={form.other_packaging}
-                      onChange={fld('other_packaging')}
-                      style={{ ...inp, minHeight: 70, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4, borderColor: formErrors.other_packaging ? HC.danger : HC.border }}
-                    />
-                  </Field>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', paddingTop: 16, borderTop: `1px solid ${HC.border}` }}>
+              {/* Footer */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: isMobile ? '12px 14px' : '14px 22px', background: HC.surface2, borderTop: `1px solid ${HC.border}`, flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={closeModal}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: 10,
-                    background: HC.cream,
-                    border: `1.5px solid ${HC.border}`,
-                    color: HC.brown,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
+                  style={{ height: isMobile ? 44 : 40, padding: '0 20px', borderRadius: 10, background: HC.cream, border: `1.5px solid ${HC.border}`, color: HC.brown, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, flex: isMobile ? 1 : 'none' }}
+                >Cancel</button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    padding: '10px 24px',
-                    borderRadius: 10,
-                    background: submitting ? HC.muted2 : `linear-gradient(135deg,${HC.success},#15803d)`,
-                    color: '#fff',
-                    border: 'none',
-                    fontSize: 13,
-                    fontWeight: 800,
-                    cursor: submitting ? 'not-allowed' : 'pointer'
-                  }}
+                  style={{ height: isMobile ? 44 : 40, padding: '0 28px', borderRadius: 10, background: submitting ? HC.muted2 : `linear-gradient(135deg,${HC.success},#15803d)`, color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: FONT, boxShadow: submitting ? 'none' : '0 4px 16px rgba(22,163,74,0.26)', flex: isMobile ? 1 : 'none' }}
                 >
-                  {submitting ? '⟳ Đang xử lý...' : isEditing ? '✓ Confirm' : 'Confirm'}
+                  {submitting ? '⟳ Đang xử lý...' : 'Confirm'}
                 </button>
               </div>
             </form>
