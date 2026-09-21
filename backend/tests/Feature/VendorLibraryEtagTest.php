@@ -59,7 +59,18 @@ class VendorLibraryEtagTest extends TestCase
         $first = $this->actingAs($seller)->getJson('/api/vendor-library')->assertOk();
         $etag  = $first->headers->get('ETag');
         $this->assertNotEmpty($etag, 'Thiếu ETag thì client không có cách nào hỏi "có gì mới không".');
-        $this->assertSame('private, must-revalidate', $first->headers->get('Cache-Control'));
+        // Kiểm theo TỪNG directive chứ không so nguyên chuỗi: Symfony ksort các
+        // directive của Cache-Control khi dựng header, nên 'private, must-revalidate'
+        // đi ra dây thành 'must-revalidate, private'. So chuỗi là test gãy vì thứ
+        // tự chữ cái, không phải vì hành vi đổi.
+        $this->assertTrue(
+            $first->headers->hasCacheControlDirective('private'),
+            'Thiếu `private` thì proxy dùng chung có thể phát bản của người này cho người khác.'
+        );
+        $this->assertTrue(
+            $first->headers->hasCacheControlDirective('must-revalidate'),
+            'Thiếu `must-revalidate` thì trình duyệt được phép dùng bản cũ mà không hỏi lại — mất luôn tác dụng của ETag.'
+        );
 
         $second = $this->actingAs($seller)
             ->withHeaders(['If-None-Match' => $etag])

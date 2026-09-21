@@ -27,6 +27,12 @@
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Test KHÔNG được chạm vào object storage thật. Không có dòng này thì
+             máy nào có .env production (MEDIA_DISK=s3) chạy `php artisan test`
+             sẽ PUT object thật lên bucket R2 production — VendorLibraryImageUploadTest
+             và các test upload khác đều ghi rác vào đó. CI không dính vì nó không
+             có .env, nhưng máy dev thì có. -->
+        <env name="MEDIA_DISK" value="public"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
