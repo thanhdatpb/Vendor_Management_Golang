@@ -197,11 +197,15 @@ class PriceSheetVersionBackfillTest extends TestCase
         $this->artisan('pricesheets:backfill-versions')->assertSuccessful();
 
         $sheet = $this->sheetData('sheet_1', 20);
+        // Giá phải KHÁC bản mới nhất: từ bản autosave trở đi, snapshot trùng
+        // nội dung với bản gần nhất bị bỏ qua (Seller hay bấm Lưu nhiều lần
+        // cho chắc — xem PriceSheetAutosaveTest). Ở đây ta đang kiểm việc
+        // PRUNE còn đúng 20 bản, nên snapshot thứ 21 phải là bản thật.
         $sheet['history'] = [[
             'version' => 21,
             'savedAt' => now()->addMinutes(5)->toIso8601String(),
             'savedBy' => 'Seller moi',
-            'settings' => $sheet['settings'],
+            'settings' => ['price' => 12.9, 'quantity' => 1, 'amzFeePct' => 17, 'shipPerItem' => 2],
             'productTypes' => $sheet['productTypes'],
         ]];
 

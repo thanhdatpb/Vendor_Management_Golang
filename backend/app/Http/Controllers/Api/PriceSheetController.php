@@ -292,6 +292,11 @@ class PriceSheetController extends Controller
         // người dùng đã xem cảnh báo và cố ý ghi đè.
         $expectedVersion = $request->input('expectedVersion');
         $force           = filter_var($request->input('force', false), FILTER_VALIDATE_BOOLEAN);
+        // Lượt ghi ngầm trong lúc Seller đang gõ (mỗi vài giây một lần). Nội
+        // dung vẫn được lưu đầy đủ và vẫn phải qua cửa `expectedVersion`; chỉ
+        // KHÁC ở chỗ không bắn realtime — xem chỗ gọi announce() bên dưới.
+        // Nó cũng không kèm `history`, nên storeVersions() không ghi bản nào.
+        $autosave        = filter_var($request->input('autosave', false), FILTER_VALIDATE_BOOLEAN);
 
         if ($existing && $expectedVersion !== null && !$force) {
             $currentVersion = (int) ($existing->version ?? 1);
@@ -367,9 +372,14 @@ class PriceSheetController extends Controller
         }
 
         $this->storeVersions((string) $sheet['id'], $incomingHistory);
+        // Vẫn bump cache: danh sách phải thấy khoảng giá / avg margin mới, và
+        // increment là thao tác rẻ. Chỉ bỏ broadcast, vì bắn Pusher theo từng
+        // nhịp gõ thì mọi máy trong project refetch danh sách liên tục.
         $this->bumpCacheVersion();
 
-        $this->announce($sheet['id'], 'saved', $nextVersion, $user, $project);
+        if (!$autosave) {
+            $this->announce($sheet['id'], 'saved', $nextVersion, $user, $project);
+        }
 
         return response()->json([
             'message' => 'Đã lưu bảng tính giá',
@@ -401,6 +411,21 @@ class PriceSheetController extends Controller
 
         $nextVersion = (int) DB::table('price_sheet_versions')->where('sheet_id', $sheetId)->max('version');
 
+        // Vân tay của bản mới nhất đang lưu — để bỏ qua snapshot TRÙNG NỘI DUNG.
+        // Seller hay bấm Lưu nhiều lần cho chắc (thực tế: 17 bản cho một bảng);
+        // mỗi bản rác lại đẩy một mốc thật ra khỏi trần MAX_VERSIONS.
+        $lastFingerprint = $this->latestVersionFingerprint($sheetId);
+
+        // Mốc thời gian của bản mới nhất đang lưu. Client CŨ gửi lại cả 20
+        // snapshot mỗi lần lưu: lần đầu là backfill, những lần sau phải bỏ qua
+        // hoàn toàn. Khử trùng theo `savedAt` không đủ — một snapshot từng bị
+        // gộp vì trùng nội dung sẽ không có mặt trong DB, nên lần gửi sau nó
+        // lọt qua và tạo đúng bản trùng mà ta vừa tránh.
+        $latestSavedAt = (string) DB::table('price_sheet_versions')
+            ->where('sheet_id', $sheetId)
+            ->max('saved_at');
+        $latestKey = $latestSavedAt !== '' ? SnapshotTime::key($latestSavedAt) : '';
+
         // Client gửi mới-nhất-trước; ghi theo thứ tự thời gian để số version tăng dần.
         foreach (array_reverse($snapshots) as $snapshot) {
             if (!is_array($snapshot)) {
@@ -410,6 +435,16 @@ class PriceSheetController extends Controller
             $savedAt = (string) ($snapshot['savedAt'] ?? '');
             $key     = SnapshotTime::key($savedAt);
             if ($savedAt !== '' && isset($existingKeys[$key])) {
+                continue;
+            }
+
+            // Cũ hơn bản mới nhất đang lưu = phần lịch sử đã xử lý ở lần trước.
+            if ($savedAt !== '' && $latestKey !== '' && $key < $latestKey) {
+                continue;
+            }
+
+            $fingerprint = $this->snapshotFingerprint($snapshot);
+            if ($lastFingerprint !== null && $fingerprint === $lastFingerprint) {
                 continue;
             }
 
@@ -426,12 +461,47 @@ class PriceSheetController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $lastFingerprint = $fingerprint;
+
             if ($savedAt !== '') {
                 $existingKeys[$key] = true;
             }
         }
 
         $this->pruneVersions($sheetId);
+    }
+
+    /**
+     * Vân tay NỘI DUNG của một snapshot.
+     *
+     * Chỉ lấy `settings` + `productTypes` — những thứ thật sự làm nên bảng giá.
+     * Cố ý bỏ `savedAt`/`savedBy`/`version` và các số tổng hợp: hai lần bấm Lưu
+     * cách nhau 5 giây luôn khác nhau ở mấy trường đó, mà người dùng thì không
+     * đổi lấy một con số nào.
+     */
+    private function snapshotFingerprint(array $snapshot): string
+    {
+        return md5(json_encode([
+            'settings'     => $snapshot['settings'] ?? null,
+            'productTypes' => $snapshot['productTypes'] ?? null,
+        ], JSON_UNESCAPED_UNICODE));
+    }
+
+    /** Vân tay của phiên bản mới nhất đang lưu, null nếu bảng chưa có bản nào. */
+    private function latestVersionFingerprint(string $sheetId): ?string
+    {
+        $latest = DB::table('price_sheet_versions')
+            ->where('sheet_id', $sheetId)
+            ->orderBy('version', 'desc')
+            ->value('data');
+
+        if (!is_string($latest) || $latest === '') {
+            return null;
+        }
+
+        $snapshot = json_decode($latest, true);
+
+        return is_array($snapshot) ? $this->snapshotFingerprint($snapshot) : null;
     }
 
     /** Giữ đúng MAX_VERSIONS bản mới nhất cho mỗi bảng. */

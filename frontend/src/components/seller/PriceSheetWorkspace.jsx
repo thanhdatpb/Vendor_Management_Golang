@@ -19,6 +19,10 @@ import { resolveSheet, baseSizesOf as baseSizesOfLib, restoreFromLibrary, libLab
 import { moveByDelta, moveById, orderIdsOf } from '../../utils/sheetStructure';
 import { exportSheetToExcel } from '../../utils/sheetExport';
 import { fmtVNDateTime } from '../../utils/vnTime';
+import { createAutosave } from '../../utils/autosaveScheduler';
+import {
+  saveDraft, readDraft, clearDraft, draftDiffers, isStaleDraft, contentSignature,
+} from '../../utils/priceSheetDraft';
 
 import { PS, marginTone } from './pricesheet/tokens';
 import { PsStyles, Btn, IconBtn, Badge, ConfirmDialog, ModalShell } from './pricesheet/primitives';
@@ -28,10 +32,25 @@ import AddCustomizeInfoModal from './pricesheet/AddCustomizeInfoModal';
 import AddProductTypeModal from './pricesheet/AddProductTypeModal';
 import HistoryPanel from './pricesheet/HistoryPanel';
 import SummaryFooter from './pricesheet/SummaryFooter';
+import DraftRestoreBanner from './pricesheet/DraftRestoreBanner';
 
 // ═══ Export ra Excel — logic dựng dữ liệu nằm ở utils/sheetExport.js (T0) ═══
 // Re-export để SetupPriceSection giữ nguyên đường import cũ.
 export { exportSheetToExcel };
+
+// ═══ Nhịp tự lưu — chọn theo TẢI, không phải theo cảm giác ═══════════════
+// Mỗi lượt ghi gửi cả blob bảng lên server (vài chục KB) và bump cache danh
+// sách, nên nhịp quá dày là tự làm chậm chính mình:
+//   • AUTOSAVE_DELAY  — ngừng tay 2,5s mới ghi. Gõ một dòng size liền mạch
+//     chỉ tốn ĐÚNG MỘT request, thay vì một request mỗi ô.
+//   • AUTOSAVE_MAX_WAIT — trần 20s cho người gõ không nghỉ: mất mạng giữa
+//     chừng thì cùng lắm mất 20 giây cuối, mà tải vẫn ≤ 3 request/phút/người.
+//   • DRAFT_THROTTLE — nháp ở máy ghi ngay lần đầu (lưới an toàn phải có mặt
+//     tức thì), sau đó tối đa 1 lần/giây: localStorage.setItem là I/O đồng bộ,
+//     gọi theo từng phím sẽ giật tay người nhập trên bảng nhiều size.
+const AUTOSAVE_DELAY = 2500;
+const AUTOSAVE_MAX_WAIT = 20000;
+const DRAFT_THROTTLE = 1000;
 
 export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast }) {
   const [name, setName] = useState(sheet.name || '');
@@ -53,12 +72,37 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const [saving, setSaving] = useState(false);
   // Xung đột phiên bản (mục 16): { updatedBy, updatedAt, currentVersion, current }
   const [conflict, setConflict] = useState(null);
+  // Hỏi trước khi thoát khi còn nội dung chưa lên được server.
+  const [confirmExit, setConfirmExit] = useState(false);
 
-  // Dirty-check: so state người dùng sửa được với snapshot lúc mở / lúc lưu.
-  const snapshotOf = (n, st, pts) => JSON.stringify({ n, st, pts });
-  const savedSnapRef = useRef(null);
-  if (savedSnapRef.current == null) savedSnapRef.current = snapshotOf(name, settings, productTypes);
-  const dirty = snapshotOf(name, settings, productTypes) !== savedSnapRef.current;
+  // ── HAI khái niệm "đã lưu", cố ý KHÔNG gộp ────────────────────────────
+  //  • syncedSigRef  — nội dung đã nằm trên server (autosave hoặc chốt mốc).
+  //    Quyết định autosave có việc để làm, và có cảnh báo khi thoát không.
+  //  • versionSigRef — nội dung của MỐC phiên bản gần nhất. Quyết định nút
+  //    "Lưu bảng tính giá" có sáng không — nhờ vậy bấm Lưu nhiều lần không đẻ
+  //    ra nhiều bản lịch sử giống hệt nhau (trần 20 bản, mốc thật bị đẩy ra).
+  const contentSig = useMemo(
+    () => contentSignature({ name, settings, productTypes }),
+    [name, settings, productTypes]
+  );
+  const syncedSigRef = useRef(null);
+  const versionSigRef = useRef(null);
+  if (syncedSigRef.current == null) {
+    syncedSigRef.current = contentSig;
+    versionSigRef.current = contentSig;
+  }
+  const unsynced = contentSig !== syncedSigRef.current;
+  const dirty = contentSig !== versionSigRef.current;
+
+  const [autosaveStatus, setAutosaveStatus] = useState({ state: 'idle' });
+  // Nháp còn sót ở máy này (autosave hỏng / đóng tab giữa chừng). ĐỌC NGAY lúc
+  // khởi tạo state: hiệu ứng autosave bên dưới sẽ ghi đè khoá này ngay khi có
+  // thay đổi đầu tiên, đọc muộn hơn là đọc phải nháp của chính phiên này.
+  const [pendingDraft, setPendingDraft] = useState(() => {
+    const draft = readDraft(sheet.id);
+    return draft && draftDiffers(draft, { name, settings, productTypes }) ? draft : null;
+  });
+  const applyConflictRef = useRef(null);
 
   useEffect(() => {
     loadVendorLibraryIndex(sheet.project || '', !sheet.project).then(setLibIndex).catch(console.error);
@@ -69,6 +113,94 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     [sheet, name, settings, productTypes, libIndex]
   );
   const summary = useMemo(() => summarizeSheet(draftSheet), [draftSheet]);
+
+  // ── TỰ LƯU ────────────────────────────────────────────────────────────
+  // Payload dựng LÚC GỬI, không phải lúc lên lịch: `sheet.version` đổi sau mỗi
+  // lượt ghi, đóng băng payload sớm là tự gửi version cũ rồi tự nhận 409 của
+  // chính mình. Payload KHÔNG kèm `history` (xem priceSheetApi.save) nên
+  // autosave không tạo phiên bản nào.
+  const saveNowRef = useRef(null);
+  saveNowRef.current = async () => {
+    const sig = contentSig;
+    await Promise.resolve(onSave({ ...draftSheet, updatedAt: new Date().toISOString() }, { autosave: true }));
+    syncedSigRef.current = sig;
+    clearDraft(sheet.id); // server đã giữ nội dung này, nháp ở máy hết việc
+  };
+
+  const autosaveRef = useRef(null);
+  if (!autosaveRef.current) {
+    autosaveRef.current = createAutosave({
+      delay: AUTOSAVE_DELAY,
+      maxWait: AUTOSAVE_MAX_WAIT,
+      save: () => saveNowRef.current(),
+      onStatus: (status) => {
+        setAutosaveStatus(status);
+        // 409 giữa lúc đang gõ: hỏi người dùng đúng như khi bấm Lưu (mục 16).
+        // Autosave tự `force` sẽ là kiểu âm thầm xoá công người khác.
+        if (status.state === 'conflict') applyConflictRef.current?.(status.error);
+      },
+    });
+  }
+
+  // Mỗi thay đổi: ghi nháp ở máy trước (lưới an toàn), rồi xếp lịch đẩy lên
+  // server. Nháp ghi theo kiểu leading + trailing: lần đầu ghi ngay, các lần
+  // sau gom lại tối đa 1 lần/giây — xem DRAFT_THROTTLE.
+  const draftTimerRef = useRef({ at: 0, timer: null });
+  useEffect(() => {
+    if (!sheet.id) return undefined;
+    if (contentSig === syncedSigRef.current) return undefined;
+
+    const pace = draftTimerRef.current; // giữ đúng object cho nhánh cleanup
+    const write = () => {
+      pace.at = Date.now();
+      saveDraft(sheet.id, { baseVersion: sheet.version ?? null, name, settings, productTypes });
+    };
+    const since = Date.now() - pace.at;
+    if (since >= DRAFT_THROTTLE) {
+      write();
+    } else {
+      clearTimeout(pace.timer);
+      pace.timer = setTimeout(write, DRAFT_THROTTLE - since);
+    }
+
+    autosaveRef.current.schedule(contentSig);
+    return () => clearTimeout(pace.timer);
+  }, [contentSig, sheet.id, sheet.version, name, settings, productTypes]);
+
+  // Rời tab / đóng cửa sổ / rời workspace: ghi nốt phần đang chờ thay vì mất
+  // 1,5 giây cuối cùng của người dùng.
+  useEffect(() => {
+    const flush = () => { autosaveRef.current?.flush(); };
+    const onVisibility = () => { if (document.hidden) flush(); };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+      flush();
+      autosaveRef.current?.stop();
+    };
+  }, []);
+
+  // Chưa lên được server mà F5 / đóng tab: để trình duyệt hỏi lại. Nháp vẫn
+  // nằm ở máy, nhưng người dùng phải biết là nó CHƯA lên server.
+  useEffect(() => {
+    if (!unsynced) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsynced]);
+
+  const restoreDraft = () => {
+    if (!pendingDraft) return;
+    setName(pendingDraft.name || '');
+    setSettings({ ...pendingDraft.settings });
+    setProductTypes((pendingDraft.productTypes || []).map((pt) => ({ ...pt, shown: pt.shown !== false })));
+    setPendingDraft(null);
+    showToast?.('success', 'Đã khôi phục bản nháp', 'Nội dung đang được tự lưu lên server.');
+  };
+
+  const discardDraft = () => { clearDraft(sheet.id); setPendingDraft(null); };
 
   // ── mutations (GIỮ NGUYÊN) ──
   const setSetting = (k, v) => setSettings((p) => ({ ...p, [k]: v }));
@@ -200,9 +332,26 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
     [draftSheet.productTypes]
   );
 
-  // ── save (append version snapshot — GIỮ NGUYÊN, thêm saving state) ──
+  /** Dựng hộp thoại xung đột từ lỗi 409 — dùng chung cho cả autosave lẫn nút Lưu. */
+  const showConflict = (err) => {
+    const info = err?.response?.data || {};
+    setConflict({
+      updatedBy: info.updatedBy || 'người khác',
+      updatedAt: info.updatedAt || null,
+      currentVersion: info.currentVersion,
+      current: info.current || null,
+    });
+  };
+  applyConflictRef.current = showConflict;
+
+  // ── CHỐT MỐC PHIÊN BẢN ────────────────────────────────────────────────
+  // Nội dung đã được autosave đẩy lên liên tục, nên nút này chỉ còn một việc:
+  // ghi một mốc vào Lịch sử tính giá (payload có `history` → server tạo bản).
   // `force` = người dùng đã xem cảnh báo xung đột và cố ý ghi đè (mục 16).
   const handleSave = async (force = false) => {
+    const sig = contentSig;
+    // Autosave đang chờ thì bỏ: lượt ghi này đã mang đúng nội dung đó rồi.
+    autosaveRef.current?.cancel();
     const snap = {
       // Lịch sử không còn đi kèm bảng (mục 17) — số bản đọc từ `historyCount`
       // của server; server mới cũng tự đánh lại số version khi ghi.
@@ -219,20 +368,21 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
         { ...draftSheet, history, updatedAt: new Date().toISOString() },
         { force }
       ));
-      savedSnapRef.current = snapshotOf(name, settings, productTypes);
+      syncedSigRef.current = sig;
+      versionSigRef.current = sig;
+      clearDraft(sheet.id);
+      if (autosaveRef.current?.isStopped()) autosaveRef.current.reset();
+      setAutosaveStatus({ state: 'saved', savedAt: new Date() });
       setConflict(null);
     } catch (err) {
       // 409: có người khác đã lưu bảng này sau lúc ta mở nó. TUYỆT ĐỐI không
       // ghi đè im lặng — trước đây server là last-write-wins nên toàn bộ thay
       // đổi của người kia biến mất mà không ai biết.
       if (err?.response?.status === 409) {
-        const info = err.response.data || {};
-        setConflict({
-          updatedBy: info.updatedBy || 'người khác',
-          updatedAt: info.updatedAt || null,
-          currentVersion: info.currentVersion,
-          current: info.current || null,
-        });
+        // Autosave phải im cho tới khi người dùng chọn xong, nếu không nó cứ
+        // vài giây lại đâm vào đúng bức tường 409 đó.
+        autosaveRef.current?.stop();
+        showConflict(err);
       } else {
         showToast?.('error', 'Lưu thất bại', err?.message || 'Không lưu được lên server.');
       }
@@ -245,12 +395,42 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const takeServerVersion = () => {
     const srv = conflict?.current;
     if (!srv) { onClose?.(); return; }
+    // Chữ ký phải tính trên ĐÚNG mảng sắp đưa vào state (đã chuẩn hoá `shown`),
+    // nếu không nội dung vừa tải về đã bị coi là "có thay đổi" và autosave đẩy
+    // ngược nó lên server ngay lập tức.
+    const pts = (srv.productTypes || []).map((pt) => ({ ...pt, shown: pt.shown !== false }));
     setName(srv.name || '');
     setSettings({ ...srv.settings });
-    setProductTypes((srv.productTypes || []).map((pt) => ({ ...pt, shown: pt.shown !== false })));
-    savedSnapRef.current = snapshotOf(srv.name || '', srv.settings, srv.productTypes || []);
+    setProductTypes(pts);
+    const sig = contentSignature({ name: srv.name || '', settings: srv.settings, productTypes: pts });
+    syncedSigRef.current = sig;
+    versionSigRef.current = sig;
+    clearDraft(sheet.id);
+    autosaveRef.current?.reset();
     setConflict(null);
     showToast?.('success', 'Đã tải lại', `Đang xem bản v${conflict.currentVersion} của ${conflict.updatedBy}`);
+  };
+
+  /** Đóng bảng — chỉ hỏi khi còn nội dung CHƯA lên được server. */
+  const requestClose = () => {
+    if (!unsynced) { onClose?.(); return; }
+    setConfirmExit(true);
+  };
+
+  /** Thử ghi nốt rồi thoát. Ghi không được thì nói thẳng là nháp còn ở máy. */
+  const saveThenClose = async () => {
+    setSaving(true);
+    try {
+      await autosaveRef.current?.flush();
+    } finally {
+      setSaving(false);
+    }
+    setConfirmExit(false);
+    if (contentSig !== syncedSigRef.current) {
+      showToast?.('error', 'Chưa lưu được lên server',
+        'Bản nháp vẫn giữ ở máy này — mở lại bảng sẽ có nút khôi phục.', 5000);
+    }
+    onClose?.();
   };
 
   const restoreVersion = (snap) => {
@@ -263,7 +443,7 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
   const mTone = marginTone(summary.avgMargin);
 
   return (
-    <div onClick={onClose} className="ps-overlay"
+    <div onClick={requestClose} className="ps-overlay"
       style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'stretch' }}>
       <div onClick={(e) => e.stopPropagation()} className="ps-scope" style={{
         width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column',
@@ -301,9 +481,13 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
               }}>{sheet.historyCount ?? sheet.history?.length ?? 0}</span>
             </button>
             <Btn variant="outline" onClick={() => exportSheetToExcel(draftSheet, showToast)}>⬇ Export Excel</Btn>
-            <IconBtn title="Đóng" onClick={onClose}>✕</IconBtn>
+            <IconBtn title="Đóng" onClick={requestClose}>✕</IconBtn>
           </div>
         </div>
+
+        {/* ── Bản nháp còn sót ở máy này (autosave hỏng / đóng tab giữa chừng) ── */}
+        <DraftRestoreBanner draft={pendingDraft} stale={isStaleDraft(pendingDraft, sheet)}
+          onRestore={restoreDraft} onDiscard={discardDraft} />
 
         {/* ── Price Setting — spec §3.2 ── */}
         <PriceSettingPanel settings={settings} onSet={setSetting} />
@@ -365,7 +549,9 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
         </div>
 
         {/* ── Footer — spec §3.7 ── */}
-        <SummaryFooter summary={summary} dirty={dirty} saving={saving} onCancel={onClose} onSave={() => handleSave(false)} />
+        <SummaryFooter summary={summary} dirty={dirty} saving={saving}
+          autosaveStatus={autosaveStatus} unsynced={unsynced}
+          onCancel={requestClose} onSave={() => handleSave(false)} />
       </div>
 
       {/* ── Xung đột phiên bản (mục 16) ──────────────────────────────────────
@@ -393,6 +579,34 @@ export default function PriceSheetWorkspace({ sheet, onSave, onClose, showToast 
               <li><b>Tải bản mới</b> — bỏ thay đổi đang gõ, lấy bản trên server.</li>
               <li><b>Ghi đè</b> — giữ bản của bạn. Bản của {conflict.updatedBy} vẫn nằm trong Lịch sử tính giá, không mất hẳn.</li>
               <li><b>Để tôi xem lại</b> — đóng hộp thoại, chưa lưu gì.</li>
+            </ul>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* ── Thoát khi còn nội dung chưa lên server ──────────────────────────
+          Chỉ hiện khi autosave chưa kịp/không ghi được. Cả ba lựa chọn đều
+          tường minh, không nhánh nào âm thầm vứt công của người dùng. */}
+      {confirmExit && (
+        <ModalShell title="Còn thay đổi chưa lưu lên server" width={460} zIndex={2500}
+          onClose={() => setConfirmExit(false)}
+          footer={<>
+            <Btn variant="ghost" onClick={() => setConfirmExit(false)}>Ở lại</Btn>
+            <Btn variant="outline" onClick={() => { setConfirmExit(false); onClose?.(); }}>
+              Thoát, giữ bản nháp ở máy
+            </Btn>
+            <Btn variant="primary" disabled={saving} onClick={saveThenClose}>
+              {saving ? 'Đang lưu…' : 'Lưu rồi thoát'}
+            </Btn>
+          </>}>
+          <div style={{ padding: 16, fontSize: 13.5, color: PS.textSecondary, lineHeight: 1.7 }}>
+            <p style={{ margin: '0 0 12px' }}>
+              Một vài thay đổi vừa rồi <b style={{ color: PS.text }}>chưa lên được server</b>.
+            </p>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <li><b>Lưu rồi thoát</b> — thử ghi lại ngay bây giờ.</li>
+              <li><b>Thoát, giữ bản nháp</b> — nội dung nằm lại máy này; mở lại bảng sẽ có nút khôi phục.</li>
+              <li><b>Ở lại</b> — quay về bảng, tự lưu vẫn tiếp tục chạy.</li>
             </ul>
           </div>
         </ModalShell>

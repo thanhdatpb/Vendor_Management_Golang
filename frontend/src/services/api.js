@@ -1,4 +1,5 @@
 import axios from "axios";
+import { buildPriceSheetPayload } from "../utils/priceSheetPayload";
 
 // Nếu VITE_API_URL để trống → dùng "" (relative URL) → Vite proxy forward đến Laravel
 // Nếu VITE_API_URL có giá trị (ví dụ khi deploy) → dùng URL đó
@@ -397,11 +398,12 @@ export const priceSheetApi = {
   // người khác. `force: true` là lối thoát khi người dùng đã xem cảnh báo và
   // cố ý ghi đè. Bảng chưa có version (tạo trước bản này) thì bỏ trường đi —
   // server giữ nguyên hành vi cũ.
-  save:   (sheet, { force = false } = {}) => api.post("/price-sheets", {
-    ...sheet,
-    ...(sheet?.version ? { expectedVersion: sheet.version } : {}),
-    ...(force ? { force: true } : {}),
-  }),
+  // `autosave`: lượt ghi ngầm trong lúc Seller đang gõ. Payload KHÔNG kèm
+  // `history` → PriceSheetController::storeVersions() thoát sớm, KHÔNG tạo
+  // phiên bản mới. Nhờ vậy ghi mỗi vài giây vẫn không làm lịch sử phình lên
+  // (trần 20 bản — mốc thật sẽ bị đẩy ra ngoài). Cờ này cũng tắt broadcast ở
+  // server để Pusher không bắn theo từng nhịp gõ.
+  save:   (sheet, opts = {}) => api.post("/price-sheets", buildPriceSheetPayload(sheet, opts)),
   remove: (id)    => api.delete(`/price-sheets/${id}`),
 };
 
