@@ -8,7 +8,8 @@ import { HC } from '../utils/constants';
 import { parseHappyCreativeLibrary, downloadVendorLibraryTemplate, exportVendorLibraryFiles } from '../../../utils/vendorExcel';
 import api, { vendorLibraryApi } from '../../../services/api';
 import { loadVendorLibrary } from '../../../utils/vendorLibraryCache';
-import { normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
+import { isGoogleDriveUrl, isYouTubeUrl, normalizeVendorMediaUrl } from '../../../utils/vendorMedia';
+import ExternalMediaLink from '../../library/ExternalMediaLink';
 import { subscribeVendorLibraryChanges } from '../../../services/echo';
 import AppToast from '../../shared/AppToast';
 import ExportVendorFilesModal from '../../shared/ExportVendorFilesModal';
@@ -59,11 +60,6 @@ const TDnum = (idx, extra = {}) => ({
 });
 const fmt$ = (v) => (v !== null && v !== undefined ? `$${Number(v).toFixed(2)}` : '—');
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
-
-// Link video YouTube (youtube.com / youtu.be) không phải ảnh → <img> sẽ vỡ.
-const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)/i.test(u);
-// Link Google Drive (drive.google.com) cũng không phải ảnh → hiển thị logo Drive.
-const isGoogleDriveUrl = (u) => typeof u === 'string' && /(?:drive|docs)\.google\.com/i.test(u);
 
 // "Chi tiết Size" (text tự do đôi khi kèm link Google Docs dài) được render bởi
 // components/library/chiTietSizeText.jsx. Nó nằm ở file riêng vì view read-only
@@ -178,13 +174,17 @@ function AuthenticatedImage({ url, siblingUrls, index, style, ...rest }) {
     </>
   );
 }
+
 // Thumbnail 40x40 trong cột Hình ảnh: link YouTube → logo YouTube, link Google Drive
-// → logo Drive (bấm mở); còn lại → ảnh như cũ. Người dùng nhận ra ngay không phải ảnh lỗi.
+// → logo Drive (bấm mở); URL khác thử tải như ảnh, nếu thất bại thì hiện link tên miền.
 export function MediaThumb({ url, siblingUrls, index }) {
+  const normalizedUrl = normalizeVendorMediaUrl(url);
+  const [failedUrl, setFailedUrl] = useState(null);
+  const imageFailed = failedUrl === normalizedUrl;
+
   if (isYouTubeUrl(url)) {
-  url = normalizeVendorMediaUrl(url);
     return (
-      <a href={url} target="_blank" rel="noreferrer" title="Video YouTube — bấm để mở"
+      <a href={normalizedUrl} target="_blank" rel="noopener noreferrer" title="Video YouTube — bấm để mở"
         style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <svg width="26" height="26" viewBox="0 0 24 24" aria-label="YouTube">
           <rect x="1" y="5" width="22" height="14" rx="4" fill="#FF0000" />
@@ -195,7 +195,7 @@ export function MediaThumb({ url, siblingUrls, index }) {
   }
   if (isGoogleDriveUrl(url)) {
     return (
-      <a href={url} target="_blank" rel="noreferrer" title="Google Drive — bấm để mở"
+      <a href={normalizedUrl} target="_blank" rel="noopener noreferrer" title="Google Drive — bấm để mở"
         style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <svg width="24" height="22" viewBox="0 0 87.3 78" aria-label="Google Drive">
           <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
@@ -208,8 +208,19 @@ export function MediaThumb({ url, siblingUrls, index }) {
       </a>
     );
   }
+
+  if (imageFailed) return <ExternalMediaLink url={normalizedUrl} />;
+
   return (
-    <AuthenticatedImage url={url} siblingUrls={siblingUrls} index={index} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+    <AuthenticatedImage
+      url={normalizedUrl}
+      siblingUrls={siblingUrls}
+      index={index}
+      alt=""
+      loading="lazy"
+      onError={() => setFailedUrl(normalizedUrl)}
+      style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }}
+    />
   );
 }
 

@@ -37,6 +37,8 @@ import {
   getVendorLibraryModeCounts,
   isWithinCurrentVendorWeek,
 } from '../../utils/vendorLibraryMode';
+import { isGoogleDriveUrl, isYouTubeUrl } from '../../utils/vendorMedia';
+import ExternalMediaLink from '../library/ExternalMediaLink';
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
 const TH = (extra = {}) => ({
@@ -53,13 +55,15 @@ const TD = (idx, extra = {}) => ({
 const fmtNA = (v) => (v !== null && v !== undefined && v !== '' ? v : '—');
 const naStyle = { background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 5, fontSize: 10, fontWeight: 800, border: '1px solid #fcd34d' };
 
-// Link YouTube / Google Drive không phải ảnh → thay <img> vỡ bằng logo tương ứng (giống VendorLibraryViewer).
-const isYouTubeUrl = (u) => typeof u === 'string' && /(?:youtube\.com|youtu\.be)/i.test(u);
-const isGoogleDriveUrl = (u) => typeof u === 'string' && /drive\.google\.com/i.test(u);
+// Link YouTube / Google Drive không phải ảnh → thay <img> vỡ bằng logo tương ứng;
+// URL khác tải ảnh lỗi (vd link video Lark) → link tên miền (giống VendorLibraryViewer).
 function MediaThumb({ url }) {
+  const [failedUrl, setFailedUrl] = useState(null);
+  const imageFailed = failedUrl === url;
+
   if (isYouTubeUrl(url)) {
     return (
-      <a href={url} target="_blank" rel="noreferrer" title="Video YouTube — bấm để mở"
+      <a href={url} target="_blank" rel="noopener noreferrer" title="Video YouTube — bấm để mở"
         style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <svg width="26" height="26" viewBox="0 0 24 24" aria-label="YouTube">
           <rect x="1" y="5" width="22" height="14" rx="4" fill="#FF0000" />
@@ -70,7 +74,7 @@ function MediaThumb({ url }) {
   }
   if (isGoogleDriveUrl(url)) {
     return (
-      <a href={url} target="_blank" rel="noreferrer" title="Google Drive — bấm để mở"
+      <a href={url} target="_blank" rel="noopener noreferrer" title="Google Drive — bấm để mở"
         style={{ width: 40, height: 40, borderRadius: 4, border: `1px solid ${HC.border}`, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <svg width="24" height="22" viewBox="0 0 87.3 78" aria-label="Google Drive">
           <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
@@ -83,9 +87,12 @@ function MediaThumb({ url }) {
       </a>
     );
   }
+
+  if (imageFailed) return <ExternalMediaLink url={url} />;
+
   return (
-    <a href={url} target="_blank" rel="noreferrer">
-      <img src={url} alt="" loading="lazy" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      <img src={url} alt="" loading="lazy" onError={() => setFailedUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: `1px solid ${HC.border}` }} />
     </a>
   );
 }

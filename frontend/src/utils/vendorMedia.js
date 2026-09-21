@@ -8,6 +8,30 @@ export const isSizeGuideMediaUrl = (url) =>
   isGoogleDriveUrl(url) ||
   (typeof url === 'string' && /^https?:\/\//i.test(url) && /\.(?:jpeg|jpg|gif|png)(?:[?#].*)?$/i.test(url));
 
+/**
+ * Chuẩn hoá link media ngoài để dùng làm fallback khi URL không tải được như ảnh.
+ * Chỉ cho phép HTTP(S), đồng thời lấy phần đầu hostname làm nhãn ngắn gọn:
+ * `printwayfulfillment.jp.larksuite.com` → `printwayfulfillment`.
+ */
+export const getExternalMediaLink = (url) => {
+  if (typeof url !== 'string' || !url.trim()) return null;
+
+  try {
+    const parsed = new URL(url.trim());
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+
+    const hostnameParts = parsed.hostname.replace(/\.$/, '').split('.').filter(Boolean);
+    if (hostnameParts[0]?.toLowerCase() === 'www') hostnameParts.shift();
+
+    return {
+      href: parsed.href,
+      label: hostnameParts[0] || parsed.hostname || 'Liên kết',
+    };
+  } catch {
+    return null;
+  }
+};
+
 // Production từng lưu URL upload theo APP_URL (ví dụ http://localhost/storage/...).
 // Luôn đưa asset storage về cùng origin để browser gọi đúng Vendor Hub hiện tại.
 //

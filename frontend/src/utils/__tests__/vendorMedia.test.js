@@ -2,8 +2,14 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MediaThumb } from '../../components/vendor/sections/VendorLibraryViewer';
+import { MergedInfoTable } from '../../components/csfpd/VendorLibraryView';
 import api from '../../services/api';
-import { isGoogleDriveUrl, isSizeGuideMediaUrl, normalizeVendorMediaUrl } from '../vendorMedia';
+import {
+  getExternalMediaLink,
+  isGoogleDriveUrl,
+  isSizeGuideMediaUrl,
+  normalizeVendorMediaUrl,
+} from '../vendorMedia';
 
 describe('vendor media URLs', () => {
   afterEach(() => {
@@ -41,6 +47,20 @@ describe('vendor media URLs', () => {
       .toBe('https://cdn.example.com/a.jpg');
   });
 
+  it('lấy nhãn link media ngoài từ phần đầu hostname và chỉ nhận HTTP(S)', () => {
+    expect(getExternalMediaLink('https://printwayfulfillment.jp.larksuite.com/file/abc'))
+      .toEqual({
+        href: 'https://printwayfulfillment.jp.larksuite.com/file/abc',
+        label: 'printwayfulfillment',
+      });
+    expect(getExternalMediaLink('https://www.example.com/video')).toEqual({
+      href: 'https://www.example.com/video',
+      label: 'example',
+    });
+    expect(getExternalMediaLink('javascript:alert(1)')).toBeNull();
+    expect(getExternalMediaLink('không-phải-url')).toBeNull();
+  });
+
   it('đưa URL object storage (Cloudflare R2/S3, không có tiền tố /storage/) về endpoint có xác thực', () => {
     // Ảnh Vendor Library khi MEDIA_DISK=s3 được lưu URL R2 công khai dạng
     // 'https://<bucket-host>/vendor-library/a.jpg' — không đi qua '/storage/' như
@@ -59,6 +79,43 @@ describe('vendor media URLs', () => {
 
     expect(screen.getByLabelText('Google Drive')).toBeInTheDocument();
     expect(document.querySelector('img')).toBeNull();
+  });
+
+  it('ảnh ngoài tải lỗi thì hiện link tên miền và mở ở tab mới', () => {
+    const url = 'https://printwayfulfillment.jp.larksuite.com/file/video-id';
+    const { container } = render(React.createElement(MediaThumb, { url }));
+
+    fireEvent.error(container.querySelector('img'));
+
+    const link = screen.getByRole('link', { name: 'printwayfulfillment' });
+    expect(link).toHaveAttribute('href', url);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('không biến URL không an toàn thành link khi ảnh tải lỗi', () => {
+    const { container } = render(React.createElement(MediaThumb, { url: 'not-a-valid-url' }));
+
+    fireEvent.error(container.querySelector('img'));
+
+    expect(screen.getByText('Không thể hiển thị')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('màn hình CSF/PD/Marvel cũng dùng fallback link tên miền', () => {
+    const url = 'https://printwayfulfillment.jp.larksuite.com/file/video-id';
+    const { container } = render(React.createElement(MergedInfoTable, {
+      generalInfo: [{ id: 'row-1', vendorName: 'VN3', productType: 'Suncatcher', images: [url] }],
+      pricing: [],
+      showLeadTime: false,
+    }));
+
+    fireEvent.error(container.querySelector('img'));
+
+    const link = screen.getByRole('link', { name: 'printwayfulfillment' });
+    expect(link).toHaveAttribute('href', url);
+    expect(link).toHaveAttribute('target', '_blank');
   });
 
   it('bấm ảnh link ngoài mở lightbox tại chỗ, không bọc thẻ <a> điều hướng ra ngoài', async () => {
