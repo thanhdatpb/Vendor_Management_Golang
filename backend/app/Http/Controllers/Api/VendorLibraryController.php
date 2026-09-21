@@ -25,6 +25,48 @@ class VendorLibraryController extends Controller
     }
 
     /**
+     * Chỉ `id` + `updated_at`, KHÔNG kéo cột `data`.
+     *
+     * Cột `data` là một longText vài MB cho toàn hệ thống. Mọi ETag ở đây chỉ
+     * cần `updated_at`, nên dùng `getRow()` cho việc đó là mỗi request lại bốc
+     * vài MB từ MySQL sang PHP rồi vứt đi — kể cả request kết thúc bằng 304.
+     * Đọc `data` chỉ xảy ra khi thực sự phải dựng body trả về.
+     */
+    private function getMetaRow()
+    {
+        return DB::table('vendor_library')
+            ->orderBy('id')
+            ->select('id', 'updated_at')
+            ->first();
+    }
+
+    /**
+     * ETag chung cho mọi endpoint đọc thư viện: mốc sửa + phần định danh riêng.
+     *
+     * `$stamp` cho nơi gọi đã cầm sẵn dòng meta truyền lại, khỏi hỏi DB lần hai.
+     */
+    private function libraryEtag(string $scope, array $parts = [], ?string $stamp = null): string
+    {
+        if ($stamp === null) {
+            $meta  = $this->getMetaRow();
+            $stamp = $meta ? (string) $meta->updated_at : '0';
+        }
+
+        return '"' . sha1(implode('|', array_merge(
+            [$scope, $stamp],
+            array_map('strval', $parts)
+        ))) . '"';
+    }
+
+    /** Header chung cho response đọc thư viện — luôn revalidate, không cache chung. */
+    private function libraryCacheHeaders($response, string $etag)
+    {
+        return $response
+            ->header('ETag', $etag)
+            ->header('Cache-Control', 'private, must-revalidate');
+    }
+
+    /**
      * Báo cho mọi máy đang mở thư viện biết dữ liệu vừa đổi (mục 16).
      *
      * Trước đây `fetchLibrary` ở client chỉ chạy lúc mount, nên sau khi import
@@ -46,29 +88,59 @@ class VendorLibraryController extends Controller
         }
     }
 
+    /**
+     * TOÀN BỘ THƯ VIỆN — nguồn của 2 màn hình danh sách (Vendor/Admin và CSF/PD/Marvel).
+     *
+     * Đây là request NẶNG NHẤT của hệ thống: một blob vài MB mỗi lần mở trang.
+     * Hai thứ giữ nó không nặng hơn mức cần thiết:
+     *
+     *  • ETag theo (updated_at, role) — client làm mới NỀN (quay lại tab, Pusher
+     *    báo đổi) nhận 304 rỗng thay vì tải lại cả blob. Role phải nằm trong
+     *    ETag vì body khác nhau theo role: bản của CSF không cùng cột với bản
+     *    của Seller, dùng chung một ETag là phát nhầm bản đã lọc cho người được
+     *    xem đủ (và ngược lại).
+     *  • Lọc theo role NGAY Ở SERVER — cả giá lẫn 2 cột AVG TG. Trước đây chỉ
+     *    lọc AVG TG; toàn bộ cột giá vẫn đi qua mạng rồi frontend mới giấu ở
+     *    tầng render, vừa phí băng thông vừa trái CLAUDE.md §6.5 (xem
+     *    tests/Feature/VendorLibraryPriceLeakTest.php).
+     *
+     * `?mode=` KHÔNG ảnh hưởng body (client tự lọc tab) nên cũng không vào ETag.
+     */
     public function getLibrary(Request $request)
     {
-        $row = $this->getRow();
-
-        if (!$row) {
-            return response()->json([]);
-        }
-
-        // PD và Marvel không được xem 2 cột thời gian (AVG TG Vendor / Thực tế);
-        // CSF thì có. Lọc ở SERVER chứ không chỉ ẩn cột trên UI — ẩn ở UI thì
-        // mở DevTools là thấy. Quy tắc role nào xem được nằm ở
-        // App\Support\VendorFieldVisibility — một chỗ duy nhất.
-        //
-        // Role được xem đầy đủ đi thẳng đường cũ, không tốn công decode blob.
         $role = $request->user()->role ?? '';
-        if (!VendorFieldVisibility::seesLeadTime($role)) {
-            $files = json_decode($row->data, true);
-            if (is_array($files)) {
-                return response()->json(VendorFieldVisibility::filterLeadTime($files, $role));
-            }
+        $etag = $this->libraryEtag('vendor-library', [VendorFieldVisibility::normalizeRole($role)]);
+
+        $ifNoneMatch = trim((string) $request->header('If-None-Match'));
+        if ($ifNoneMatch !== '' && $this->etagMatches($ifNoneMatch, $etag)) {
+            return response('', 304)->header('ETag', $etag);
         }
 
-        return response($row->data)->header('Content-Type', 'application/json');
+        $row = $this->getRow();
+        if (!$row) {
+            return $this->libraryCacheHeaders(response()->json([]), $etag);
+        }
+
+        // Role thấy đủ mọi trường đi thẳng đường cũ: trả nguyên chuỗi đã lưu,
+        // không decode rồi encode lại vài MB cho không.
+        if (VendorFieldVisibility::seesPrices($role) && VendorFieldVisibility::seesLeadTime($role)) {
+            return $this->libraryCacheHeaders(
+                response($row->data)->header('Content-Type', 'application/json'),
+                $etag
+            );
+        }
+
+        $files = json_decode($row->data, true);
+        if (!is_array($files)) {
+            // Cùng cách xử lý với respondWithFile(): KHÔNG trả mảng rỗng, vì
+            // "thư viện trống" và "dữ liệu hỏng" là hai chuyện khác nhau.
+            return response()->json(['message' => 'Dữ liệu thư viện không hợp lệ.'], 422);
+        }
+
+        $files = VendorFieldVisibility::filterLeadTime($files, $role);
+        $files = VendorFieldVisibility::filterPrices($files, $role);
+
+        return $this->libraryCacheHeaders(response()->json($files), $etag);
     }
 
     /**
@@ -95,28 +167,28 @@ class VendorLibraryController extends Controller
         // còn lại luôn bị ép về project của chính họ.
         $projectKey = $this->indexProjectKey($request, $user);
 
-        $row   = $this->getRow();
-        $stamp = $row ? (string) $row->updated_at : '0';
-        $etag  = '"' . sha1(implode('|', [
-            'vendor-library-index',
-            (string) $stamp,
-            (string) $projectKey,
+        $etag = $this->libraryEtag('vendor-library-index', [
+            $projectKey,
             $seesPrices ? 'priced' : 'nopriced',
-        ])) . '"';
+        ]);
 
         $ifNoneMatch = trim((string) $request->header('If-None-Match'));
         if ($ifNoneMatch !== '' && $this->etagMatches($ifNoneMatch, $etag)) {
             return response('', 304)->header('ETag', $etag);
         }
 
-        if (!$row) {
-            return response()->json([])->header('ETag', $etag);
-        }
-
+        // Cột `data` CHỈ được đọc khi cache trượt. Trước đây nó bị kéo về ngay
+        // từ đầu chỉ để lấy `updated_at`, nên cả request 304 lẫn request cache
+        // hit đều phải bốc vài MB từ MySQL rồi vứt đi.
         $records = Cache::remember(
             'vendor_library_index_' . sha1($etag),
             3600,
-            function () use ($row, $projectKey, $seesPrices) {
+            function () use ($projectKey, $seesPrices) {
+                $row = $this->getRow();
+                if (!$row) {
+                    return [];
+                }
+
                 $files = json_decode($row->data, true);
 
                 return VendorLibraryIndexBuilder::build(
@@ -127,9 +199,7 @@ class VendorLibraryController extends Controller
             }
         );
 
-        return response()->json($records)
-            ->header('ETag', $etag)
-            ->header('Cache-Control', 'private, must-revalidate');
+        return $this->libraryCacheHeaders(response()->json($records), $etag);
     }
 
     /** Phạm vi project của index — không cho role hẹp tự nới bằng query param. */
@@ -179,18 +249,15 @@ class VendorLibraryController extends Controller
         $user       = $request->user();
         $projectKey = $this->fileProjectKey($user);
 
-        $row = $this->getRow();
-        $etag = '"' . sha1(implode('|', [
-            'vendor-library-file-list',
-            $row ? (string) $row->updated_at : '0',
-            $projectKey,
-        ])) . '"';
+        $etag = $this->libraryEtag('vendor-library-file-list', [$projectKey]);
 
         $ifNoneMatch = trim((string) $request->header('If-None-Match'));
         if ($ifNoneMatch !== '' && $this->etagMatches($ifNoneMatch, $etag)) {
             return response('', 304)->header('ETag', $etag);
         }
 
+        // Đọc blob SAU khi đã loại 304: mở lại ngăn kéo không còn chạm cột `data`.
+        $row   = $this->getRow();
         $files = $row ? json_decode((string) $row->data, true) : [];
         $list  = [];
 
@@ -240,9 +307,7 @@ class VendorLibraryController extends Controller
         // File nhập gần nhất lên đầu — cùng thứ tự với danh sách thư viện.
         usort($list, static fn (array $a, array $b) => strcmp((string) $b['importedAt'], (string) $a['importedAt']));
 
-        return response()->json($list)
-            ->header('ETag', $etag)
-            ->header('Cache-Control', 'private, must-revalidate');
+        return $this->libraryCacheHeaders(response()->json($list), $etag);
     }
 
     /**
@@ -303,22 +368,27 @@ class VendorLibraryController extends Controller
         $user = $request->user();
         $role = $user->role ?? '';
 
-        $row = $this->getRow();
-        if (!$row) {
+        // Dòng meta (id + updated_at, KHÔNG có cột `data`) đủ cho cả việc biết
+        // thư viện có tồn tại lẫn việc dựng ETag.
+        $meta = $this->getMetaRow();
+        if (!$meta) {
             return response()->json(['message' => 'Thư viện đang trống.'], 404);
         }
 
-        $etag = '"' . sha1(implode('|', [
+        $etag = $this->libraryEtag(
             'vendor-library-file',
-            (string) $row->updated_at,
-            $etagSubject,
-            VendorFieldVisibility::normalizeRole($role),
-            $this->fileProjectKey($user),
-        ])) . '"';
+            [$etagSubject, VendorFieldVisibility::normalizeRole($role), $this->fileProjectKey($user)],
+            (string) $meta->updated_at
+        );
 
         $ifNoneMatch = trim((string) $request->header('If-None-Match'));
         if ($ifNoneMatch !== '' && $this->etagMatches($ifNoneMatch, $etag)) {
             return response('', 304)->header('ETag', $etag);
+        }
+
+        $row = $this->getRow();
+        if (!$row) {
+            return response()->json(['message' => 'Thư viện đang trống.'], 404);
         }
 
         $files = json_decode((string) $row->data, true);
@@ -351,9 +421,7 @@ class VendorLibraryController extends Controller
             ], 403);
         }
 
-        return response()->json($this->visibleFile($found, $role))
-            ->header('ETag', $etag)
-            ->header('Cache-Control', 'private, must-revalidate');
+        return $this->libraryCacheHeaders(response()->json($this->visibleFile($found, $role)), $etag);
     }
 
     /**

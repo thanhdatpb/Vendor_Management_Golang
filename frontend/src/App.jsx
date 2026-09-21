@@ -1,18 +1,43 @@
-﻿import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+﻿import { lazy, Suspense } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import Login from "./pages/Login";
-import AuthCallback from "./pages/AuthCallback";
-import AdminDashboard from "./pages/AdminDashboard";
-import SellerDashboard from "./pages/SellerDashboard";
-import VendorDashboard from "./pages/VendorDashboard";
-import CsfDashboard from "./pages/CsfDashboard";
-import MarvelVendorLibrary from "./components/csfpd/MarvelVendorLibrary";
-import PdDashboard from "./pages/PdDashboard";
-import PriceSheetPage from "./pages/PriceSheetPage";
-import LibraryFilePage from "./pages/LibraryFilePage";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
+
+// ── Tách bundle theo route ───────────────────────────────────────────────────
+// Trước đây mọi dashboard được import TĨNH, nên tất cả nằm chung một chunk
+// `index-*.js` (~846 KB): người CSF tải cả màn hình Admin, Seller và Vendor —
+// kể cả những component nặng mà role của họ không bao giờ mở tới.
+//
+// `Login` cố tình GIỮ import tĩnh: đó là màn hình đầu tiên của mọi phiên, tách
+// nó ra chỉ thêm một vòng request trước khi thấy được gì.
+//
+// Mỗi role chỉ khớp đúng một route (RoleRoute chặn phần còn lại) nên trong một
+// phiên thường chỉ có 1–2 chunk dưới đây được tải thật.
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const SellerDashboard = lazy(() => import("./pages/SellerDashboard"));
+const VendorDashboard = lazy(() => import("./pages/VendorDashboard"));
+const CsfDashboard = lazy(() => import("./pages/CsfDashboard"));
+const PdDashboard = lazy(() => import("./pages/PdDashboard"));
+const PriceSheetPage = lazy(() => import("./pages/PriceSheetPage"));
+const LibraryFilePage = lazy(() => import("./pages/LibraryFilePage"));
+
+// Marvel dùng CsfDashboard nhưng truyền component thư viện riêng qua PROP, nên
+// nó phải là một component — bọc lazy ở đây và CsfDashboard render nó bên trong
+// Suspense của App.
+const MarvelVendorLibrary = lazy(() => import("./components/csfpd/MarvelVendorLibrary"));
+
+/**
+ * Màn hình chờ trong lúc chunk của route đang về.
+ *
+ * Cố ý TRỐNG chứ không phải spinner: chunk thường về trong vài chục ms trên
+ * mạng bình thường, nhấp nháy một spinner rồi tắt ngay còn khó chịu hơn là
+ * không có gì. Dashboard nào cũng đã có spinner riêng cho phần dữ liệu của nó.
+ */
+const RouteFallback = () => <div style={{ minHeight: "100vh" }} />;
 
 export default function App() {
   const location = useLocation();
@@ -31,7 +56,7 @@ export default function App() {
   const libraryInline = location.state?.libraryInline === true;
 
   return (
-    <>
+    <Suspense fallback={<RouteFallback />}>
       <Routes location={libraryBackground || location}>
       {/* :section? = mục đang mở trong dashboard (tab sidebar). Mỗi mục có URL
           riêng để bookmark / gửi link / F5 / Back đều đúng mục — trước đây cả
@@ -153,6 +178,6 @@ export default function App() {
           />
         </Routes>
       )}
-    </>
+    </Suspense>
   );
 }

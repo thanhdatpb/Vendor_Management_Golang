@@ -302,7 +302,13 @@ export const vendorApi = {
 };
 
 export const vendorLibraryApi = {
-  get: (mode = 'all') => api.get(`/vendor-library?mode=${mode}`),
+  // Blob thư viện đầy đủ — request nặng nhất của hệ thống. 304 được coi là hợp
+  // lệ để nơi gọi (utils/vendorLibraryCache.js) dùng lại bản đã cache theo ETag
+  // thay vì tải lại vài MB mỗi lần quay lại tab.
+  get: (mode = 'all', headers = {}) => api.get(`/vendor-library?mode=${mode}`, {
+    headers,
+    validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
+  }),
   // Index GỌN cho bảng tính giá: chỉ recordKey + size + giá vốn, thay vì tải cả
   // blob thư viện (ảnh, notes, generalInfo) mỗi lần mở một bảng giá.
   // 304 được coi là hợp lệ để nơi gọi dùng lại bản đã cache theo ETag.

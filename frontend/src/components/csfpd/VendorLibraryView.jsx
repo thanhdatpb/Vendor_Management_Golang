@@ -14,14 +14,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { HC } from '../../constants/sellerTheme';
-import { vendorLibraryApi } from '../../services/api';
+import { loadVendorLibrary } from '../../utils/vendorLibraryCache';
 import { subscribeVendorLibraryChanges } from '../../services/echo';
 import { stripHiddenFields, currentUserRole } from '../../constants/vendorFieldVisibility';
 import { departmentFor } from './departments';
 import { exportVendorLibraryFiles } from '../../utils/vendorExcel';
 import AppToast from '../shared/AppToast';
 import ExportVendorFilesModal from '../shared/ExportVendorFilesModal';
-import { renderChiTietSizeText } from '../vendor/sections/VendorLibraryViewer';
+// Lấy thẳng từ module dùng chung, KHÔNG qua VendorLibraryViewer: import từ
+// viewer là kéo cả chunk ~206 KB của màn hình quản lý thư viện vào đường tải
+// của CSF/PD/Marvel — ba bộ phận chỉ-đọc không bao giờ mở màn hình đó.
+import { renderChiTietSizeText } from '../library/chiTietSizeText';
 import { fileVisibleToProject } from '../../constants/projects';
 import { timeValue, fmtVNDateTimeShort } from '../../utils/vnTime';
 import LibraryFileModal from '../library/LibraryFileModal';
@@ -354,12 +357,13 @@ export default function VendorLibraryView({ projectKey, department, mode = VENDO
     if (!silent) setLoading(true);
     setFetchError(null);
     try {
-      const res = await vendorLibraryApi.get('all');
+      // loadVendorLibrary hỏi server bằng If-None-Match: không có gì đổi thì
+      // nhận 304 rỗng và dùng lại bản trong bộ nhớ, thay vì kéo lại cả blob.
+      const files = await loadVendorLibrary('all');
       // Lưới an toàn: server là nơi thực thi việc lọc giá, nhưng nếu một bản
       // server cũ (hoặc cache của trình duyệt) còn trả giá về thì component
       // này cũng không có gì để render ra. Quy tắc "role nào thấy giá" nằm ở
       // constants/vendorFieldVisibility.js — một chỗ duy nhất.
-      const files = Array.isArray(res.data) ? res.data : [];
       setRawFiles(stripHiddenFields(files, currentUserRole()));
     } catch (err) {
       setFetchError(err?.response?.data?.message || err?.message || 'Không thể kết nối server. Vui lòng thử lại.');

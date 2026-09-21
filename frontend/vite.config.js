@@ -47,7 +47,15 @@ export default defineConfig(({ mode }) => {
         // (Sự cố 2026-07-16: bundle -v5 hỏng đã bị cache 7 ngày dưới cùng tên file
         //  → phải đổi tên file mới cache-bust được cho toàn bộ user.)
         entryFileNames: `assets/[name]-[hash]-v6.js`,
-        chunkFileNames: `assets/[name]-[hash]-v6.js`,
+        // Chunk tách theo route mang TÊN COMPONENT, nên sinh ra những file như
+        // `VendorDashboard-*.js`, `VendorLibraryViewer-*.js`. Quy trình deploy
+        // loại trừ mọi đường dẫn chứa `vendor` (xem cảnh báo ngay dưới đây), và
+        // pattern đó không neo đầu — chỉ cần nó không phân biệt hoa/thường là
+        // các chunk này nằm đủ trong git, commit đúng, mà không bao giờ lên tới
+        // server → trắng trang y như sự cố 2026-08-19. Đổi `vendor` thành
+        // `vndr` trong tên file để không phụ thuộc vào việc pattern có phân
+        // biệt hoa/thường hay không.
+        chunkFileNames: (chunk) => `assets/${String(chunk.name).replace(/vendor/gi, 'vndr')}-[hash]-v6.js`,
         assetFileNames: `assets/[name]-[hash]-v6.[ext]`,
         // ⚠️ TÊN CHUNK KHÔNG ĐƯỢC BẮT ĐẦU BẰNG `vendor`.
         // Quy trình deploy loại trừ mọi đường dẫn chứa `vendor` để khỏi đồng bộ

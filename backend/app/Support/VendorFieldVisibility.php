@@ -135,6 +135,36 @@ final class VendorFieldVisibility
     }
 
     /**
+     * Bỏ mọi khoá giá khỏi CẢ blob thư viện.
+     *
+     * Bản nhiều-file của `filterFilePrices`, dùng cho `getLibrary` — đường vào
+     * cũ và nặng nhất của thư viện. Trước đây chỗ đó chỉ lọc 2 cột thời gian,
+     * nên CSF/PD/Marvel vẫn nhận đủ 30 khoá giá và frontend mới giấu đi ở tầng
+     * render; CLAUDE.md §6.5 nói rõ giá không được có mặt trong response.
+     *
+     * Trả về chính mảng đầu vào nếu role được xem giá — không tốn công sao chép,
+     * giống cách `filterLeadTime` làm.
+     *
+     * @param  array<int,mixed>  $files  blob thư viện đã json_decode
+     * @return array<int,mixed>
+     */
+    public static function filterPrices(array $files, $role): array
+    {
+        if (self::seesPrices($role)) {
+            return $files;
+        }
+
+        foreach ($files as &$file) {
+            if (is_array($file)) {
+                $file = self::filterFilePrices($file, $role);
+            }
+        }
+        unset($file);
+
+        return $files;
+    }
+
+    /**
      * Bỏ mọi khoá giá khỏi MỘT file thư viện (cả `pricing` lẫn `generalInfo`).
      *
      * Dùng cho endpoint trả một file theo id: đó là đường MỚI vào cùng dữ liệu

@@ -11,15 +11,15 @@ use Tests\TestCase;
 /**
  * PR-S3 — Giá KHÔNG được rời server tới role không có quyền.
  *
- * ⛔ ĐỎ LÀ ĐÚNG cho tới khi Milestone S xong. Hiện `getLibrary` trả nguyên blob
- * (kể cả toàn bộ cột giá) cho mọi role; VendorLibraryCsfPdViewer chỉ ẩn ở tầng
- * render. CLAUDE.md §6.5 nói rõ: không lộ trường giá "trong props, response
- * hay markup".
+ * ✅ Đã vá: `getLibrary` lọc giá bằng VendorFieldVisibility::filterPrices trước
+ * khi trả về, nên CSF/PD/Marvel không còn nhận cột giá rồi trông chờ UI giấu đi.
+ * CLAUDE.md §6.5: không lộ trường giá "trong props, response hay markup".
+ *
+ * Từ đây test nằm trong BỘ CHẶN MERGE — đỏ nghĩa là lỗ rò rỉ vừa mở lại.
  *
  * Assertion cố tình đặt trên RAW BODY chứ không chỉ trên key: dữ liệu thư viện
  * là blob JSON lồng nhau, kiểm theo key rất dễ sót nhánh con.
  */
-#[Group('pending')]
 #[Group('milestone-s')]
 class VendorLibraryPriceLeakTest extends TestCase
 {
