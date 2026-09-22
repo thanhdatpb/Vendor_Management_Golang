@@ -31,18 +31,22 @@ describe('resolveSheet — Product Type lấy từ thư viện', () => {
     expect(out.productTypes[0].sizes.every((s) => s.isLib)).toBe(true);
   });
 
-  it('Item Cost nạp từ cột P1, ship cost nạp theo phương thức ship đang chọn', () => {
+  it('Item Cost nạp từ cột Total (Fulfill) của phương thức ship đang chọn, KHÔNG cộng Price Ship', () => {
     const eco = resolveSheet({ productTypes: [libPT()] }, libIndex).productTypes[0].sizes[0];
-    expect(eco).toMatchObject({ label: 'S', itemCost: 8.2, totalShipCost: 4.1, shipCostItem: 1.1 });
+    expect(eco).toMatchObject({
+      label: 'S', itemCost: 12.3, p1: 8.2, costBasis: 'fulfill', costMissing: false,
+      totalShipCost: 0, shipCostItem: 1.1,
+    });
 
     const express = resolveSheet({ productTypes: [libPT({ shipMethod: 'express' })] }, libIndex).productTypes[0].sizes[0];
-    expect(express).toMatchObject({ totalShipCost: 9.8, shipCostItem: 2.6 });
+    expect(express).toMatchObject({ itemCost: 18, totalShipCost: 0, shipCostItem: 2.6 });
   });
 
-  it('phương thức ship thiếu trong thư viện → ship cost = 0, KHÔNG phải NaN', () => {
-    const sz = resolveSheet({ productTypes: [libPT({ shipMethod: 'overnight' })] }, libIndex).productTypes[0].sizes[0];
-    expect(sz.totalShipCost).toBe(0);
-    expect(sz.shipCostItem).toBe(0);
+  it('phương thức ship đã lưu không có giá trong thư viện → chưa có giá vốn, ship cost = 0, KHÔNG phải NaN', () => {
+    const pt = resolveSheet({ productTypes: [libPT({ shipMethod: 'overnight' })] }, libIndex).productTypes[0];
+    const sz = pt.sizes[0];
+    expect(pt.shipMethodState).toBe('needs-choice');     // thư viện có 3 phương thức → Seller chọn lại
+    expect(sz).toMatchObject({ itemCost: '', costMissing: true, totalShipCost: 0, shipCostItem: 0 });
   });
 
   it('GIỮ NGUYÊN giá đã nhập của dòng khớp label (không được mất dữ liệu)', () => {

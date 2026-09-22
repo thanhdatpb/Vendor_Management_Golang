@@ -18,6 +18,13 @@
 //      Chỉ cột `margin` (và `avgMargin`) trong snapshot đổi. Mọi con số TIỀN
 //      (totalPrice, couponAmt, amzFee, variableFee, totalCost, profit, profitAfter)
 //      và `marginAfter` giữ nguyên — đó là bằng chứng thay đổi này không đụng tiền.
+//  2026-09-22 — ĐỔI NGUỒN hiển thị Item Cost (không phải refactor làm lệch tiền):
+//      cũ : Item Cost = P1, Price Ship của phương thức ship cộng riêng vào Total Cost
+//      mới: Item Cost = Total (Fulfill) của phương thức ship (đã gồm ship), KHÔNG
+//           cộng Price Ship lần nữa.
+//      → Chỉ cột `itemCost` của dòng thư viện đổi (8.2 → 12.3 …). Mọi con số TIỀN
+//      (totalCost, profit, profitAfter, margin…) giữ nguyên từng chữ số: bảng giá
+//      có sẵn không đổi kết quả, chỉ hiện Item Cost đã gồm ship.
 // ════════════════════════════════════════════════════════
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import legacySheet from '../../test/fixtures/legacySheet.json';
@@ -62,7 +69,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
         {
           "amzFee": 2.3137,
           "couponAmt": 1.29,
-          "itemCost": 8.2,
+          "itemCost": 12.3,
           "margin": -2.7651,
           "marginAfter": -11.4228,
           "profit": -0.0637,
@@ -76,7 +83,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
         {
           "amzFee": 2.3137,
           "couponAmt": 1.29,
-          "itemCost": 8.2,
+          "itemCost": 12.3,
           "margin": -2.7651,
           "marginAfter": -11.4228,
           "profit": -0.0637,
@@ -90,7 +97,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
         {
           "amzFee": 2.5432,
           "couponAmt": 1.44,
-          "itemCost": 8.6,
+          "itemCost": 12.7,
           "margin": 2.5488,
           "marginAfter": -6.2317,
           "profit": 0.8068,
@@ -104,7 +111,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
         {
           "amzFee": 2.6962,
           "couponAmt": 1.54,
-          "itemCost": 9.1,
+          "itemCost": 13.4,
           "margin": 3.092,
           "marginAfter": -5.7586,
           "profit": 0.9538,
@@ -118,7 +125,7 @@ describe('Golden — bảng giá cũ giữ nguyên từng con số', () => {
         {
           "amzFee": 2.8492,
           "couponAmt": 1.64,
-          "itemCost": 9.6,
+          "itemCost": 13.9,
           "margin": 4.663,
           "marginAfter": -4.25,
           "profit": 1.3008,

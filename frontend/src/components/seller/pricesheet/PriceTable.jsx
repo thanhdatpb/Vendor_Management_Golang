@@ -28,7 +28,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { PS, marginTone, toneColor } from './tokens';
 import { Dot, IconBtn, Btn, ConfirmDialog } from './primitives';
 import { computeSizeRow, usd, pct, num } from '../../../utils/pricingEngine';
-import { normalizeKey } from '../../../utils/vendorLibraryIndex';
+import { normalizeKey, shipMethodLabel } from '../../../utils/vendorLibraryIndex';
 import {
   selectionIds, computeFillDown, computeFillRight, computeClear, computeUndoPatches, pushUndo,
   computePasteDown, computePasteToSelection,
@@ -147,6 +147,13 @@ function ZoneDot({ color }) {
   }} />;
 }
 
+/** Ô Item Cost chưa có giá vốn ("Chọn ship" / "Thiếu giá") — màu viền/chữ đặt theo ca. */
+const missingCostStyle = {
+  display: 'flex', alignItems: 'center', justifyContent: 'flex-end', minHeight: 30,
+  padding: '5px 8px', fontSize: 11.5, fontWeight: 650, borderRadius: 8,
+  border: '1px dashed', background: PS.bgSurface, cursor: 'help', whiteSpace: 'nowrap',
+};
+
 function MarginCell({ value }) {
   const tone = marginTone(value);
   return (
@@ -217,6 +224,14 @@ export default function PriceTable({
   const customs = pt.customizeInfos || [];
   const sizes = useMemo(() => pt.sizes || [], [pt.sizes]);
   const rows = useMemo(() => sizes.map((sz) => ({ sz, calc: computeSizeRow(settings, pt, sz) })), [sizes, settings, pt]);
+
+  // Nguồn Item Cost của dòng thư viện — hiện dưới tiêu đề cột. Chỉ PT lấy từ thư
+  // viện mới có `shipMethodOptions` (resolveSheet gắn); PT nhập tay không hiện gì.
+  const shipState = pt.shipMethodState;
+  const costSource = !Array.isArray(pt.shipMethodOptions) ? ''
+    : shipState === 'none' ? 'Tạm dùng P1'
+      : shipState === 'needs-choice' ? 'Total (fulfill) · chờ chọn'
+        : `Total (fulfill) · ${shipMethodLabel(pt.shipMethod)}`;
 
   // ── Vùng chọn qua CỘT NHẬP (PR-A1, tổng quát hoá ở PR-A5) ──
   // Kéo CHỈ đánh dấu vùng — không còn nhánh nào ghi giá trị khi thả chuột.
@@ -482,7 +497,14 @@ export default function PriceTable({
                   </div>
                 </th>
               ))}
-              <th style={{ ...thTier2In, minWidth: 90 }}>Item Cost ($)</th>
+              <th style={{ ...thTier2In, minWidth: 90 }}>
+                Item Cost ($)
+                {costSource && (
+                  <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'none', letterSpacing: 0, opacity: 0.85, marginTop: 2, whiteSpace: 'nowrap' }}>
+                    {costSource}
+                  </div>
+                )}
+              </th>
 
               <th className="ps-divider-l" style={{ ...thTier2Out, minWidth: 90 }}>Coupon ($)</th>
               <th style={{ ...thTier2Out, minWidth: 96 }}>Total Price</th>
@@ -570,12 +592,40 @@ export default function PriceTable({
                   <td className="ps-cell"
                     onMouseDown={() => onCellMouseDown('itemCost', i)} onMouseEnter={(e) => onCellMouseEnter('itemCost', i, e)}
                     style={{ background: isCellSelected('itemCost', sz.id) ? PS.brandSubtle : undefined }}>
-                    <input type="number" step="0.01" value={sz.itemCost ?? ''} aria-label={`Item cost — size ${sz.label || i + 1}`}
-                      onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })}
-                      onWheel={(e) => e.target.blur()} placeholder="0" readOnly={sz.isLib}
-                      onPaste={sz.isLib ? undefined : handleColumnPaste('itemCost', sz)}
-                      title={sz.isLib ? 'Giá vốn lấy từ thư viện Vendor (cột P1) — không sửa ở đây' : 'Kéo dọc để CHỌN VÙNG — Fill Down/Ctrl+D để điền cả cột, dán nhiều dòng để điền tuần tự.'}
-                      className="ps-input ps-input--num" style={{ padding: '5px 8px', fontSize: 12.5, ...(isCellSelected('itemCost', sz.id) && !sz.isLib ? { background: 'transparent', borderColor: PS.brand } : {}) }} />
+                    {sz.isLib && sz.costMissing ? (
+                      // Chưa có giá vốn: chưa chọn Ship Method, hoặc size không có Total ở
+                      // phương thức đang áp dụng — KHÔNG hiện 0 (Profit sẽ thành số ảo).
+                      <div role="status" aria-label={`Item cost — size ${sz.label || i + 1}`}
+                        title={shipState === 'needs-choice'
+                          ? 'Chọn Ship Method trên thanh công cụ để nạp Item Cost từ thư viện Vendor.'
+                          : `Size ${sz.label || i + 1} không có Total (fulfill) ở ${shipMethodLabel(pt.shipMethod)} trong thư viện Vendor.`}
+                        style={{
+                          ...missingCostStyle,
+                          ...(shipState === 'needs-choice'
+                            ? { borderColor: PS.accentBorder, color: PS.warning }
+                            : { borderColor: PS.negative, color: PS.negative, background: PS.negativeBg }),
+                        }}>
+                        {shipState === 'needs-choice' ? 'Chọn ship' : 'Thiếu giá'}
+                      </div>
+                    ) : (
+                      <input type="number" step="0.01" value={sz.itemCost ?? ''} aria-label={`Item cost — size ${sz.label || i + 1}`}
+                        onChange={(e) => onUpdateSize(pt.id, sz.id, { itemCost: e.target.value })}
+                        onWheel={(e) => e.target.blur()} placeholder="0" readOnly={sz.isLib}
+                        onPaste={sz.isLib ? undefined : handleColumnPaste('itemCost', sz)}
+                        title={!sz.isLib
+                          ? 'Kéo dọc để CHỌN VÙNG — Fill Down/Ctrl+D để điền cả cột, dán nhiều dòng để điền tuần tự.'
+                          : shipState === 'none'
+                            ? 'Thư viện Vendor chưa có Total (fulfill) cho phôi này — đang tạm dùng cột P1, CHƯA gồm ship.'
+                            : shipState
+                              ? `Giá vốn = Total (fulfill) · ${shipMethodLabel(pt.shipMethod)} của thư viện Vendor (đã gồm ship) — không sửa ở đây`
+                              : 'Giá vốn lấy từ thư viện Vendor — không sửa ở đây'}
+                        className="ps-input ps-input--num"
+                        style={{
+                          padding: '5px 8px', fontSize: 12.5,
+                          ...(sz.isLib && shipState === 'none' ? { fontStyle: 'italic', color: PS.warning, background: PS.warningBg } : {}),
+                          ...(isCellSelected('itemCost', sz.id) && !sz.isLib ? { background: 'transparent', borderColor: PS.brand } : {}),
+                        }} />
+                    )}
                   </td>
 
                   {/* ── Nhóm computed: nền subtle, chữ mảnh, KHÔNG nền màu đậm ── */}
@@ -587,10 +637,21 @@ export default function PriceTable({
                   <td className="ps-cell-auto"
                     style={{ fontWeight: 700, color: PS.text }}>{usd(calc.totalPrice)}</td>
                   <td className="ps-cell-auto" style={{ color: PS.textMuted }}>{usd(calc.amzFee)}</td>
-                  <td className="ps-cell-auto"
-                    style={{ fontWeight: 650, color: calc.profitAfter >= 0 ? PS.text : PS.negative }}>{usd(calc.profitAfter)}</td>
-                  <td className="ps-cell-auto"><MarginCell value={calc.margin} /></td>
-                  <td className="ps-cell-auto"><MarginCell value={calc.marginAfter} /></td>
+                  {/* Chưa có giá vốn → Profit/Margin chưa tính được: hiện "—" thay vì số ảo. */}
+                  {calc.costUnknown ? (
+                    <>
+                      <td className="ps-cell-auto" style={{ color: PS.textMuted }} title="Chưa có Item Cost — chưa tính được Profit">—</td>
+                      <td className="ps-cell-auto" style={{ color: PS.textMuted }} title="Chưa có Item Cost — chưa tính được Margin">—</td>
+                      <td className="ps-cell-auto" style={{ color: PS.textMuted }} title="Chưa có Item Cost — chưa tính được Margin">—</td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="ps-cell-auto"
+                        style={{ fontWeight: 650, color: calc.profitAfter >= 0 ? PS.text : PS.negative }}>{usd(calc.profitAfter)}</td>
+                      <td className="ps-cell-auto"><MarginCell value={calc.margin} /></td>
+                      <td className="ps-cell-auto"><MarginCell value={calc.marginAfter} /></td>
+                    </>
+                  )}
 
                   {/* Xoá size — dùng được cho CẢ dòng thư viện: phôi dùng chung nhiều
                       project có size dư là bình thường, xoá ở đây KHÔNG đụng file thư

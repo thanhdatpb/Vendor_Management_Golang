@@ -159,17 +159,24 @@ Total Price  = (Unit Price + Ship/Item) × qty + Ship/Order
 Coupon       = Coupon$ + Coupon% × ((Unit Price + Ship/Item) × qty)   ← % chỉ áp trên phần hàng, không gồm Ship/Order
 AMZ Fee      = AMZ% × (Total Price − Coupon)
 Variable Fee = Variable% × (Unit Price × qty − Coupon)
-Total Cost   = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
+Total Cost   = (Item Cost + ImportTax) + (qty − 1) × (P1 + Ship cost/item + ImportTax)          ← dòng lấy từ Thư viện Vendor
+Total Cost   = (Item Cost + Ship/Item + ImportTax) × qty + (Ship/Order − Ship/Item)             ← dòng nhập tay
 
 Profit       = Total Price − AMZ Fee − Total Cost                          (trước khuyến mãi)
 Profit (KM)  = Total Price − AMZ Fee − Variable Fee − Coupon − Total Cost  (sau khuyến mãi)
 Margin       = Profit / Total Price
 ```
 
-Ba biến chi phí lấy từ **Thư viện Vendor** theo từng size (bản chỉnh 2026-07-17):
-- **Item Cost** ← cột **P1** (Pricing 1) — giá hàng thuần, không còn dùng cột `Total (Fulfill)` (tránh cộng ship 2 lần).
-- **Total Ship cost** ← cột **Price Ship** của phương thức ship đã chọn.
-- **Ship cost/item** ← cột **Price Ship Item 2** (mới) — ship mỗi sản phẩm tăng thêm khi multipack.
+Giá vốn của dòng lấy từ **Thư viện Vendor** (bản chỉnh 2026-09):
+- **Item Cost** ← cột **Total (Fulfill)** của Ship Method đang áp dụng — giá vốn **đã gồm ship**, nên không cộng thêm Price Ship. Với qty = 1: `Total Cost = Item Cost + ImportTax`.
+- **Ship Method tự nhận diện** theo cột Total (Fulfill) có dữ liệu (ô trống / $0 coi như không có giá):
+  - chỉ 1 phương thức có giá → tự áp, hiện chip `✓ Economy`, Seller không phải bấm;
+  - 2+ phương thức → chỉ cho chọn trong số có giá (kèm khoảng giá trên nút); chưa chọn thì Item Cost trống, Profit/Margin hiện "—";
+  - phương thức đã lưu không còn giá → còn 1 thì tự chuyển (badge "Đã chuyển X → Y"), còn 2+ thì bắt chọn lại;
+  - không có Total ở đâu → Item Cost tạm dùng **P1** kèm cảnh báo "chưa gồm ship".
+- Size không có Total ở phương thức đang áp dụng → ô "Thiếu giá", **không** tự lấy giá của phương thức khác; size đó không tính vào Avg margin.
+- Multipack: sản phẩm đầu tính trọn Total (Fulfill), mỗi sản phẩm thêm tính **P1 + Price Ship Item 2**.
+- Bảng giá có sẵn: mở ra là Item Cost hiện theo Total (Fulfill) tương ứng; với qty = 1 mọi con số tiền giữ nguyên (P1 + Price Ship = Total). Không có migration, không tự ghi server khi chưa sửa gì.
 - Ship phía chi phí (từ thư viện) tách biệt với **Ship/Item & Ship/Order** ở Price Setting — hai cái sau chỉ dùng cho **Total Price** (doanh thu). Product Type nhập tay dùng tạm Price Setting làm cost-ship.
 
 

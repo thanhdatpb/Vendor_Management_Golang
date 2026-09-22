@@ -28,9 +28,10 @@ function fileProjectTag(file) {
 
 // Khai báo phương thức ship → field tương ứng trong pricing row của thư viện.
 // (khớp đúng cấu trúc parseHappyCreativeLibrary trong vendorExcel.js)
-// priceField    = cột "Price Ship"         → Total Ship cost (ship cả đơn)
-// item2Field     = cột "Price Ship Item 2"  → Ship cost/item (ship mỗi sản phẩm thêm, multipack)
-// totalField     = cột "Total (Fulfill)"    → không còn dùng để tính giá vốn (Item Cost giờ = P1)
+// totalField     = cột "Total (Fulfill)"    → Item Cost của bảng tính giá (giá vốn ĐÃ gồm ship)
+// priceField    = cột "Price Ship"         → chỉ còn để tra cứu, KHÔNG cộng thêm vào giá vốn
+//                                            (Total đã gồm nó — cộng nữa là tính ship 2 lần)
+// item2Field     = cột "Price Ship Item 2"  → ship mỗi sản phẩm thêm (multipack)
 export const SHIP_METHODS = [
   { key: 'eco',       label: 'Economy',   totalField: 'eco_total',       priceField: 'eco_price',       item2Field: 'eco_price_item2' },
   { key: 'ground',    label: 'Ground',    totalField: 'ground_total',    priceField: 'ground_price',    item2Field: 'ground_price_item2' },
@@ -447,7 +448,38 @@ export function getLibraryTotal(entry, sizeLabel, methodKey) {
   return getLibraryField(entry, sizeLabel, SHIP_METHODS.find((m) => m.key === methodKey)?.totalField);
 }
 
-/** Item Cost = cột P1 (Pricing 1) của size — giá hàng thuần, KHÔNG phụ thuộc phương thức ship. */
+/**
+ * Item Cost của bảng tính giá = Total (Fulfill) của phương thức ship — giá vốn
+ * đã gồm ship. Ô trống, rác hoặc $0.00 đều coi như KHÔNG có giá (giá vốn $0
+ * gần như chắc chắn là ô vendor bỏ trống, lấy nó là Profit ảo).
+ */
+export function getLibraryFulfill(entry, sizeLabel, methodKey) {
+  const v = getLibraryTotal(entry, sizeLabel, methodKey);
+  return v !== null && Number.isFinite(v) && v > 0 ? v : null;
+}
+
+/**
+ * Các phương thức ship có Total (Fulfill) ở ÍT NHẤT một size của nguồn thư
+ * viện — nguồn cho việc tự nhận diện Ship Method trên bảng tính giá.
+ * `sizeLabels` giới hạn theo size đang hiển thị (size Seller đã xoá khỏi bảng
+ * không được làm nảy ra một phương thức); bỏ trống = mọi size của nguồn.
+ * Trả về theo đúng thứ tự SHIP_METHODS, kèm khoảng giá để hiện trên nút chọn.
+ */
+export function availableShipMethods(entry, sizeLabels) {
+  if (!entry) return [];
+  const labels = Array.isArray(sizeLabels) ? sizeLabels : (entry.sizes || []);
+  return SHIP_METHODS.map((m) => {
+    const values = labels.map((label) => getLibraryFulfill(entry, label, m.key)).filter((v) => v !== null);
+    if (!values.length) return null;
+    return { key: m.key, label: m.label, min: Math.min(...values), max: Math.max(...values), count: values.length };
+  }).filter(Boolean);
+}
+
+/**
+ * Cột P1 (Pricing 1) của size — giá hàng THUẦN, chưa gồm ship. Chỉ còn dùng
+ * cho sản phẩm thứ 2 trở đi của multipack, và làm Item Cost tạm khi phôi chưa
+ * có Total (Fulfill) ở phương thức nào.
+ */
 export function getLibraryItemCost(entry, sizeLabel) {
   return getLibraryField(entry, sizeLabel, 'pricing1');
 }

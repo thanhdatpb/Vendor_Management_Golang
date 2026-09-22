@@ -85,6 +85,48 @@ describe('computeSizeRow — cấu trúc công thức', () => {
     expect(r.totalCost).toBeCloseTo((6 + 1.1 + 0.5) * 2 + (4.1 - 1.1), 10);
   });
 
+  // ── Item Cost = Total (Fulfill) (bản chỉnh 2026-09) ──────────────────────
+  const fulfillSize = { ...size, isLib: true, costBasis: 'fulfill', itemCost: 10.1, p1: 6, shipCostItem: 1.1, totalShipCost: 0 };
+
+  it('dòng Total (Fulfill), qty = 1: Total Cost = Item Cost + ImportTax — KHÔNG cộng ship lần nữa', () => {
+    const r = computeSizeRow(settings, pt, fulfillSize);
+    expect(r.totalCost).toBeCloseTo(10.1 + 0.5, 10);
+    expect(r.totalShipCost).toBe(0);
+    // cờ totalShipCost còn sót trong bản lưu cũng KHÔNG được cộng vào
+    expect(computeSizeRow(settings, pt, { ...fulfillSize, totalShipCost: 4.1 }).totalCost).toBeCloseTo(10.6, 10);
+  });
+
+  it('dòng Total (Fulfill), multipack: sản phẩm đầu tính trọn Total, mỗi sản phẩm thêm P1 + ship/item', () => {
+    const r = computeSizeRow({ ...settings, quantity: 3 }, pt, fulfillSize);
+    expect(r.totalCost).toBeCloseTo((10.1 + 0.5) + 2 * (6 + 1.1 + 0.5), 10);
+  });
+
+  it('dòng Total (Fulfill) thiếu P1: sản phẩm thêm tính bằng Item Cost (thà dư hơn thiếu)', () => {
+    const r = computeSizeRow({ ...settings, quantity: 2 }, pt, { ...fulfillSize, p1: '' });
+    expect(r.totalCost).toBeCloseTo((10.1 + 0.5) + (10.1 + 1.1 + 0.5), 10);
+  });
+
+  it('cùng một phôi, qty = 1: Total (Fulfill) cho đúng giá vốn như công thức cũ P1 + Price Ship', () => {
+    // Thư viện: P1 6, Price Ship 4.1, Ship Item 2 1.1, Total = 6 + 4.1 = 10.1
+    const oldRow = computeSizeRow(settings, pt, { ...size, isLib: true, itemCost: 6, shipCostItem: 1.1, totalShipCost: 4.1 });
+    const newRow = computeSizeRow(settings, pt, fulfillSize);
+    expect(newRow.totalCost).toBeCloseTo(oldRow.totalCost, 10);
+    expect(newRow.profit).toBeCloseTo(oldRow.profit, 10);
+    expect(newRow.margin).toBeCloseTo(oldRow.margin, 10);
+  });
+
+  it('costUnknown chỉ bật cho dòng thư viện có costMissing', () => {
+    expect(computeSizeRow(settings, pt, { ...fulfillSize, itemCost: '', costMissing: true }).costUnknown).toBe(true);
+    expect(computeSizeRow(settings, pt, fulfillSize).costUnknown).toBe(false);
+    expect(computeSizeRow(settings, pt, { ...size, costMissing: true }).costUnknown).toBe(false); // dòng nhập tay
+  });
+
+  it('dòng thư viện lưu trước bản chỉnh (không có costBasis) giữ nguyên công thức cũ', () => {
+    const legacy = { ...size, isLib: true, itemCost: 6, shipCostItem: 1.1, totalShipCost: 4.1 };
+    const r = computeSizeRow({ ...settings, quantity: 2 }, pt, legacy);
+    expect(r.totalCost).toBeCloseTo((6 + 1.1 + 0.5) * 2 + (4.1 - 1.1), 10);
+  });
+
   it('Profit trước/sau khuyến mãi khác nhau đúng bằng Variable + Coupon', () => {
     const s = { ...settings, couponUsd: 1.2, couponPct: 5 };
     const r = computeSizeRow(s, pt, size);
@@ -151,6 +193,19 @@ describe('summarizeSheet', () => {
     };
     const clean = { settings, productTypes: [{ ...withJunk.productTypes[0], sizes: [withJunk.productTypes[0].sizes[0]] }] };
     expect(summarizeSheet(withJunk).avgMargin).toBeLessThan(summarizeSheet(clean).avgMargin);
+  });
+
+  it('dòng chưa có giá vốn (costMissing) vẫn đếm size + khoảng giá, nhưng KHÔNG vào avgMargin', () => {
+    const known = { id: 'k', label: 'S', sizeAdd: 1, itemCost: 5, customize: {}, isLib: true, costBasis: 'fulfill', p1: 3 };
+    const unknown = { id: 'u', label: 'XL', sizeAdd: 9, itemCost: '', customize: {}, isLib: true, costBasis: 'fulfill', costMissing: true };
+    const ptA = { id: 'a', name: 'A', phoi: 0, customizeInfos: [] };
+    const mixed = summarizeSheet({ settings, productTypes: [{ ...ptA, sizes: [known, unknown] }] });
+    const onlyKnown = summarizeSheet({ settings, productTypes: [{ ...ptA, sizes: [known] }] });
+    expect(mixed.count).toBe(2);
+    expect(mixed.maxPrice).toBeCloseTo(computeSizeRow(settings, ptA, unknown).totalPrice, 10);
+    expect(mixed.avgMargin).toBeCloseTo(onlyKnown.avgMargin, 10);
+    // cả bảng chưa có giá vốn → không có avg margin, thay vì một con số ảo
+    expect(summarizeSheet({ settings, productTypes: [{ ...ptA, sizes: [unknown] }] }).avgMargin).toBeNull();
   });
 });
 

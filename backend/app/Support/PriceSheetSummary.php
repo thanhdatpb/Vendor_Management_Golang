@@ -76,17 +76,29 @@ final class PriceSheetSummary
         $amzFee      = (self::num($settings['amzFeePct'] ?? null) / 100) * ($totalPrice - $couponAmt);
         $variableFee = (self::num($settings['variableFeePct'] ?? null) / 100) * ($unitPrice * $qty - $couponAmt);
 
-        $isLib         = !empty($size['isLib']);
-        $shipCostItem  = $isLib ? self::num($size['shipCostItem'] ?? null) : $shipPerItem;
-        $totalShipCost = $isLib ? self::num($size['totalShipCost'] ?? null) : $shipPerOrder;
+        $isLib        = !empty($size['isLib']);
+        $shipCostItem = $isLib ? self::num($size['shipCostItem'] ?? null) : $shipPerItem;
+        // Bản chỉnh 2026-09: dòng thư viện có Item Cost = Total (Fulfill), ĐÃ gồm ship.
+        $fulfillBasis = $isLib && ($size['costBasis'] ?? null) === 'fulfill';
 
-        $totalCost = ($itemCost + $shipCostItem + $importTax) * $qty + ($totalShipCost - $shipCostItem);
+        if ($fulfillBasis) {
+            // Sản phẩm đầu tính trọn Total, mỗi sản phẩm thêm P1 + ship/item (thiếu P1 → Item Cost).
+            $p1            = self::num($size['p1'] ?? null);
+            $extraItemCost = $p1 > 0 ? $p1 : $itemCost;
+            $totalCost     = ($itemCost + $importTax) + ($qty - 1) * ($extraItemCost + $shipCostItem + $importTax);
+        } else {
+            $totalShipCost = $isLib ? self::num($size['totalShipCost'] ?? null) : $shipPerOrder;
+            $totalCost     = ($itemCost + $shipCostItem + $importTax) * $qty + ($totalShipCost - $shipCostItem);
+        }
 
         $profit      = $totalPrice - $amzFee - $totalCost;
         $profitAfter = $totalPrice - $amzFee - $variableFee - $couponAmt - $totalCost;
 
         return [
             'qty'         => $qty,
+            // Dòng thư viện chưa có giá vốn (thiếu Total ở Ship Method / chưa chọn):
+            // margin là số ảo → summarize() không tính vào avg margin.
+            'costUnknown' => $isLib && !empty($size['costMissing']),
             'unitPrice'   => $unitPrice,
             'totalPrice'  => $totalPrice,
             'couponAmt'   => $couponAmt,
@@ -120,9 +132,12 @@ final class PriceSheetSummary
                 if (!is_array($size)) {
                     continue;
                 }
-                $row       = self::computeSizeRow($settings, $productType, $size);
-                $prices[]  = $row['totalPrice'];
-                $margins[] = $row['margin'];
+                $row      = self::computeSizeRow($settings, $productType, $size);
+                $prices[] = $row['totalPrice'];
+                // Size chưa có giá vốn vẫn đếm + góp khoảng giá, nhưng không vào avg margin.
+                if (!$row['costUnknown']) {
+                    $margins[] = $row['margin'];
+                }
             }
         }
 
@@ -134,7 +149,7 @@ final class PriceSheetSummary
             'count'     => count($prices),
             'minPrice'  => min($prices),
             'maxPrice'  => max($prices),
-            'avgMargin' => array_sum($margins) / count($margins),
+            'avgMargin' => $margins === [] ? null : array_sum($margins) / count($margins),
         ];
     }
 

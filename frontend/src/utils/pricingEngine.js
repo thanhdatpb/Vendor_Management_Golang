@@ -64,7 +64,7 @@ export const SETTING_FIELDS = [
  *   Coupon      = Coupon$ + Coupon% × ((Unit Price + Ship/Item) × qty)  ★ % áp trên phần hàng, KHÔNG gồm Ship/Order
  *   AMZ Fee     = AMZ% × (Total Price − Coupon)                      ★ trừ coupon trước khi tính phí
  *   Variable    = Variable% × (Unit Price × qty − Coupon)            ★ theo giá hàng, không theo coupon
- *   Total Cost  = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
+ *   Total Cost  = xem 2 nhánh bên dưới (dòng thư viện / dòng nhập tay)
  *   Profit      = Total Price − AMZ − Total Cost                     (trước khuyến mãi)
  *   Profit(KM)  = Total Price − AMZ − Variable − Coupon − Total Cost (sau khuyến mãi)
  *   Margin      = (Profit(KM) + Coupon) / Total Price × 100
@@ -73,12 +73,21 @@ export const SETTING_FIELDS = [
  *                   không tính là chi phí khi đo margin).
  *   Margin(KM)  = Profit(KM) / Total Price × 100
  *
- *   Nguồn ba biến chi phí (bản chỉnh 2026-07-17):
- *     • Item Cost      ← cột P1 (Pricing 1) của thư viện vendor  (giá hàng THUẦN, không gồm ship)
- *     • Total Ship cost← cột "Price Ship" của phương thức ship đã chọn (ship cả đơn)
- *     • Ship cost/item ← cột "Price Ship Item 2" (ship mỗi sản phẩm tăng thêm khi multipack)
- *   Với qty=1: Ship cost/item triệt tiêu → Total Cost = Item Cost + ImportTax + Total Ship cost.
- *   Với qty>1: mỗi sản phẩm thêm cộng 1 lần Ship cost/item.
+ *   Total Cost của dòng THƯ VIỆN (`costBasis: 'fulfill'`, bản chỉnh 2026-09):
+ *     Total Cost = (Item Cost + ImportTax) + (qty − 1) × (P1 + Ship cost/item + ImportTax)
+ *     • Item Cost      ← cột "Total (Fulfill)" của Ship Method hiệu lực — giá vốn ĐÃ gồm ship,
+ *                        nên KHÔNG cộng thêm Price Ship (cộng nữa là tính ship 2 lần)
+ *     • P1             ← cột Pricing 1 — giá hàng thuần của mỗi sản phẩm thêm (multipack);
+ *                        record không có P1 thì sản phẩm thêm tính bằng Item Cost (thà dư hơn thiếu)
+ *     • Ship cost/item ← cột "Price Ship Item 2" (ship mỗi sản phẩm tăng thêm)
+ *     Với qty=1: Total Cost = Item Cost + ImportTax — đúng số Seller thấy ở cột Item Cost.
+ *     `costMissing` (size không có Total ở Ship Method hiệu lực, hoặc chưa chọn) → `costUnknown`:
+ *     Profit/Margin của dòng không tính được, KHÔNG coi giá vốn là 0.
+ *
+ *   Dòng NHẬP TAY, và dòng thư viện lưu TRƯỚC bản chỉnh (không có `costBasis` — chỉ
+ *   còn gặp ở Product Type mất record nguồn), giữ công thức 2026-07-17:
+ *     Total Cost = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
+ *     (dòng nhập tay: Ship cost/item = Ship/Item, Total Ship cost = Ship/Order của Price Setting)
  *
  *   Lưu ý:
  *   • Ship phía CHI PHÍ (shipCostItem/totalShipCost) lấy từ THƯ VIỆN theo từng size —
@@ -117,21 +126,33 @@ export function computeSizeRow(settings, productType, size) {
   const variableFee = (num(s.variableFeePct) / 100) * (unitPrice * qty - couponAmt); // ★ Var% × (Unit×qty − Coupon)
 
   // ── Ship phía CHI PHÍ ──
-  // Size từ thư viện (isLib): lấy shipCostItem (Price Ship Item 2) + totalShipCost (Price Ship)
-  //   đã được PriceSheetWorkspace nạp sẵn theo phương thức ship đã chọn (0 nếu thư viện chưa có).
+  // Size từ thư viện (isLib): shipCostItem (Price Ship Item 2) + totalShipCost do resolveSheet
+  //   nạp sẵn theo Ship Method hiệu lực (0 nếu thư viện chưa có).
   // Size nhập tay: dùng Ship/Item & Ship/Order của Price Setting làm cost-ship.
   const isLib = !!size?.isLib;
   const shipCostItem = isLib ? num(size?.shipCostItem) : shipPerItem;
-  const totalShipCost = isLib ? num(size?.totalShipCost) : shipPerOrder;
+  const fulfillBasis = isLib && size?.costBasis === 'fulfill';
+  const totalShipCost = isLib && !fulfillBasis ? num(size?.totalShipCost) : (isLib ? 0 : shipPerOrder);
 
-  // ★ Total Cost = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
-  const totalCost = (itemCost + shipCostItem + importTax) * qty + (totalShipCost - shipCostItem);
+  let totalCost;
+  if (fulfillBasis) {
+    // ★ Item Cost = Total (Fulfill) đã gồm ship → sản phẩm đầu tính trọn, mỗi sản phẩm thêm P1 + ship/item.
+    const extraItemCost = num(size?.p1) > 0 ? num(size.p1) : itemCost;
+    totalCost = (itemCost + importTax) + (qty - 1) * (extraItemCost + shipCostItem + importTax);
+  } else {
+    // ★ Total Cost = (Item Cost + Ship cost/item + ImportTax) × qty + (Total Ship cost − Ship cost/item)
+    totalCost = (itemCost + shipCostItem + importTax) * qty + (totalShipCost - shipCostItem);
+  }
 
   const profit = totalPrice - amzFee - totalCost;
   const profitAfter = totalPrice - amzFee - variableFee - couponAmt - totalCost;
 
   return {
     qty,
+    // Dòng thư viện chưa có giá vốn (size thiếu Total ở Ship Method hiệu lực / chưa chọn
+    // Ship Method): Total Price vẫn đúng, nhưng Profit/Margin là số ảo — UI hiện "—",
+    // summarizeSheet không tính vào Avg margin.
+    costUnknown: isLib && !!size?.costMissing,
     shipping: shipPerItem * qty + shipPerOrder,   // tổng ship phía doanh thu (informational)
     shipCostItem,
     totalShipCost,
@@ -152,6 +173,8 @@ export function computeSizeRow(settings, productType, size) {
 
 /**
  * Tổng hợp một bảng tính giá: số size, khoảng giá, avg margin.
+ * Dòng chưa có giá vốn (`costUnknown`) vẫn đếm size và vẫn góp Total Price vào
+ * khoảng giá (giá bán không phụ thuộc giá vốn), nhưng KHÔNG góp vào Avg margin.
  */
 export function summarizeSheet(sheet) {
   const rows = [];
@@ -162,12 +185,12 @@ export function summarizeSheet(sheet) {
   });
   if (!rows.length) return { count: 0, minPrice: null, maxPrice: null, avgMargin: null };
   const prices = rows.map((r) => r.totalPrice);
-  const margins = rows.map((r) => r.margin);
+  const margins = rows.filter((r) => !r.costUnknown).map((r) => r.margin);
   return {
     count: rows.length,
     minPrice: Math.min(...prices),
     maxPrice: Math.max(...prices),
-    avgMargin: margins.reduce((a, b) => a + b, 0) / margins.length,
+    avgMargin: margins.length ? margins.reduce((a, b) => a + b, 0) / margins.length : null,
   };
 }
 

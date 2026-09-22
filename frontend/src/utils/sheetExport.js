@@ -51,10 +51,14 @@ export function buildSheetAoa(sheet) {
         const own = (pt.customizeInfos || []).find((x) => x.name === c.name);
         return own ? num(sz.customize?.[own.id]) : '';
       });
+      // Size chưa có giá vốn (chưa chọn Ship Method / thiếu Total ở phương thức đang
+      // áp dụng): để TRỐNG Item Cost + Profit/Margin thay vì xuất số lời ảo.
+      const unknown = r.costUnknown;
       aoa.push([
-        pt.name, sz.label, num(pt.phoi), num(sz.sizeAdd), ...custVals, num(sz.itemCost),
+        pt.name, sz.label, num(pt.phoi), num(sz.sizeAdd), ...custVals, unknown ? '' : num(sz.itemCost),
         +r.totalPrice.toFixed(2), +r.amzFee.toFixed(2), +r.couponAmt.toFixed(2),
-        +r.variableFee.toFixed(2), +r.profitAfter.toFixed(2), +r.margin.toFixed(2), +r.marginAfter.toFixed(2),
+        +r.variableFee.toFixed(2),
+        unknown ? '' : +r.profitAfter.toFixed(2), unknown ? '' : +r.margin.toFixed(2), unknown ? '' : +r.marginAfter.toFixed(2),
       ]);
     });
   });

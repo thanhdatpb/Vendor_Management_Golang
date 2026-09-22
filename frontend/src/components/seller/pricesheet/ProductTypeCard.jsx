@@ -10,7 +10,85 @@ import { PS } from './tokens';
 import { Btn, IconBtn, Badge, Segmented, ConfirmDialog } from './primitives';
 import PriceTable from './PriceTable';
 import ProductTypeInfoStrip from './ProductTypeInfoStrip';
-import { SHIP_METHODS } from '../../../utils/vendorLibraryIndex';
+import { SHIP_METHODS, shipMethodLabel } from '../../../utils/vendorLibraryIndex';
+import { usd } from '../../../utils/pricingEngine';
+
+const labelStyle = { fontSize: 11.5, fontWeight: 650, color: PS.textSecondary, whiteSpace: 'nowrap' };
+const warnBadgeStyle = { cursor: 'help', border: `1px solid ${PS.accentBorder}` };
+
+/** "$13.70" hoặc "$13.70–15.20" — khoảng Total (Fulfill) của một phương thức. */
+const priceRange = (o) => (o.min === o.max ? usd(o.min) : `${usd(o.min)}–${Number(o.max).toFixed(2)}`);
+
+/**
+ * Bộ chọn Ship Method — vẽ theo `pt.shipMethodState` do resolveSheet gắn:
+ *   single / switched → chip khoá, Seller không phải bấm (phôi chỉ có giá ở 1 phương thức);
+ *   chosen / needs-choice → chỉ các phương thức CÓ Total, kèm khoảng giá trên nút;
+ *   none → không có Total ở đâu cả, Item Cost đang tạm dùng P1.
+ * PT nhập tay / mất record nguồn (không có `shipMethodOptions`) giữ bộ chọn cũ đủ 5 phương thức.
+ */
+function ShipMethodControl({ pt, libEntry, onChange }) {
+  const options = pt.shipMethodOptions;
+  const state = pt.shipMethodState;
+  const wrap = (children) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      <span style={labelStyle}>Ship Method</span>
+      {children}
+    </div>
+  );
+
+  if (!Array.isArray(options)) {
+    return wrap(<>
+      <Segmented label="Ship Method" options={SHIP_METHODS} value={pt.shipMethod} onChange={onChange} />
+      {libEntry && !pt.shipMethod && (
+        <Badge tone="warning" style={warnBadgeStyle}
+          title="Chọn một phương thức ship để nạp giá vốn (Item Cost) từ thư viện vendor.">Chưa chọn</Badge>
+      )}
+    </>);
+  }
+
+  if (state === 'none') {
+    return wrap(
+      <Badge tone="warning" style={warnBadgeStyle}
+        title="Thư viện Vendor chưa có Total (fulfill) ở phương thức ship nào cho phôi này. Item Cost đang tạm lấy cột P1 — CHƯA gồm ship.">
+        Chưa có Total (fulfill) · tạm dùng P1
+      </Badge>
+    );
+  }
+
+  if (options.length === 1) {
+    const only = options[0];
+    return wrap(<>
+      <span title={`Thư viện chỉ có Total (fulfill) ở ${only.label} — tự áp dụng, không cần chọn.`}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 9,
+          fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', cursor: 'help',
+          background: PS.brandSubtle, border: `1px solid ${PS.brandBorder}`, color: PS.brandDeep,
+        }}>
+        ✓ {only.label}
+      </span>
+      {state === 'switched' && (
+        <Badge tone="warning" style={warnBadgeStyle}
+          title={`Thư viện không còn Total (fulfill) ở ${shipMethodLabel(pt.shipMethodPrevious) || pt.shipMethodPrevious} cho phôi này — đã chuyển sang ${only.label}.`}>
+          Đã chuyển {shipMethodLabel(pt.shipMethodPrevious) || pt.shipMethodPrevious} → {only.label}
+        </Badge>
+      )}
+    </>);
+  }
+
+  const previous = state === 'needs-choice' ? shipMethodLabel(pt.shipMethodPrevious) : '';
+  return wrap(<>
+    <Segmented label="Ship Method" value={pt.shipMethod} onChange={onChange}
+      options={options.map((o) => ({ key: o.key, label: o.label, hint: priceRange(o) }))} />
+    {state === 'needs-choice' && (
+      <Badge tone="warning" style={warnBadgeStyle}
+        title={previous
+          ? `Thư viện không còn Total (fulfill) ở ${previous} — chọn lại một phương thức để nạp Item Cost.`
+          : `Phôi có Total (fulfill) ở ${options.length} phương thức — chọn một để nạp Item Cost.`}>
+        {previous ? `Không còn giá ${previous} · chọn lại` : `Chọn 1 trong ${options.length}`}
+      </Badge>
+    )}
+  </>);
+}
 
 export default function ProductTypeCard({
   pt, settings, libEntry, compareCount = 0,
@@ -26,6 +104,11 @@ export default function ProductTypeCard({
   // rơi về `libEntry.vendor` cho bảng cũ resolve theo tên (đường lùi).
   const vendorLabel = pt.vendorCode || libEntry?.vendor || '';
   const recordMissing = pt.warning === 'record-missing';
+  // Size thiếu Total ở Ship Method đang áp dụng. Lúc CHƯA chọn phương thức thì
+  // mọi size đều "thiếu" — khi đó badge "Chọn 1 trong N" đã nói đủ, không đếm.
+  const missingCount = pt.shipMethodState && pt.shipMethodState !== 'needs-choice'
+    ? (pt.sizes || []).filter((sz) => sz.isLib && sz.costMissing).length
+    : 0;
 
   return (
     <section aria-label={`Product type ${pt.name || 'chưa đặt tên'}`} style={{
@@ -72,17 +155,17 @@ export default function ProductTypeCard({
           </div>
         </label>
 
-        {/* Ship Method — segmented control thật (spec §3.4). Không auto-chọn
-            để không đổi số liệu; chưa chọn → badge nhắc rõ ràng. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 650, color: PS.textSecondary, whiteSpace: 'nowrap' }}>Ship Method</span>
-          <Segmented label="Ship Method" options={SHIP_METHODS} value={pt.shipMethod}
-            onChange={(key) => onPT(pt.id, { shipMethod: key })} />
-          {libEntry && !pt.shipMethod && (
-            <Badge tone="warning" style={{ cursor: 'help', border: `1px solid ${PS.accentBorder}` }}
-              title="Chọn một phương thức ship để nạp giá vốn (Item Cost) từ thư viện vendor.">Chưa chọn</Badge>
-          )}
-        </div>
+        {/* Ship Method — tự nhận diện theo cột Total (Fulfill) có dữ liệu (xem
+            resolveShipMethod trong utils/resolveSheet.js). */}
+        <ShipMethodControl pt={pt} libEntry={libEntry}
+          onChange={(key) => onPT(pt.id, { shipMethod: key })} />
+
+        {missingCount > 0 && (
+          <Badge tone="negative" style={{ cursor: 'help' }}
+            title={`${missingCount} size không có Total (fulfill) ở ${shipMethodLabel(pt.shipMethod)} trong thư viện Vendor — Item Cost trống, Profit/Margin của các size này chưa tính được và không tính vào Avg margin.`}>
+            {missingCount} size thiếu giá {shipMethodLabel(pt.shipMethod)}
+          </Badge>
+        )}
 
         {/* Nguồn dữ liệu — kèm mã vendor để phân biệt các block trùng tên phôi
             (mục 03/04): "Football Jersey · VN3" khác "Football Jersey · VN7". */}

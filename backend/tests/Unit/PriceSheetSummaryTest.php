@@ -101,6 +101,50 @@ class PriceSheetSummaryTest extends TestCase
         }
     }
 
+    /**
+     * Bản chỉnh 2026-09: dòng thư viện có Item Cost = Total (Fulfill) (đã gồm ship).
+     * Số kỳ vọng sinh bằng `computeSizeRow` của frontend (node, 2026-09-22).
+     */
+    public function test_dong_total_fulfill_khong_cong_ship_lan_nua_va_multipack_tinh_p1(): void
+    {
+        $settings    = $this->settings();
+        $productType = $this->productTypeWithCustomize();
+        $fulfill     = $this->fulfillSize();
+
+        // qty = 2: sản phẩm đầu trọn Total, sản phẩm thêm P1 + ship/item. totalShipCost
+        // còn sót trong bản lưu KHÔNG được cộng vào.
+        $this->assertRow($settings, $productType, $fulfill, [
+            'totalCost' => 18.0, 'profit' => 30.9065, 'profitAfter' => 22.68,
+        ]);
+        $this->assertRow(['quantity' => 1] + $settings, $productType, $fulfill, [
+            'totalCost' => 10.5, 'profit' => 16.19825, 'profitAfter' => 11.115,
+        ]);
+        // Thiếu P1 → sản phẩm thêm tính bằng Item Cost.
+        $this->assertRow($settings, $productType, ['p1' => ''] + $fulfill, [
+            'totalCost' => 22.1, 'profit' => 26.8065, 'profitAfter' => 18.58,
+        ]);
+    }
+
+    public function test_size_chua_co_gia_von_khong_tinh_vao_avg_margin(): void
+    {
+        $sheet   = $this->sheet();
+        $missing = ['itemCost' => '', 'costMissing' => true] + $this->fulfillSize();
+        $sheet['productTypes'][0]['sizes'][] = $missing;
+
+        $withMissing = PriceSheetSummary::summarize($sheet);
+        $before      = PriceSheetSummary::summarize($this->sheet());
+
+        $this->assertTrue(PriceSheetSummary::computeSizeRow($this->settings(), $this->productTypeWithCustomize(), $missing)['costUnknown']);
+        $this->assertSame(4, $withMissing['count']);                       // vẫn đếm size
+        $this->assertSame(round($before['avgMargin'], 10), round($withMissing['avgMargin'], 10));
+
+        $onlyMissing = [
+            'settings'     => $this->settings(),
+            'productTypes' => [['customizeInfos' => [], 'sizes' => [$missing]]],
+        ];
+        $this->assertNull(PriceSheetSummary::summarize($onlyMissing)['avgMargin']);
+    }
+
     public function test_summarize_tra_dung_so_size_khoang_gia_va_avg_margin(): void
     {
         $summary = PriceSheetSummary::summarize($this->sheet());
@@ -232,6 +276,16 @@ class PriceSheetSummaryTest extends TestCase
                 ['id' => 's2', 'label' => 'L', 'sizeAdd' => '3,5', 'itemCost' => 7, 'customize' => ['ci1' => 1],
                  'isLib' => true, 'shipCostItem' => 0.8, 'totalShipCost' => 4.2],
             ],
+        ];
+    }
+
+    /** Dòng thư viện theo bản chỉnh 2026-09: Item Cost = Total (Fulfill). @return array<string,mixed> */
+    private function fulfillSize(): array
+    {
+        return [
+            'id' => 's4', 'label' => 'XL', 'sizeAdd' => 2, 'itemCost' => 10.1, 'p1' => 6,
+            'customize' => ['ci1' => 1, 'ci2' => 0.5],
+            'isLib' => true, 'costBasis' => 'fulfill', 'shipCostItem' => 1.1, 'totalShipCost' => 4.2,
         ];
     }
 

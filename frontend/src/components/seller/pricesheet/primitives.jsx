@@ -44,10 +44,10 @@ export function IconBtn({ title, style, children, variant = 'ghost', ...rest }) 
 }
 
 // ─── Badge (meta / margin) ───────────────────────────────
-export function Badge({ tone = 'muted', style, children }) {
+export function Badge({ tone = 'muted', style, children, ...rest }) {
   const neutral = tone === 'muted';
   return (
-    <span style={{
+    <span {...rest} style={{
       display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 10px',
       borderRadius: 999, fontSize: 12, fontWeight: 650, whiteSpace: 'nowrap',
       fontVariantNumeric: 'tabular-nums',
@@ -108,6 +108,13 @@ export function Segmented({ options, value, onChange, label, size = 'sm' }) {
               color: on ? PS.brandDeep : PS.textSecondary, whiteSpace: 'nowrap',
             }}>
             {o.label}
+            {/* Chú thích phụ (VD khoảng giá của phương thức ship) — tuỳ chọn */}
+            {o.hint && (
+              <span style={{
+                marginLeft: 6, fontSize: 10.5, fontWeight: 600, fontVariantNumeric: 'tabular-nums',
+                color: on ? PS.brandDeep : PS.textMuted, opacity: on ? 0.85 : 1,
+              }}>{o.hint}</span>
+            )}
           </button>
         );
       })}

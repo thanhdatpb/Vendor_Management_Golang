@@ -23,10 +23,18 @@
 //    • `size.overrides.{label,itemCost}` thắng giá trị thư viện — sửa tại chỗ;
 //    • `pt.sizeOrder` quyết định thứ tự dòng, id lạ đẩy về cuối.
 //  Bảng cũ không có ba trường này thì mọi thứ chạy y hệt trước.
+//
+//  2026-09 — Item Cost = Total (Fulfill) + tự nhận diện Ship Method:
+//    • Item Cost của dòng thư viện lấy cột Total (Fulfill) của phương thức ship
+//      (giá vốn ĐÃ gồm ship), không còn là P1 + cộng riêng Price Ship;
+//    • Ship Method tự áp khi phôi chỉ có Total ở MỘT phương thức; có 2+ thì
+//      Seller chọn trong số có giá (xem resolveShipMethod);
+//    • bảng có sẵn cũng resolve theo luật mới ngay khi mở — không có migration.
 // ════════════════════════════════════════════════════════
 import { makeSize, makeProductType } from './pricingEngine';
 import {
-  findLibraryEntry, findLibraryRecord, getLibraryItemCost, getLibraryShip, getLibraryShipItem2, normalizeKey,
+  findLibraryEntry, findLibraryRecord, getLibraryItemCost, getLibraryFulfill, getLibraryShipItem2,
+  availableShipMethods, normalizeKey,
 } from './vendorLibraryIndex';
 
 // ── Size lấy từ thư viện vendor: id phải suy ra được từ (ptId + label) ──
@@ -146,40 +154,125 @@ export function baseSizesOf(pt, libIndex) {
   return orderSizes([...libSizesOf(pt, source), ...manualSizesOf(pt, source)], pt.sizeOrder);
 }
 
-/** Một dòng thư viện sau khi nạp giá vốn + ship, rồi áp override cục bộ của Seller. */
-function decorateLibRow(base, source, pt) {
+/**
+ * Ship Method hiệu lực của một Product Type lấy từ thư viện.
+ *
+ * Nhận diện theo những phương thức có Total (Fulfill) ở ít nhất một size đang
+ * hiển thị (availableShipMethods). `state` cho card biết phải vẽ gì:
+ *   'single'       — đúng 1 phương thức có giá → tự áp, Seller không phải bấm;
+ *   'chosen'       — 2+ phương thức, Seller đã chọn một cái còn giá;
+ *   'switched'     — cái đã lưu không còn giá, còn đúng 1 cái → tự chuyển sang
+ *                    cái đó (`previous` = cái cũ, để báo cho Seller biết);
+ *   'needs-choice' — 2+ phương thức mà chưa chọn (hoặc cái đã chọn không còn
+ *                    giá — `previous`). KHÔNG tự chọn: các phương thức có thể
+ *                    lệch nhau nhiều, chọn sai là Profit sai mà không ai thấy;
+ *   'none'         — không phương thức nào có Total → Item Cost tạm dùng P1.
+ */
+export function resolveShipMethod(pt, source, sizeLabels) {
+  const options = availableShipMethods(source, sizeLabels);
+  const saved = pt?.shipMethod || '';
+  if (!options.length) return { method: null, options, state: 'none', previous: '' };
+  if (saved && options.some((o) => o.key === saved)) {
+    return { method: saved, options, state: options.length === 1 ? 'single' : 'chosen', previous: '' };
+  }
+  if (options.length === 1) {
+    return { method: options[0].key, options, state: saved ? 'switched' : 'single', previous: saved };
+  }
+  return { method: null, options, state: 'needs-choice', previous: saved };
+}
+
+/**
+ * Một dòng thư viện sau khi nạp giá vốn, rồi áp override cục bộ của Seller.
+ *
+ * Item Cost = Total (Fulfill) của phương thức hiệu lực — giá vốn ĐÃ gồm ship,
+ * nên `totalShipCost` = 0 (cộng Price Ship nữa là tính ship 2 lần, đúng lỗi
+ * #224 từng sửa bằng cách chuyển sang P1). `costBasis: 'fulfill'` báo cho
+ * computeSizeRow dùng công thức giá vốn tương ứng; `p1` + `shipCostItem` chỉ
+ * dùng cho sản phẩm thứ 2 trở đi của multipack. `costMissing` = size không có
+ * giá ở phương thức hiệu lực (hoặc chưa chọn phương thức) — Profit/Margin của
+ * dòng đó không tính được, KHÔNG được coi giá vốn là 0.
+ */
+function decorateLibRow(base, source, ship) {
   const label = libLabelOf(base);
-  // Bản chỉnh 2026-07-17: giá vốn = P1 (không còn cột Total); cost-ship lấy per-method.
-  const itemCost = getLibraryItemCost(source, label) || '';
-  const totalShipCost = getLibraryShip(source, label, pt.shipMethod) || 0;      // cột "Price Ship"
-  const shipCostItem = getLibraryShipItem2(source, label, pt.shipMethod) || 0;  // cột "Price Ship Item 2"
+  const p1 = getLibraryItemCost(source, label);
+  let libCost = '';
+  let missing = false;
+  if (ship.state === 'none') {
+    libCost = p1 ?? '';                    // chưa có Total ở đâu cả → tạm P1, card báo "chưa gồm ship"
+  } else if (ship.method) {
+    const fulfill = getLibraryFulfill(source, label, ship.method);
+    if (fulfill === null) missing = true;
+    else libCost = fulfill;
+  } else {
+    missing = true;                        // 2+ phương thức, Seller chưa chọn
+  }
   const ov = base.overrides || {};
+  const overridden = ov.itemCost !== undefined && ov.itemCost !== null;
   return {
     ...base,
     libLabel: label,
     label: ov.label ?? label,
-    itemCost: ov.itemCost ?? itemCost,
-    totalShipCost,
-    shipCostItem,
+    itemCost: overridden ? ov.itemCost : libCost,
+    costBasis: 'fulfill',
+    p1: p1 ?? '',
+    shipCostItem: ship.method ? (getLibraryShipItem2(source, label, ship.method) || 0) : 0,
+    totalShipCost: 0,
+    costMissing: !overridden && missing,
     isLib: true,
   };
 }
 
-/** Dòng Seller tự thêm: thư viện KHÔNG được đụng vào giá vốn đã nhập tay. */
-const decorateManualRow = (sz) => ({ ...sz, isLib: false, origin: 'manual' });
+/**
+ * Dòng Seller tự thêm: thư viện KHÔNG được đụng vào giá vốn đã nhập tay. Dòng
+ * từng là dòng thư viện (size bị bỏ khỏi thư viện) phải bỏ cờ giá vốn thư viện
+ * còn sót trong bản đã lưu.
+ */
+const decorateManualRow = (sz) => {
+  const rest = { ...sz };
+  delete rest.costBasis;
+  delete rest.costMissing;
+  delete rest.p1;
+  return { ...rest, isLib: false, origin: 'manual' };
+};
 
 /** Ghép dòng thư viện + dòng tự thêm rồi sắp theo `pt.sizeOrder`. */
 function composeSizes(pt, source) {
-  const lib = libSizesOf(pt, source).map((base) => decorateLibRow(base, source, pt));
+  const bases = libSizesOf(pt, source);
+  const ship = resolveShipMethod(pt, source, bases.map(libLabelOf));
+  const lib = bases.map((base) => decorateLibRow(base, source, ship));
   const manual = manualSizesOf(pt, source).map(decorateManualRow);
-  return orderSizes([...lib, ...manual], pt.sizeOrder);
+  return { sizes: orderSizes([...lib, ...manual], pt.sizeOrder), ship };
+}
+
+/**
+ * Field Ship Method đã resolve, gắn lên Product Type cho card vẽ. Phương thức
+ * tự nhận diện được ghi vào `shipMethod` → lần lưu sau chốt luôn: vendor có
+ * bổ sung thêm phương thức khác thì bảng này vẫn giữ cái đang dùng, không đột
+ * ngột rơi về trạng thái "chọn ship".
+ */
+const shipMeta = (pt, ship) => ({
+  shipMethod: ship.method || pt.shipMethod,
+  shipMethodOptions: ship.options,
+  shipMethodState: ship.state,
+  shipMethodPrevious: ship.previous,
+});
+
+/** Bỏ field Ship Method đã resolve còn sót trong bản lưu, khi PT không còn nguồn thư viện. */
+function stripShipMeta(pt) {
+  if (!pt || !('shipMethodOptions' in pt || 'shipMethodState' in pt || 'shipMethodPrevious' in pt)) return pt;
+  const rest = { ...pt };
+  delete rest.shipMethodOptions;
+  delete rest.shipMethodState;
+  delete rest.shipMethodPrevious;
+  return rest;
 }
 
 /** Product Type resolve theo TÊN — đường lùi cho bảng chưa có `libRef`. */
 function resolveByName(pt, libIndex) {
   const libEntry = findLibraryEntry(libIndex, pt.name);
-  if (!libEntry) return pt;
-  return { ...pt, sizes: composeSizes(pt, libEntry) };
+  if (!libEntry) return stripShipMeta(pt);
+  const { sizes, ship } = composeSizes(pt, libEntry);
+  return { ...pt, sizes, ...shipMeta(pt, ship) };
 }
 
 /** Product Type gắn chặt vào một record cụ thể (mục 03/04) — một vendor, một file nguồn. */
@@ -204,13 +297,17 @@ function resolveByRecord(pt, libIndex) {
         shipCostItem: snap.shipCostItem ?? sz.shipCostItem ?? 0,
       };
     });
+    // Ship Method không còn gì để nhận diện (không có nguồn) — bỏ field đã
+    // resolve của lần trước, card quay về bộ chọn cũ. Giá vốn giữ đúng bản đã
+    // lưu, kể cả `costBasis`/`p1` nằm sẵn trong từng dòng.
     return {
-      ...pt, sizes: orderSizes(sizes, pt.sizeOrder),
+      ...stripShipMeta(pt), sizes: orderSizes(sizes, pt.sizeOrder),
       vendorCode: pt.libRef.vendorCode, warning: 'record-missing',
     };
   }
 
-  return { ...pt, sizes: composeSizes(pt, record), vendorCode: record.vendorCode };
+  const { sizes, ship } = composeSizes(pt, record);
+  return { ...pt, sizes, ...shipMeta(pt, ship), vendorCode: record.vendorCode };
 }
 
 /**
@@ -239,8 +336,9 @@ export function restoreFromLibrary(pt, libIndex) {
 
 /**
  * Bind cả bảng tính giá với thư viện: mỗi Product Type khớp được nguồn thư viện
- * (theo `libRef` hoặc theo tên) sẽ lấy danh sách size + Item Cost (cột P1) +
- * ship cost theo phương thức ship. Product Type nhập tay giữ nguyên.
+ * (theo `libRef` hoặc theo tên) sẽ lấy danh sách size + Item Cost (cột Total
+ * (Fulfill) của Ship Method hiệu lực — xem resolveShipMethod). Product Type
+ * nhập tay giữ nguyên.
  *
  * @param {object} sheet    — bảng tính giá (state hiện tại của workspace)
  * @param {object|null} libIndex — index thư viện (loadVendorLibraryIndex)

@@ -19,6 +19,9 @@ import { PROJECTS } from '../../../constants/projects';
 
 const projectLabel = (key) => PROJECTS.find((p) => p.id === key)?.label || key || '—';
 
+/** Size chưa có giá vốn (thiếu Total / chưa chọn Ship Method) — không hiện số lời ảo. */
+const dash = <span style={{ color: PS.textMuted }} title="Chưa có Item Cost">—</span>;
+
 /** Ô số 1 dòng, dùng lại cho cả header Price Setting lẫn từng cột trong bảng size. */
 function Num({ label, value, tone }) {
   return (
@@ -86,7 +89,7 @@ function ProductTypeTable({ pt, settings }) {
                 <tr key={sz.id || i} className="ps-tr">
                   <td style={{ padding: '8px 10px', fontWeight: 650, fontSize: 13, color: PS.text, textAlign: 'left' }}>{sz.label || '—'}</td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>{usd(sz.sizeAdd || 0)}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>{usd(sz.itemCost || 0)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>{r.costUnknown ? dash : usd(sz.itemCost || 0)}</td>
                   {customizeInfos.map((c) => (
                     <td key={c.id} style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13 }}>
                       {usd(sz.customize?.[c.id] || 0)}
@@ -94,9 +97,9 @@ function ProductTypeTable({ pt, settings }) {
                   ))}
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: PS.textSecondary }}>{usd(r.unitPrice)}</td>
                   <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, fontWeight: 650 }}>{usd(r.totalPrice)}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: PS.textSecondary }}>{usd(r.totalCost)}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: r.profit >= 0 ? PS.positive : PS.negative }}>{usd(r.profit)}</td>
-                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, fontWeight: 700, color: toneColorOf(tone) }}>{pct(r.margin, 1)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: PS.textSecondary }}>{r.costUnknown ? dash : usd(r.totalCost)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: r.profit >= 0 ? PS.positive : PS.negative }}>{r.costUnknown ? dash : usd(r.profit)}</td>
+                  <td style={{ padding: '8px 10px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, fontWeight: 700, color: toneColorOf(tone) }}>{r.costUnknown ? dash : pct(r.margin, 1)}</td>
                 </tr>
               );
             })}

@@ -63,7 +63,9 @@ describe('Mục 03 — bảng giá tham chiếu tới record cụ thể', () => 
       customizeInfos: [], sizes: [],
     }] };
     const out = resolveSheet(sheet, libIndex);
-    expect(out.productTypes[0].sizes[0].itemCost).toBe(7.4);
+    // Item Cost = Total (Fulfill) Economy của VN7 (12.00) — KHÔNG phải 12.30 của VN3.
+    expect(out.productTypes[0].sizes[0].itemCost).toBe(12);
+    expect(out.productTypes[0].sizes[0].p1).toBe(7.4);
     expect(out.productTypes[0].vendorCode).toBe('VN7');
   });
 
@@ -86,7 +88,12 @@ describe('Mục 03 — bảng giá tham chiếu tới record cụ thể', () => 
       id: 'pt1', name: 'Football Jersey', phoi: '0', shipMethod: 'eco', customizeInfos: [], sizes: [],
     }] };
     const out = resolveSheet(legacy, libIndex);
-    expect(out.productTypes[0].sizes[0].itemCost).toBe(8.2);   // fallback theo tên: vendor đầu tiên
+    // fallback theo tên: vendor đầu tiên (VN3) — Item Cost = Total (Fulfill) Economy.
+    expect(out.productTypes[0].sizes[0].itemCost).toBe(12.3);
+    // Tổng giá vốn giữ nguyên như công thức cũ P1 + Price Ship = 8.2 + 4.1.
+    const { computeSizeRow } = await import('../pricingEngine');
+    const r = computeSizeRow(legacy.settings, out.productTypes[0], out.productTypes[0].sizes[0]);
+    expect(r.totalCost).toBeCloseTo(8.2 + 4.1, 10);
   });
 });
 
