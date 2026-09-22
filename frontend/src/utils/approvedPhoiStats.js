@@ -73,6 +73,35 @@ export function collectApprovedPhoi(products) {
     || String(a.key).localeCompare(String(b.key)));
 }
 
+/**
+ * Phôi đang có trong thư viện của MỘT vendor — mỗi dòng generalInfo là một
+ * phôi, file mới nhập lên đầu.
+ *
+ * @param {Array}  files  file thư viện đang hoạt động (đã lọc project nếu cần)
+ * @param {string} key    vendorKey của vendor cần xem
+ * @returns {Array<{ key, phoi, fileName, importedAt }>}
+ */
+export function libraryPhoiOfVendor(files, key) {
+  if (!key) return [];
+  const out = [];
+  (Array.isArray(files) ? files : []).forEach((file, fileIndex) => {
+    if (!file) return;
+    (file.generalInfo || []).forEach((row, rowIndex) => {
+      if (!row) return;
+      const name = clean(row.vendorName) || clean(row.kyHieu);
+      if (vendorKey(name) !== key) return;
+      out.push({
+        key: `${file.id ?? `f${fileIndex}`}::${row.id ?? rowIndex}`,
+        phoi: clean(row.productType) || '—',
+        fileName: clean(file.filename) || clean(file.title),
+        importedAt: file.importedAt || null,
+      });
+    });
+  });
+  return out.sort((a, b) => timeValue(b.importedAt) - timeValue(a.importedAt)
+    || a.phoi.localeCompare(b.phoi, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
 /** Chỉ giữ phôi đã duyệt cho `projectId` ('' = mọi project). */
 export function filterApprovedByProject(list, projectId) {
   if (!projectId) return list;

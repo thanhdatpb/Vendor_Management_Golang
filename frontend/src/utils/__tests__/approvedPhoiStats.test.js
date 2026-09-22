@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   collectApprovedPhoi,
   filterApprovedByProject,
+  libraryPhoiOfVendor,
   summarizePhoi,
   vendorKey,
 } from '../approvedPhoiStats';
@@ -114,5 +115,19 @@ describe('summarizePhoi', () => {
     const approved = collectApprovedPhoi([product(1, { assigned_vendors: sized('old', 'x1', 'ZZ9', 'Mug') })]);
     const { vendors } = summarizePhoi(approved, []);
     expect(vendors).toEqual([{ key: 'ZZ9', name: 'ZZ9', approved: 1, library: 0 }]);
+  });
+});
+
+describe('libraryPhoiOfVendor', () => {
+  it('mọi phôi của một vendor trong thư viện, file mới nhập lên đầu', () => {
+    const files = [
+      { id: 'a', filename: 'Cũ', importedAt: '2026-08-01T00:00:00Z', generalInfo: [{ id: 'r1', vendorName: 'VN3', productType: 'Hoodie' }, { id: 'r2', vendorName: 'US1', productType: 'Tee' }] },
+      { id: 'b', filename: 'Mới', importedAt: '2026-09-01T00:00:00Z', generalInfo: [{ id: 'r3', vendorName: '', kyHieu: 'vn3', productType: 'Mug' }] },
+    ];
+    expect(libraryPhoiOfVendor(files, 'VN3')).toEqual([
+      { key: 'b::r3', phoi: 'Mug', fileName: 'Mới', importedAt: '2026-09-01T00:00:00Z' },
+      { key: 'a::r1', phoi: 'Hoodie', fileName: 'Cũ', importedAt: '2026-08-01T00:00:00Z' },
+    ]);
+    expect(libraryPhoiOfVendor(files, '')).toEqual([]);
   });
 });

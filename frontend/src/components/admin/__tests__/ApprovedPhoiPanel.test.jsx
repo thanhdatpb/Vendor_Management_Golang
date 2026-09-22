@@ -27,8 +27,8 @@ const PRODUCTS = [
 ];
 
 const FILES = [
-  { id: 'f1', generalInfo: [{ vendorName: 'US1' }, { vendorName: 'US1' }] },
-  { id: 'f2', generalInfo: [{ vendorName: 'VN3' }, { vendorName: 'VN3' }, { vendorName: 'VN3' }] },
+  { id: 'f1', filename: 'T-shirt 2D', importedAt: '2026-09-20T03:00:00Z', generalInfo: [{ id: 'g1', vendorName: 'US1', productType: 'Tee Bella' }, { id: 'g2', vendorName: 'US1', productType: 'Tee Gildan' }] },
+  { id: 'f2', filename: 'Car Clip Acrylic', importedAt: '2026-09-21T03:00:00Z', generalInfo: [{ id: 'g3', vendorName: 'VN3', productType: 'Clip Round' }, { id: 'g4', vendorName: 'VN3', productType: 'Clip Heart' }, { id: 'g5', vendorName: 'VN3', productType: 'Clip Star' }] },
 ];
 
 const store = {};
@@ -52,8 +52,8 @@ describe('ApprovedPhoiPanel', () => {
 
     await screen.findByText('T-shirt 2D Unisex');
     const p = within(panel());
-    expect(p.getByText('Phôi đã duyệt').parentElement).toHaveTextContent('2');
-    expect(p.getByText('Phôi trong thư viện').parentElement).toHaveTextContent('5');
+    expect(p.getByRole('group', { name: 'Phôi đã duyệt' })).toHaveTextContent('2');
+    expect(p.getByRole('group', { name: 'Phôi trong thư viện' })).toHaveTextContent('5');
     expect(p.getByText('Trong 2 file vendor đang hoạt động')).toBeInTheDocument();
     // Không còn tỷ lệ gộp giữa hai số
     expect(panel()).not.toHaveTextContent('%');
@@ -89,11 +89,49 @@ describe('ApprovedPhoiPanel', () => {
     expect(onVendorFilterChange).toHaveBeenLastCalledWith('');
   });
 
+  it('đang chọn vendor: liệt kê mọi phôi của vendor, tách Đã duyệt / Trong thư viện', async () => {
+    const onVendorFilterChange = vi.fn();
+    render(<ApprovedPhoiPanel files={FILES} vendorFilter="VN3" onVendorFilterChange={onVendorFilterChange} />);
+
+    expect(await screen.findByRole('heading', { name: 'Phôi của VN3' })).toBeInTheDocument();
+    // Tab Đã duyệt mặc định: phôi + project + ngày
+    const approvedTab = screen.getByRole('button', { name: 'Đã duyệt (1)' });
+    expect(approvedTab).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Car Clip Acrylic').closest('tr')).toHaveTextContent('Global');
+
+    // Tab Trong thư viện: đủ 3 phôi của VN3 kèm tên file
+    await userEvent.click(screen.getByRole('button', { name: 'Trong thư viện (3)' }));
+    ['Clip Round', 'Clip Heart', 'Clip Star'].forEach((name) => expect(screen.getByText(name)).toBeInTheDocument());
+    expect(screen.getByText('Clip Round').closest('tr')).toHaveTextContent('Car Clip Acrylic');
+    expect(screen.queryByText('Tee Bella')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Bỏ lọc' }));
+    expect(onVendorFilterChange).toHaveBeenLastCalledWith('');
+  });
+
+  it('vendor chưa có phôi duyệt thì mở thẳng tab Trong thư viện', async () => {
+    productApi.getApprovedProducts.mockResolvedValue({ data: { data: [] } });
+    render(<ApprovedPhoiPanel files={FILES} vendorFilter="US1" onVendorFilterChange={vi.fn()} />);
+    expect(await screen.findByText('Tee Bella')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trong thư viện (2)' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('nhiều vendor thì hiện 6, còn lại mở bằng Xem tất cả vendor', async () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({ id: 'm' + i, filename: 'F' + i, generalInfo: [{ id: 'x' + i, vendorName: 'V' + (i + 1), productType: 'P' }] }));
+    productApi.getApprovedProducts.mockResolvedValue({ data: { data: [] } });
+    render(<ApprovedPhoiPanel files={many} onVendorFilterChange={vi.fn()} />);
+    await screen.findByText('Chưa có phôi nào được duyệt và cung cấp vendor.');
+    const vendorButtons = () => screen.getAllByRole('button', { name: /phôi trong thư viện$/ });
+    expect(vendorButtons()).toHaveLength(6);
+    await userEvent.click(screen.getByRole('button', { name: 'Xem tất cả vendor (9)' }));
+    expect(vendorButtons()).toHaveLength(9);
+  });
+
   it('lọc Project áp cho phôi đã duyệt', async () => {
     render(<ApprovedPhoiPanel files={FILES} projectFilter="global" />);
     await screen.findByText('Car Clip Acrylic');
     expect(screen.queryByText('T-shirt 2D Unisex')).not.toBeInTheDocument();
-    expect(within(panel()).getByText('Phôi đã duyệt').parentElement).toHaveTextContent('1');
+    expect(within(panel()).getByRole('group', { name: 'Phôi đã duyệt' })).toHaveTextContent('1');
   });
 
   it('thu gọn còn một dòng và nhớ lựa chọn', async () => {
