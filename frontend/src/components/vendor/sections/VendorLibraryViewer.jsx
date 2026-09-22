@@ -1879,8 +1879,13 @@ export function ManualAddModal({ onClose, onSave, mode }) {
  * @param {boolean} canManage  vẫn được dùng các thao tác quản lý THƯ VIỆN (thêm
  *   vendor, tải template, import Excel, chia sẻ project) kể cả khi readOnly.
  *   Admin xem read-only nhưng có toàn quyền quản lý thư viện nên bật cờ này.
+ * @param {Function} renderLibrarySummary  (chỉ chế độ Tổng quan) vẽ một khối
+ *   ngay dưới thanh công cụ, trên danh sách file — Admin dùng cho "Thống kê
+ *   phôi". Nhận `{ files, libraryLoaded, projectFilter, vendorFilter,
+ *   setVendorFilter }`; `files` đã lọc theo ô Project nhưng KHÔNG theo ô tìm
+ *   kiếm / vendor. Không truyền thì trang giữ nguyên như cũ.
  */
-export default function VendorLibraryViewer({ readOnly = false, canManage = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, onModeCountsChange, highlightFileId, onHighlightCleared, fileWindowActions = null, initialSearch = '' }) {
+export default function VendorLibraryViewer({ readOnly = false, canManage = false, mode = 'all', selectable = false, selectedIds, onSelectRow, onSelectAll, onLibraryLoaded, onModeCountsChange, highlightFileId, onHighlightCleared, fileWindowActions = null, initialSearch = '', renderLibrarySummary = null }) {
   // rawFiles = dữ liệu gốc từ API (chưa filter theo product)
   const [rawFiles, setRawFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2120,6 +2125,15 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
     () => groupLibraryFilesByMonth(displayFiles),
     [displayFiles],
   );
+
+  // Nguồn cho khối renderLibrarySummary: file theo ô Project, KHÔNG theo ô tìm
+  // kiếm / vendor — bấm lọc một vendor thì số của các vendor khác vẫn đứng yên.
+  const summaryFiles = useMemo(() => {
+    if (!renderLibrarySummary || mode !== 'all') return null;
+    return canManageLibrary && projectFilter
+      ? libraryFiles.filter(file => fileVisibleToProject(file, projectFilter))
+      : libraryFiles;
+  }, [renderLibrarySummary, mode, libraryFiles, canManageLibrary, projectFilter]);
 
   /**
    * @param {{ silent?: boolean }} opts
@@ -2577,6 +2591,14 @@ export default function VendorLibraryViewer({ readOnly = false, canManage = fals
       )}
 
 
+
+      {summaryFiles && renderLibrarySummary({
+        files: summaryFiles,
+        libraryLoaded: dataLoaded,
+        projectFilter,
+        vendorFilter,
+        setVendorFilter,
+      })}
 
       {/* Mỗi tháng là một nhịp quét riêng. File trong tháng vẫn dùng hai cột;
           vùng nội dung hẹp thì về một cột để tên, badge và nút không chồng nhau. */}

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import VendorLibraryViewer from '../../vendor/sections/VendorLibraryViewer';
+import ApprovedPhoiPanel from '../ApprovedPhoiPanel';
 import { VENDOR_LIBRARY_MODES } from '../../../utils/vendorLibraryMode';
 
 /**
@@ -11,8 +12,22 @@ import { VENDOR_LIBRARY_MODES } from '../../../utils/vendorLibraryMode';
  *
  * `onModeCountsChange` báo ngược số file của New Arrivals / Best Seller lên để
  * sidebar hiển thị badge.
+ *
+ * Riêng Admin, chế độ Tổng quan có thêm khối "Thống kê phôi" (phôi đã duyệt /
+ * phôi trong thư viện) giữa thanh công cụ và danh sách file. Các role khác
+ * không truyền `renderLibrarySummary` nên trang của họ giữ nguyên.
  */
 export default function VendorsSection({ mode = VENDOR_LIBRARY_MODES.ALL, onModeCountsChange }) {
+  const renderLibrarySummary = useCallback(({ files, libraryLoaded, projectFilter, vendorFilter, setVendorFilter }) => (
+    <ApprovedPhoiPanel
+      files={files}
+      libraryLoaded={libraryLoaded}
+      projectFilter={projectFilter}
+      vendorFilter={vendorFilter}
+      onVendorFilterChange={setVendorFilter}
+    />
+  ), []);
+
   // readOnly: Admin không sửa trực tiếp ô trong bảng.
   // canManage: nhưng vẫn có toàn quyền quản lý thư viện — thêm vendor, tải
   // template, import Excel và chia sẻ file cho project, giống Vendor.
@@ -22,6 +37,7 @@ export default function VendorsSection({ mode = VENDOR_LIBRARY_MODES.ALL, onMode
       canManage={true}
       mode={mode}
       onModeCountsChange={onModeCountsChange}
+      renderLibrarySummary={renderLibrarySummary}
     />
   );
 }
