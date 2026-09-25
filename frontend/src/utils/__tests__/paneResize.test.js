@@ -80,7 +80,13 @@ describe('readPaneState / writePaneState', () => {
     expect(readPaneState('PANE_TEST')).toEqual({ ratio: 0.33, collapsed: true });
   });
 
-  it('storage bị chặn (không có localStorage) → không ném lỗi, dùng mặc định', () => {
+  it('storage bị chặn (private mode) → không ném lỗi, dùng mặc định', () => {
+    // Trước đây test này trông chờ môi trường KHÔNG có localStorage — đúng với
+    // Node 26 cục bộ nhưng sai trên CI Node 24 (jsdom ở đó có storage thật).
+    // Dựng hẳn storage luôn ném lỗi để kết quả giống nhau ở mọi Node.
+    const blocked = () => { throw new Error('storage bị chặn'); };
+    vi.stubGlobal('localStorage', { getItem: blocked, setItem: blocked, removeItem: blocked, clear: blocked });
+
     expect(() => writePaneState('PANE_TEST_BLOCKED', { ratio: 0.4 })).not.toThrow();
     expect(readPaneState('PANE_TEST_BLOCKED')).toEqual({ ratio: PANE_DEFAULT_RATIO, collapsed: false });
   });
