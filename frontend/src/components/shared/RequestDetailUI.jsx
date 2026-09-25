@@ -282,3 +282,93 @@ export function MediaColumn({ urls = [], current = 0, onSelect, onOpen, isMobile
     </div>
   );
 }
+
+// ── Thanh chia kéo được giữa nửa thông tin request và nửa bảng vendor ────────
+// Trải nghiệm: xem thông tin request trước, rồi kéo (hoặc bấm "Thu gọn") để
+// dồn chỗ cho bảng vendor. Dùng cùng useResizablePane — component này chỉ vẽ.
+export function PaneResizer({
+  ratio = 0.5,
+  collapsed = false,
+  dragging = false,
+  min = 0,
+  max = 100,
+  onDragStart,
+  onKeyDown,
+  onToggle,
+  onReset,
+  label = 'Kéo để đổi chiều cao phần thông tin request',
+  collapsedHint = 'Thông tin request đang thu gọn',
+}) {
+  const [hover, setHover] = useState(false);
+  const active = hover || dragging;
+  const value = collapsed ? 0 : Math.round(ratio * 100);
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label={label}
+      aria-valuenow={value}
+      aria-valuemin={Math.round(min)}
+      aria-valuemax={Math.round(max)}
+      tabIndex={0}
+      title={`${label} · Nhấp đúp để đặt lại`}
+      onMouseDown={onDragStart}
+      onTouchStart={onDragStart}
+      onKeyDown={onKeyDown}
+      onDoubleClick={onReset}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: 'relative', flexShrink: 0, height: 22,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'row-resize', userSelect: 'none', outline: 'none',
+        background: collapsed ? HC.orangePale : (active ? HC.orangeLight : HC.surface2),
+        borderTop: `1px solid ${HC.border}`,
+        borderBottom: `1px solid ${active ? HC.orangeMid : 'transparent'}`,
+        transition: 'background .15s, border-color .15s',
+      }}
+    >
+      {collapsed && (
+        <span style={{ position: 'absolute', left: 22, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: HC.brown, whiteSpace: 'nowrap' }}>
+          {collapsedHint}
+        </span>
+      )}
+      <span
+        aria-hidden="true"
+        style={{
+          width: active ? 72 : 54, height: 4, borderRadius: 999,
+          background: active ? HC.orange : HC.borderStrong,
+          boxShadow: active ? `0 0 0 4px ${HC.orangeGlow}` : 'none',
+          transition: 'width .15s, background .15s, box-shadow .15s',
+        }}
+      />
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        aria-expanded={!collapsed}
+        title={collapsed ? 'Mở lại thông tin request' : 'Thu gọn thông tin request để xem bảng vendor'}
+        style={{
+          position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
+          height: 20, padding: '0 9px', borderRadius: 999, cursor: 'pointer',
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          background: HC.surface, border: `1px solid ${active ? HC.orangeMid : HC.border}`,
+          color: HC.brown, fontSize: 10, fontWeight: 800, letterSpacing: '0.02em',
+          fontFamily: FONT, whiteSpace: 'nowrap', boxShadow: '0 1px 3px rgba(26,15,0,0.06)',
+          transition: 'border-color .15s, color .15s, background .15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = HC.orangeLight; e.currentTarget.style.color = HC.orangeDeep; }}
+        onMouseLeave={e => { e.currentTarget.style.background = HC.surface; e.currentTarget.style.color = HC.brown; }}
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform .18s' }} aria-hidden="true">
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+        {collapsed ? 'Mở thông tin' : 'Thu gọn'}
+      </button>
+    </div>
+  );
+}
