@@ -9,11 +9,15 @@ import PriceComparisonMatrix from './PriceComparisonMatrix';
 import Lightbox from './Lightbox';
 import { BestSellerBadge } from '../ui/VendorUI';
 import useIsMobile from '../../../hooks/useIsMobile';
+import useResizablePane from '../../../hooks/useResizablePane';
 import {
   MODAL_MAX_WIDTH, FONT, toList,
   DetailHeader, MediaColumn, Section, Field, ReviewCard, RefLink,
-  SpecRail, SpecList, VendorBar, VendorEmptyState,
+  SpecRail, SpecList, VendorBar, VendorEmptyState, PaneResizer,
 } from '../../shared/RequestDetailUI';
+
+// Ghi nhớ chiều cao/thu gọn khung thông tin request theo từng người dùng.
+const LS_REQUEST_PANE = 'REQUEST_DETAIL_PANE_V1';
 
 const parseAssignedVendors = (raw) => {
   if (!raw) return [];
@@ -51,6 +55,15 @@ export default function VendorViewerModal({ product, onClose }) {
   const [showMatrix, setShowMatrix] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const isMountedRef = useRef(true);
+
+  // Khung trên (thông tin request) kéo cao/thấp được, nhớ theo người dùng.
+  // Mobile xếp dọc nên không chia khung — giữ nguyên cách cuộn cũ.
+  const {
+    containerRef: paneContainerRef, ratio: paneRatio, collapsed: paneCollapsed,
+    dragging: paneDragging, startDrag: startPaneDrag, onKeyDown: onPaneKeyDown,
+    toggleCollapse: togglePane, reset: resetPane,
+  } = useResizablePane({ storageKey: LS_REQUEST_PANE, enabled: !isMobile });
+  const paneHeight = paneCollapsed ? 0 : `${(paneRatio * 100).toFixed(2)}%`;
 
   const [feedbackTexts, setFeedbackTexts] = useState(() => {
     const initial = {};
@@ -251,10 +264,20 @@ export default function VendorViewerModal({ product, onClose }) {
             }
           />
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div ref={paneContainerRef} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
 
             {/* ── TOP: ảnh (trái) + thông tin chia Section (phải) ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '300px minmax(0,1fr)', alignItems: 'stretch', flexShrink: 0, maxHeight: isMobile ? 'none' : '52vh', overflowY: 'auto', borderBottom: `1px solid ${HC.border}`, background: HC.surface }}>
+            <div style={{
+              display: isMobile ? 'grid' : (paneCollapsed ? 'none' : 'grid'),
+              gridTemplateColumns: isMobile ? '1fr' : '300px minmax(0,1fr)',
+              alignItems: 'stretch', flexShrink: 0, minHeight: 0,
+              // Desktop: chiều cao do người dùng kéo (ratio); mobile giữ cuộn dọc như cũ.
+              height: isMobile ? 'auto' : paneHeight,
+              maxHeight: isMobile ? 'none' : undefined,
+              overflowY: 'auto',
+              borderBottom: isMobile ? `1px solid ${HC.border}` : 'none',
+              background: HC.surface,
+            }}>
               <MediaColumn
                 urls={mediaUrls}
                 current={currentMediaIndex}
@@ -304,6 +327,19 @@ export default function VendorViewerModal({ product, onClose }) {
                 </Section>
               </div>
             </div>
+
+            {/* ── Thanh chia kéo được: thu gọn thông tin request để xem bảng vendor ── */}
+            {!isMobile && (
+              <PaneResizer
+                ratio={paneRatio}
+                collapsed={paneCollapsed}
+                dragging={paneDragging}
+                onDragStart={startPaneDrag}
+                onKeyDown={onPaneKeyDown}
+                onToggle={togglePane}
+                onReset={resetPane}
+              />
+            )}
 
             {/* ── BOTTOM: Vendor Comparison ── */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f8fafc' }}>
