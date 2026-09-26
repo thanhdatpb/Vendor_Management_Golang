@@ -10,8 +10,12 @@
 #      Summary của run, không phải ở dấu X trên PR. Cố ý như vậy: một check
 #      lúc nào cũng đỏ sẽ làm người ta quen mắt và bỏ qua cả lúc bộ chặn merge
 #      đỏ thật. Khi một mục xong, chuyển test sang bộ chặn:
-#        - frontend: bỏ hậu tố `.pending` trong tên file
-#        - backend : bỏ #[Group('pending')] trên class
+#        - frontend : bỏ hậu tố `.pending` trong tên file
+#        - backend-go: chuyển hàm test sang file _test.go không có tiền tố tạm
+#
+#  Backend đã chuyển hoàn toàn sang Go (2026-09). Thư mục backend/ (Laravel)
+#  không còn được git theo dõi — xem .gitignore — nên không còn job PHP nào ở
+#  đây nữa.
 # ════════════════════════════════════════════════════════════════
 name: Tests
 
@@ -104,8 +108,7 @@ jobs:
           CHROME_PATH: /usr/bin/google-chrome
 
   # ── Backend Go — bộ chặn merge ────────────────────────────────────────
-  # Backend đang được chuyển từ Laravel sang Go. Job này chặn merge cho phần
-  # Go; các job PHP bên dưới sẽ được gỡ khi thư mục backend/ bị bỏ.
+  # Toàn bộ backend đã chuyển sang Go (không còn job PHP nào trong file này).
   backend-go:
     name: Backend Go — bộ chặn merge
     runs-on: ubuntu-latest
@@ -174,111 +177,3 @@ jobs:
           go run ./cmd/migrate up
           go run ./cmd/migrate status
 
-  backend-tests:
-    name: Backend PHP — bộ chặn merge (sẽ gỡ sau khi chuyển xong Go)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    env:
-      APP_ENV: testing
-      APP_KEY: base64:c2VjdXJlLXRlc3Qta2V5LWZvci1jaS0zMmJ5dGVzISE=
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: sqlite3, pdo_sqlite, mbstring, zip
-          coverage: none
-      - name: Kiểm tính hợp lệ của composer (PR-M1)
-        run: |
-          composer validate --strict --no-check-publish
-          composer install --dry-run 2>&1 | tee /tmp/composer-dry.txt
-          if grep -qiE '^\s*- Removing' /tmp/composer-dry.txt; then
-            echo "::error::composer install sẽ GỠ package đang có trong vendor/ — lock lệch json. Xem PR-M1."
-            exit 1
-          fi
-      - run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Chạy test (bỏ nhóm pending)
-        run: php artisan test --exclude-group=pending
-
-  backend-mysql:
-    name: Backend — trên MySQL thật (bộ chặn merge)
-    # Bộ test mặc định chạy SQLite. SQLite chỉ có "type affinity": nó nhận mọi
-    # chuỗi vào cột datetime và bỏ qua độ chính xác của decimal. Nghĩa là cả một
-    # LỚP lỗi chỉ lộ trên production:
-    #   • chuỗi ISO-8601 kèm hậu tố `Z` ghi vào cột timestamp → MySQL strict ném
-    #     1292 Incorrect datetime value
-    #   • giá trị vượt tầm decimal → 1264 Out of range
-    # Job này là nơi duy nhất bắt được chúng trước khi lên production.
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    env:
-      APP_ENV: testing
-      APP_KEY: base64:c2VjdXJlLXRlc3Qta2V5LWZvci1jaS0zMmJ5dGVzISE=
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: hcvh_test
-      DB_USERNAME: root
-      DB_PASSWORD: secret
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: secret
-          MYSQL_DATABASE: hcvh_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -psecret"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: pdo_mysql, mbstring, zip
-          coverage: none
-      - run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Chạy test trên MySQL (bỏ nhóm pending)
-        # phpunit.xml khai DB_CONNECTION=sqlite nhưng không đặt force="true",
-        # nên biến môi trường ở trên thắng.
-        run: php artisan test --exclude-group=pending
-
-  backend-pending:
-    name: Backend — mục tiêu chưa đạt (thông tin)
-    runs-on: ubuntu-latest
-    # `continue-on-error` đặt ở STEP chứ không phải ở job: để ở job thì GitHub
-    # vẫn kết luận job là failure và PR hiện dấu X đỏ — trái với ý "THÔNG TIN"
-    # ghi ở đầu file. Một check LÚC NÀO CŨNG đỏ sẽ dạy người ta bỏ qua màu đỏ,
-    # và khi bộ chặn merge đỏ thật thì không ai buồn nhìn nữa.
-    defaults:
-      run:
-        working-directory: backend
-    env:
-      APP_ENV: testing
-      APP_KEY: base64:c2VjdXJlLXRlc3Qta2V5LWZvci1jaS0zMmJ5dGVzISE=
-    steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: sqlite3, pdo_sqlite, mbstring, zip
-          coverage: none
-      - run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Lỗ hổng phân quyền & nợ kỹ thuật chưa vá
-        id: pending
-        continue-on-error: true
-        run: php artisan test --group=pending
-      - name: Ghi kết quả ra summary
-        if: always()
-        run: |
-          echo "### Backend — mục tiêu chưa đạt: \`${{ steps.pending.outcome }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "\`failure\` ở đây là ĐÚNG — đây là danh sách việc còn lại, xanh dần theo từng PR." >> "$GITHUB_STEP_SUMMARY"
-          echo "Chi tiết xem log bước trên. Khi một mục xong: bỏ \`#[Group('pending')]\` trên class test." >> "$GITHUB_STEP_SUMMARY"

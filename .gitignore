@@ -15,9 +15,14 @@ BACKEND_SCHEMA.md
 # VSCode settings
 .vscode/
 
-# Binary / cert không commit vào git (dev tự cài Composer; CA bundle cấu hình qua php.ini)
-backend/composer.phar
-backend/cacert.pem
+# Backend PHP/Laravel cũ (2026-09-26): đã port hoàn toàn sang backend-go/, xem
+# CLAUDE.md và memory dự án. Giữ file trên đĩa để còn đối chiếu khi port nốt
+# phần còn lại (authn, libraryapi, cmd/cli), nhưng KHÔNG track trong git nữa —
+# 9.721 file, 9.489 trong đó là backend/vendor/ (dependency Composer, chưa bao
+# giờ nên commit). Repo đã Public; bỏ theo dõi cũng giảm bề mặt mã nguồn cũ.
+# Đã gỡ khỏi index bằng `git rm -r --cached backend/` trong cùng commit thêm
+# dòng này. Xoá hẳn khỏi đĩa khi backend-go đã verify xong 100%.
+backend/
 
 # Temporary files
 read_excel.js

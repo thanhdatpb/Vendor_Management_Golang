@@ -1,12 +1,18 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # 1. Bỏ qua nếu đường dẫn hiện tại đã nằm trong backend/public hoặc frontend/dist
-  RewriteRule ^(backend/public|frontend/dist)/ - [L]
+  # 1. Bỏ qua nếu đường dẫn hiện tại đã nằm trong frontend/dist
+  RewriteRule ^(frontend/dist)/ - [L]
 
-  # 2. API/Sanctum/Storage -> Backend
-  RewriteCond %{REQUEST_URI} ^/(api|sanctum|storage) [NC]
-  RewriteRule ^(.*)$ backend/public/$1 [L]
+  # 2. API/Storage -> backend-go, chạy như một service riêng (mặc định cổng
+  #    8001, xem backend-go/internal/config/config.go GO_HTTP_ADDR). Không
+  #    còn backend/public (PHP-FPM) — bản Go là service HTTP thật, phải proxy
+  #    chứ không route sang một thư mục tĩnh. Bỏ /sanctum: token do Go tự
+  #    parse (xem internal/authn), không qua route Sanctum của Laravel nữa.
+  #    Yêu cầu bật mod_proxy + mod_proxy_http; ProxyPreserveHost On nên đặt ở
+  #    vhost (không đọc được trong .htaccess theo mặc định).
+  RewriteCond %{REQUEST_URI} ^/(api|storage) [NC]
+  RewriteRule ^(.*)$ http://127.0.0.1:8001/$1 [P,L]
 
   # 3. Mọi thứ khác -> Frontend React
   RewriteRule ^(.*)$ frontend/dist/$1 [L]
