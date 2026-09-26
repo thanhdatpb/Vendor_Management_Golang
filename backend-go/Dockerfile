@@ -18,7 +18,10 @@ RUN go mod download
 COPY . .
 
 # CGO_ENABLED=0 cho binary tĩnh; -trimpath bỏ đường dẫn máy build khỏi binary.
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/vendorhub ./cmd/server
+# Build cả migrate: thay cho `php artisan migrate`, dùng chạy schema goose khi
+# dựng DB mới hoặc nâng schema production (`docker compose exec api /app/migrate up`).
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/vendorhub ./cmd/server && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
 
 # ── Stage 2: dependency Node cho script trích xuất Excel ──────────────────
 FROM node:22-alpine AS scripts
@@ -38,6 +41,7 @@ RUN adduser -D -u 10001 app
 WORKDIR /app
 
 COPY --from=build   /out/vendorhub        /app/vendorhub
+COPY --from=build   /out/migrate          /app/migrate
 COPY --from=scripts /scripts/node_modules /app/scripts/node_modules
 COPY scripts/extract_excel.cjs            /app/scripts/extract_excel.cjs
 

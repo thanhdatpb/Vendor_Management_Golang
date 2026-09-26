@@ -112,6 +112,21 @@ jobs:
     defaults:
       run:
         working-directory: backend-go
+    # MySQL thật, không SQLite: 1292 Incorrect datetime value và các lỗi
+    # strict-mode khác của MySQL không lộ ra trên SQLite — xem CLAUDE.md.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: hub_vendor_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -140,6 +155,24 @@ jobs:
           fi
       - name: Chạy test kèm race detector
         run: go test -race ./...
+      # Chứng minh migration goose thật sự chạy được trên MySQL, cả hai chiều —
+      # đây là chỗ 1064/1292 lộ ra, không phải ở go test (dùng sqlmock, không
+      # chạm MySQL thật). Round-trip up → down → up khớp cách đã kiểm thủ công
+      # ngày 2026-09-26.
+      - name: Kiểm migration chạy được cả hai chiều trên MySQL thật
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: "3306"
+          DB_DATABASE: hub_vendor_db
+          DB_USERNAME: root
+          DB_PASSWORD: ""
+          FRONTEND_URL: http://localhost:5173
+          GO_HTTP_ADDR: ":8001"
+        run: |
+          go run ./cmd/migrate up
+          go run ./cmd/migrate down
+          go run ./cmd/migrate up
+          go run ./cmd/migrate status
 
   backend-tests:
     name: Backend PHP — bộ chặn merge (sẽ gỡ sau khi chuyển xong Go)
