@@ -138,3 +138,49 @@ func TestVersionConflictLuonCoCode(t *testing.T) {
 		t.Errorf("thiếu message mặc định trong %s", got)
 	}
 }
+
+// Nơi gọi truyền status 0 thì rơi về mặc định của bản PHP: 200 cho success,
+// 400 cho error. Không được thành 0 — net/http sẽ panic.
+func TestStatusMacDinhKhiNoiGoiKhongTruyen(t *testing.T) {
+	status, _ := body(t, func(w http.ResponseWriter) { APISuccess(w, nil, "", 0) })
+	if status != http.StatusOK {
+		t.Errorf("APISuccess status = %d, muốn 200", status)
+	}
+
+	status, _ = body(t, func(w http.ResponseWriter) { APIError(w, "hỏng", 0, nil) })
+	if status != http.StatusBadRequest {
+		t.Errorf("APIError status = %d, muốn 400", status)
+	}
+
+	// Status truyền tường minh thì phải được tôn trọng.
+	status, _ = body(t, func(w http.ResponseWriter) { APIError(w, "hỏng", http.StatusInternalServerError, nil) })
+	if status != http.StatusInternalServerError {
+		t.Errorf("status = %d, muốn 500", status)
+	}
+}
+
+// Validation chưa có lỗi nào thì Message() phải trả chuỗi rỗng, không panic vì
+// đọc phần tử đầu của slice rỗng.
+func TestValidationRongKhongPanic(t *testing.T) {
+	v := NewValidation()
+
+	if got := v.Message(); got != "" {
+		t.Errorf("Message() = %q, muốn chuỗi rỗng", got)
+	}
+	if len(v.Fields()) != 0 {
+		t.Errorf("Fields() = %v, muốn rỗng", v.Fields())
+	}
+}
+
+// Nhiều câu lỗi cho cùng một trường phải giữ đủ và đúng thứ tự — Laravel trả cả
+// mảng, UI hiện từng dòng.
+func TestValidationGiuDuCacCauLoiCuaMotTruong(t *testing.T) {
+	v := NewValidation()
+	v.Add("email", "The email field is required.")
+	v.Add("email", "The email must be a valid email address.")
+
+	got := v.Fields()["email"]
+	if len(got) != 2 || got[0] != "The email field is required." {
+		t.Errorf("errors[email] = %v", got)
+	}
+}

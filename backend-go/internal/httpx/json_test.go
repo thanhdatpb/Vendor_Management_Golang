@@ -121,3 +121,33 @@ func TestPHPFloatTrongStructResponse(t *testing.T) {
 		t.Errorf("= %s\nmuốn %s", got, want)
 	}
 }
+
+// String() dùng cho log và cho chỗ cần chuỗi trần (ví dụ dựng ETag từ mốc sửa),
+// nên phải cho ra đúng cùng một dạng với MarshalJSON, chỉ khác là không có nháy.
+func TestStringTraCungDangVoiMarshalJSON(t *testing.T) {
+	in := time.Date(2026, 9, 26, 10, 0, 0, 123456789, time.UTC)
+
+	if got := LaravelTime(in).String(); got != "2026-09-26T10:00:00.123456Z" {
+		t.Errorf("LaravelTime.String() = %q", got)
+	}
+	if got := MySQLTime(in).String(); got != "2026-09-26 10:00:00" {
+		t.Errorf("MySQLTime.String() = %q", got)
+	}
+
+	// Mốc rỗng ra chuỗi rỗng, không phải mốc năm 1 — chuỗi đó đi vào ETag.
+	if got := LaravelTime(time.Time{}).String(); got != "" {
+		t.Errorf("LaravelTime rỗng = %q, muốn chuỗi rỗng", got)
+	}
+	if got := MySQLTime(time.Time{}).String(); got != "" {
+		t.Errorf("MySQLTime rỗng = %q, muốn chuỗi rỗng", got)
+	}
+}
+
+func TestPHPFloatStringGiongMarshalJSON(t *testing.T) {
+	for _, f := range []PHPFloat{1, 0, -2, 6.5, 0.0001} {
+		encoded, _ := f.MarshalJSON()
+		if f.String() != string(encoded) {
+			t.Errorf("String() = %q nhưng MarshalJSON = %s", f.String(), encoded)
+		}
+	}
+}

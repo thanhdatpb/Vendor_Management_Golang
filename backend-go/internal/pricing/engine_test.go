@@ -368,4 +368,97 @@ func TestVendorRefSuyLaiTuProductTypeKhiThieu(t *testing.T) {
 	if none := VendorRef(map[string]any{"productTypes": []any{}}); none != nil {
 		t.Errorf("vendorRef = %v, muốn nil khi không có mã nào", *none)
 	}
+
+	// Phần tử rác trong productTypes không được làm hỏng việc suy mã.
+	junk := VendorRef(map[string]any{
+		"productTypes": []any{"không phải object", nil, map[string]any{"vendorCode": "V-09"}},
+	})
+	if junk == nil || *junk != "V-09" {
+		t.Errorf("vendorRef = %v, muốn V-09", junk)
+	}
+}
+
+// customizeInfos là mảng do client dựng, có bản ghi cũ thiếu id hoặc không phải
+// object. Bỏ qua chúng, đừng cộng nhầm và đừng nổ.
+func TestComputeSizeRowBoQuaCustomizeInfoRac(t *testing.T) {
+	pt := map[string]any{
+		"phoi": 1.25,
+		"customizeInfos": []any{
+			"không phải object",
+			nil,
+			map[string]any{"name": "thiếu id"},
+			map[string]any{"id": ""},
+			map[string]any{"id": "ci1", "name": "Logo"},
+		},
+	}
+	size := map[string]any{
+		"sizeAdd": 2.0, "itemCost": 6.5,
+		"customize": map[string]any{"ci1": 1.0},
+	}
+
+	row := ComputeSizeRow(settings(), pt, size)
+
+	// Chỉ ci1 được cộng: 20 + 1.25 + 2 + 1 = 24.25
+	closeTo(t, "unitPrice", row.UnitPrice, 24.25)
+}
+
+// Size không có khoá customize vẫn phải tính được, không panic.
+func TestComputeSizeRowKhongCoCustomize(t *testing.T) {
+	pt := map[string]any{
+		"phoi":           1.25,
+		"customizeInfos": []any{map[string]any{"id": "ci1"}},
+	}
+
+	row := ComputeSizeRow(settings(), pt, map[string]any{"sizeAdd": 2.0})
+
+	closeTo(t, "unitPrice", row.UnitPrice, 23.25) // 20 + 1.25 + 2 + 0
+}
+
+func TestSummaryColumnsGiuSourceFile(t *testing.T) {
+	s := sheet()
+	s["_sourceFile"] = "Thu vien P.happy.xlsx"
+
+	cols := SummaryColumns(s)
+
+	if cols.SourceFile == nil || *cols.SourceFile != "Thu vien P.happy.xlsx" {
+		t.Errorf("source_file = %v", cols.SourceFile)
+	}
+
+	// Không có khoá thì để nil, không phải chuỗi rỗng.
+	if plain := SummaryColumns(sheet()); plain.SourceFile != nil {
+		t.Errorf("source_file = %v, muốn nil", *plain.SourceFile)
+	}
+}
+
+func TestProductTypeNamesBoQuaPhanTuRac(t *testing.T) {
+	names := ProductTypeNames(map[string]any{
+		"productTypes": []any{
+			"không phải object",
+			nil,
+			map[string]any{"name": "  "},  // tên toàn khoảng trắng
+			map[string]any{"name": 123.0}, // không phải chuỗi
+			map[string]any{"name": " Legend Shirt "},
+		},
+	})
+
+	if len(names) != 1 || names[0] != "Legend Shirt" {
+		t.Errorf("names = %v, muốn [Legend Shirt] đã trim", names)
+	}
+}
+
+// Total Price bằng 0 thì margin là 0, không phải NaN — bản JS/PHP dùng
+// truthiness nên nhánh này có thật trong dữ liệu.
+func TestMarginBangKhongKhiTotalPriceBangKhong(t *testing.T) {
+	row := ComputeSizeRow(
+		map[string]any{"price": 0, "quantity": 1},
+		map[string]any{},
+		map[string]any{},
+	)
+
+	if row.TotalPrice != 0 {
+		t.Fatalf("ca thử sai: totalPrice = %v", row.TotalPrice)
+	}
+	if row.Margin != 0 || row.MarginAfter != 0 {
+		t.Errorf("margin = %v / %v, muốn 0 (không NaN)", row.Margin, row.MarginAfter)
+	}
 }
