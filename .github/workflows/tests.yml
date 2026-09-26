@@ -103,8 +103,46 @@ jobs:
         env:
           CHROME_PATH: /usr/bin/google-chrome
 
+  # ── Backend Go — bộ chặn merge ────────────────────────────────────────
+  # Backend đang được chuyển từ Laravel sang Go. Job này chặn merge cho phần
+  # Go; các job PHP bên dưới sẽ được gỡ khi thư mục backend/ bị bỏ.
+  backend-go:
+    name: Backend Go — bộ chặn merge
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
+      # gofmt phải sạch: định dạng lệch làm diff của PR rối và che mất thay đổi thật.
+      - name: Kiểm gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::Các file sau chưa gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: go vet
+        run: go vet ./...
+      # go.mod / go.sum phải khớp: thiếu entry thì build trên máy sạch sẽ hỏng.
+      - name: Kiểm go.mod đã tidy
+        run: |
+          go mod tidy
+          if ! git diff --quiet -- go.mod go.sum; then
+            echo "::error::go.mod hoặc go.sum chưa tidy — chạy 'go mod tidy' rồi commit lại."
+            git diff -- go.mod go.sum
+            exit 1
+          fi
+      - name: Chạy test kèm race detector
+        run: go test -race ./...
+
   backend-tests:
-    name: Backend — bộ chặn merge
+    name: Backend PHP — bộ chặn merge (sẽ gỡ sau khi chuyển xong Go)
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -18,8 +18,13 @@ type Config struct {
 	Environment string
 	HTTPAddr    string
 	FrontendURL string
-	// MediaRoot points at the same public media directory Laravel uses while both
-	// services run side by side. Production should set GO_MEDIA_ROOT explicitly.
+	// MediaRoot là thư mục media do backend-go sở hữu. Trước đây nó trỏ thẳng
+	// vào backend/storage/app/public của Laravel; giờ tách ra để xoá backend/
+	// không làm mất đường phục vụ ảnh.
+	//
+	// CHUYỂN DỮ LIỆU CŨ TRƯỚC KHI CHẠY: các file đã upload vẫn nằm ở
+	// backend/storage/app/public/products. Di chuyển chúng sang MediaRoot mới
+	// (hoặc đặt GO_MEDIA_ROOT trỏ về chỗ cũ) trước khi bỏ thư mục Laravel.
 	MediaRoot           string
 	MediaDisk           string
 	AWSAccessKeyID      string
@@ -63,19 +68,21 @@ type Config struct {
 
 func Load() (Config, error) {
 	c := Config{
-		Environment:         env("APP_ENV", "local"),
-		HTTPAddr:            env("GO_HTTP_ADDR", ":8001"),
-		FrontendURL:         strings.TrimRight(env("FRONTEND_URL", "http://localhost:5173"), "/"),
-		MediaRoot:           env("GO_MEDIA_ROOT", "../backend/storage/app/public"),
-		MediaDisk:           env("MEDIA_DISK", "public"),
-		AWSAccessKeyID:      os.Getenv("AWS_ACCESS_KEY_ID"),
-		AWSSecretAccessKey:  os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		AWSRegion:           env("AWS_DEFAULT_REGION", "auto"),
-		AWSBucket:           os.Getenv("AWS_BUCKET"),
-		AWSURL:              os.Getenv("AWS_URL"),
-		AWSEndpoint:         os.Getenv("AWS_ENDPOINT"),
-		AWSUsePathStyle:     boolean("AWS_USE_PATH_STYLE_ENDPOINT", false),
-		VendorExtractScript: env("GO_VENDOR_EXTRACT_SCRIPT", "../backend/extract_excel.cjs"),
+		Environment:        env("APP_ENV", "local"),
+		HTTPAddr:           env("GO_HTTP_ADDR", ":8001"),
+		FrontendURL:        strings.TrimRight(env("FRONTEND_URL", "http://localhost:5173"), "/"),
+		MediaRoot:          env("GO_MEDIA_ROOT", "storage/media"),
+		MediaDisk:          env("MEDIA_DISK", "public"),
+		AWSAccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
+		AWSSecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		AWSRegion:          env("AWS_DEFAULT_REGION", "auto"),
+		AWSBucket:          os.Getenv("AWS_BUCKET"),
+		AWSURL:             os.Getenv("AWS_URL"),
+		AWSEndpoint:        os.Getenv("AWS_ENDPOINT"),
+		AWSUsePathStyle:    boolean("AWS_USE_PATH_STYLE_ENDPOINT", false),
+		// Script trích xuất Excel giờ thuộc backend-go, không còn nằm trong thư
+		// mục Laravel — xoá backend/ không làm hỏng chức năng import vendor.
+		VendorExtractScript: env("GO_VENDOR_EXTRACT_SCRIPT", "scripts/extract_excel.cjs"),
 		GoogleClientID:      os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret:  os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURI:   os.Getenv("GOOGLE_REDIRECT_URI"),

@@ -1,0 +1,14 @@
+{
+  "name": "vendorhub-excel-extract",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Trich xuat du lieu va anh nhung tu file Excel cho backend-go. Chay qua subprocess tu internal/vendorapi/import.go, khong phai mot dich vu doc lap.",
+  "main": "extract_excel.cjs",
+  "scripts": {
+    "extract": "node extract_excel.cjs"
+  },
+  "dependencies": {
+    "jszip": "3.10.1",
+    "xlsx": "0.18.5"
+  }
+}

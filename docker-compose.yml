@@ -1,3 +1,7 @@
+# Môi trường dev của VendorHub sau khi backend chuyển sang Go.
+#
+# `docker compose up` dựng đủ những gì backend-go cần: MySQL, Redis, một hộp
+# thư giả để xem email mà không gửi ra ngoài, và chính dịch vụ Go.
 services:
   mysql:
     image: mysql:8.0
@@ -18,6 +22,76 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: hub_vendor_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Hộp thư giả: bắt mọi email thay vì gửi thật. Quan trọng khi DB dev nạp từ
+  # dump production — địa chỉ trong đó là email thật của người dùng.
+  # Giao diện đọc thư: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit
+    container_name: hub_vendor_mailpit
+    restart: always
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  api:
+    build:
+      context: ./backend-go
+    container_name: hub_vendor_api
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      APP_ENV: local
+      GO_HTTP_ADDR: ":8001"
+      FRONTEND_URL: http://localhost:5173
+
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: hub_vendor_db
+      DB_USERNAME: root
+      DB_PASSWORD: root
+
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+
+      # Gửi qua mailpit, không cần xác thực.
+      MAIL_MAILER: smtp
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      MAIL_FROM_ADDRESS: no-reply@vendorhub.local
+      MAIL_FROM_NAME: VendorHub
+
+      MEDIA_DISK: public
+      GO_MEDIA_ROOT: /app/storage/media
+      GO_VENDOR_EXTRACT_SCRIPT: /app/scripts/extract_excel.cjs
+
+      # APP_KEY phải TRÙNG với khoá Laravel đang dùng, nếu không vé chọn tài
+      # khoản do bên kia phát sẽ không giải mã được trong lúc còn chạy song song.
+      APP_KEY: ${APP_KEY:-}
+    volumes:
+      - media_data:/app/storage/media
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  # Công cụ quản trị DB cho dev. Không phải một phần của ứng dụng — giữ hay bỏ
+  # đều không ảnh hưởng backend-go.
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: hub_vendor_phpmyadmin
@@ -33,3 +107,4 @@ services:
 
 volumes:
   mysql_data:
+  media_data:
